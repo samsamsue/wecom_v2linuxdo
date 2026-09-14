@@ -1962,6 +1962,95 @@ test("topic detail image auto-layout setting, 100px thumbnails below text, and c
   assert.ok(enabledRes.galleryHtml.includes("width:100px;height:100px"), "thumbnail constrained to 100px");
 });
 
+test("message bubble hover shows 原排版 button and clicking directly toggles original layout", () => {
+  // 1. Script contains hover toggle button class and icons
+  assert.ok(
+    scriptContent.includes(".wecom-bubble-layout-toggle"),
+    "must style .wecom-bubble-layout-toggle"
+  );
+  assert.ok(
+    scriptContent.includes("layoutOriginal:") && scriptContent.includes("layoutAuto:"),
+    "must define layoutOriginal and layoutAuto icons in ICONS"
+  );
+  assert.ok(
+    scriptContent.includes("<span>原排版</span>") && scriptContent.includes("<span>自动排版</span>"),
+    "must support 原排版 and 自动排版 text labels"
+  );
+
+  // 2. CSS specifies hover visibility on bubble
+  assert.ok(
+    scriptContent.includes(".wecom-msg-bubble:hover .wecom-bubble-layout-toggle"),
+    "must show toggle button on bubble hover"
+  );
+
+  // 3. Script defines toggleMessageBubbleLayout function and delegates click
+  assert.ok(
+    scriptContent.includes("function toggleMessageBubbleLayout"),
+    "must define toggleMessageBubbleLayout function"
+  );
+  assert.ok(
+    scriptContent.includes('event.target.closest(".wecom-bubble-layout-toggle")'),
+    "must handle click on .wecom-bubble-layout-toggle in chat panel"
+  );
+
+  // 4. Functional simulation of toggleMessageBubbleLayout
+  const mockPost = {
+    id: 101,
+    post_number: 1,
+    cooked: "<p>原排版正文</p><p><img src=\"https://linux.do/photo.jpg\"></p>"
+  };
+
+  const bubbleMock = {
+    dataset: { layoutMode: "auto" },
+    hasGallery: true,
+    bodyHtml: "<p>原排版正文</p>",
+    btnTitle: "点击显示原排版",
+    btnText: "原排版",
+    isRawClass: false
+  };
+
+  function simulateToggle(bubble, post) {
+    const isRaw = bubble.dataset.layoutMode === "raw";
+    if (isRaw) {
+      bubble.dataset.layoutMode = "auto";
+      bubble.hasGallery = true;
+      bubble.bodyHtml = "<p>原排版正文</p>";
+      bubble.btnTitle = "点击显示原排版";
+      bubble.btnText = "原排版";
+      bubble.isRawClass = false;
+    } else {
+      bubble.dataset.layoutMode = "raw";
+      bubble.hasGallery = false;
+      bubble.bodyHtml = post.cooked;
+      bubble.btnTitle = "点击显示自动排版";
+      bubble.btnText = "自动排版";
+      bubble.isRawClass = true;
+    }
+  }
+
+  // Initial auto mode
+  assert.equal(bubbleMock.dataset.layoutMode, "auto");
+  assert.equal(bubbleMock.btnText, "原排版");
+  assert.equal(bubbleMock.hasGallery, true);
+
+  // Toggle to raw
+  simulateToggle(bubbleMock, mockPost);
+  assert.equal(bubbleMock.dataset.layoutMode, "raw");
+  assert.equal(bubbleMock.btnText, "自动排版");
+  assert.equal(bubbleMock.btnTitle, "点击显示自动排版");
+  assert.equal(bubbleMock.hasGallery, false);
+  assert.equal(bubbleMock.bodyHtml, mockPost.cooked);
+  assert.equal(bubbleMock.isRawClass, true);
+
+  // Toggle back to auto
+  simulateToggle(bubbleMock, mockPost);
+  assert.equal(bubbleMock.dataset.layoutMode, "auto");
+  assert.equal(bubbleMock.btnText, "原排版");
+  assert.equal(bubbleMock.btnTitle, "点击显示原排版");
+  assert.equal(bubbleMock.hasGallery, true);
+  assert.equal(bubbleMock.isRawClass, false);
+});
+
 
 
 

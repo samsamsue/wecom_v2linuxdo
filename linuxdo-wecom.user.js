@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.5
+// @version      0.7.6
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -182,7 +182,9 @@
     winMin: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"><line x1="1.5" y1="6" x2="10.5" y2="6" /></svg>`,
     winMax: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="1.5" y="1.5" width="9" height="9" rx="1.5" /></svg>`,
     winRestore: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="3.5" y="1.5" width="7" height="7" rx="1" /><path d="M1.5 4.5v6a1 1 0 0 0 1 1h6" /></svg>`,
-    winClose: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M2.2 2.2l7.6 7.6m0-7.6l-7.6 7.6" /></svg>`
+    winClose: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M2.2 2.2l7.6 7.6m0-7.6l-7.6 7.6" /></svg>`,
+    layoutOriginal: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><line x1="9" y1="9" x2="10" y2="9" /><line x1="9" y1="13" x2="15" y2="13" /><line x1="9" y1="17" x2="15" y2="17" /></svg>`,
+    layoutAuto: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><rect x="4" y="4" width="6" height="6" rx="1" /><rect x="14" y="4" width="6" height="6" rx="1" /><rect x="4" y="14" width="6" height="6" rx="1" /><rect x="14" y="14" width="6" height="6" rx="1" /></svg>`
   };
   ICONS.chat = ICONS.msg;
   ICONS.list = ICONS.msg;
@@ -3425,6 +3427,75 @@
     html.wecom-dark .wecom-msg-thumb:hover {
       border-color: rgba(38, 126, 240, 0.6) !important;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35) !important;
+    }
+
+    /* ---------- 气泡排版切换悬浮钮 ---------- */
+    .wecom-bubble-layout-toggle {
+      position: absolute !important;
+      top: 6px !important;
+      right: 8px !important;
+      z-index: 10 !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 4px !important;
+      height: 22px !important;
+      padding: 0 8px !important;
+      border-radius: 11px !important;
+      font-size: 11px !important;
+      font-weight: 500 !important;
+      font-family: var(--wc-font) !important;
+      line-height: 1 !important;
+      color: #4E5359 !important;
+      background: rgba(255, 255, 255, 0.94) !important;
+      backdrop-filter: blur(4px) !important;
+      border: 1px solid rgba(0, 0, 0, 0.12) !important;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+      cursor: pointer !important;
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+      transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease !important;
+      user-select: none !important;
+    }
+    .wecom-msg-bubble:hover .wecom-bubble-layout-toggle,
+    .wecom-msg:hover .wecom-bubble-layout-toggle {
+      opacity: 1 !important;
+      visibility: visible !important;
+      pointer-events: auto !important;
+    }
+    .wecom-bubble-layout-toggle:hover {
+      background: #FFFFFF !important;
+      color: #267EF0 !important;
+      border-color: rgba(38, 126, 240, 0.4) !important;
+      box-shadow: 0 2px 8px rgba(38, 126, 240, 0.15) !important;
+    }
+    .wecom-bubble-layout-toggle.is-raw {
+      color: #267EF0 !important;
+      border-color: rgba(38, 126, 240, 0.3) !important;
+    }
+    .wecom-bubble-layout-toggle svg {
+      width: 12px !important;
+      height: 12px !important;
+      flex-shrink: 0 !important;
+    }
+    .wecom-msg-me .wecom-bubble-layout-toggle {
+      right: auto !important;
+      left: 8px !important;
+    }
+    html.wecom-dark .wecom-bubble-layout-toggle {
+      background: rgba(35, 37, 41, 0.94) !important;
+      border-color: rgba(255, 255, 255, 0.15) !important;
+      color: #C5C8CC !important;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
+    }
+    html.wecom-dark .wecom-bubble-layout-toggle:hover {
+      background: #2B2D31 !important;
+      color: #3A8BFD !important;
+      border-color: rgba(58, 139, 253, 0.5) !important;
+    }
+    html.wecom-dark .wecom-bubble-layout-toggle.is-raw {
+      color: #3A8BFD !important;
+      border-color: rgba(58, 139, 253, 0.4) !important;
     }
 
     /* ---------- 聊天图片预览 ---------- */
@@ -6699,7 +6770,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.5";
+  const SCRIPT_VERSION = "0.7.6";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -9452,6 +9523,7 @@
     for (const msg of messages) {
       const bubble = msg.querySelector(".wecom-msg-bubble");
       if (!bubble) continue;
+      if (bubble.dataset.layoutMode === "raw") continue;
       if (bubble.querySelector(".wecom-msg-images")) continue;
 
       const bodyEl = bubble.querySelector(".wecom-msg-body");
@@ -9525,7 +9597,59 @@
       if (isNodeVisuallyEmpty(bodyEl)) {
         bodyEl.classList.add("is-empty");
       }
+
+      // 添加气泡排版切换悬浮钮
+      let toggleBtn = bubble.querySelector(".wecom-bubble-layout-toggle");
+      if (!toggleBtn) {
+        toggleBtn = document.createElement("button");
+        toggleBtn.type = "button";
+        toggleBtn.className = "wecom-bubble-layout-toggle";
+        bubble.appendChild(toggleBtn);
+      }
+      toggleBtn.title = "点击显示原排版";
+      toggleBtn.innerHTML = `${ICONS.layoutOriginal}<span>原排版</span>`;
+      toggleBtn.classList.remove("is-raw");
+      bubble.dataset.layoutMode = "auto";
     }
+  }
+
+  function toggleMessageBubbleLayout(btn) {
+    const bubble = btn.closest(".wecom-msg-bubble");
+    if (!bubble) return;
+    const msgEl = bubble.closest(".wecom-msg");
+    if (!msgEl) return;
+    const postNum = Number(msgEl.dataset.postNumber);
+    const post = chatState.postsByNumber.get(postNum);
+    if (!post) return;
+
+    const isRaw = bubble.dataset.layoutMode === "raw";
+    if (isRaw) {
+      // 切换到自动排版
+      bubble.dataset.layoutMode = "auto";
+      const bodyEl = bubble.querySelector(".wecom-msg-body");
+      if (bodyEl) {
+        bodyEl.innerHTML = post.cooked || "";
+        bodyEl.classList.remove("is-empty");
+      }
+      bubble.querySelector(".wecom-msg-images")?.remove();
+      applyImageAutoLayout(msgEl);
+      btn.title = "点击显示原排版";
+      btn.innerHTML = `${ICONS.layoutOriginal}<span>原排版</span>`;
+      btn.classList.remove("is-raw");
+    } else {
+      // 切换到原排版
+      bubble.dataset.layoutMode = "raw";
+      bubble.querySelector(".wecom-msg-images")?.remove();
+      const bodyEl = bubble.querySelector(".wecom-msg-body");
+      if (bodyEl) {
+        bodyEl.innerHTML = post.cooked || "";
+        bodyEl.classList.remove("is-empty");
+      }
+      btn.title = "点击显示自动排版";
+      btn.innerHTML = `${ICONS.layoutAuto}<span>自动排版</span>`;
+      btn.classList.add("is-raw");
+    }
+    hydrateChatImages(bubble);
   }
 
   function refreshChatMessagesLayout() {
@@ -9539,6 +9663,7 @@
       if (!post) continue;
       const bubble = msgEl.querySelector(".wecom-msg-bubble");
       if (!bubble) continue;
+      bubble.removeAttribute("data-layout-mode");
       bubble.innerHTML = `${replyReferenceHtml(post)}<div class="wecom-msg-body">${post.cooked || ""}</div>`;
     }
     hydrateChatImages(body);
@@ -10267,6 +10392,12 @@
       deletePostBoost(boostId, message).catch((err) => {
         alert(`删除 Boost 失败: ${err.message}`);
       });
+      return;
+    }
+    const layoutToggle = event.target.closest(".wecom-bubble-layout-toggle");
+    if (layoutToggle && panel.contains(layoutToggle)) {
+      consumeClick(event);
+      toggleMessageBubbleLayout(layoutToggle);
       return;
     }
     const thumb = event.target.closest(".wecom-msg-thumb");
