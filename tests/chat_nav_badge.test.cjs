@@ -1819,6 +1819,26 @@ test("new topic composer applies Enterprise WeChat layout, grippie header, and c
   );
 });
 
+test("Discourse confirmation dialogs and modals have higher z-index than composer and are unblocked", () => {
+  assert.ok(
+    scriptContent.includes(".dialog-holder") && scriptContent.includes("#discourse-modal-container"),
+    "must target Discourse dialog-holder and modal container"
+  );
+  assert.ok(
+    scriptContent.includes("z-index: 20000 !important;"),
+    "must elevate modals to z-index 20000 above reply-control 1500"
+  );
+  assert.ok(
+    scriptContent.includes(".dialog-footer button.btn-danger") || scriptContent.includes("button.btn-danger"),
+    "must style discard confirmation button"
+  );
+  assert.ok(
+    scriptContent.includes("NATIVE_BRIDGE_SEL") && scriptContent.includes(".dialog-holder"),
+    "must include dialog-holder in NATIVE_BRIDGE_SEL to avoid DOM thrashing"
+  );
+});
+
+
 
 
 

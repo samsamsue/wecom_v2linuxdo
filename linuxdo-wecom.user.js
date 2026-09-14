@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.3
+// @version      0.7.4
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -3129,6 +3129,194 @@
     html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .submit-panel .toggle-preview:hover {
       background: #2C313A !important;
       color: #388BFD !important;
+    }
+
+    /* ---------- Discourse 原生确认对话框/浮层（如点击“放弃”弹出的舍弃草稿确认层）、Modal 弹窗与遮罩层 ---------- */
+    .dialog-holder,
+    .dialog-container,
+    .dialog-overlay,
+    #discourse-modal-container,
+    .d-modal,
+    .d-modal__backdrop,
+    .d-modal__container,
+    .modal-backdrop,
+    .modal-outer-container,
+    .modal,
+    .bootbox,
+    .discard-draft-modal,
+    .confirm-dialog {
+      z-index: 20000 !important;
+      pointer-events: auto !important;
+      visibility: visible !important;
+    }
+    .dialog-holder *,
+    .dialog-container *,
+    #discourse-modal-container *,
+    .d-modal *,
+    .bootbox * {
+      pointer-events: auto !important;
+    }
+    .dialog-holder .dialog-overlay,
+    .d-modal__backdrop,
+    .modal-backdrop {
+      z-index: 19999 !important;
+      position: fixed !important;
+      inset: 0 !important;
+      background: rgba(0, 0, 0, 0.45) !important;
+      backdrop-filter: blur(2px) !important;
+      pointer-events: auto !important;
+    }
+
+    /* 弹窗居中卡片：企微规范 */
+    .dialog-container,
+    .modal-dialog,
+    .d-modal__container {
+      position: fixed !important;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      margin: 0 !important;
+      z-index: 20000 !important;
+      width: 90% !important;
+      max-width: 440px !important;
+      min-width: 280px !important;
+      pointer-events: auto !important;
+    }
+    .dialog-content,
+    .modal-content,
+    .d-modal__container {
+      background: #FFFFFF !important;
+      border: 1px solid #D8DCE0 !important;
+      border-radius: 8px !important;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22) !important;
+      padding: 20px 24px !important;
+      font-family: var(--wc-font) !important;
+      color: #1F2329 !important;
+      box-sizing: border-box !important;
+    }
+    .dialog-header,
+    .modal-header,
+    .d-modal__header {
+      border-bottom: none !important;
+      padding: 0 0 10px 0 !important;
+    }
+    .dialog-title,
+    .modal-title,
+    .d-modal__title {
+      font-size: 15px !important;
+      font-weight: 600 !important;
+      color: #1F2329 !important;
+      font-family: var(--wc-font) !important;
+    }
+    .dialog-body,
+    .modal-body,
+    .d-modal__body {
+      font-size: 13px !important;
+      line-height: 1.6 !important;
+      color: #4E5359 !important;
+      padding: 0 0 18px 0 !important;
+      font-family: var(--wc-font) !important;
+    }
+    .dialog-footer,
+    .modal-footer,
+    .d-modal__footer {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: flex-end !important;
+      gap: 10px !important;
+      border-top: none !important;
+      padding: 0 !important;
+    }
+    /* 危险操作按钮（如“舍弃”草稿） */
+    .dialog-footer button.btn-danger,
+    .modal-footer button.btn-danger,
+    .d-modal__footer button.btn-danger,
+    .bootbox button.btn-danger,
+    button.btn-danger.btn-confirm {
+      background: #FA5151 !important;
+      border: 1px solid #FA5151 !important;
+      color: #FFFFFF !important;
+      border-radius: 4px !important;
+      height: 32px !important;
+      min-width: 72px !important;
+      padding: 0 16px !important;
+      font-size: 13px !important;
+      font-weight: 500 !important;
+      font-family: var(--wc-font) !important;
+      cursor: pointer !important;
+      transition: background 0.15s ease !important;
+    }
+    .dialog-footer button.btn-danger:hover,
+    .modal-footer button.btn-danger:hover,
+    .d-modal__footer button.btn-danger:hover,
+    .bootbox button.btn-danger:hover,
+    button.btn-danger.btn-confirm:hover {
+      background: #D9363E !important;
+      border-color: #D9363E !important;
+    }
+    /* 取消 / 继续编辑按钮 */
+    .dialog-footer button.btn-default,
+    .dialog-footer button.btn-cancel,
+    .modal-footer button.btn-default,
+    .d-modal__footer button.btn-default,
+    .bootbox button.btn-default {
+      background: #FFFFFF !important;
+      border: 1px solid #D2D4D7 !important;
+      color: #33383E !important;
+      border-radius: 4px !important;
+      height: 32px !important;
+      min-width: 64px !important;
+      padding: 0 14px !important;
+      font-size: 13px !important;
+      font-family: var(--wc-font) !important;
+      cursor: pointer !important;
+      transition: background 0.12s ease !important;
+    }
+    .dialog-footer button.btn-default:hover,
+    .dialog-footer button.btn-cancel:hover,
+    .modal-footer button.btn-default:hover,
+    .d-modal__footer button.btn-default:hover,
+    .bootbox button.btn-default:hover {
+      background: #F5F7FA !important;
+      border-color: #BDD0E8 !important;
+      color: #1F2329 !important;
+    }
+
+    /* 深色模式下对话框 */
+    html.wecom-dark .dialog-content,
+    html.wecom-dark .modal-content,
+    html.wecom-dark .d-modal__container {
+      background: #232529 !important;
+      border-color: #383A40 !important;
+      color: #ECEFF4 !important;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5) !important;
+    }
+    html.wecom-dark .dialog-title,
+    html.wecom-dark .modal-title,
+    html.wecom-dark .d-modal__title {
+      color: #FFFFFF !important;
+    }
+    html.wecom-dark .dialog-body,
+    html.wecom-dark .modal-body,
+    html.wecom-dark .d-modal__body {
+      color: #A6A9AD !important;
+    }
+    html.wecom-dark .dialog-footer button.btn-default,
+    html.wecom-dark .dialog-footer button.btn-cancel,
+    html.wecom-dark .modal-footer button.btn-default,
+    html.wecom-dark .d-modal__footer button.btn-default,
+    html.wecom-dark .bootbox button.btn-default {
+      background: #2B2D31 !important;
+      border-color: #44474E !important;
+      color: #DCDDDE !important;
+    }
+    html.wecom-dark .dialog-footer button.btn-default:hover,
+    html.wecom-dark .dialog-footer button.btn-cancel:hover,
+    html.wecom-dark .modal-footer button.btn-default:hover,
+    html.wecom-dark .d-modal__footer button.btn-default:hover,
+    html.wecom-dark .bootbox button.btn-default:hover {
+      background: #383A40 !important;
+      color: #FFFFFF !important;
     }
 
     /* ---------- native 模式悬浮恢复钮 ---------- */
@@ -6375,7 +6563,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.3";
+  const SCRIPT_VERSION = "0.7.4";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -13755,7 +13943,7 @@
   function isModalOrViewerOpen() {
     return Boolean(
       document.querySelector(
-        ".wecom-image-viewer:not([hidden]), .wecom-edit-dialog:not([hidden]), .wecom-watermark-dialog:not([hidden]), .wecom-boost-popover:not([hidden])"
+        ".wecom-image-viewer:not([hidden]), .wecom-edit-dialog:not([hidden]), .wecom-watermark-dialog:not([hidden]), .wecom-boost-popover:not([hidden]), .dialog-holder, #discourse-modal-container .modal.show, #discourse-modal-container .modal.in, .d-modal"
       )
     );
   }
@@ -13823,7 +14011,7 @@
     }
 
     const WECOM_UI_SEL = ".wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
-    const NATIVE_BRIDGE_SEL = "#reply-control, .autocomplete, .autocomplete-container, .d-editor-popup, [data-identifier='emoji-picker'], .tag-chooser";
+    const NATIVE_BRIDGE_SEL = "#reply-control, .dialog-holder, .dialog-container, #discourse-modal-container, .d-modal, .bootbox, .autocomplete, .autocomplete-container, .d-editor-popup, [data-identifier='emoji-picker'], .tag-chooser";
     const observer = new MutationObserver((mutations) => {
       // 忽略我们自己面板内部的 DOM 变动，否则点开筛选会立刻触发 applyTheme 回写/闪断
       const external = mutations.some((m) => {
