@@ -1062,4 +1062,77 @@ test("Topic last read floor persistence and automatic restoration on detail view
   assert.equal(pickReadingPost([10, 11, 12], true), 12);
 });
 
+test("Linux DO notification menu teardown, route synchronization, and topic navigation stability", () => {
+  // 1. Verify notification menu events and auto-close bindings
+  assert.ok(
+    scriptContent.includes("bindNotifMenuEvents"),
+    "must define bindNotifMenuEvents to capture notification item clicks"
+  );
+  assert.ok(
+    scriptContent.includes('const actionable = e.target.closest("a[href], button, .notification, [data-notification-id]");') ||
+    scriptContent.includes("actionable"),
+    "must detect clicks on actionable links/buttons within user-menu"
+  );
+
+  // 2. Verify resetNotifPresentation cleans up float class and inline display
+  assert.ok(
+    scriptContent.includes('menu.classList.remove("wecom-user-menu-float");'),
+    "resetNotifPresentation must remove wecom-user-menu-float class"
+  );
+  assert.ok(
+    scriptContent.includes('menu.style.display = "none";'),
+    "resetNotifPresentation must set menu display to none"
+  );
+
+  // 3. Verify closeNotifMenu checks visibility before clickUserMenuToggle
+  assert.ok(
+    scriptContent.includes('const isVisible = menu.offsetParent !== null && menu.style.display !== "none";') ||
+    scriptContent.includes("isVisible"),
+    "closeNotifMenu must verify menu visibility before simulating toggle click"
+  );
+
+  // 4. Verify bindListPanelClicks closes notification menu and syncs discourseRouteTo
+  assert.ok(
+    scriptContent.includes("closeNotifMenu();\n        e.preventDefault();\n        e.stopPropagation();") ||
+    scriptContent.includes("closeNotifMenu();\n        e.preventDefault();"),
+    "conversation click in list panel must call closeNotifMenu"
+  );
+  assert.ok(
+    scriptContent.includes("discourseRouteTo(href);\n        loadTopic(topicId"),
+    "conversation click must sync route with discourseRouteTo"
+  );
+
+  // 5. Verify handleChatNavClick closes notification menu and recovers from unsupported paths
+  assert.ok(
+    scriptContent.includes("closeNotifMenu();\n\n    // 1. 确保停靠栏「消息」项处于 active 态") ||
+    scriptContent.includes("closeNotifMenu();\n\n    // 1."),
+    "handleChatNavClick must close notification menu"
+  );
+  assert.ok(
+    scriptContent.includes('navigateInApp(IS_V2EX ? "/?tab=all" : "/latest");'),
+    "handleChatNavClick must route to latest when clicking from unsupported path"
+  );
+
+  // 6. Verify isHomePath includes /notifications on Linux DO
+  assert.ok(
+    scriptContent.includes("/^(latest|new|unread|unseen|top|categories|hot|posted|read|bookmarks|notifications)\\b/") ||
+    scriptContent.includes("bookmarks|notifications"),
+    "isHomePath must support /notifications for Linux DO"
+  );
+
+  // 7. Verify applyTheme guards loadTopic against duplicate triggers when already loading
+  assert.ok(
+    scriptContent.includes("Number(chatState.topicId) === Number(targetTopicId) && chatState.loading"),
+    "applyTheme must avoid aborting loadTopic when target is already loading"
+  );
+
+  // 8. Verify avatar badge click is bound for both platforms
+  assert.match(
+    scriptContent,
+    /avatar\.addEventListener\("click",[\s\S]*const badge = rail\?\.querySelector\("\.wecom-rail-avatar-badge"\);\s*badge\?\.addEventListener\("click"/,
+    "avatar badge click must be bound to trigger avatar click on Linux DO"
+  );
+});
+
+
 

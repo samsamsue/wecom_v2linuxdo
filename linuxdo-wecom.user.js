@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.6.4
+// @version      0.6.5
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -894,7 +894,7 @@
       return pathname === "/" || /^\/(recent|changes|notifications)\b/.test(pathname) || /^\/go\//.test(pathname);
     }
     return pathname === "/" ||
-      /^\/(latest|new|unread|unseen|top|categories|hot|posted|read|bookmarks)\b/.test(pathname) ||
+      /^\/(latest|new|unread|unseen|top|categories|hot|posted|read|bookmarks|notifications)\b/.test(pathname) ||
       /^\/c\//.test(pathname) || /^\/tag\//.test(pathname);
   }
 
@@ -909,6 +909,7 @@
     "/posted": "/posted.json",
     "/read": "/read.json",
     "/bookmarks": "/bookmarks.json",
+    "/notifications": "/latest.json",
     // 类别索引本身没有 topic_list，继续展示最新话题。
     "/categories": "/latest.json"
   });
@@ -5658,7 +5659,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.6.4";
+  const SCRIPT_VERSION = "0.6.5";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -6329,6 +6330,8 @@
 
   /** 点击左侧「消息」图标：回到顶部 + 刷新会话列表 */
   function handleChatNavClick() {
+    closeNotifMenu();
+
     // 1. 确保停靠栏「消息」项处于 active 态
     const chatBtn = document.querySelector('.wecom-rail-item[data-rail-key="chat"]');
     if (chatBtn) {
@@ -6339,6 +6342,13 @@
           else if (item.dataset.railKey !== "group") item.classList.remove("active");
         });
       }
+    }
+
+    // 若当前处于原生未支持页面（例如 /u/... 个人中心），点击「消息」应切回首页三栏
+    const currentPath = location.pathname;
+    if (!isHomePath(currentPath) && !isTopicPath(currentPath)) {
+      navigateInApp(IS_V2EX ? "/?tab=all" : "/latest");
+      return;
     }
 
     // 2. 消息图标微动效反馈
@@ -6461,6 +6471,7 @@
     menu.style.bottom = "";
     menu.style.transform = "";
     setNotifOpenClass(true);
+    bindNotifMenuEvents(menu);
   }
 
   function clickUserMenuToggle() {
@@ -6511,7 +6522,7 @@
     const menu = findUserMenu();
     if (!menu) return false;
     positionNotifMenu(menu);
-    bindNotifMenuHover(menu);
+    bindNotifMenuEvents(menu);
     lockHeaderAfterNotif();
     return true;
   }
@@ -6578,15 +6589,25 @@
     setNotifPinned(false);
     setNotifOpenClass(false);
     lockHeaderAfterNotif();
+    const menu = findUserMenu();
+    if (menu) {
+      menu.classList.remove("wecom-user-menu-float");
+      menu.style.display = "none";
+    }
   }
 
   function closeNotifMenu() {
-    const hadNativeMenu = Boolean(findUserMenu());
+    const menu = findUserMenu();
+    const hadNativeMenu = Boolean(menu);
     resetNotifPresentation();
     try {
       const closed = setUserMenuVisible(false);
-      if (!closed && hadNativeMenu && !clickUserMenuToggle()) {
-        console.error("[linuxdo-wecom] closeNotifMenu: native menu close unavailable");
+      // 仅当菜单在 DOM 中确实处于显示状态时才尝试模拟点击收起；若已关闭绝不盲目 toggle 重新展开
+      if (!closed && hadNativeMenu && menu) {
+        const isVisible = menu.offsetParent !== null && menu.style.display !== "none";
+        if (isVisible) {
+          clickUserMenuToggle();
+        }
       }
     } catch (err) {
       console.error("[linuxdo-wecom] closeNotifMenu failed", err);
@@ -6616,11 +6637,18 @@
     }, 220);
   }
 
-  function bindNotifMenuHover(menu) {
-    if (!menu || menu.dataset.wecomHoverBound === "1") return;
-    menu.dataset.wecomHoverBound = "1";
+  function bindNotifMenuEvents(menu) {
+    if (!menu || menu.dataset.wecomBound === "1") return;
+    menu.dataset.wecomBound = "1";
     menu.addEventListener("mouseenter", clearNotifLeaveTimer);
     menu.addEventListener("mouseleave", scheduleCloseNotifMenu);
+    menu.addEventListener("click", (e) => {
+      const actionable = e.target.closest("a[href], button, .notification, [data-notification-id]");
+      if (actionable && menu.contains(actionable)) {
+        notifIgnoreHoverUntil = Date.now() + 500;
+        closeNotifMenu();
+      }
+    }, true);
   }
 
   function ensureNotifMenuObserver() {
@@ -6630,7 +6658,7 @@
       if (!notifWantOpen) return;
       if (adoptNotifMenuIfAny() || notifOpenInFlight) return;
       // 原版路由或菜单项主动关闭后，同步清掉企微侧的钉住/显示状态。
-      if (getHeaderService()?.userVisible === false) resetNotifPresentation();
+      if (getHeaderService()?.userVisible === false || !findUserMenu()) resetNotifPresentation();
     });
     notifMenuObserver.observe(document.body, { childList: true, subtree: true });
   }
@@ -6729,6 +6757,12 @@
       ensureNotifMenuObserver();
       openNotifMenu();
       setNotifPinned(true);
+    });
+
+    const badge = rail?.querySelector(".wecom-rail-avatar-badge");
+    badge?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      avatar.click();
     });
   }
 
@@ -7059,6 +7093,7 @@
 
       const conv = link.closest("a.wecom-conv");
       if (conv && panel.contains(conv)) {
+        closeNotifMenu();
         e.preventDefault();
         e.stopPropagation();
         try { conv.blur(); } catch { /* ignore */ }
@@ -7127,6 +7162,7 @@
             suppressHistoryApply = false;
           }
         }
+        discourseRouteTo(href);
         loadTopic(topicId, !hasRendered, target);
         return;
       }
@@ -11616,8 +11652,8 @@
     }
     const initialBody = document.querySelector(".wecom-chat-body");
     const hasRenderedMsgs = Boolean(initialBody && initialBody.querySelector(".wecom-msg") && !initialBody.querySelector(".wecom-chat-loading, .wecom-chat-error, .wecom-chat-empty"));
-    if (!force && chatState.loading && chatState.topicId === topicId) return;
-    if (!force && chatState.topicId === topicId && chatState.renderedLastIdx >= 0 && hasRenderedMsgs) {
+    if (!force && chatState.loading && Number(chatState.topicId) === Number(topicId)) return;
+    if (!force && Number(chatState.topicId) === Number(topicId) && chatState.renderedLastIdx >= 0 && hasRenderedMsgs) {
       syncListActive();
       return;
     }
@@ -11806,10 +11842,15 @@
       }
       syncListActive();
     } catch (err) {
-      if (err?.name === "AbortError" || signal.aborted) return;
+      if (err?.name === "AbortError" || signal.aborted) {
+        if (topicAbortController === controller) {
+          chatState.loading = false;
+        }
+        return;
+      }
       renderChatError(err);
     } finally {
-      if (topicAbortController === controller) {
+      if (topicAbortController === controller || !topicAbortController) {
         topicAbortController = null;
         chatState.loading = false;
       }
@@ -12426,7 +12467,14 @@
       } else {
         loadList(listState.apiPath || (IS_V2EX ? "/?tab=all" : "/latest.json"), false);
       }
-      loadTopic(topicIdFromPath(pathname));
+      const targetTopicId = topicIdFromPath(pathname);
+      if (targetTopicId) {
+        if (Number(chatState.topicId) === Number(targetTopicId) && chatState.loading) {
+          // 当前话题正在加载中，避免重复触发 loadTopic 并打断请求
+        } else {
+          loadTopic(targetTopicId);
+        }
+      }
       syncNewPostsFromDom();
     } else {
       loadList(listApiForPath(pathname, location.search), false);
