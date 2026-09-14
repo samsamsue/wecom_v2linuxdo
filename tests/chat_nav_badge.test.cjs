@@ -503,12 +503,12 @@ test("V2EX integration includes isolation guards and full WeCom interactions", (
     "loadCategories must return empty array on V2EX"
   );
   assert.ok(
-    scriptContent.includes("if (IS_V2EX || !chatState.hasOlder"),
-    "loadOlderPosts must early return on V2EX"
+    scriptContent.includes("v2exHasMore"),
+    "must track v2exHasMore pagination state"
   );
   assert.ok(
-    scriptContent.includes("if (IS_V2EX || !chatState.hasNewer"),
-    "loadNewerPosts must early return on V2EX"
+    scriptContent.includes("syncV2exPaginationFooter"),
+    "must define syncV2exPaginationFooter for V2EX detail pagination"
   );
   assert.ok(
     scriptContent.includes("window.open(`/member/${encodeURIComponent(username)}`, \"_blank\");"),
@@ -905,3 +905,79 @@ test("conversation detail links open in _blank with rel=noopener noreferrer", ()
   assert.equal(hashOnly.getAttribute("target"), null);
   assert.equal(jsLink.getAttribute("target"), null);
 });
+
+test("V2EX topic detail multi-page pagination and footer bar", () => {
+  assert.ok(
+    scriptContent.includes("function syncV2exPaginationFooter("),
+    "must define syncV2exPaginationFooter"
+  );
+  assert.ok(
+    scriptContent.includes("wecom-v2ex-more-bar"),
+    "must include .wecom-v2ex-more-bar"
+  );
+  assert.ok(
+    scriptContent.includes("data.total_replies != null"),
+    "loadTopic must support data.total_replies"
+  );
+  assert.ok(
+    scriptContent.includes("chatState.hasNewer = Boolean(chatState.v2exHasMore);"),
+    "syncRenderedWindow must sync hasNewer with v2exHasMore"
+  );
+
+  // Test V2EX pagination parsing simulation
+  function simulatePaginationParse(html, page) {
+    let totalReplies = 0;
+    const countMatch = html.match(/(?:gray|cell)[^>]*>[\s\S]*?(\d+)\s*(?:replies|条回复|回复)/i) ||
+      html.match(/(\d+)\s*(?:replies|条回复|回复)/i);
+    if (countMatch) totalReplies = Number(countMatch[1]) || 0;
+
+    const inputMatch = html.match(/class="[^"]*page_input[^"]*"[^>]*max="(\d+)"/i) ||
+      html.match(/max="(\d+)"[^>]*class="[^"]*page_input[^"]*"/i);
+    const inputMax = inputMatch ? Number(inputMatch[1]) : 0;
+
+    const pageNumbers = [...html.matchAll(/(?:href|onclick)="[^"]*(?:^|[?&])p=(\d+)[^"]*"/gi)]
+      .map((m) => Number(m[1]));
+    const maxP = pageNumbers.length ? Math.max(...pageNumbers) : 0;
+
+    const hasDisabledNext = Boolean(html.match(/normal_page_right[^"]*disable_now/i) || html.match(/disable_now[^"]*normal_page_right/i));
+    const hasNextBtn = Boolean(html.match(/title="Next Page"/i)) && !hasDisabledNext;
+
+    const totalPages = Math.max(inputMax, maxP, totalReplies > 0 ? Math.ceil(totalReplies / 100) : 0);
+    const hasNextPage = (totalPages > page) || hasNextBtn;
+
+    return { totalReplies, totalPages, hasNextPage };
+  }
+
+  // Sample page 1 with 199 replies, input max=2, next page button
+  const p1Html = `
+    <div class="cell"><span class="gray">199 replies • 2026-09-14</span></div>
+    <div class="cell ps_container">
+      <a href="?p=1" class="page_current">1</a>
+      <a href="?p=2" class="page_normal">2</a>
+      <input type="number" class="page_input" value="1" min="1" max="2" />
+      <td class="super normal_page_right button" title="Next Page">❯</td>
+    </div>
+  `;
+
+  // Sample page 2 (last page) with disabled next button
+  const p2Html = `
+    <div class="cell"><span class="gray">199 replies • 2026-09-14</span></div>
+    <div class="cell ps_container">
+      <a href="?p=1" class="page_normal">1</a>
+      <a href="?p=2" class="page_current">2</a>
+      <input type="number" class="page_input" value="2" min="1" max="2" />
+      <td class="super normal_page_right button disable_now" title="Next Page">❯</td>
+    </div>
+  `;
+
+  const res1 = simulatePaginationParse(p1Html, 1);
+  assert.equal(res1.totalReplies, 199);
+  assert.equal(res1.totalPages, 2);
+  assert.equal(res1.hasNextPage, true);
+
+  const res2 = simulatePaginationParse(p2Html, 2);
+  assert.equal(res2.totalReplies, 199);
+  assert.equal(res2.totalPages, 2);
+  assert.equal(res2.hasNextPage, false);
+});
+

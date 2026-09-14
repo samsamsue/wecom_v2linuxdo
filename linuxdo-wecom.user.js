@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.6.2
+// @version      0.6.3
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -2287,6 +2287,63 @@
       font-size: 13px; cursor: pointer; font-family: var(--wc-font);
     }
     .wecom-empty-btn:hover { background: var(--wc-hover); }
+    .wecom-v2ex-more-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 18px;
+      margin: 16px auto 14px;
+      max-width: 340px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--wc-text-2);
+      background: var(--wc-hover-bg, rgba(0, 0, 0, 0.03));
+      border: 1px solid var(--wc-border-light, rgba(0, 0, 0, 0.08));
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+    .wecom-v2ex-more-bar:hover:not(.is-loading):not(.is-end) {
+      background: rgba(26, 135, 255, 0.08);
+      color: #1A87FF;
+      border-color: rgba(26, 135, 255, 0.25);
+    }
+    .wecom-v2ex-more-bar.is-end {
+      border: none;
+      background: transparent;
+      cursor: default;
+      color: var(--wc-text-3);
+      font-size: 12px;
+      padding: 6px 12px;
+    }
+    .wecom-v2ex-more-bar.is-loading {
+      cursor: default;
+      opacity: 0.85;
+    }
+    .wecom-v2ex-more-bar .wecom-chat-spinner {
+      width: 14px;
+      height: 14px;
+      border-width: 2px;
+    }
+    html.wecom-dark .wecom-v2ex-more-bar,
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-more-bar {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.08);
+      color: var(--wc-text-2);
+    }
+    html.wecom-dark .wecom-v2ex-more-bar:hover:not(.is-loading):not(.is-end),
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-more-bar:hover:not(.is-loading):not(.is-end) {
+      background: rgba(26, 135, 255, 0.15);
+      color: #409EFF;
+      border-color: rgba(26, 135, 255, 0.35);
+    }
+    html.wecom-dark .wecom-v2ex-more-bar.is-end,
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-more-bar.is-end {
+      background: transparent;
+      border: none;
+      color: var(--wc-text-3);
+    }
 
     .wecom-chat-error-actions {
       display: flex;
@@ -5601,7 +5658,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.6.2";
+  const SCRIPT_VERSION = "0.6.3";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -8577,6 +8634,14 @@
     if (handleChatHeaderClick(event, panel)) return;
     if (handleMessageToolClick(event, panel)) return;
 
+    // V2EX 点击加载下一页底栏
+    const v2exMoreBtn = event.target.closest(".wecom-v2ex-more-bar");
+    if (v2exMoreBtn && panel.contains(v2exMoreBtn) && !v2exMoreBtn.classList.contains("is-loading") && !v2exMoreBtn.classList.contains("is-end")) {
+      consumeClick(event);
+      loadNewerPosts();
+      return;
+    }
+
     // 详情所有链接都 _blank 方式打开：拦截聊天面板中所有常规链接
     const generalLink = event.target.closest("a[href]");
     if (generalLink && panel.contains(generalLink) && isPlainClick(event)) {
@@ -8618,7 +8683,7 @@
     chatState.pinnedPost = 0;
     const body = panel.querySelector(".wecom-chat-body");
     if (body.scrollTop < 80) loadOlderPosts();
-    if (body.scrollTop + body.clientHeight >= body.scrollHeight - 120) loadNewerPosts();
+    if (body.scrollTop + body.clientHeight >= body.scrollHeight - 160) loadNewerPosts();
     trackVisibleTopicPost();
   }
 
@@ -11037,15 +11102,38 @@
       });
     });
 
-    const pageNumbers = [...doc.querySelectorAll("a[href]")]
-      .map((a) => (a.getAttribute("href") || "").match(new RegExp(`^/t/${topicId}\\?p=(\\d+)`)))
+    // 提取总回复数（例如 "199 replies" 或 "199 条回复"）
+    let totalReplies = 0;
+    const countMatch = doc.querySelector("#Main .gray, #Main .cell")?.textContent?.match(/(\d+)\s*(?:replies|条回复|回复)/i) ||
+      doc.body?.textContent?.match(/(\d+)\s*(?:replies|条回复|回复)/i);
+    if (countMatch) {
+      totalReplies = Number(countMatch[1]) || 0;
+    }
+
+    // 提取分页输入框中的最大页码（例如 <input class="page_input" max="2">）
+    const pageInput = doc.querySelector("input.page_input");
+    const inputMax = pageInput ? (Number(pageInput.getAttribute("max") || pageInput.max) || 0) : 0;
+
+    // 提取链接中的所有页码（包括 a[href] 和 link[href]，匹配 ?p= 或 /t/:id?p=）
+    const pageNumbers = [...doc.querySelectorAll("a[href], link[href]")]
+      .map((el) => (el.getAttribute("href") || "").match(/(?:^|[?&])p=(\d+)/))
       .filter(Boolean)
       .map((m) => Number(m[1]));
-    const hasNextPage = pageNumbers.some((n) => n > page) || Boolean(doc.querySelector(`a[rel="next"][href*="/t/${topicId}"]`));
+    const maxP = pageNumbers.length ? Math.max(...pageNumbers) : 0;
+
+    // 下一页按钮（.normal_page_right, [title='Next Page'] 且未包含 .disable_now）
+    const nextBtn = doc.querySelector(".normal_page_right, [title='Next Page']");
+    const hasNextBtn = Boolean(nextBtn && !nextBtn.classList.contains("disable_now"));
+
+    const totalPages = Math.max(inputMax, maxP, totalReplies > 0 ? Math.ceil(totalReplies / 100) : 0);
+    const hasNextPage = (totalPages > page) || hasNextBtn;
+
     return {
       id: Number(topicId),
       title,
-      posts_count: posts.length,
+      posts_count: totalReplies > 0 ? (totalReplies + 1) : posts.length,
+      total_replies: totalReplies || Math.max(0, posts.length - 1),
+      total_pages: totalPages || (hasNextPage ? page + 1 : page),
       node_name: opNode,
       post_stream: {
         posts,
@@ -11225,7 +11313,7 @@
         }
       }
       const data = await fetchV2exTopicData(id, signal, page);
-      setCachedTopic(id, data);
+      if (page === 1) setCachedTopic(id, data);
       setCachedTopic(cacheKey, data);
       return data;
     }
@@ -11522,7 +11610,9 @@
           count.textContent = "";
         }
       }
-      const replyTotal = data.posts_count || posts.length;
+      const replyTotal = (IS_V2EX && data.total_replies != null)
+        ? data.total_replies
+        : (data.posts_count || posts.length);
       chatState.replyTotal = replyTotal;
       const orgName = IS_V2EX ? (data.node_title || data.node_name || "v2ex.com") : "linux.do";
       if (sub) {
@@ -11579,6 +11669,9 @@
         body.innerHTML = renderBubbles(posts, getCurrentUsername()) ||
           `<div class="wecom-chat-empty">${ICONS.msg}<div>暂无消息</div></div>`;
         hydrateChatImages(body);
+        if (IS_V2EX) {
+          syncV2exPaginationFooter(body, false);
+        }
         syncRenderedWindow(body);
         if (IS_V2EX && target && (target.floor || target.replyId || target.anchor)) {
           rememberTopicPost(topicId, target.floor ? target.floor + 1 : 1);
@@ -11649,8 +11742,59 @@
     chatState.renderedFirstIdx = first;
     chatState.renderedLastIdx = last;
     chatState.renderedLastNumber = maxNumber;
-    chatState.hasOlder = first > 0;
-    chatState.hasNewer = last < chatState.stream.length - 1;
+    if (IS_V2EX) {
+      chatState.hasNewer = Boolean(chatState.v2exHasMore);
+      chatState.hasOlder = (Number(chatState.v2exPage) > 1 && !chatState.postsByNumber.has(2)) || first > 0;
+    } else {
+      chatState.hasOlder = first > 0;
+      chatState.hasNewer = last < chatState.stream.length - 1;
+    }
+  }
+
+  function syncV2exPaginationFooter(body, loading = false) {
+    if (!IS_V2EX || !body) return;
+    let bar = body.querySelector(".wecom-v2ex-more-bar");
+    const hasMore = Boolean(chatState.v2exHasMore);
+    const currentPage = Number(chatState.v2exPage) || 1;
+    const total = chatState.replyTotal || 0;
+
+    if (loading) {
+      if (!bar) {
+        bar = document.createElement("div");
+        bar.className = "wecom-v2ex-more-bar is-loading";
+        body.appendChild(bar);
+      }
+      bar.className = "wecom-v2ex-more-bar is-loading";
+      bar.innerHTML = `<div class="wecom-chat-spinner"></div><span>正在加载第 ${currentPage + 1} 页回复…</span>`;
+      return;
+    }
+
+    if (hasMore) {
+      if (!bar) {
+        bar = document.createElement("div");
+        bar.className = "wecom-v2ex-more-bar";
+        body.appendChild(bar);
+      }
+      bar.className = "wecom-v2ex-more-bar";
+      bar.setAttribute("role", "button");
+      bar.setAttribute("title", "下滑或点击加载下一页回复");
+      bar.innerHTML = `<span>下滑或点击加载下一页 (第 ${currentPage + 1} 页)</span>`;
+    } else {
+      const renderedCount = body.querySelectorAll(".wecom-msg[data-post-number]").length;
+      if (renderedCount > 100 || (total && total > 100)) {
+        if (!bar) {
+          bar = document.createElement("div");
+          bar.className = "wecom-v2ex-more-bar is-end";
+          body.appendChild(bar);
+        }
+        bar.className = "wecom-v2ex-more-bar is-end";
+        bar.removeAttribute("role");
+        bar.removeAttribute("title");
+        bar.innerHTML = `<span>— 已加载全部回复（共 ${total || renderedCount - 1} 条）—</span>`;
+      } else if (bar) {
+        bar.remove();
+      }
+    }
   }
 
   let lastPaginationTime = 0;
@@ -11658,10 +11802,46 @@
 
   /** 向上滚动加载更早的帖子 */
   async function loadOlderPosts() {
-    if (IS_V2EX || !chatState.hasOlder || chatState.loading || !chatState.topicId) return;
+    if (chatState.loading || !chatState.topicId) return;
     if (Date.now() < rateLimitCooldownUntil) return;
     if (Date.now() - lastPaginationTime < PAGINATION_THROTTLE_MS) return;
     lastPaginationTime = Date.now();
+    if (IS_V2EX) {
+      const currentPage = Number(chatState.v2exPage) || 1;
+      if (currentPage <= 1 || chatState.postsByNumber.has(2)) return;
+      const prevPage = currentPage - 1;
+      chatState.loading = true;
+      const body = document.querySelector(".wecom-chat-body");
+      try {
+        const data = await fetchV2exTopicHtml(chatState.topicId, null, prevPage);
+        const posts = (data?.post_stream?.posts || []).filter((post) => postNumberOf(post) > 1);
+        const fresh = posts.filter((post) => !chatState.postsByNumber.has(postNumberOf(post)));
+        if (body && fresh.length) {
+          const prevHeight = body.scrollHeight;
+          rememberChatPosts(fresh);
+          chatState.stream = fresh.map((p) => p.id).concat(chatState.stream);
+          const opEl = body.querySelector(".wecom-msg[data-post-number='1']");
+          const html = renderBubbles(fresh, getCurrentUsername());
+          if (opEl && opEl.nextSibling) {
+            opEl.insertAdjacentHTML("afterend", html);
+          } else if (opEl) {
+            body.insertAdjacentHTML("beforeend", html);
+          } else {
+            body.insertAdjacentHTML("afterbegin", html);
+          }
+          hydrateChatImages(body);
+          body.scrollTop += body.scrollHeight - prevHeight;
+          chatState.v2exPage = prevPage;
+          syncRenderedWindow(body);
+        }
+      } catch (err) {
+        console.warn("[v2ex-wecom] loadOlderPosts failed:", err);
+      } finally {
+        chatState.loading = false;
+      }
+      return;
+    }
+    if (!chatState.hasOlder) return;
     const ids = chatState.stream.slice(Math.max(0, chatState.renderedFirstIdx - 20), chatState.renderedFirstIdx);
     if (!ids.length) return;
     chatState.loading = true;
@@ -11687,8 +11867,11 @@
 
   /** 向下滚动加载更新的帖子（话题很长时不能只留首屏一页） */
   async function loadNewerPosts() {
-    if (IS_V2EX || !chatState.hasNewer || chatState.loading || !chatState.topicId) {
-      if (!IS_V2EX || !chatState.v2exHasMore || chatState.loading || !chatState.topicId) return;
+    if (chatState.loading || !chatState.topicId) return;
+    if (IS_V2EX) {
+      if (!chatState.v2exHasMore) return;
+    } else {
+      if (!chatState.hasNewer) return;
     }
     if (Date.now() < rateLimitCooldownUntil) return;
     if (Date.now() - lastPaginationTime < PAGINATION_THROTTLE_MS) return;
@@ -11697,6 +11880,7 @@
       const body = document.querySelector(".wecom-chat-body");
       const nextPage = (Number(chatState.v2exPage) || 1) + 1;
       chatState.loading = true;
+      syncV2exPaginationFooter(body, true);
       try {
         const data = await fetchV2exTopicHtml(chatState.topicId, null, nextPage);
         const posts = (data?.post_stream?.posts || []).filter((post) => postNumberOf(post) > 1);
@@ -11708,9 +11892,12 @@
         chatState.v2exPage = nextPage;
         chatState.v2exHasMore = Boolean(data?.v2ex_has_more) && fresh.length > 0;
         chatState.hasNewer = chatState.v2exHasMore;
-      } catch { /* 保留当前已加载回复 */
+        setCachedTopic(`${chatState.topicId}_p${nextPage}`, data);
+      } catch (err) {
+        console.warn("[v2ex-wecom] loadNewerPosts failed:", err);
       } finally {
         chatState.loading = false;
+        syncV2exPaginationFooter(body, false);
       }
       return;
     }
@@ -11766,14 +11953,20 @@
     }
     body.querySelector(".wecom-chat-empty")?.remove();
     const currentMax = Math.max(...renderedNumbers, 0);
+    const moreBar = body.querySelector(".wecom-v2ex-more-bar");
     if (fresh.every((post) => postNumberOf(post) > currentMax)) {
-      body.insertAdjacentHTML("beforeend", renderBubbles(fresh, getCurrentUsername()));
+      if (moreBar) {
+        moreBar.insertAdjacentHTML("beforebegin", renderBubbles(fresh, getCurrentUsername()));
+      } else {
+        body.insertAdjacentHTML("beforeend", renderBubbles(fresh, getCurrentUsername()));
+      }
     } else {
       for (const post of fresh) {
         const target = [...body.querySelectorAll(".wecom-msg[data-post-number]")]
           .find((node) => Number(node.dataset.postNumber) > postNumberOf(post));
         const html = bubbleHtml(post, getCurrentUsername());
         if (target) target.insertAdjacentHTML("beforebegin", html);
+        else if (moreBar) moreBar.insertAdjacentHTML("beforebegin", html);
         else body.insertAdjacentHTML("beforeend", html);
       }
     }
