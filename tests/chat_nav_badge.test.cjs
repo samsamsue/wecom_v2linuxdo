@@ -2581,14 +2581,54 @@ test("image auto-layout aspect ratio configuration (4:3, 1:1, 16:9) and empty li
   assert.equal(resTrailing, "<p>单段文本</p>", "must eliminate leading and trailing void space");
 });
 
+test("comprehensive dark mode stylesheet covers tokens, user menus, list chips, bubbles, oneboxes, emoji picker, edit dialog, and V2EX", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const scriptPath = path.join(__dirname, "..", "linuxdo-wecom.user.js");
+  const scriptContent = fs.readFileSync(scriptPath, "utf8");
 
+  // 1. Core token definitions & overridable color-scheme
+  assert.ok(scriptContent.includes("color-scheme: dark !important;"), "must enforce color-scheme: dark !important in dark mode");
+  assert.ok(scriptContent.includes("--wc-bg: #202328;"), "must define --wc-bg in dark mode");
+  assert.ok(scriptContent.includes("--wc-text-4: #545B66;"), "must define --wc-text-4 in dark mode");
+  assert.ok(scriptContent.includes("--wc-blue-soft: rgba(30, 111, 255, 0.18);"), "must define dark --wc-blue-soft");
+  assert.ok(scriptContent.includes("--wc-accent-soft: rgba(30, 111, 255, 0.18);"), "must define dark --wc-accent-soft");
 
+  // 2. Left rail & menus
+  assert.ok(scriptContent.includes(".sidebar-wrapper"), "must style sidebar-wrapper in dark mode");
+  assert.ok(scriptContent.includes(".user-menu.wecom-user-menu-float"), "must style floating user-menu in dark mode");
+  assert.ok(scriptContent.includes(".quick-access-panel"), "must style quick-access-panel in dark mode");
+  assert.ok(scriptContent.includes(".wecom-theme-menu button:hover"), "must style theme menu button hover in dark mode");
 
+  // 3. Conversation list
+  assert.ok(scriptContent.includes(".wecom-chip.active"), "must style active chip in dark mode");
+  assert.ok(scriptContent.includes(".wecom-chip-icon"), "must style chip icon in dark mode");
+  assert.ok(scriptContent.includes(".wecom-list-nav a.active"), "must style list nav link active in dark mode");
+  assert.ok(scriptContent.includes(".wecom-conv-tag.is-dept"), "must style dept tag in dark mode");
+  assert.ok(scriptContent.includes(".wecom-conv-tag.is-ext"), "must style ext tag in dark mode");
+  assert.ok(scriptContent.includes(".wecom-list-search form:focus-within"), "must style search focus-within in dark mode");
 
+  // 4. Chat header & bubbles & cooked elements
+  assert.ok(scriptContent.includes(".wecom-chat-head"), "must style chat head in dark mode");
+  assert.ok(scriptContent.includes(".wecom-msg-tools"), "must style floating msg tools in dark mode");
+  assert.ok(scriptContent.includes(".wecom-msg-tool:hover"), "must style msg tool hover in dark mode");
+  assert.ok(scriptContent.includes(".wecom-msg-bubble aside.onebox"), "must style onebox in dark mode");
+  assert.ok(scriptContent.includes(".wecom-msg-bubble pre"), "must style pre in dark mode");
+  assert.ok(scriptContent.includes(".wecom-msg-bubble code"), "must style code in dark mode");
+  assert.ok(scriptContent.includes(".wecom-msg-bubble table th"), "must style table th in dark mode");
+  assert.ok(scriptContent.includes(".wecom-msg-bubble .subtle"), "must style V2EX subtle in dark mode");
+  assert.ok(scriptContent.includes(".wecom-msg-bubble a.mention"), "must style mention in dark mode");
 
+  // 5. Popovers, composer & dialogs
+  assert.ok(scriptContent.includes(".emoji-picker"), "must style emoji picker in dark mode");
+  assert.ok(scriptContent.includes(".autocomplete"), "must style autocomplete in dark mode");
+  assert.ok(scriptContent.includes(".wecom-edit-dialog-card"), "must style edit dialog card");
+  assert.ok(scriptContent.includes(".wecom-edit-input"), "must style edit dialog input");
+  assert.ok(scriptContent.includes(".wecom-reply-target"), "must style reply target banner in dark mode");
 
-
-
-
-
-
+  // 6. V2EX native fallback styles & float FAB
+  assert.ok(scriptContent.includes("html.wecom-dark #Top"), "must style V2EX #Top in dark mode");
+  assert.ok(scriptContent.includes("html.wecom-dark #Wrapper"), "must style V2EX #Wrapper in dark mode");
+  assert.ok(scriptContent.includes("html.wecom-dark .box"), "must style V2EX .box in dark mode");
+  assert.ok(scriptContent.includes(".wecom-mode-fab"), "must style wecom-mode-fab in dark mode");
+});

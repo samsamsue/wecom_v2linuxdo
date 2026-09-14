@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.11
+// @version      0.7.12
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -1025,7 +1025,7 @@
   const RAW_CSS = String.raw`
     /* ---------- Token ---------- */
     .${ROOT_CLASS} {
-      color-scheme: light !important;
+      color-scheme: light;
       --wc-blue: #1A87FF;
       --wc-blue-hover: #0A6FE0;
       --wc-blue-soft: #E8F3FF;
@@ -1071,7 +1071,7 @@
     /* 整站颜色模式：由运行时同步 html/body 与站点 stylesheet */
     html.${ROOT_CLASS},
     html.${ROOT_CLASS} body {
-      color-scheme: light !important;
+      color-scheme: light;
     }
 
     /* ---------- 字体与基础 ---------- */
@@ -3328,6 +3328,89 @@
       background: #383A40 !important;
       color: #FFFFFF !important;
     }
+
+    /* ---------- 消息编辑弹窗 ---------- */
+    .wecom-edit-dialog,
+    .wecom-edit-dialog * { box-sizing: border-box; }
+    .wecom-edit-dialog[hidden] { display: none !important; }
+    .wecom-edit-dialog {
+      position: fixed;
+      inset: 0;
+      z-index: 12000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(24, 35, 49, .42);
+      font-family: var(--wc-font);
+    }
+    .wecom-edit-dialog-card {
+      width: min(560px, calc(100vw - 32px));
+      max-height: calc(100vh - 40px);
+      display: flex;
+      flex-direction: column;
+      padding: 18px;
+      border: 1px solid #D6DEE8;
+      border-radius: 10px;
+      background: #FFFFFF;
+      box-shadow: 0 18px 50px rgba(30, 48, 71, .24);
+      color: #172033;
+    }
+    .wecom-edit-dialog-head,
+    .wecom-edit-dialog-actions {
+      display: flex;
+      align-items: center;
+    }
+    .wecom-edit-dialog-head { justify-content: space-between; margin-bottom: 12px; }
+    .wecom-edit-dialog-title { font-size: 16px; font-weight: 600; }
+    .wecom-edit-dialog-close {
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: 0;
+      border-radius: 5px;
+      background: transparent;
+      color: #7D8B9D;
+      font-size: 21px;
+      line-height: 26px;
+      cursor: pointer;
+    }
+    .wecom-edit-dialog-close:hover { background: #EEF3F8; }
+    .wecom-edit-input {
+      width: 100%;
+      min-height: 180px;
+      max-height: 55vh;
+      padding: 11px 12px;
+      resize: vertical;
+      border: 1px solid #C9D3DF;
+      border-radius: 7px;
+      outline: 0;
+      background: #FFFFFF;
+      color: #172033;
+      font: 14px/1.6 var(--wc-font);
+    }
+    .wecom-edit-input:focus { border-color: #267EF0; box-shadow: 0 0 0 2px rgba(38,126,240,.15); }
+    .wecom-edit-status { min-height: 20px; padding-top: 6px; color: #8795A8; font-size: 12px; }
+    .wecom-edit-status.error { color: #D84C4C; }
+    .wecom-edit-status.busy { color: #267EF0; }
+    .wecom-edit-status.success { color: #07A35A; }
+    .wecom-edit-dialog-actions { justify-content: flex-end; gap: 8px; margin-top: 10px; }
+    .wecom-edit-dialog-actions button {
+      min-width: 68px;
+      height: 32px;
+      border: 1px solid #CCD6E2;
+      border-radius: 6px;
+      background: #FFFFFF;
+      color: #526175;
+      font: 13px var(--wc-font);
+      cursor: pointer;
+    }
+    .wecom-edit-dialog-actions .wecom-edit-save {
+      border-color: #267EF0;
+      background: #267EF0;
+      color: #FFFFFF;
+    }
+    .wecom-edit-dialog-actions .wecom-edit-save:disabled { opacity: .5; cursor: default; }
 
     /* ---------- native 模式悬浮恢复钮 ---------- */
     .wecom-mode-fab {
@@ -6184,7 +6267,10 @@
 
   /* 深色主题配色微调 */
   const WECOM_DARK_REFINEMENTS = String.raw`
-    html.${ROOT_CLASS}.wecom-dark {
+    html.${ROOT_CLASS}.wecom-dark,
+    html.wecom-dark,
+    body.wecom-dark {
+      color-scheme: dark !important;
       --wc-rail-bg: #16181C;
       --wc-rail-border: #22252A;
       --wc-rail-icon: #7A8699;
@@ -6200,31 +6286,139 @@
       --wc-text: #E6E8EB;
       --wc-text-2: #959CA6;
       --wc-text-3: #6F7682;
+      --wc-text-4: #545B66;
+      --wc-bg: #202328;
       --wc-hover: rgba(255, 255, 255, 0.06);
+      --wc-active: rgba(255, 255, 255, 0.1);
       --wc-border: #2A2D33;
       --wc-border-strong: #3A3E46;
       --wc-list-active: #1F477A;
+      --wc-blue-soft: rgba(30, 111, 255, 0.18);
+      --wc-blue-chip: rgba(30, 111, 255, 0.25);
+      --wc-accent-soft: rgba(30, 111, 255, 0.18);
+      --wc-card-bg: #23272E;
+      --wc-surface-0: #23272E;
+      --wc-surface-1: #202328;
+      --wc-surface-2: #272B33;
+      --wc-surface-3: #2F343D;
+      --wc-nav2-bg: #1C1E22;
+      --wc-nav2-border: #26292E;
+      --primary: var(--wc-text);
+      --primary-medium: var(--wc-text-2);
+      --primary-low: var(--wc-text-3);
+      --secondary: var(--wc-bg);
+      --header_background: var(--wc-chat-bg);
+      --header_primary: var(--wc-text);
+      --d-hover: var(--wc-hover);
+      --d-sidebar-background: #1C1E22;
+      --d-sidebar-border-color: var(--wc-border);
     }
+
+    /* 侧栏原生展开抽屉 */
+    html.${ROOT_CLASS}.wecom-dark body .sidebar-wrapper {
+      background-color: #1C1E22 !important;
+      border-right-color: #26292E !important;
+      color: #ECEFF4 !important;
+      --secondary: #1C1E22 !important;
+      --d-sidebar-background: #1C1E22 !important;
+      --d-sidebar-border-color: #26292E !important;
+      --primary: #ECEFF4 !important;
+      --primary-medium: #959CA6 !important;
+      --primary-low: #6F7682 !important;
+      --d-hover: rgba(255, 255, 255, 0.06) !important;
+    }
+
+    /* 左侧头像通知浮层与用户菜单 */
+    html.wecom-dark .user-menu.wecom-user-menu-float,
+    html.${ROOT_CLASS}.wecom-dark .user-menu.wecom-user-menu-float,
+    html.wecom-dark .user-menu.revamped.menu-panel.wecom-user-menu-float,
+    html.${ROOT_CLASS}.wecom-dark .user-menu.revamped.menu-panel.wecom-user-menu-float,
+    html.wecom-dark .user-menu.menu-panel.wecom-user-menu-float,
+    html.${ROOT_CLASS}.wecom-dark .user-menu.menu-panel.wecom-user-menu-float {
+      background: #23272E !important;
+      color: #ECEFF4 !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55) !important;
+    }
+    html.wecom-dark .user-menu .quick-access-panel,
+    html.wecom-dark .user-menu .menu-tabs-container,
+    html.wecom-dark .user-menu .panel-body,
+    html.wecom-dark .user-menu .menu-panel,
+    html.${ROOT_CLASS}.wecom-dark .user-menu .quick-access-panel,
+    html.${ROOT_CLASS}.wecom-dark .user-menu .menu-tabs-container,
+    html.${ROOT_CLASS}.wecom-dark .user-menu .panel-body,
+    html.${ROOT_CLASS}.wecom-dark .user-menu .menu-panel {
+      background: #23272E !important;
+      color: #ECEFF4 !important;
+    }
+    html.wecom-dark .user-menu li:hover,
+    html.wecom-dark .user-menu .notification.read:hover,
+    html.wecom-dark .user-menu .notification.unread:hover,
+    html.${ROOT_CLASS}.wecom-dark .user-menu li:hover,
+    html.${ROOT_CLASS}.wecom-dark .user-menu .notification.read:hover,
+    html.${ROOT_CLASS}.wecom-dark .user-menu .notification.unread:hover {
+      background: rgba(255, 255, 255, 0.06) !important;
+    }
+    html.wecom-dark .user-menu .notification.unread,
+    html.${ROOT_CLASS}.wecom-dark .user-menu .notification.unread {
+      background: rgba(30, 111, 255, 0.1) !important;
+    }
+    html.wecom-dark .user-menu a,
+    html.${ROOT_CLASS}.wecom-dark .user-menu a {
+      color: #ECEFF4 !important;
+    }
+
+    /* 外观与排版菜单按钮 hover 与分隔线 */
+    html.wecom-dark .wecom-theme-menu button:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu button:hover {
+      background: rgba(30, 111, 255, 0.22) !important;
+      color: #3D8AF5 !important;
+    }
+    html.wecom-dark .wecom-theme-menu hr,
+    html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu hr {
+      border-color: rgba(255, 255, 255, 0.1) !important;
+    }
+
+    /* 搜索栏与新增按钮 */
     html.${ROOT_CLASS}.wecom-dark .wecom-list-search form,
     html.${ROOT_CLASS}.wecom-dark .wecom-list-add-btn {
       background: #2B2D31 !important;
       background-color: #2B2D31 !important;
       color: #8F959E !important;
     }
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-search form:focus-within {
+      background: #23262B !important;
+      background-color: #23262B !important;
+      border-color: #388BFD !important;
+      box-shadow: 0 0 0 1px #388BFD !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-btn:hover {
+      background: #363A42 !important;
+      color: #FFFFFF !important;
+    }
     html.${ROOT_CLASS}.wecom-dark .wecom-list-add-menu {
-      background: #232529;
-      border-color: rgba(255, 255, 255, 0.12);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+      background: #232529 !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45) !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-list-add-item {
-      color: #D3D8E2;
+      color: #D3D8E2 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-item svg {
+      stroke: #8C99AA !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-list-add-item:hover {
-      background: #2C2F36;
-      color: #FFFFFF;
+      background: #2C2F36 !important;
+      color: #FFFFFF !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-item:hover svg {
+      stroke: #3D8AF5 !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-list-search input {
       color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-search input::placeholder {
+      color: #6F7682 !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-rail-item {
       color: #7A8699 !important;
@@ -6238,6 +6432,54 @@
     html.${ROOT_CLASS}.wecom-dark .wecom-rail-item.is-on .wecom-rail-icon svg {
       fill: #3D8AF5 !important;
     }
+
+    /* 分类标签胶囊 */
+    html.${ROOT_CLASS}.wecom-dark .wecom-chip {
+      color: #959CA6 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-chip:hover {
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-chip.active {
+      background: #2D323B !important;
+      color: #FFFFFF !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-chip-icon {
+      background: #2B2F36 !important;
+      color: #8C99AA !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-chip-icon:hover {
+      background: #363B44 !important;
+      color: #FFFFFF !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-chip-icon.is-on,
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-nav-toggle[aria-expanded="true"] {
+      background: rgba(30, 111, 255, 0.25) !important;
+      color: #3D8AF5 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-nav {
+      border-bottom-color: var(--wc-border) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-nav a {
+      background: #23272E !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      color: #A6AFBC !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-nav a:hover {
+      background: rgba(255, 255, 255, 0.08) !important;
+      color: #FFFFFF !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-nav a.active {
+      background: rgba(30, 111, 255, 0.22) !important;
+      border-color: rgba(30, 111, 255, 0.45) !important;
+      color: #3D8AF5 !important;
+    }
+
+    /* 会话列表项与标签 */
+    html.${ROOT_CLASS}.wecom-dark .wecom-conv {
+      border-bottom-color: var(--wc-border) !important;
+    }
     html.${ROOT_CLASS}.wecom-dark .wecom-conv:hover {
       background: rgba(255, 255, 255, 0.05) !important;
     }
@@ -6248,6 +6490,106 @@
       background: #1F477A !important;
       color: #FFFFFF !important;
     }
+    html.${ROOT_CLASS}.wecom-dark .wecom-conv.active .wecom-conv-name,
+    html.${ROOT_CLASS}.wecom-dark .wecom-conv.active .wecom-conv-msg,
+    html.${ROOT_CLASS}.wecom-dark .wecom-conv.active .wecom-conv-time {
+      color: #FFFFFF !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-conv-name {
+      color: #E6E8EB !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-conv-msg {
+      color: #8C99AA !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-conv-time {
+      color: #6F7682 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-conv-avatar {
+      background: #2C3038 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-conv-avatar.is-group,
+    html.${ROOT_CLASS}.wecom-dark .wecom-conv-avatar.is-grid-mask {
+      background: #25282F !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-conv-tag.is-dept {
+      background: rgba(30, 111, 255, 0.18) !important;
+      color: #5BA2FF !important;
+      border: 1px solid rgba(30, 111, 255, 0.35) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-conv-tag.is-ext {
+      background: rgba(7, 193, 96, 0.18) !important;
+      color: #21C978 !important;
+      border: 1px solid rgba(7, 193, 96, 0.35) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-conv-tag {
+      background: rgba(30, 111, 255, 0.15) !important;
+      color: #5BA2FF !important;
+      border-color: rgba(30, 111, 255, 0.3) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-status {
+      color: #7A8494 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-status.is-clickable:hover {
+      color: #388BFD !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-history-tag {
+      color: #E6E8EB !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-history-clear-btn {
+      border-color: var(--wc-border) !important;
+      color: #8C99AA !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-history-clear-btn:hover {
+      border-color: #FA5151 !important;
+      color: #FA5151 !important;
+      background: rgba(250, 81, 81, 0.12) !important;
+    }
+
+    /* 聊天窗口主框架与顶栏 */
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-panel {
+      background: var(--wc-chat-bg) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-head {
+      background: var(--wc-chat-bg) !important;
+      border-bottom: 1px solid var(--wc-border) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-header {
+      background: var(--wc-chat-bg) !important;
+      border-bottom-color: var(--wc-border) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-title {
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-count,
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-sub {
+      color: #8C99AA !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-actions .wecom-icon-btn {
+      color: #8C99AA !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-actions .wecom-icon-btn:hover {
+      background: rgba(255, 255, 255, 0.08) !important;
+      color: #ECEFF4 !important;
+    }
+
+    /* 气泡浮动操作条 */
+    html.wecom-dark .wecom-msg-tools,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-tools {
+      background: #2B2F36 !important;
+      border: 1px solid rgba(255, 255, 255, 0.14) !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
+    }
+    html.wecom-dark .wecom-msg-tool,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-tool {
+      color: #A0A6B2 !important;
+    }
+    html.wecom-dark .wecom-msg-tool:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-tool:hover {
+      background: rgba(255, 255, 255, 0.1) !important;
+      color: #388BFD !important;
+    }
+
+    /* 气泡消息体 */
     html.${ROOT_CLASS}.wecom-dark .wecom-msg-other .wecom-msg-bubble {
       background: #2B2E34 !important;
       color: #ECEFF4 !important;
@@ -6256,6 +6598,134 @@
       background: #1E6B38 !important;
       color: #FFFFFF !important;
     }
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble a {
+      color: #4D9BF7 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-me .wecom-msg-bubble a {
+      color: #BEE3FF !important;
+      text-decoration: underline !important;
+    }
+
+    /* 代码块与内联代码 */
+    html.wecom-dark .wecom-msg-bubble pre,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble pre {
+      background: #191C21 !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      color: #E6EDF5 !important;
+    }
+    html.wecom-dark .wecom-msg-bubble code,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble code {
+      background: rgba(255, 255, 255, 0.08) !important;
+      color: #E6EDF5 !important;
+      padding: 1px 4px !important;
+      border-radius: 3px !important;
+    }
+    html.wecom-dark .wecom-msg-me .wecom-msg-bubble pre,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-me .wecom-msg-bubble pre {
+      background: rgba(0, 0, 0, 0.3) !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      color: #FFFFFF !important;
+    }
+    html.wecom-dark .wecom-msg-me .wecom-msg-bubble code,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-me .wecom-msg-bubble code {
+      background: rgba(0, 0, 0, 0.25) !important;
+      color: #FFFFFF !important;
+    }
+
+    /* Onebox 嵌入卡片 */
+    html.wecom-dark .wecom-msg-bubble aside.onebox,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble aside.onebox,
+    html.wecom-dark .wecom-msg-bubble .onebox,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble .onebox {
+      background: rgba(255, 255, 255, 0.05) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      color: #ECEFF4 !important;
+      border-radius: 6px !important;
+    }
+    html.wecom-dark .wecom-msg-bubble aside.onebox header a,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble aside.onebox header a,
+    html.wecom-dark .wecom-msg-bubble aside.onebox .onebox-body a,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble aside.onebox .onebox-body a,
+    html.wecom-dark .wecom-msg-bubble .onebox a,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble .onebox a {
+      color: #4D9BF7 !important;
+    }
+    html.wecom-dark .wecom-msg-bubble aside.onebox .onebox-body,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble aside.onebox .onebox-body {
+      color: #C0C5CF !important;
+    }
+
+    /* 引用块优化 */
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble .wecom-reply-reference,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble aside.quote,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble blockquote {
+      border-left-color: rgba(255, 255, 255, 0.28) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble .wecom-reply-author,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble aside.quote .title {
+      color: #B4BAC5 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble .wecom-reply-preview,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble aside.quote blockquote,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble blockquote p {
+      color: #A2A9B6 !important;
+    }
+
+    /* 表格 */
+    html.wecom-dark .wecom-msg-bubble table th,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble table th {
+      background: rgba(255, 255, 255, 0.08) !important;
+      color: #FFFFFF !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    }
+    html.wecom-dark .wecom-msg-bubble table td,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble table td {
+      background: rgba(255, 255, 255, 0.03) !important;
+      color: #ECEFF4 !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+
+    /* 折叠面板与剧透 */
+    html.wecom-dark .wecom-msg-bubble details,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble details {
+      background: rgba(255, 255, 255, 0.04) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      border-radius: 6px !important;
+      padding: 6px 10px !important;
+    }
+    html.wecom-dark .wecom-msg-bubble details summary,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble details summary {
+      color: #388BFD !important;
+    }
+
+    /* V2EX 附言 (.subtle) */
+    html.wecom-dark .wecom-msg-bubble .subtle,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble .subtle {
+      background: rgba(255, 255, 255, 0.04) !important;
+      border-left: 3px solid #388BFD !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+      border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+      color: #ECEFF4 !important;
+      border-radius: 0 6px 6px 0 !important;
+      padding: 6px 10px !important;
+      margin: 8px 0 !important;
+    }
+    html.wecom-dark .wecom-msg-bubble .subtle .fade,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble .subtle .fade {
+      color: #8C99AA !important;
+    }
+
+    /* @提及徽标 */
+    html.wecom-dark .wecom-msg-bubble a.mention,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble a.mention {
+      background: rgba(56, 139, 253, 0.22) !important;
+      color: #5BA2FF !important;
+      padding: 1px 6px !important;
+      border-radius: 10px !important;
+    }
+
+    /* 底栏输入卡片 */
     html.${ROOT_CLASS}.wecom-dark .wecom-composer {
       background: #191B1F !important;
     }
@@ -6287,6 +6757,14 @@
     html.${ROOT_CLASS}.wecom-dark .wecom-tool-quick-meet:hover {
       color: #388BFD !important;
     }
+    html.${ROOT_CLASS}.wecom-dark .wecom-reply-target {
+      background: rgba(38, 126, 240, 0.16) !important;
+      color: #5BA2FF !important;
+      border-bottom-color: rgba(38, 126, 240, 0.25) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-reply-cancel {
+      color: #5BA2FF !important;
+    }
     html.${ROOT_CLASS}.wecom-dark .wecom-chat-compose {
       color: #ECEFF4 !important;
     }
@@ -6300,6 +6778,106 @@
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-send-btn:not(:disabled) {
       background: #267EF0 !important;
+      color: #FFFFFF !important;
+    }
+
+    /* Discourse Emoji 选择器 */
+    html.wecom-dark .emoji-picker,
+    html.${ROOT_CLASS}.wecom-dark .emoji-picker,
+    html.wecom-dark [data-identifier='emoji-picker'],
+    html.${ROOT_CLASS}.wecom-dark [data-identifier='emoji-picker'] {
+      background: #23272E !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      color: #ECEFF4 !important;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.55) !important;
+    }
+    html.wecom-dark .emoji-picker input,
+    html.${ROOT_CLASS}.wecom-dark .emoji-picker input {
+      background: #1A1D22 !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      color: #ECEFF4 !important;
+    }
+    html.wecom-dark .emoji-picker .category-button:hover,
+    html.wecom-dark .emoji-picker .category-button.is-active,
+    html.${ROOT_CLASS}.wecom-dark .emoji-picker .category-button:hover,
+    html.${ROOT_CLASS}.wecom-dark .emoji-picker .category-button.is-active,
+    html.wecom-dark .emoji-picker button.emoji:hover,
+    html.${ROOT_CLASS}.wecom-dark .emoji-picker button.emoji:hover {
+      background: rgba(255, 255, 255, 0.1) !important;
+    }
+    html.wecom-dark .emoji-picker .emoji-picker-category-title,
+    html.${ROOT_CLASS}.wecom-dark .emoji-picker .emoji-picker-category-title {
+      color: #8C99AA !important;
+    }
+
+    /* 输入自动补全浮层 */
+    html.wecom-dark .autocomplete,
+    html.wecom-dark .autocomplete-container,
+    html.${ROOT_CLASS}.wecom-dark .autocomplete,
+    html.${ROOT_CLASS}.wecom-dark .autocomplete-container {
+      background: #23272E !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45) !important;
+    }
+    html.wecom-dark .autocomplete li a,
+    html.${ROOT_CLASS}.wecom-dark .autocomplete li a {
+      color: #D3D8E2 !important;
+    }
+    html.wecom-dark .autocomplete li a:hover,
+    html.wecom-dark .autocomplete li.selected a,
+    html.${ROOT_CLASS}.wecom-dark .autocomplete li a:hover,
+    html.${ROOT_CLASS}.wecom-dark .autocomplete li.selected a {
+      background: #2C313A !important;
+      color: #388BFD !important;
+    }
+
+    /* 消息编辑弹窗 */
+    html.wecom-dark .wecom-edit-dialog-card,
+    html.${ROOT_CLASS}.wecom-dark .wecom-edit-dialog-card {
+      background: #23272E !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      color: #ECEFF4 !important;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6) !important;
+    }
+    html.wecom-dark .wecom-edit-dialog-title,
+    html.${ROOT_CLASS}.wecom-dark .wecom-edit-dialog-title {
+      color: #FFFFFF !important;
+    }
+    html.wecom-dark .wecom-edit-dialog-close,
+    html.${ROOT_CLASS}.wecom-dark .wecom-edit-dialog-close {
+      color: #8C99AA !important;
+    }
+    html.wecom-dark .wecom-edit-dialog-close:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-edit-dialog-close:hover {
+      background: rgba(255, 255, 255, 0.08) !important;
+      color: #FFFFFF !important;
+    }
+    html.wecom-dark .wecom-edit-input,
+    html.${ROOT_CLASS}.wecom-dark .wecom-edit-input {
+      background: #1A1D23 !important;
+      border-color: rgba(255, 255, 255, 0.14) !important;
+      color: #ECEFF4 !important;
+    }
+    html.wecom-dark .wecom-edit-input:focus,
+    html.${ROOT_CLASS}.wecom-dark .wecom-edit-input:focus {
+      border-color: #388BFD !important;
+      box-shadow: 0 0 0 2px rgba(56, 139, 253, 0.25) !important;
+    }
+    html.wecom-dark .wecom-edit-dialog-actions button:not(.wecom-edit-save),
+    html.${ROOT_CLASS}.wecom-dark .wecom-edit-dialog-actions button:not(.wecom-edit-save) {
+      background: #2B2D31 !important;
+      border-color: rgba(255, 255, 255, 0.14) !important;
+      color: #DCDDDE !important;
+    }
+    html.wecom-dark .wecom-edit-dialog-actions button:not(.wecom-edit-save):hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-edit-dialog-actions button:not(.wecom-edit-save):hover {
+      background: #383A40 !important;
+      color: #FFFFFF !important;
+    }
+    html.wecom-dark .wecom-edit-dialog-actions .wecom-edit-save,
+    html.${ROOT_CLASS}.wecom-dark .wecom-edit-dialog-actions .wecom-edit-save {
+      background: #267EF0 !important;
+      border-color: #267EF0 !important;
       color: #FFFFFF !important;
     }
 
@@ -6332,6 +6910,8 @@
     html.${ROOT_CLASS}.wecom-dark .wecom-member-body.is-scrolling {
       scrollbar-color: rgba(255, 255, 255, 0.22) transparent !important;
     }
+
+    /* 群成员/公告栏 */
     html.${ROOT_CLASS}.wecom-dark .wecom-member-panel {
       background: var(--wc-chat-bg) !important;
       border-left-color: var(--wc-border) !important;
@@ -6343,6 +6923,77 @@
     html.${ROOT_CLASS}.wecom-dark .wecom-member-category-bar {
       background: #2D2318 !important;
       border-color: #593D1E !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-row:hover {
+      background: rgba(255, 255, 255, 0.06) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-role {
+      background: rgba(30, 111, 255, 0.2) !important;
+      color: #5BA2FF !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-actions .wecom-icon-btn {
+      color: #8C99AA !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-actions .wecom-icon-btn:hover {
+      background: rgba(255, 255, 255, 0.08) !important;
+      color: #ECEFF4 !important;
+    }
+
+    /* V2EX 原生结构暗色兜底 */
+    html.wecom-dark #Top {
+      background-color: #1A1C20 !important;
+      border-bottom: 1px solid #26292E !important;
+    }
+    html.wecom-dark #Wrapper {
+      background-color: #141619 !important;
+    }
+    html.wecom-dark .box {
+      background-color: #1C1E22 !important;
+      border-color: #282C33 !important;
+      box-shadow: none !important;
+    }
+    html.wecom-dark .cell,
+    html.wecom-dark .cell.item {
+      background-color: #1C1E22 !important;
+      border-bottom-color: #26292E !important;
+      color: #ECEFF4 !important;
+    }
+    html.wecom-dark .cell:hover {
+      background-color: #202328 !important;
+    }
+    html.wecom-dark .header {
+      background-color: #1E2126 !important;
+      border-bottom-color: #26292E !important;
+      color: #ECEFF4 !important;
+    }
+    html.wecom-dark .inner {
+      background-color: #1C1E22 !important;
+      border-top-color: #26292E !important;
+      color: #959CA6 !important;
+    }
+    html.wecom-dark .topic_content,
+    html.wecom-dark .reply_content {
+      color: #ECEFF4 !important;
+    }
+    html.wecom-dark .item_title a,
+    html.wecom-dark a.dark {
+      color: #D8DEE9 !important;
+    }
+    html.wecom-dark .snow,
+    html.wecom-dark .fade,
+    html.wecom-dark .gray {
+      color: #7A8494 !important;
+    }
+    html.wecom-dark input.s,
+    html.wecom-dark .mll {
+      background-color: #16181C !important;
+      border-color: #2C3038 !important;
+      color: #ECEFF4 !important;
+    }
+    html.wecom-dark .wecom-mode-fab,
+    html.${ROOT_CLASS}.wecom-dark .wecom-mode-fab {
+      background: #267EF0 !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
     }
   `;
 
@@ -7141,7 +7792,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.11";
+  const SCRIPT_VERSION = "0.7.12";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
