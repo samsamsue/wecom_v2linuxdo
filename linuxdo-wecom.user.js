@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.8
+// @version      0.7.9
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -54,6 +54,10 @@
   const THEME_MODE_KEY = "linuxdo-wecom-theme-mode";
   const BOOST_ENABLED_KEY = "linuxdo-wecom-boost-enabled";
   const IMAGE_AUTO_LAYOUT_KEY = "linuxdo-wecom-image-auto-layout";
+  const IMAGE_AUTO_LAYOUT_SIZE_KEY = "linuxdo-wecom-image-layout-size";
+  const DEFAULT_IMAGE_AUTO_LAYOUT_SIZE = 100;
+  const MIN_IMAGE_AUTO_LAYOUT_SIZE = 50;
+  const MAX_IMAGE_AUTO_LAYOUT_SIZE = 400;
   const THEME_MODE_VALUES = Object.freeze(["light", "dark", "system"]);
   const DEFAULT_THEME_MODE = "light";
   const IMAGE_VIEWER_DEFAULT_SCALE = 1;
@@ -3351,12 +3355,14 @@
     .wecom-msg-thumb {
       position: relative !important;
       width: 100px !important;
+      width: var(--wecom-image-thumb-size, 100px) !important;
       height: 100px !important;
-      min-width: 100px !important;
-      min-height: 100px !important;
-      max-width: 100px !important;
-      max-height: 100px !important;
-      flex: 0 0 100px !important;
+      height: var(--wecom-image-thumb-size, 100px) !important;
+      min-width: var(--wecom-image-thumb-size, 100px) !important;
+      min-height: var(--wecom-image-thumb-size, 100px) !important;
+      max-width: var(--wecom-image-thumb-size, 100px) !important;
+      max-height: var(--wecom-image-thumb-size, 100px) !important;
+      flex: 0 0 var(--wecom-image-thumb-size, 100px) !important;
       border-radius: 6px !important;
       overflow: hidden !important;
       background: rgba(0, 0, 0, 0.04) !important;
@@ -3387,11 +3393,13 @@
     }
     .wecom-msg-thumb img {
       width: 100px !important;
+      width: var(--wecom-image-thumb-size, 100px) !important;
       height: 100px !important;
-      min-width: 100px !important;
-      min-height: 100px !important;
-      max-width: 100px !important;
-      max-height: 100px !important;
+      height: var(--wecom-image-thumb-size, 100px) !important;
+      min-width: var(--wecom-image-thumb-size, 100px) !important;
+      min-height: var(--wecom-image-thumb-size, 100px) !important;
+      max-width: var(--wecom-image-thumb-size, 100px) !important;
+      max-height: var(--wecom-image-thumb-size, 100px) !important;
       object-fit: cover !important;
       display: block !important;
       border-radius: 4px !important;
@@ -3427,6 +3435,90 @@
     html.wecom-dark .wecom-msg-thumb:hover {
       border-color: rgba(38, 126, 240, 0.6) !important;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35) !important;
+    }
+
+    /* 图片排版尺寸设置行 */
+    .wecom-menu-image-size-row {
+      padding: 6px 8px 8px !important;
+      margin: 2px 4px 4px !important;
+      background: rgba(0, 0, 0, 0.025);
+      border-radius: 6px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 5px !important;
+      box-sizing: border-box !important;
+      transition: opacity 0.15s ease !important;
+    }
+    html.wecom-dark .wecom-menu-image-size-row {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    .wecom-menu-size-header {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      font-size: 11px !important;
+      color: var(--wc-text-3) !important;
+      user-select: none !important;
+    }
+    .wecom-menu-size-val {
+      font-weight: 600 !important;
+      color: var(--wc-blue, #267EF0) !important;
+      font-size: 11px !important;
+    }
+    .wecom-menu-size-chips {
+      display: flex !important;
+      align-items: center !important;
+      gap: 4px !important;
+      width: 100% !important;
+    }
+    .wecom-theme-menu .wecom-size-chip {
+      flex: 1 1 0 !important;
+      width: auto !important;
+      min-width: 0 !important;
+      height: 22px !important;
+      line-height: 20px !important;
+      padding: 0 !important;
+      border: 1px solid rgba(0, 0, 0, 0.1) !important;
+      background: rgba(0, 0, 0, 0.03) !important;
+      border-radius: 4px !important;
+      font-size: 11px !important;
+      color: var(--wc-text-2) !important;
+      cursor: pointer !important;
+      text-align: center !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      transition: all 0.12s ease !important;
+      box-sizing: border-box !important;
+      user-select: none !important;
+    }
+    .wecom-theme-menu .wecom-size-chip:hover {
+      background: rgba(38, 126, 240, 0.1) !important;
+      border-color: rgba(38, 126, 240, 0.4) !important;
+      color: var(--wc-blue, #267EF0) !important;
+    }
+    .wecom-theme-menu .wecom-size-chip.is-active {
+      background: var(--wc-blue, #267EF0) !important;
+      border-color: var(--wc-blue, #267EF0) !important;
+      color: #FFFFFF !important;
+      font-weight: 600 !important;
+    }
+    html.wecom-dark .wecom-theme-menu .wecom-size-chip {
+      background: rgba(255, 255, 255, 0.06) !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      color: #B2B8C2 !important;
+    }
+    html.wecom-dark .wecom-theme-menu .wecom-size-chip:hover {
+      background: rgba(38, 126, 240, 0.2) !important;
+      border-color: rgba(38, 126, 240, 0.6) !important;
+      color: #FFFFFF !important;
+    }
+    html.wecom-dark .wecom-theme-menu .wecom-size-chip.is-active {
+      background: var(--wc-blue, #267EF0) !important;
+      border-color: var(--wc-blue, #267EF0) !important;
+      color: #FFFFFF !important;
     }
 
     /* ---------- 气泡排版切换悬浮钮 ---------- */
@@ -6540,6 +6632,30 @@
     refreshChatMessagesLayout();
   }
 
+  function getImageAutoLayoutSize() {
+    try {
+      const val = parseInt(localStorage.getItem(IMAGE_AUTO_LAYOUT_SIZE_KEY), 10);
+      if (Number.isFinite(val) && val >= MIN_IMAGE_AUTO_LAYOUT_SIZE && val <= MAX_IMAGE_AUTO_LAYOUT_SIZE) {
+        return val;
+      }
+    } catch { /* ignore */ }
+    return DEFAULT_IMAGE_AUTO_LAYOUT_SIZE;
+  }
+
+  function applyImageAutoLayoutSizeCss(size) {
+    const num = Number(size) || DEFAULT_IMAGE_AUTO_LAYOUT_SIZE;
+    document.documentElement.style.setProperty("--wecom-image-thumb-size", `${num}px`);
+  }
+
+  function setImageAutoLayoutSize(size) {
+    const num = Math.min(MAX_IMAGE_AUTO_LAYOUT_SIZE, Math.max(MIN_IMAGE_AUTO_LAYOUT_SIZE, Number(size) || DEFAULT_IMAGE_AUTO_LAYOUT_SIZE));
+    try {
+      localStorage.setItem(IMAGE_AUTO_LAYOUT_SIZE_KEY, String(num));
+    } catch { /* ignore */ }
+    applyImageAutoLayoutSizeCss(num);
+    syncThemeControls();
+  }
+
   const THEME_MODE_LABELS = Object.freeze({
     light: "浅色模式",
     dark: "深色模式",
@@ -6624,6 +6740,30 @@
         badge.className = `wecom-menu-state-badge ${on ? "is-on" : "is-off"}`;
       }
     }
+
+    const imageSizeRow = menu.querySelector(".wecom-menu-image-size-row");
+    if (imageSizeRow) {
+      const isAuto = isImageAutoLayoutEnabled();
+      imageSizeRow.style.opacity = isAuto ? "" : "0.55";
+      const curSize = getImageAutoLayoutSize();
+      const valEl = imageSizeRow.querySelector(".wecom-menu-size-val");
+      if (valEl) valEl.textContent = `${curSize}px`;
+      let matched = false;
+      imageSizeRow.querySelectorAll(".wecom-size-chip").forEach((chip) => {
+        const s = chip.dataset.size;
+        if (s === "custom") return;
+        const active = Number(s) === curSize;
+        if (active) matched = true;
+        chip.classList.toggle("is-active", active);
+        chip.setAttribute("aria-checked", active ? "true" : "false");
+      });
+      const customChip = imageSizeRow.querySelector(".wecom-size-chip-custom");
+      if (customChip) {
+        customChip.classList.toggle("is-active", !matched);
+        customChip.setAttribute("aria-checked", !matched ? "true" : "false");
+        customChip.textContent = !matched ? `${curSize}px` : "自定义";
+      }
+    }
   }
 
   function bindThemeControls() {
@@ -6682,6 +6822,16 @@
       `<div class="wecom-theme-menu-title wecom-theme-menu-divider">详情排版</div>` +
       `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-image-layout" aria-checked="false">` +
       `${ICONS.pic}<span class="wecom-menu-label">图片自动排版</span><span class="wecom-menu-state-badge is-off">已关闭</span></button>` +
+      `<div class="wecom-menu-image-size-row" title="点击切换或自定义图片排版尺寸">` +
+      `  <div class="wecom-menu-size-header"><span class="wecom-menu-sub-label">缩略图尺寸</span><span class="wecom-menu-size-val">100px</span></div>` +
+      `  <div class="wecom-menu-size-chips">` +
+      `    <button type="button" class="wecom-size-chip" data-size="80">80</button>` +
+      `    <button type="button" class="wecom-size-chip" data-size="100">100</button>` +
+      `    <button type="button" class="wecom-size-chip" data-size="120">120</button>` +
+      `    <button type="button" class="wecom-size-chip" data-size="150">150</button>` +
+      `    <button type="button" class="wecom-size-chip wecom-size-chip-custom" data-size="custom">自定义</button>` +
+      `  </div>` +
+      `</div>` +
       `<button type="button" role="menuitem" class="wecom-check-update">${ICONS.refresh}<span>检查脚本更新</span></button>`;
     document.body.appendChild(menu);
     menu.addEventListener("click", (event) => {
@@ -6718,6 +6868,33 @@
         event.preventDefault();
         event.stopPropagation();
         setImageAutoLayoutEnabled(!isImageAutoLayoutEnabled());
+        return;
+      }
+      const sizeChip = event.target.closest(".wecom-size-chip");
+      if (sizeChip) {
+        event.preventDefault();
+        event.stopPropagation();
+        const sizeVal = sizeChip.dataset.size;
+        if (sizeVal === "custom") {
+          const current = getImageAutoLayoutSize();
+          const input = window.prompt("请输入图片自动排版缩略图尺寸 (像素 px，范围 50-400):", String(current));
+          if (input !== null) {
+            const parsed = parseInt(input.trim(), 10);
+            if (!Number.isNaN(parsed) && parsed >= MIN_IMAGE_AUTO_LAYOUT_SIZE && parsed <= MAX_IMAGE_AUTO_LAYOUT_SIZE) {
+              if (!isImageAutoLayoutEnabled()) {
+                setImageAutoLayoutEnabled(true);
+              }
+              setImageAutoLayoutSize(parsed);
+            } else if (!Number.isNaN(parsed)) {
+              alert(`尺寸超出范围，请输入 ${MIN_IMAGE_AUTO_LAYOUT_SIZE} 到 ${MAX_IMAGE_AUTO_LAYOUT_SIZE} 之间的数值`);
+            }
+          }
+        } else {
+          if (!isImageAutoLayoutEnabled()) {
+            setImageAutoLayoutEnabled(true);
+          }
+          setImageAutoLayoutSize(Number(sizeVal));
+        }
         return;
       }
       const option = event.target.closest("button[data-theme-mode]");
@@ -6770,7 +6947,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.8";
+  const SCRIPT_VERSION = "0.7.9";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -14363,6 +14540,7 @@
     document.documentElement.classList.add(ROOT_CLASS);
     document.documentElement.classList.toggle("wecom-nav2-open", isNav2Open());
     document.documentElement.classList.toggle("wecom-hide-boost", !isBoostEnabled());
+    applyImageAutoLayoutSizeCss(getImageAutoLayoutSize());
     setupWindowControlsOverlay();
     restyleSplash();
     makeFavicon();

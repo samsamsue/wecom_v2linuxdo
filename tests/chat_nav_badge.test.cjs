@@ -2245,6 +2245,101 @@ test("clicking notifications clears or decrements badges immediately across avat
   assert.equal(simulateGetCount(3), 3, "must reset override and display count when higher raw count arrives");
 });
 
+test("image auto-layout thumbnail size can be configured, supports presets and custom sizes, and applies CSS variable", () => {
+  // 1. Script defines size storage keys and helper functions
+  assert.ok(
+    scriptContent.includes("IMAGE_AUTO_LAYOUT_SIZE_KEY"),
+    "must define IMAGE_AUTO_LAYOUT_SIZE_KEY"
+  );
+  assert.ok(
+    scriptContent.includes("function getImageAutoLayoutSize()"),
+    "must define getImageAutoLayoutSize"
+  );
+  assert.ok(
+    scriptContent.includes("function setImageAutoLayoutSize(size)"),
+    "must define setImageAutoLayoutSize"
+  );
+  assert.ok(
+    scriptContent.includes("function applyImageAutoLayoutSizeCss(size)"),
+    "must define applyImageAutoLayoutSizeCss"
+  );
+
+  // 2. CSS supports dynamic thumbnail size variable
+  assert.ok(
+    scriptContent.includes("var(--wecom-image-thumb-size, 100px)"),
+    "thumbnails must use CSS variable --wecom-image-thumb-size"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-menu-image-size-row"),
+    "must define .wecom-menu-image-size-row in CSS"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-size-chip"),
+    "must define .wecom-size-chip in CSS"
+  );
+
+  // 3. Settings menu includes size presets and custom trigger
+  assert.ok(
+    scriptContent.includes('data-size="80"') &&
+    scriptContent.includes('data-size="100"') &&
+    scriptContent.includes('data-size="120"') &&
+    scriptContent.includes('data-size="150"'),
+    "must provide preset size buttons 80, 100, 120, 150"
+  );
+  assert.ok(
+    scriptContent.includes('data-size="custom"'),
+    "must provide custom size button"
+  );
+
+  // 4. Functional simulation of size getter, setter, clamping and CSS variable application
+  let storedSize = null;
+  const mockStyle = {};
+  const MIN = 50;
+  const MAX = 400;
+  const DEFAULT = 100;
+
+  function simGetSize() {
+    const v = parseInt(storedSize, 10);
+    if (Number.isFinite(v) && v >= MIN && v <= MAX) return v;
+    return DEFAULT;
+  }
+
+  function simSetSize(size) {
+    const num = Math.min(MAX, Math.max(MIN, Number(size) || DEFAULT));
+    storedSize = String(num);
+    mockStyle["--wecom-image-thumb-size"] = `${num}px`;
+    return num;
+  }
+
+  // Default is 100
+  assert.equal(simGetSize(), 100);
+
+  // Select 80px preset
+  simSetSize(80);
+  assert.equal(simGetSize(), 80);
+  assert.equal(mockStyle["--wecom-image-thumb-size"], "80px");
+
+  // Select 150px preset
+  simSetSize(150);
+  assert.equal(simGetSize(), 150);
+  assert.equal(mockStyle["--wecom-image-thumb-size"], "150px");
+
+  // Set custom 200px
+  simSetSize(200);
+  assert.equal(simGetSize(), 200);
+  assert.equal(mockStyle["--wecom-image-thumb-size"], "200px");
+
+  // Clamp underflow & overflow
+  simSetSize(20);
+  assert.equal(simGetSize(), 50, "must clamp underflow to MIN 50");
+  assert.equal(mockStyle["--wecom-image-thumb-size"], "50px");
+
+  simSetSize(600);
+  assert.equal(simGetSize(), 400, "must clamp overflow to MAX 400");
+  assert.equal(mockStyle["--wecom-image-thumb-size"], "400px");
+});
+
+
 
 
 
