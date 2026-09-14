@@ -1381,6 +1381,188 @@ test("convRowHtml hover title attribute displays only the real topic title witho
   );
 });
 
+test("detail disguised title long press displays original title, and release restores disguised title", async () => {
+  // Static script assertions
+  assert.ok(scriptContent.includes("const LONG_PRESS_TITLE_MS = 220;"), "must define LONG_PRESS_TITLE_MS");
+  assert.ok(scriptContent.includes("function bindChatTitleLongPress("), "must define bindChatTitleLongPress");
+  assert.ok(scriptContent.includes("bindChatTitleLongPress(panel);"), "must call bindChatTitleLongPress in bindChatPanelEvents");
+  assert.ok(scriptContent.includes(".wecom-chat-title.is-masked"), "must style .wecom-chat-title.is-masked");
+  assert.ok(scriptContent.includes(".wecom-chat-title.is-peeking-title"), "must style .wecom-chat-title.is-peeking-title");
+  assert.ok(scriptContent.includes("html.${ROOT_CLASS}.wecom-wco-active .wecom-chat-title"), "must configure WCO no-drag for .wecom-chat-title");
+
+  // Dynamic simulation assertions
+  const listeners = {};
+  const windowListeners = {};
+  const windowMock = {
+    addEventListener(type, fn) {
+      if (!windowListeners[type]) windowListeners[type] = [];
+      windowListeners[type].push(fn);
+    },
+    dispatch(type, event = {}) {
+      if (windowListeners[type]) windowListeners[type].forEach(fn => fn(event));
+    }
+  };
+
+  const titleEl = {
+    tagName: "SPAN",
+    className: "wecom-chat-title",
+    classList: {
+      _classes: new Set(["wecom-chat-title"]),
+      add(c) { this._classes.add(c); },
+      remove(c) { this._classes.delete(c); },
+      contains(c) { return this._classes.has(c); },
+      toggle(c, force) { if (force) this.add(c); else this.remove(c); }
+    },
+    textContent: "",
+    title: "",
+    closest(sel) { return sel === ".wecom-chat-title" ? this : null; },
+    setPointerCapture(id) { this._captured = id; },
+    releasePointerCapture(id) { if (this._captured === id) delete this._captured; }
+  };
+
+  const panelMock = {
+    dataset: {},
+    querySelector(sel) { return sel === ".wecom-chat-title" ? titleEl : null; },
+    addEventListener(type, fn) {
+      if (!listeners[type]) listeners[type] = [];
+      listeners[type].push(fn);
+    },
+    dispatch(type, event = {}) {
+      if (listeners[type]) listeners[type].forEach(fn => fn(event));
+    }
+  };
+
+  let maskMode = "all";
+  const chatState = {
+    topicId: 8888,
+    title: "真实详情帖子：深入理解浏览器渲染机制"
+  };
+
+  function isMaskTitleDetail() {
+    return maskMode === "all" || maskMode === "detail";
+  }
+
+  function disguiseTitleForTopic(topic) {
+    return "【项目推进】2026年技术架构方案";
+  }
+
+  const LONG_PRESS_TITLE_MS = 220;
+
+  function bindChatTitleLongPress(panel, win = windowMock) {
+    if (!panel || panel.dataset.chatTitleLongPressBound) return;
+    panel.dataset.chatTitleLongPressBound = "1";
+
+    let timer = null;
+    let isPeeking = false;
+    let capturedEl = null;
+
+    const stopPeeking = () => {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      if (isPeeking) {
+        isPeeking = false;
+        const titleEl = panel.querySelector(".wecom-chat-title");
+        if (titleEl) {
+          if (isMaskTitleDetail() && chatState.topicId) {
+            titleEl.textContent = disguiseTitleForTopic({ id: chatState.topicId, title: chatState.title });
+          } else if (chatState.title) {
+            titleEl.textContent = chatState.title;
+          }
+          titleEl.classList.remove("is-peeking-title");
+        }
+      }
+      if (capturedEl) {
+        try {
+          if (typeof capturedEl.releasePointerCapture === "function" && capturedEl._pointerId != null) {
+            capturedEl.releasePointerCapture(capturedEl._pointerId);
+          }
+        } catch (_) {}
+        delete capturedEl._pointerId;
+        capturedEl = null;
+      }
+    };
+
+    panel.addEventListener("pointerdown", (e) => {
+      if (e.button != null && e.button !== 0) return;
+      const titleEl = e.target && typeof e.target.closest === "function" ? e.target.closest(".wecom-chat-title") : null;
+      if (!titleEl) return;
+      if (!isMaskTitleDetail() || !chatState.topicId || !chatState.title) return;
+
+      stopPeeking();
+      capturedEl = titleEl;
+      capturedEl._pointerId = e.pointerId;
+      try {
+        if (typeof titleEl.setPointerCapture === "function" && e.pointerId != null) {
+          titleEl.setPointerCapture(e.pointerId);
+        }
+      } catch (_) {}
+
+      timer = setTimeout(() => {
+        timer = null;
+        if (isMaskTitleDetail() && chatState.title) {
+          isPeeking = true;
+          titleEl.textContent = chatState.title;
+          titleEl.classList.add("is-peeking-title");
+        }
+      }, LONG_PRESS_TITLE_MS);
+    });
+
+    panel.addEventListener("pointerup", stopPeeking);
+    panel.addEventListener("pointercancel", stopPeeking);
+    panel.addEventListener("lostpointercapture", stopPeeking);
+    win.addEventListener("pointerup", stopPeeking);
+    win.addEventListener("pointercancel", stopPeeking);
+    win.addEventListener("blur", stopPeeking);
+    win.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") stopPeeking();
+    });
+
+    return { stopPeeking, getIsPeeking: () => isPeeking, getTimer: () => timer };
+  }
+
+  titleEl.textContent = disguiseTitleForTopic({ id: chatState.topicId, title: chatState.title });
+  const ctrl = bindChatTitleLongPress(panelMock);
+
+  // Quick click does not trigger peek
+  panelMock.dispatch("pointerdown", { button: 0, pointerId: 10, target: titleEl });
+  assert.ok(ctrl.getTimer() !== null);
+  await new Promise(r => setTimeout(r, 80));
+  panelMock.dispatch("pointerup", { button: 0, pointerId: 10, target: titleEl });
+  assert.equal(ctrl.getTimer(), null);
+  assert.equal(ctrl.getIsPeeking(), false);
+  assert.equal(titleEl.textContent, "【项目推进】2026年技术架构方案");
+
+  // Long press triggers peek, release restores
+  panelMock.dispatch("pointerdown", { button: 0, pointerId: 11, target: titleEl });
+  await new Promise(r => setTimeout(r, 260));
+  assert.equal(ctrl.getIsPeeking(), true);
+  assert.equal(titleEl.textContent, chatState.title);
+  assert.ok(titleEl.classList.contains("is-peeking-title"));
+
+  windowMock.dispatch("pointerup", {});
+  assert.equal(ctrl.getIsPeeking(), false);
+  assert.equal(titleEl.textContent, "【项目推进】2026年技术架构方案");
+  assert.ok(!titleEl.classList.contains("is-peeking-title"));
+
+  // Long press then blur restores
+  panelMock.dispatch("pointerdown", { button: 0, pointerId: 12, target: titleEl });
+  await new Promise(r => setTimeout(r, 260));
+  assert.equal(ctrl.getIsPeeking(), true);
+  windowMock.dispatch("blur", {});
+  assert.equal(ctrl.getIsPeeking(), false);
+  assert.equal(titleEl.textContent, "【项目推进】2026年技术架构方案");
+
+  // When mask is off, does not trigger
+  maskMode = "off";
+  titleEl.textContent = chatState.title;
+  panelMock.dispatch("pointerdown", { button: 0, pointerId: 13, target: titleEl });
+  assert.equal(ctrl.getTimer(), null);
+  assert.equal(ctrl.getIsPeeking(), false);
+});
+
+
 
 
 

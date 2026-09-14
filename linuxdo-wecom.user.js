@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.6.9
+// @version      0.7.0
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -1848,6 +1848,14 @@
     .wecom-chat-title {
       font-size: 16px; font-weight: 600; color: var(--wc-text);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      user-select: none; -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    .wecom-chat-title.is-masked {
+      cursor: pointer;
+    }
+    .wecom-chat-title.is-peeking-title {
+      opacity: 0.95;
     }
     .wecom-chat-sub { font-size: 12px; color: var(--wc-text-3); margin-top: 1px; }
     .wecom-chat-tools,
@@ -2326,6 +2334,7 @@
     }
     html.${ROOT_CLASS}.wecom-wco-active .wecom-chat-header button,
     html.${ROOT_CLASS}.wecom-wco-active .wecom-chat-header a,
+    html.${ROOT_CLASS}.wecom-wco-active .wecom-chat-title,
     html.${ROOT_CLASS}.wecom-wco-active .wecom-platform-switcher,
     html.${ROOT_CLASS}.wecom-wco-active .wecom-platform-switcher *,
     html.${ROOT_CLASS}.wecom-wco-active .wecom-chat-chips,
@@ -2339,6 +2348,7 @@
     @media (display-mode: window-controls-overlay) {
       html.${ROOT_CLASS} .wecom-chat-header button,
       html.${ROOT_CLASS} .wecom-chat-header a,
+      html.${ROOT_CLASS} .wecom-chat-title,
       html.${ROOT_CLASS} .wecom-platform-switcher,
       html.${ROOT_CLASS} .wecom-platform-switcher *,
       html.${ROOT_CLASS} .wecom-chat-chips,
@@ -3888,6 +3898,9 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
     }
     .wecom-chat-count {
       font-size: 12px;
@@ -5785,7 +5798,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.6.9";
+  const SCRIPT_VERSION = "0.7.0";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -7353,7 +7366,12 @@
           const convTitle = conv.querySelector(".wecom-conv-name")?.textContent || conv.getAttribute("title") || "";
           const titleEl = document.querySelector(".wecom-chat-title");
           const subEl = document.querySelector(".wecom-chat-sub");
-          if (titleEl && convTitle) titleEl.textContent = convTitle;
+          if (titleEl && convTitle) {
+            titleEl.textContent = convTitle;
+            titleEl.classList.toggle("is-masked", isMaskTitleDetail());
+            titleEl.classList.remove("is-peeking-title");
+            titleEl.title = isMaskTitleDetail() ? "" : convTitle;
+          }
           if (subEl) subEl.textContent = "加载中…";
         }
         if (location.pathname !== href) {
@@ -9126,11 +9144,92 @@
     trackVisibleTopicPost();
   }
 
+  const LONG_PRESS_TITLE_MS = 220;
+
+  function bindChatTitleLongPress(panel) {
+    if (!panel || panel.dataset.chatTitleLongPressBound) return;
+    panel.dataset.chatTitleLongPressBound = "1";
+
+    let timer = null;
+    let isPeeking = false;
+    let capturedEl = null;
+
+    const stopPeeking = () => {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      if (isPeeking) {
+        isPeeking = false;
+        const titleEl = panel.querySelector(".wecom-chat-title");
+        if (titleEl) {
+          if (isMaskTitleDetail() && chatState.topicId) {
+            titleEl.textContent = disguiseTitleForTopic({ id: chatState.topicId, title: chatState.title });
+          } else if (chatState.title) {
+            titleEl.textContent = chatState.title;
+          }
+          titleEl.classList.remove("is-peeking-title");
+        }
+      }
+      if (capturedEl) {
+        try {
+          if (typeof capturedEl.releasePointerCapture === "function" && capturedEl._pointerId != null) {
+            capturedEl.releasePointerCapture(capturedEl._pointerId);
+          }
+        } catch (_) {}
+        delete capturedEl._pointerId;
+        capturedEl = null;
+      }
+    };
+
+    panel.addEventListener("pointerdown", (e) => {
+      if (e.button != null && e.button !== 0) return;
+      const titleEl = e.target && typeof e.target.closest === "function" ? e.target.closest(".wecom-chat-title") : null;
+      if (!titleEl) return;
+      if (!isMaskTitleDetail() || !chatState.topicId || !chatState.title) return;
+
+      stopPeeking();
+      capturedEl = titleEl;
+      capturedEl._pointerId = e.pointerId;
+      try {
+        if (typeof titleEl.setPointerCapture === "function" && e.pointerId != null) {
+          titleEl.setPointerCapture(e.pointerId);
+        }
+      } catch (_) {}
+
+      timer = setTimeout(() => {
+        timer = null;
+        if (isMaskTitleDetail() && chatState.title) {
+          isPeeking = true;
+          titleEl.textContent = chatState.title;
+          titleEl.classList.add("is-peeking-title");
+        }
+      }, LONG_PRESS_TITLE_MS);
+    });
+
+    panel.addEventListener("pointerup", stopPeeking);
+    panel.addEventListener("pointercancel", stopPeeking);
+    panel.addEventListener("lostpointercapture", stopPeeking);
+    window.addEventListener("pointerup", stopPeeking);
+    window.addEventListener("pointercancel", stopPeeking);
+    window.addEventListener("blur", stopPeeking);
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") stopPeeking();
+    });
+
+    panel.addEventListener("contextmenu", (e) => {
+      if (e.target && typeof e.target.closest === "function" && e.target.closest(".wecom-chat-title") && isMaskTitleDetail()) {
+        e.preventDefault();
+      }
+    });
+  }
+
   function bindChatPanelEvents(panel) {
     panel.addEventListener("click", (event) => handleChatPanelClick(event, panel));
     panel.addEventListener("keydown", handleChatImageKeydown);
     document.removeEventListener("fullscreenchange", syncWinMaxState);
     document.addEventListener("fullscreenchange", syncWinMaxState);
+    bindChatTitleLongPress(panel);
     let chatScrollTimer = null;
     let chatBodyScrollThrottleTimer = null;
     const chatBody = panel.querySelector(".wecom-chat-body");
@@ -9161,7 +9260,12 @@
     const maskDetail = isMaskTitleDetail();
     const displayTitle = maskDetail ? disguiseTitleForTopic({ id: chatState.topicId, title: chatState.title }) : chatState.title;
     const titleEl = document.querySelector(".wecom-chat-title");
-    if (titleEl) titleEl.textContent = displayTitle;
+    if (titleEl) {
+      titleEl.textContent = displayTitle;
+      titleEl.classList.toggle("is-masked", Boolean(maskDetail));
+      titleEl.classList.remove("is-peeking-title");
+      titleEl.title = maskDetail ? "" : (chatState.title || "");
+    }
     const sub = document.querySelector(".wecom-chat-sub");
     if (sub) {
       if (maskDetail) {
@@ -9214,7 +9318,11 @@
     body.dataset.state = "empty";
     const title = document.querySelector(".wecom-chat-title");
     const sub = document.querySelector(".wecom-chat-sub");
-    if (title) title.textContent = "";
+    if (title) {
+      title.textContent = "";
+      title.classList.remove("is-masked", "is-peeking-title");
+      title.title = "";
+    }
     if (sub) sub.textContent = "";
     const count = document.querySelector(".wecom-chat-count");
     if (count) { count.style.display = "none"; count.textContent = ""; }
@@ -12126,7 +12234,12 @@
       const sub = document.querySelector(".wecom-chat-sub");
       const maskDetail = isMaskTitleDetail();
       const displayTitle = maskDetail ? disguiseTitleForTopic({ id: chatState.topicId, title: chatState.title }) : chatState.title;
-      if (title) title.textContent = displayTitle;
+      if (title) {
+        title.textContent = displayTitle;
+        title.classList.toggle("is-masked", Boolean(maskDetail));
+        title.classList.remove("is-peeking-title");
+        title.title = maskDetail ? "" : (chatState.title || "");
+      }
       const participants = data.participant_count ||
         (data.details && data.details.participants ? data.details.participants.length : 0);
       const count = document.querySelector(".wecom-chat-count");
