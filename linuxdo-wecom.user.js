@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.6.5
+// @version      0.6.6
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -1697,6 +1697,12 @@
     .wecom-list-status {
       padding: 14px; text-align: center;
       font-size: 12px; color: var(--wc-text-3);
+    }
+    .wecom-list-status.is-clickable {
+      cursor: pointer;
+    }
+    .wecom-list-status.is-clickable:hover {
+      color: var(--wc-blue);
     }
 
     /* ---------- 右栏：聊天详情 ---------- */
@@ -5659,7 +5665,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.6.5";
+  const SCRIPT_VERSION = "0.6.6";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -7083,6 +7089,14 @@
         return;
       }
 
+      const statusEl = e.target.closest(".wecom-list-status");
+      if (statusEl && panel.contains(statusEl)) {
+        if (listState.moreUrl && !listState.loading) {
+          loadMoreList();
+        }
+        return;
+      }
+
       // 会话/置顶：拦截默认跳转，走即时渲染或 Discourse SPA / pushState
       const link = e.target.closest("a.wecom-conv, .wecom-list-nav a");
       if (!link || !panel.contains(link)) return;
@@ -7417,7 +7431,7 @@
     const usersById = listState.usersById || {};
     body.innerHTML =
       listState.topics.map((t) => convRowHtml(t, usersById)).join("") +
-      `<div class="wecom-list-status">${listState.moreUrl ? "下拉加载更多…" : (listState.topics.length ? "没有更多了" : "")}</div>`;
+      `<div class="wecom-list-status ${listState.moreUrl ? "is-clickable" : ""}">${listState.moreUrl ? "下拉或点击加载更多…" : (listState.topics.length ? "没有更多了" : "")}</div>`;
     syncListChips();
     syncListActive();
   }
@@ -7458,9 +7472,9 @@
   function v2exPageForPath(apiPath) {
     const path = String(apiPath || "");
     const match = path.match(/[?&]p=(\d+)/);
-    if (match) return Math.max(0, Number(match[1]) || 0);
-    // V2EX /recent uses p=1 for its first page; other lists start at p=0.
-    return path === "/recent" ? 1 : 0;
+    if (match) return Math.max(1, Number(match[1]) || 1);
+    // V2EX 各类列表若未带 ?p=，第一页均为页码 1（如 /recent、/go/programmer、/?tab=all）
+    return 1;
   }
 
   function v2exPageUrl(apiPath, page) {
@@ -7479,19 +7493,103 @@
 
   function v2exNextPageUrl(currentPath) {
     const path = String(currentPath || "");
-    // The V2EX home page is page 1; /recent is page 2 (not /recent?p=1).
+    // V2EX 首页 tab=all/latest/全部：下一页为 /recent
     if (path === "/api/topics/latest.json" || path === "latest" || path === "all" || path === "/" || path === "/?tab=all") {
       return "/recent";
     }
     if (path === "/recent") return "/recent?p=2";
-    return v2exPageUrl(path, v2exPageForPath(path) + 1);
+    const currentPage = v2exPageForPath(path);
+    return v2exPageUrl(path, currentPage + 1);
   }
 
-  function setV2exPagination(apiPath, count) {
+  /**
+   * 精确解析 V2EX 话题列表的分页状态，依据原站 input.page_input、.ps_container 和分页链接判断，
+   * 彻底避免因单页话题数波动（如 19 条 < 20 条）或节点首页被误判为 0 页而导致翻页过早中断。
+   */
+  function parseV2exListPagination(doc, apiPath, count) {
+    const path = String(apiPath || "");
+    const currentPage = v2exPageForPath(path);
+
+    if (path === "/notifications" || count === 0) {
+      return { hasMore: false, nextPageUrl: null, totalPages: 1 };
+    }
+
+    // 首页全部/最新：无 pager 容器，但下一页确定为 /recent
+    const isAllHome = path === "/api/topics/latest.json" || path === "latest" || path === "all" || path === "/" || path === "/?tab=all";
+    if (isAllHome) {
+      return {
+        hasMore: count > 0,
+        nextPageUrl: "/recent",
+        totalPages: 0
+      };
+    }
+
+    // 其他首页分类 tab（最热/技术/创意/好玩等）：V2EX 原站首页 tab 为固定精选列表，无分页
+    if (path.includes("tab=") && !path.includes("tab=all") && !path.includes("tab=latest")) {
+      return { hasMore: false, nextPageUrl: null, totalPages: 1 };
+    }
+
+    if (doc) {
+      // 1. 提取分页输入框 <input class="page_input" value="X" max="Y" />
+      const pageInput = doc.querySelector("input.page_input");
+      const inputMax = pageInput ? (Number(pageInput.getAttribute("max") || pageInput.max) || 0) : 0;
+      const inputVal = pageInput ? (Number(pageInput.getAttribute("value") || pageInput.value) || 0) : 0;
+
+      // 2. 提取下一页按钮（.normal_page_right 或 [title='Next Page']）
+      const nextBtn = doc.querySelector(".normal_page_right, [title='Next Page']");
+      const hasDisabledNext = Boolean(nextBtn && nextBtn.classList.contains("disable_now"));
+      const hasNextBtn = Boolean(nextBtn) && !hasDisabledNext;
+
+      // 3. 提取页码链接中的最大页
+      const pageNumbers = [...doc.querySelectorAll("a.page_normal, a.page_current, a[href*='p=']")]
+        .map((el) => (el.getAttribute("href") || "").match(/[?&]p=(\d+)/))
+        .filter(Boolean)
+        .map((m) => Number(m[1]));
+      const maxPageInLinks = pageNumbers.length ? Math.max(...pageNumbers) : 0;
+
+      const totalPages = Math.max(inputMax, maxPageInLinks);
+      const effPage = inputVal || currentPage;
+
+      if (totalPages > 0) {
+        const hasMore = (totalPages > effPage) || hasNextBtn;
+        return {
+          hasMore,
+          nextPageUrl: hasMore ? v2exNextPageUrl(path) : null,
+          totalPages
+        };
+      }
+
+      if (hasNextBtn) {
+        return {
+          hasMore: true,
+          nextPageUrl: v2exNextPageUrl(path),
+          totalPages: effPage + 1
+        };
+      }
+      if (hasDisabledNext) {
+        return { hasMore: false, nextPageUrl: null, totalPages: effPage };
+      }
+    }
+
+    // 容错降级：对于 /recent 或 /go/ 节点页面，只要当前页有话题内容且非空，允许尝试翻到下一页
+    const isRecentOrNode = path.startsWith("/recent") || path.startsWith("/go/");
+    if (isRecentOrNode && count > 0) {
+      return {
+        hasMore: true,
+        nextPageUrl: v2exNextPageUrl(path),
+        totalPages: 0
+      };
+    }
+
+    return { hasMore: false, nextPageUrl: null, totalPages: 1 };
+  }
+
+  function setV2exPagination(apiPath, count, doc = null) {
+    const pagination = parseV2exListPagination(doc, apiPath, count);
     listState.v2exPage = v2exPageForPath(apiPath);
     listState.v2exPagePath = apiPath;
-    listState.v2exHasMore = apiPath !== "/notifications" && count >= 20;
-    listState.moreUrl = listState.v2exHasMore ? v2exNextPageUrl(apiPath) : null;
+    listState.v2exHasMore = pagination.hasMore;
+    listState.moreUrl = pagination.nextPageUrl;
   }
 
   async function loadList(apiPath, force) {
@@ -7516,7 +7614,7 @@
           const domTopics = extractV2exTopicsFromDoc(document);
           if (domTopics.length > 0) {
             listState.topics = domTopics;
-            setV2exPagination(apiPath, domTopics.length);
+            setV2exPagination(apiPath, domTopics.length, document);
             renderListRows();
             syncRail();
             listState.loadedApiPath = apiPath;
@@ -7524,6 +7622,7 @@
           }
         }
         let topics = [];
+        let fetchedDoc = null;
         if (apiPath === "/api/topics/hot.json" || apiPath === "hot") {
           try {
             const res = await api("/api/topics/hot.json");
@@ -7536,8 +7635,8 @@
               const resp = await fetch("/?tab=hot", { credentials: "same-origin" });
               if (resp.ok) {
                 const html = await resp.text();
-                const doc = new DOMParser().parseFromString(html, "text/html");
-                topics = extractV2exTopicsFromDoc(doc);
+                fetchedDoc = new DOMParser().parseFromString(html, "text/html");
+                topics = extractV2exTopicsFromDoc(fetchedDoc);
               }
             } catch { /* ignore */ }
           }
@@ -7553,8 +7652,8 @@
               const resp = await fetch("/?tab=all", { credentials: "same-origin" });
               if (resp.ok) {
                 const html = await resp.text();
-                const doc = new DOMParser().parseFromString(html, "text/html");
-                topics = extractV2exTopicsFromDoc(doc);
+                fetchedDoc = new DOMParser().parseFromString(html, "text/html");
+                topics = extractV2exTopicsFromDoc(fetchedDoc);
               }
             } catch { /* ignore */ }
           }
@@ -7564,10 +7663,10 @@
             const resp = await fetch(path, { credentials: "same-origin" });
             if (resp.ok) {
               const html = await resp.text();
-              const doc = new DOMParser().parseFromString(html, "text/html");
+              fetchedDoc = new DOMParser().parseFromString(html, "text/html");
               topics = path === "/notifications"
-                ? extractV2exNotificationsFromDoc(doc)
-                : extractV2exTopicsFromDoc(doc);
+                ? extractV2exNotificationsFromDoc(fetchedDoc)
+                : extractV2exTopicsFromDoc(fetchedDoc);
             }
           } catch {
             topics = [];
@@ -7581,7 +7680,7 @@
         }
         if (requestSerial !== listState.requestSerial) return;
         listState.topics = topics;
-        setV2exPagination(apiPath, topics.length);
+        setV2exPagination(apiPath, topics.length, fetchedDoc);
         renderListRows();
         syncRail();
         listState.loadedApiPath = apiPath;
@@ -7636,11 +7735,14 @@
         if (requestSerial !== listState.requestSerial) return;
         const existing = new Set(listState.topics.map((topic) => topic.id));
         const fresh = topics.filter((topic) => !existing.has(topic.id));
-        listState.topics = listState.topics.concat(fresh);
+        if (fresh.length > 0) {
+          listState.topics = listState.topics.concat(fresh);
+        }
         listState.v2exPagePath = pageUrl;
         listState.v2exPage = v2exPageForPath(pageUrl);
-        listState.v2exHasMore = topics.length >= 20 && fresh.length > 0;
-        listState.moreUrl = listState.v2exHasMore ? v2exNextPageUrl(pageUrl) : null;
+        const pagination = parseV2exListPagination(doc, pageUrl, topics.length);
+        listState.v2exHasMore = pagination.hasMore && (topics.length > 0);
+        listState.moreUrl = listState.v2exHasMore ? pagination.nextPageUrl : null;
         renderListRows();
         syncRail();
       } catch (error) {
@@ -12047,7 +12149,7 @@
           appendFreshPosts(fresh, body, { scroll: false });
         }
         chatState.v2exPage = nextPage;
-        chatState.v2exHasMore = Boolean(data?.v2ex_has_more) && fresh.length > 0;
+        chatState.v2exHasMore = Boolean(data?.v2ex_has_more) && posts.length > 0;
         chatState.hasNewer = chatState.v2exHasMore;
         setCachedTopic(`${chatState.topicId}_p${nextPage}`, data);
       } catch (err) {

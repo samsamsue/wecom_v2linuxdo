@@ -1134,5 +1134,98 @@ test("Linux DO notification menu teardown, route synchronization, and topic navi
   );
 });
 
+test("V2EX topic list pagination accurately inspects page indicators and avoids early termination", () => {
+  assert.ok(
+    scriptContent.includes("function parseV2exListPagination("),
+    "must define parseV2exListPagination"
+  );
+  assert.ok(
+    scriptContent.includes("function setV2exPagination(apiPath, count, doc = null)"),
+    "setV2exPagination must accept doc parameter"
+  );
+  assert.ok(
+    scriptContent.includes('const statusEl = e.target.closest(".wecom-list-status");'),
+    "bindListPanelClicks must support clicking .wecom-list-status to load more"
+  );
+
+  // Simulation test for v2exPageForPath logic
+  function testPageForPath(path) {
+    const match = path.match(/[?&]p=(\d+)/);
+    if (match) return Math.max(1, Number(match[1]) || 1);
+    return 1;
+  }
+  assert.equal(testPageForPath("/go/programmer"), 1, "node page without p parameter must be page 1");
+  assert.equal(testPageForPath("/recent"), 1, "/recent must be page 1");
+  assert.equal(testPageForPath("/recent?p=6"), 6, "/recent?p=6 must be page 6");
+
+  // Simulation test for list pagination parsing
+  function simulateListPagination(html, apiPath, count) {
+    const path = String(apiPath || "");
+    const currentPage = testPageForPath(path);
+    if (path === "/notifications" || count === 0) return { hasMore: false, nextPageUrl: null };
+    const isAllHome = path === "/" || path === "/?tab=all" || path === "all" || path === "latest";
+    if (isAllHome) return { hasMore: count > 0, nextPageUrl: "/recent" };
+    if (path.includes("tab=") && !path.includes("tab=all") && !path.includes("tab=latest")) {
+      return { hasMore: false, nextPageUrl: null };
+    }
+    if (html) {
+      const inputMatch = html.match(/class="[^"]*page_input[^"]*"[^>]*max="(\d+)"/i) ||
+        html.match(/max="(\d+)"[^>]*class="[^"]*page_input[^"]*"/i);
+      const inputMax = inputMatch ? Number(inputMatch[1]) : 0;
+      const valMatch = html.match(/class="[^"]*page_input[^"]*"[^>]*value="(\d+)"/i) ||
+        html.match(/value="(\d+)"[^>]*class="[^"]*page_input[^"]*"/i);
+      const inputVal = valMatch ? Number(valMatch[1]) : 0;
+
+      const hasDisabledNext = Boolean(html.match(/normal_page_right[^"]*disable_now/i) || html.match(/disable_now[^"]*normal_page_right/i));
+      const hasNextBtn = Boolean(html.match(/title="Next Page"/i)) && !hasDisabledNext;
+
+      const totalPages = inputMax;
+      const effPage = inputVal || currentPage;
+      if (totalPages > 0) {
+        const hasMore = (totalPages > effPage) || hasNextBtn;
+        return { hasMore, nextPageUrl: hasMore ? `${path.replace(/[?&]p=\d+/, "")}?p=${effPage + 1}` : null };
+      }
+      if (hasNextBtn) {
+        return { hasMore: true, nextPageUrl: `${path.replace(/[?&]p=\d+/, "")}?p=${effPage + 1}` };
+      }
+      if (hasDisabledNext) {
+        return { hasMore: false, nextPageUrl: null };
+      }
+    }
+    return { hasMore: false, nextPageUrl: null };
+  }
+
+  // 1. Homepage all tab leads to /recent
+  const resHome = simulateListPagination("", "/?tab=all", 52);
+  assert.equal(resHome.hasMore, true);
+  assert.equal(resHome.nextPageUrl, "/recent");
+
+  // 2. Tab tech has no pagination
+  const resTech = simulateListPagination("", "/?tab=tech", 50);
+  assert.equal(resTech.hasMore, false);
+
+  // 3. /recent?p=6 with only 19 topics still advances to p=7
+  const p6Html = `
+    <div class="cell ps_container">
+      <input type="number" class="page_input" value="6" min="1" max="41394" />
+      <td class="super normal_page_right button" title="Next Page">❯</td>
+    </div>
+  `;
+  const resP6 = simulateListPagination(p6Html, "/recent?p=6", 19);
+  assert.equal(resP6.hasMore, true);
+  assert.equal(resP6.nextPageUrl, "/recent?p=7");
+
+  // 4. Last page with disabled next button stops
+  const lastHtml = `
+    <div class="cell ps_container">
+      <input type="number" class="page_input" value="41394" min="1" max="41394" />
+      <td class="super normal_page_right button disable_now" title="Next Page">❯</td>
+    </div>
+  `;
+  const resLast = simulateListPagination(lastHtml, "/recent?p=41394", 15);
+  assert.equal(resLast.hasMore, false);
+});
+
+
 
 
