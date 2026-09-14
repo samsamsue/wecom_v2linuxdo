@@ -2339,6 +2339,140 @@ test("image auto-layout thumbnail size can be configured, supports presets and c
   assert.equal(mockStyle["--wecom-image-thumb-size"], "400px");
 });
 
+test("images with dimensions smaller than layout thumbnail size are excluded from auto-layout", () => {
+  // 1. Script defines helper functions and integrates size check into auto-layout
+  assert.ok(
+    scriptContent.includes("function parsePixelDimension"),
+    "must define parsePixelDimension"
+  );
+  assert.ok(
+    scriptContent.includes("function getImageEffectiveDimensions"),
+    "must define getImageEffectiveDimensions"
+  );
+  assert.ok(
+    scriptContent.includes("function isImageSmallerThanLayout"),
+    "must define isImageSmallerThanLayout"
+  );
+  assert.ok(
+    scriptContent.includes("function attachImageAutoLayoutLoadCheck"),
+    "must define attachImageAutoLayoutLoadCheck"
+  );
+  assert.ok(
+    scriptContent.includes("if (isImageSmallerThanLayout(img, layoutSize)) return false;"),
+    "candidateImgs filter must exclude images smaller than layoutSize"
+  );
+  assert.ok(
+    scriptContent.includes("refreshChatMessagesLayout();"),
+    "setImageAutoLayoutSize must trigger refreshChatMessagesLayout"
+  );
+
+  // 2. Functional simulation of parsePixelDimension
+  function simParsePixel(val) {
+    if (!val) return NaN;
+    const str = String(val).trim();
+    if (!str || str.endsWith("%") || str.endsWith("vw") || str.endsWith("vh")) return NaN;
+    const num = parseFloat(str);
+    return Number.isFinite(num) && num > 0 ? num : NaN;
+  }
+
+  assert.equal(simParsePixel("50px"), 50);
+  assert.equal(simParsePixel("80"), 80);
+  assert.equal(simParsePixel(" 120.5 px "), 120.5);
+  assert.ok(Number.isNaN(simParsePixel("100%")), "percentage width must return NaN");
+  assert.ok(Number.isNaN(simParsePixel("auto")), "auto must return NaN");
+  assert.ok(Number.isNaN(simParsePixel(null)), "null must return NaN");
+
+  // 3. Functional simulation of getImageEffectiveDimensions and isImageSmallerThanLayout
+  function simGetDimensions(img) {
+    if (!img) return null;
+    if (img.naturalWidth > 0) {
+      return { width: img.naturalWidth, height: img.naturalHeight || img.naturalWidth };
+    }
+    const attrW = simParsePixel(img.getAttribute?.("width") || img.getAttribute?.("data-width"));
+    const attrH = simParsePixel(img.getAttribute?.("height") || img.getAttribute?.("data-height"));
+    if (Number.isFinite(attrW) && Number.isFinite(attrH)) return { width: attrW, height: attrH };
+    if (Number.isFinite(attrW)) return { width: attrW, height: attrW };
+    if (Number.isFinite(attrH)) return { width: attrH, height: attrH };
+
+    const styleW = simParsePixel(img.style?.width);
+    const styleH = simParsePixel(img.style?.height);
+    if (Number.isFinite(styleW) && Number.isFinite(styleH)) return { width: styleW, height: styleH };
+    if (Number.isFinite(styleW)) return { width: styleW, height: styleW };
+    if (Number.isFinite(styleH)) return { width: styleH, height: styleH };
+
+    if (img.metaText) {
+      const match = img.metaText.match(/(\d+)\s*[×x]\s*(\d+)/i);
+      if (match) return { width: parseInt(match[1], 10), height: parseInt(match[2], 10) };
+    }
+    return null;
+  }
+
+  function simIsSmaller(img, layoutSize) {
+    const dim = simGetDimensions(img);
+    if (!dim) return false;
+    return dim.width < layoutSize && dim.height < layoutSize;
+  }
+
+  // Under default layoutSize = 100:
+  // Tiny 48x48 icon is smaller than 100px
+  assert.equal(simIsSmaller({ getAttribute: (k) => k === "width" ? "48" : "48" }, 100), true);
+  // 80x80 small image is smaller than 100px
+  assert.equal(simIsSmaller({ naturalWidth: 80, naturalHeight: 80 }, 100), true);
+  // 100x100 is not strictly smaller than 100px
+  assert.equal(simIsSmaller({ naturalWidth: 100, naturalHeight: 100 }, 100), false);
+  // 800x600 photo is not smaller than 100px
+  assert.equal(simIsSmaller({ naturalWidth: 800, naturalHeight: 600 }, 100), false);
+  // 50x300 vertical banner exceeds 100px height -> not smaller
+  assert.equal(simIsSmaller({ naturalWidth: 50, naturalHeight: 300 }, 100), false);
+  // 300x50 horizontal banner exceeds 100px width -> not smaller
+  assert.equal(simIsSmaller({ naturalWidth: 300, naturalHeight: 50 }, 100), false);
+  // Discourse meta informations 1920x1080 -> not smaller
+  assert.equal(simIsSmaller({ metaText: "1920×1080 200 KB" }, 100), false);
+
+  // Dynamic layout size changes:
+  // When layout size is 80px: 80x80 is no longer smaller than layout size
+  assert.equal(simIsSmaller({ naturalWidth: 80, naturalHeight: 80 }, 80), false);
+  // When layout size is 150px: 120x120 becomes smaller than layout size
+  assert.equal(simIsSmaller({ naturalWidth: 120, naturalHeight: 120 }, 150), true);
+
+  // 4. Functional simulation of message auto-layout with small & large images
+  function simulateMessageAutoLayout(images, layoutSize) {
+    const candidateImgs = [];
+    const inlineImgs = [];
+    for (const img of images) {
+      if (simIsSmaller(img, layoutSize)) {
+        inlineImgs.push(img);
+      } else {
+        candidateImgs.push(img);
+      }
+    }
+    return {
+      hasGallery: candidateImgs.length > 0,
+      galleryCount: candidateImgs.length,
+      inlineCount: inlineImgs.length
+    };
+  }
+
+  // Post with only small inline icons (e.g. 48px, 64px)
+  const iconsOnly = [
+    { getAttribute: (k) => k === "width" ? "48" : "48" },
+    { getAttribute: (k) => k === "width" ? "64" : "64" }
+  ];
+  const resIconsOnly = simulateMessageAutoLayout(iconsOnly, 100);
+  assert.equal(resIconsOnly.hasGallery, false, "post with only small images must not create gallery");
+  assert.equal(resIconsOnly.inlineCount, 2, "small images must remain inline");
+
+  // Post with 1 small badge (60x20) and 1 screenshot (1200x800)
+  const mixedImages = [
+    { getAttribute: (k) => k === "width" ? "60" : "20" },
+    { naturalWidth: 1200, naturalHeight: 800 }
+  ];
+  const resMixed = simulateMessageAutoLayout(mixedImages, 100);
+  assert.equal(resMixed.hasGallery, true, "mixed post must create gallery for large image");
+  assert.equal(resMixed.galleryCount, 1, "only large image goes to gallery");
+  assert.equal(resMixed.inlineCount, 1, "small badge remains inline in message text");
+});
+
 
 
 

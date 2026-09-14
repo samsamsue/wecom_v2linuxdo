@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.9
+// @version      0.7.10
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -6654,6 +6654,7 @@
     } catch { /* ignore */ }
     applyImageAutoLayoutSizeCss(num);
     syncThemeControls();
+    refreshChatMessagesLayout();
   }
 
   const THEME_MODE_LABELS = Object.freeze({
@@ -6947,7 +6948,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.9";
+  const SCRIPT_VERSION = "0.7.10";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -9794,12 +9795,121 @@
     return !meaningful;
   }
 
+  function parsePixelDimension(val) {
+    if (!val) return NaN;
+    const str = String(val).trim();
+    if (!str || str.endsWith("%") || str.endsWith("vw") || str.endsWith("vh")) return NaN;
+    const num = parseFloat(str);
+    return Number.isFinite(num) && num > 0 ? num : NaN;
+  }
+
+  function getImageEffectiveDimensions(img) {
+    if (!img) return null;
+
+    // 1. Natural dimensions if loaded
+    if (img.naturalWidth > 0) {
+      return {
+        width: img.naturalWidth,
+        height: img.naturalHeight || img.naturalWidth
+      };
+    }
+
+    // 2. Explicit HTML attributes (width, height, data-width, data-height, data-orig-width, data-orig-height)
+    const attrW = parsePixelDimension(img.getAttribute("width") || img.getAttribute("data-width") || img.getAttribute("data-orig-width"));
+    const attrH = parsePixelDimension(img.getAttribute("height") || img.getAttribute("data-height") || img.getAttribute("data-orig-height"));
+    if (Number.isFinite(attrW) && Number.isFinite(attrH)) {
+      return { width: attrW, height: attrH };
+    }
+    if (Number.isFinite(attrW)) {
+      return { width: attrW, height: attrW };
+    }
+    if (Number.isFinite(attrH)) {
+      return { width: attrH, height: attrH };
+    }
+
+    // 3. Inline style
+    const styleW = parsePixelDimension(img.style?.width);
+    const styleH = parsePixelDimension(img.style?.height);
+    if (Number.isFinite(styleW) && Number.isFinite(styleH)) {
+      return { width: styleW, height: styleH };
+    }
+    if (Number.isFinite(styleW)) {
+      return { width: styleW, height: styleW };
+    }
+    if (Number.isFinite(styleH)) {
+      return { width: styleH, height: styleH };
+    }
+
+    // 4. Discourse .meta informations (e.g. "800×600 45 KB")
+    const metaInfo = img.closest(".lightbox-wrapper")?.querySelector(".informations")?.textContent;
+    if (metaInfo) {
+      const match = metaInfo.match(/(\d+)\s*[×x]\s*(\d+)/i);
+      if (match) {
+        const mw = parseInt(match[1], 10);
+        const mh = parseInt(match[2], 10);
+        if (mw > 0 && mh > 0) {
+          return { width: mw, height: mh };
+        }
+      }
+    }
+
+    // 5. Rendered dimensions if in document
+    if (typeof img.getBoundingClientRect === "function" && img.isConnected) {
+      const rect = img.getBoundingClientRect();
+      const rw = img.offsetWidth || img.clientWidth || (rect ? rect.width : 0);
+      const rh = img.offsetHeight || img.clientHeight || (rect ? rect.height : 0);
+      if (rw > 0 && rh > 0) {
+        return { width: rw, height: rh };
+      }
+    }
+
+    return null;
+  }
+
+  function isImageSmallerThanLayout(img, layoutSize) {
+    const dim = getImageEffectiveDimensions(img);
+    if (!dim) return false;
+    const targetSize = Number(layoutSize) || getImageAutoLayoutSize();
+    // 小于排版尺寸：图片的宽度和高度均小于设定的排版缩略图尺寸
+    return dim.width < targetSize && dim.height < targetSize;
+  }
+
+  function attachImageAutoLayoutLoadCheck(img, bubble) {
+    if (!img || img.dataset.layoutChecked) return;
+    img.dataset.layoutChecked = "1";
+    if (typeof img.addEventListener !== "function") return;
+    img.addEventListener("load", () => {
+      const currentLayoutSize = getImageAutoLayoutSize();
+      if (isImageSmallerThanLayout(img, currentLayoutSize)) {
+        const msg = bubble?.closest(".wecom-msg");
+        if (!msg) return;
+        const postNum = Number(msg.dataset.postNumber);
+        const post = chatState.postsByNumber.get(postNum);
+        const rawContent = post?.cooked || bubble.dataset.rawCooked;
+        if (rawContent) {
+          bubble.removeAttribute("data-layout-mode");
+          bubble.querySelector(".wecom-msg-images")?.remove();
+          bubble.querySelector(".wecom-bubble-layout-toggle")?.remove();
+          const bodyEl = bubble.querySelector(".wecom-msg-body");
+          if (bodyEl) {
+            bodyEl.innerHTML = rawContent;
+            bodyEl.classList.remove("is-empty");
+          }
+          applyImageAutoLayout(msg);
+          hydrateChatImages(bubble);
+        }
+      }
+    }, { once: true });
+  }
+
   function applyImageAutoLayout(root) {
     if (!root || !isImageAutoLayoutEnabled()) return;
     const messages = root.classList?.contains("wecom-msg")
       ? [root]
       : Array.from(root.querySelectorAll(".wecom-msg"));
     if (!messages.length) return;
+
+    const layoutSize = getImageAutoLayoutSize();
 
     for (const msg of messages) {
       const bubble = msg.querySelector(".wecom-msg-bubble");
@@ -9821,10 +9931,18 @@
         if (img.closest("aside.onebox, .onebox, .onebox-body, [data-onebox-src], blockquote, aside.quote, .wecom-reply-reference, table, details, .poll, .poll-ui-container, .lazyYT, .video-container, .audio-container, .chat-transcript, pre, code")) return false;
         const src = img.getAttribute("src") || img.getAttribute("data-orig-src") || img.getAttribute("data-large-src");
         if (!src || src.startsWith("data:image/svg+xml")) return false;
+        if (isImageSmallerThanLayout(img, layoutSize)) return false;
+        if (!img.complete && !getImageEffectiveDimensions(img)) {
+          attachImageAutoLayoutLoadCheck(img, bubble);
+        }
         return true;
       });
 
-      if (!candidateImgs.length) continue;
+      if (!candidateImgs.length) {
+        bubble.querySelector(".wecom-bubble-layout-toggle")?.remove();
+        bubble.removeAttribute("data-layout-mode");
+        continue;
+      }
 
       const gallery = document.createElement("div");
       gallery.className = "wecom-msg-images";
@@ -9948,11 +10066,20 @@
     for (const msgEl of messages) {
       const num = Number(msgEl.dataset.postNumber);
       const post = chatState.postsByNumber.get(num);
-      if (!post) continue;
       const bubble = msgEl.querySelector(".wecom-msg-bubble");
       if (!bubble) continue;
+      const rawContent = post?.cooked || bubble.dataset.rawCooked;
+      if (rawContent === undefined || rawContent === null) continue;
       bubble.removeAttribute("data-layout-mode");
-      bubble.innerHTML = `${replyReferenceHtml(post)}<div class="wecom-msg-body">${post.cooked || ""}</div>`;
+      bubble.querySelector(".wecom-msg-images")?.remove();
+      bubble.querySelector(".wecom-bubble-layout-toggle")?.remove();
+      const bodyEl = bubble.querySelector(".wecom-msg-body");
+      if (bodyEl) {
+        bodyEl.innerHTML = rawContent;
+        bodyEl.classList.remove("is-empty");
+      } else {
+        bubble.innerHTML = `${post ? replyReferenceHtml(post) : ""}<div class="wecom-msg-body">${rawContent}</div>`;
+      }
     }
     hydrateChatImages(body);
   }
