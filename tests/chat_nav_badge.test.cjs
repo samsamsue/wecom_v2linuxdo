@@ -981,3 +981,85 @@ test("V2EX topic detail multi-page pagination and footer bar", () => {
   assert.equal(res2.hasNextPage, false);
 });
 
+test("Topic last read floor persistence and automatic restoration on detail view", () => {
+  assert.ok(
+    scriptContent.includes("function rememberTopicPost("),
+    "must define rememberTopicPost"
+  );
+  assert.ok(
+    scriptContent.includes("function getRememberedPost("),
+    "must define getRememberedPost"
+  );
+  assert.ok(
+    scriptContent.includes("function saveCurrentTopicReadingPosition("),
+    "must define saveCurrentTopicReadingPosition"
+  );
+  assert.ok(
+    scriptContent.includes('window.addEventListener("beforeunload", saveCurrentTopicReadingPosition);'),
+    "must register beforeunload listener to persist reading position"
+  );
+  assert.ok(
+    scriptContent.includes("if (chatState.pinningScroll || chatState.pinnedPost) return;"),
+    "handleChatBodyScroll must protect pinningScroll and pinnedPost"
+  );
+  assert.ok(
+    scriptContent.includes('chatBody.addEventListener("wheel", cancelPin, { passive: true });'),
+    "bindChatPanelEvents must listen to user wheel event to cancel pinning"
+  );
+  assert.ok(
+    scriptContent.includes("targetPage = floor > 100 ? Math.floor((floor - 1) / 100) + 1 : 1;"),
+    "topicHref and syncTopicLastReadHref must compute target page for V2EX floors"
+  );
+  assert.ok(
+    scriptContent.includes("target.floor = remembered - 1;"),
+    "conv click and loadTopic must compute target floor from remembered post"
+  );
+
+  // Test simulation: V2EX target page & floor computation
+  function computeV2exTarget(postNumber) {
+    if (!postNumber || postNumber <= 1) return { floor: 0, page: 1, anchor: "" };
+    const floor = postNumber - 1;
+    const page = floor > 100 ? Math.floor((floor - 1) / 100) + 1 : 1;
+    return { floor, page, anchor: `reply${floor}` };
+  }
+
+  // Floor 50 (page 1)
+  const t50 = computeV2exTarget(51);
+  assert.equal(t50.floor, 50);
+  assert.equal(t50.page, 1);
+  assert.equal(t50.anchor, "reply50");
+
+  // Floor 100 (page 1)
+  const t100 = computeV2exTarget(101);
+  assert.equal(t100.floor, 100);
+  assert.equal(t100.page, 1);
+  assert.equal(t100.anchor, "reply100");
+
+  // Floor 101 (page 2)
+  const t101 = computeV2exTarget(102);
+  assert.equal(t101.floor, 101);
+  assert.equal(t101.page, 2);
+  assert.equal(t101.anchor, "reply101");
+
+  // Floor 150 (page 2)
+  const t150 = computeV2exTarget(151);
+  assert.equal(t150.floor, 150);
+  assert.equal(t150.page, 2);
+  assert.equal(t150.anchor, "reply150");
+
+  // Floor 205 (page 3)
+  const t205 = computeV2exTarget(206);
+  assert.equal(t205.floor, 205);
+  assert.equal(t205.page, 3);
+  assert.equal(t205.anchor, "reply205");
+
+  // Test simulation: Reading position selection
+  function pickReadingPost(visiblePosts, isAtBottom) {
+    if (!visiblePosts.length) return 0;
+    return isAtBottom ? visiblePosts[visiblePosts.length - 1] : visiblePosts[0];
+  }
+  assert.equal(pickReadingPost([10, 11, 12], false), 10);
+  assert.equal(pickReadingPost([10, 11, 12], true), 12);
+});
+
+

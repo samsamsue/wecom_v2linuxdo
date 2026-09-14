@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.6.3
+// @version      0.6.4
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -5658,7 +5658,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.6.3";
+  const SCRIPT_VERSION = "0.6.4";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -7080,6 +7080,14 @@
         if (conv.dataset.targetFloor) target.floor = Number(conv.dataset.targetFloor);
         if (conv.dataset.targetReplyId) target.replyId = Number(conv.dataset.targetReplyId);
         if (conv.dataset.targetPage) target.page = Number(conv.dataset.targetPage);
+        if (IS_V2EX && !target.floor && !target.replyId && !target.anchor) {
+          const remembered = getRememberedPost(topicId);
+          if (remembered > 1) {
+            target.floor = remembered - 1;
+            target.page = target.floor > 100 ? Math.floor((target.floor - 1) / 100) + 1 : 1;
+            target.anchor = `reply${target.floor}`;
+          }
+        }
 
         if (isSame && hasRendered && (target.floor || target.replyId || target.anchor)) {
           const located = locateV2exReply(body, target);
@@ -7217,8 +7225,18 @@
 
   function topicHref(topic) {
     if (IS_V2EX) {
-      const pagePart = topic.target_page > 1 ? `?p=${topic.target_page}` : "";
-      const anchorPart = topic.target_anchor ? `#${topic.target_anchor}` : "";
+      let targetPage = topic.target_page;
+      let targetAnchor = topic.target_anchor;
+      if (!targetPage && !targetAnchor) {
+        const remembered = rememberedPostForTopic(topic);
+        if (remembered > 1) {
+          const floor = remembered - 1;
+          targetPage = floor > 100 ? Math.floor((floor - 1) / 100) + 1 : 1;
+          targetAnchor = `reply${floor}`;
+        }
+      }
+      const pagePart = targetPage > 1 ? `?p=${targetPage}` : "";
+      const anchorPart = targetAnchor ? `#${targetAnchor}` : "";
       return `/t/${topic.id}${pagePart}${anchorPart}`;
     }
     const slug = topic.slug || "topic";
@@ -7273,11 +7291,23 @@
     const summary = maskList ? String(topic.title || rawSummary) : rawSummary;
     const tag = (maskList || isMaskAvatar()) ? "" : convCategoryTag(topic);
     const isPinned = !!(topic.pinned || topic.pinned_globally);
+    let targetFloor = topic.target_floor;
+    let targetReplyId = topic.target_reply_id;
+    let targetAnchor = topic.target_anchor;
+    let targetPage = topic.target_page;
+    if (IS_V2EX && !targetFloor && !targetReplyId && !targetAnchor && !targetPage) {
+      const remembered = rememberedPostForTopic(topic);
+      if (remembered > 1) {
+        targetFloor = remembered - 1;
+        targetPage = targetFloor > 100 ? Math.floor((targetFloor - 1) / 100) + 1 : 1;
+        targetAnchor = `reply${targetFloor}`;
+      }
+    }
     const targetAttrs = [
-      topic.target_floor ? `data-target-floor="${topic.target_floor}"` : "",
-      topic.target_reply_id ? `data-target-reply-id="${topic.target_reply_id}"` : "",
-      topic.target_anchor ? `data-target-anchor="${escapeHtml(topic.target_anchor)}"` : "",
-      topic.target_page ? `data-target-page="${topic.target_page}"` : ""
+      targetFloor ? `data-target-floor="${targetFloor}"` : "",
+      targetReplyId ? `data-target-reply-id="${targetReplyId}"` : "",
+      targetAnchor ? `data-target-anchor="${escapeHtml(targetAnchor)}"` : "",
+      targetPage ? `data-target-page="${targetPage}"` : ""
     ].filter(Boolean).join(" ");
     return `
       <a class="wecom-conv${isPinned ? " is-pinned" : ""}" href="${escapeHtml(topicHref(topic))}" data-topic-id="${topic.id}" ${targetAttrs} title="${escapeHtml(maskList ? `${title} · ${topic.title}` : title)}">
@@ -8679,8 +8709,7 @@
   }
 
   function handleChatBodyScroll(panel) {
-    if (chatState.pinningScroll) return;
-    chatState.pinnedPost = 0;
+    if (chatState.pinningScroll || chatState.pinnedPost) return;
     const body = panel.querySelector(".wecom-chat-body");
     if (body.scrollTop < 80) loadOlderPosts();
     if (body.scrollTop + body.clientHeight >= body.scrollHeight - 160) loadNewerPosts();
@@ -8695,6 +8724,13 @@
     let chatScrollTimer = null;
     let chatBodyScrollThrottleTimer = null;
     const chatBody = panel.querySelector(".wecom-chat-body");
+    const cancelPin = () => {
+      chatState.pinnedPost = 0;
+      chatState.pinningScroll = false;
+    };
+    chatBody.addEventListener("wheel", cancelPin, { passive: true });
+    chatBody.addEventListener("touchstart", cancelPin, { passive: true });
+    chatBody.addEventListener("pointerdown", cancelPin, { passive: true });
     chatBody.addEventListener("scroll", () => {
       chatBody.classList.add("is-scrolling");
       clearTimeout(chatScrollTimer);
@@ -9061,7 +9097,13 @@
 
   function keepChatAtV2exReply(body, target) {
     if (!body || !target) return;
-    const pin = () => locateV2exReply(body, target);
+    const targetPost = target.floor ? target.floor + 1 : (target.replyId || 1);
+    chatState.pinnedPost = targetPost;
+    chatState.pinningScroll = true;
+    const pin = () => {
+      if (Number(chatState.pinnedPost) !== Number(targetPost)) return;
+      locateV2exReply(body, target);
+    };
     pin();
     const pending = [...body.querySelectorAll("img")].filter((image) => !image.complete);
     pending.forEach((image) => {
@@ -9069,6 +9111,10 @@
       image.addEventListener("error", pin, { once: true });
     });
     [50, 160, 350, 700, 1200].forEach((delay) => setTimeout(pin, delay));
+    setTimeout(() => {
+      chatState.pinningScroll = false;
+      if (Number(chatState.pinnedPost) === Number(targetPost)) chatState.pinnedPost = 0;
+    }, 1300);
   }
 
   function formatBoostCooked(cooked, raw) {
@@ -11375,7 +11421,20 @@
     const row = document.querySelector(`.wecom-conv[data-topic-id="${topicId}"]`);
     if (!row) return;
     if (IS_V2EX) {
-      row.setAttribute("href", `/t/${topicId}`);
+      const floor = Math.max(0, postNumber - 1);
+      const page = floor > 100 ? Math.floor((floor - 1) / 100) + 1 : 1;
+      const pagePart = page > 1 ? `?p=${page}` : "";
+      const anchorPart = floor > 0 ? `#reply${floor}` : "";
+      row.setAttribute("href", `/t/${topicId}${pagePart}${anchorPart}`);
+      if (floor > 0) {
+        row.dataset.targetFloor = String(floor);
+        row.dataset.targetPage = String(page);
+        row.dataset.targetAnchor = `reply${floor}`;
+      } else {
+        delete row.dataset.targetFloor;
+        delete row.dataset.targetPage;
+        delete row.dataset.targetAnchor;
+      }
       return;
     }
     const current = row.getAttribute("href") || "";
@@ -11422,11 +11481,35 @@
 
   function scrollChatToPost(body, postNumber) {
     if (!body || !postNumber) return false;
-    const el = body.querySelector(`.wecom-msg[data-post-number="${postNumber}"]`);
+    let el = body.querySelector(`.wecom-msg[data-post-number="${postNumber}"], .wecom-msg[data-floor="${postNumber - 1}"]`);
+    if (!el) {
+      const msgs = [...body.querySelectorAll(".wecom-msg[data-post-number]")];
+      let closest = null;
+      let minDiff = Infinity;
+      for (const msg of msgs) {
+        const num = Number(msg.dataset.postNumber) || 0;
+        if (!num) continue;
+        const diff = Math.abs(num - postNumber);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closest = msg;
+        }
+      }
+      el = closest;
+    }
     if (!el) return false;
+    clearTimeout(replyHighlightTimer);
+    highlightedReplyMessage?.classList.remove("is-reply-target");
+    highlightedReplyMessage = el;
+    el.classList.add("is-reply-target");
+    replyHighlightTimer = setTimeout(() => {
+      el.classList.remove("is-reply-target");
+      if (highlightedReplyMessage === el) highlightedReplyMessage = null;
+    }, REPLY_HIGHLIGHT_DURATION_MS);
+
     const delta = el.getBoundingClientRect().top - body.getBoundingClientRect().top;
     chatState.pinningScroll = true;
-    body.scrollTop = Math.max(0, body.scrollTop + delta);
+    body.scrollTop = Math.max(0, body.scrollTop + delta - 12);
     requestAnimationFrame(() => {
       chatState.pinningScroll = false;
     });
@@ -11436,6 +11519,7 @@
   function keepChatAtPost(body, postNumber) {
     if (!body || !postNumber) return;
     chatState.pinnedPost = postNumber;
+    chatState.pinningScroll = true;
     const pin = () => {
       if (Number(chatState.pinnedPost) !== Number(postNumber)) return;
       scrollChatToPost(body, postNumber);
@@ -11448,7 +11532,7 @@
     });
     [50, 160, 400, 800].forEach((delay) => setTimeout(pin, delay));
     setTimeout(() => {
-      pin();
+      chatState.pinningScroll = false;
       if (Number(chatState.pinnedPost) === Number(postNumber)) chatState.pinnedPost = 0;
     }, 1000);
   }
@@ -11484,16 +11568,30 @@
     }).catch(() => {});
   }
 
+  function saveCurrentTopicReadingPosition() {
+    if (!chatState.topicId || chatState.pinnedPost || chatState.pinningScroll) return;
+    const body = document.querySelector(".wecom-chat-body");
+    const visible = visibleTopicPosts(body);
+    if (!visible.length) return;
+    const isAtBottom = body.scrollHeight - (body.scrollTop + body.clientHeight) <= 16;
+    const postNumber = isAtBottom ? visible[visible.length - 1] : visible[0];
+    if (!postNumber) return;
+    rememberTopicPost(chatState.topicId, postNumber);
+    replaceTopicPostUrl(chatState.topicId, postNumber);
+  }
+
   const trackVisibleTopicPost = debounce(() => {
     if (!chatState.topicId || chatState.pinnedPost || chatState.pinningScroll) return;
     const body = document.querySelector(".wecom-chat-body");
     const visible = visibleTopicPosts(body);
-    const postNumber = visible[0];
+    if (!visible.length) return;
+    const isAtBottom = body.scrollHeight - (body.scrollTop + body.clientHeight) <= 16;
+    const postNumber = isAtBottom ? visible[visible.length - 1] : visible[0];
     if (!postNumber) return;
     rememberTopicPost(chatState.topicId, postNumber);
     replaceTopicPostUrl(chatState.topicId, postNumber);
     reportReadTimings(chatState.topicId, visible);
-  }, 220);
+  }, 200);
 
   let topicAbortController = null;
 
@@ -11502,6 +11600,19 @@
     let target = targetOption;
     if (!target && IS_V2EX) {
       target = parseV2exReplyTarget(location.href);
+    }
+    if (IS_V2EX && (!target || (!target.floor && !target.replyId && !target.anchor))) {
+      const remembered = getRememberedPost(topicId);
+      if (remembered > 1) {
+        const remFloor = remembered - 1;
+        const remPage = remFloor > 100 ? Math.floor((remFloor - 1) / 100) + 1 : 1;
+        target = {
+          floor: remFloor,
+          page: remPage,
+          replyId: 0,
+          anchor: `reply${remFloor}`
+        };
+      }
     }
     const initialBody = document.querySelector(".wecom-chat-body");
     const hasRenderedMsgs = Boolean(initialBody && initialBody.querySelector(".wecom-msg") && !initialBody.querySelector(".wecom-chat-loading, .wecom-chat-error, .wecom-chat-empty"));
@@ -11520,6 +11631,7 @@
 
     const sameTopic = chatState.topicId === topicId;
     if (!sameTopic) {
+      saveCurrentTopicReadingPosition();
       chatState.postsByNumber = new Map();
       chatState.renderedFirstIdx = -1;
       chatState.renderedLastIdx = -1;
@@ -11550,6 +11662,9 @@
       let data = await fetchTopicJson(topicId, requestedPost, force, signal, targetPage);
       if (signal.aborted || chatState.topicId !== topicId) return; // 路由已切走或已取消
       let openPost = openingPostNumber(topicId, data);
+      if (!openPost && target && target.floor) {
+        openPost = target.floor + 1;
+      }
       if (!requestedPost && openPost > 1 && !((data.post_stream && data.post_stream.posts) || [])
         .some((post) => postNumberOf(post) === openPost)) {
         try {
@@ -11674,7 +11789,8 @@
         }
         syncRenderedWindow(body);
         if (IS_V2EX && target && (target.floor || target.replyId || target.anchor)) {
-          rememberTopicPost(topicId, target.floor ? target.floor + 1 : 1);
+          const postNum = target.floor ? target.floor + 1 : (openPost || 1);
+          rememberTopicPost(topicId, postNum > 0 ? postNum : 1);
           keepChatAtV2exReply(body, target);
         } else if (sameTopic) {
           body.scrollTop = Math.min(body.scrollTop, body.scrollHeight);
@@ -12445,6 +12561,7 @@
     }
     window.addEventListener("popstate", scheduleApply);
     window.addEventListener("hashchange", scheduleApply);
+    window.addEventListener("beforeunload", saveCurrentTopicReadingPosition);
     document.addEventListener("DOMContentLoaded", scheduleApply, { once: true });
     document.addEventListener("turbo:load", scheduleApply);
     document.addEventListener("page:changed", scheduleApply);
