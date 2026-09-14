@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.0
+// @version      0.7.1
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -1611,7 +1611,8 @@
     }
     .wecom-list-panel.is-history-mode .wecom-list-nav-toggle,
     .wecom-list-panel.is-history-mode .wecom-list-chips,
-    .wecom-list-panel.is-history-mode .wecom-list-add {
+    .wecom-list-panel.is-history-mode .wecom-list-add,
+    .wecom-list-panel.is-history-mode .wecom-list-add-wrap {
       display: none !important;
     }
     .wecom-list-panel.is-history-mode .wecom-history-header-bar {
@@ -2985,6 +2986,73 @@
     }
     .wecom-list-add:hover { background: #D4D4D4; }
     .wecom-list-add svg { width: 17px; height: 17px; }
+    .wecom-list-add-wrap {
+      position: relative;
+      flex: 0 0 auto;
+    }
+    .wecom-list-add-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      width: 152px;
+      background: #FFFFFF;
+      border: 1px solid var(--wc-border, rgba(0, 0, 0, 0.08));
+      border-radius: 6px;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+      padding: 4px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      animation: wecom-fade-in 0.12s cubic-bezier(0, 0, 0.2, 1);
+    }
+    .wecom-list-add-menu[hidden] {
+      display: none !important;
+    }
+    .wecom-list-add-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      height: 32px;
+      padding: 0 8px;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--wc-text, #1F2329);
+      font-size: 13px;
+      cursor: pointer;
+      text-align: left;
+      user-select: none;
+      transition: background 0.1s ease, color 0.1s ease;
+      box-sizing: border-box;
+    }
+    .wecom-list-add-item:hover {
+      background: var(--wc-hover, #F0F2F5);
+      color: var(--wc-primary, #1A87FF);
+    }
+    .wecom-list-add-item-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      color: currentColor;
+    }
+    .wecom-list-add-item-icon svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      fill: none;
+    }
+    .wecom-list-add-item-text {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     .wecom-list-header {
       height: 40px;
       padding: 0 10px;
@@ -5094,6 +5162,18 @@
       background-color: #2B2D31 !important;
       color: #8F959E !important;
     }
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-menu {
+      background: #232529;
+      border-color: rgba(255, 255, 255, 0.12);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-item {
+      color: #D3D8E2;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-item:hover {
+      background: #2C2F36;
+      color: #FFFFFF;
+    }
     html.${ROOT_CLASS}.wecom-dark .wecom-list-search input {
       color: #ECEFF4 !important;
     }
@@ -5798,7 +5878,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.0";
+  const SCRIPT_VERSION = "0.7.1";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -7241,16 +7321,86 @@
     scheduleApply();
   }
 
+  function closeListAddMenu() {
+    const menu = document.querySelector(".wecom-list-add-menu");
+    const addBtn = document.querySelector(".wecom-list-add");
+    if (menu) menu.hidden = true;
+    if (addBtn) addBtn.setAttribute("aria-expanded", "false");
+  }
+
+  function updateListAddMenuTexts(menu) {
+    if (!menu) return;
+    const isMask = isMaskTitleList();
+    const newTopicItem = menu.querySelector('[data-add-action="new-topic"]');
+    if (newTopicItem) {
+      const textEl = newTopicItem.querySelector(".wecom-list-add-item-text");
+      if (textEl) textEl.textContent = isMask ? "发起新项目群" : "发布新主题";
+      newTopicItem.title = isMask ? "发新话题" : "发布新主题";
+    }
+    const navItem = menu.querySelector('[data-add-action="nav"]');
+    if (navItem) {
+      const textEl = navItem.querySelector(".wecom-list-add-item-text");
+      if (textEl) textEl.textContent = isMask ? "部门架构导航" : "话题分类导航";
+      navItem.title = isMask ? "话题分类" : "话题分类导航";
+    }
+  }
+
+  function toggleListAddMenu(panel) {
+    const wrap = panel.querySelector(".wecom-list-add-wrap");
+    const menu = wrap?.querySelector(".wecom-list-add-menu");
+    const addBtn = wrap?.querySelector(".wecom-list-add");
+    if (!menu || !addBtn) return;
+    const willOpen = menu.hidden;
+    if (willOpen) {
+      updateListAddMenuTexts(menu);
+      menu.hidden = false;
+      addBtn.setAttribute("aria-expanded", "true");
+    } else {
+      menu.hidden = true;
+      addBtn.setAttribute("aria-expanded", "false");
+    }
+  }
+
+  let listAddOutsideBound = false;
+  function ensureListAddOutsideClose() {
+    if (listAddOutsideBound) return;
+    listAddOutsideBound = true;
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".wecom-list-add-wrap")) {
+        closeListAddMenu();
+      }
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeListAddMenu();
+    });
+  }
+
   function bindListPanelClicks(panel) {
-    // v3：含企业微信搜索栏与话题导航按钮；旧面板需重绑
-    if (!panel || panel.dataset.linkBound === "3") return;
-    panel.dataset.linkBound = "3";
+    // v4：含新建菜单与话题导航下拉；旧面板需重绑
+    if (!panel || panel.dataset.linkBound === "4") return;
+    panel.dataset.linkBound = "4";
+    ensureListAddOutsideClose();
     panel.addEventListener("click", (e) => {
       const addBtn = e.target.closest(".wecom-list-add");
       if (addBtn && panel.contains(addBtn)) {
         e.preventDefault();
         e.stopPropagation();
-        setNav2Open(!isNav2Open());
+        toggleListAddMenu(panel);
+        return;
+      }
+
+      const addActionBtn = e.target.closest(".wecom-list-add-item");
+      if (addActionBtn && panel.contains(addActionBtn)) {
+        e.preventDefault();
+        e.stopPropagation();
+        const action = addActionBtn.dataset.addAction;
+        closeListAddMenu();
+        if (action === "new-topic") {
+          const newTopicUrl = IS_V2EX ? "https://v2ex.com/new" : "/new-topic";
+          window.open(newTopicUrl, "_blank", "noopener,noreferrer");
+        } else if (action === "nav") {
+          setNav2Open(!isNav2Open());
+        }
         return;
       }
 
@@ -7396,7 +7546,7 @@
   function ensureListPanel() {
     let panel = document.querySelector(".wecom-list-panel");
     // 旧面板缺筛选按钮/容器时重建
-    if (panel && (!panel.querySelector(".wecom-list-search") || !panel.querySelector(".wecom-list-nav-toggle") || !panel.querySelector(".wecom-list-nav") || !panel.querySelector(".wecom-chip") || !panel.querySelector(".wecom-history-header-bar"))) {
+    if (panel && (!panel.querySelector(".wecom-list-search") || !panel.querySelector(".wecom-list-nav-toggle") || !panel.querySelector(".wecom-list-nav") || !panel.querySelector(".wecom-chip") || !panel.querySelector(".wecom-history-header-bar") || !panel.querySelector(".wecom-list-add-menu"))) {
       panel.remove();
       panel = null;
     }
@@ -7429,7 +7579,19 @@
           ${ICONS.search}
           <input type="search" name="q" placeholder="${searchPlaceholder}" autocomplete="off" enterkeyhint="search" aria-label="搜索话题">
         </form>
-        <button type="button" class="wecom-list-add" title="打开话题导航" aria-label="打开话题导航">${ICONS.plus}</button>
+        <div class="wecom-list-add-wrap">
+          <button type="button" class="wecom-list-add" title="新建与导航" aria-label="新建与导航" aria-haspopup="menu" aria-expanded="false">${ICONS.plus}</button>
+          <div class="wecom-list-add-menu" hidden role="menu">
+            <button type="button" class="wecom-list-add-item" data-add-action="new-topic" role="menuitem">
+              <span class="wecom-list-add-item-icon">${ICONS.compose}</span>
+              <span class="wecom-list-add-item-text">发布新主题</span>
+            </button>
+            <button type="button" class="wecom-list-add-item" data-add-action="nav" role="menuitem">
+              <span class="wecom-list-add-item-icon">${ICONS.grid}</span>
+              <span class="wecom-list-add-item-text">话题分类导航</span>
+            </button>
+          </div>
+        </div>
       </div>
       <div class="wecom-list-header">
         <button type="button" class="wecom-chip-icon wecom-list-nav-toggle" title="筛选" aria-expanded="false">${ICONS.filter}</button>

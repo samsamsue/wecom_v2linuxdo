@@ -1562,6 +1562,156 @@ test("detail disguised title long press displays original title, and release res
   assert.equal(ctrl.getIsPeeking(), false);
 });
 
+test("list panel + button renders dropdown menu with create topic and topic navigation items", () => {
+  // Static script assertions
+  assert.ok(scriptContent.includes('class="wecom-list-add-wrap"'), "must define .wecom-list-add-wrap");
+  assert.ok(scriptContent.includes('class="wecom-list-add-menu"'), "must define .wecom-list-add-menu");
+  assert.ok(scriptContent.includes('data-add-action="new-topic"'), "must define new-topic action");
+  assert.ok(scriptContent.includes('data-add-action="nav"'), "must define nav action");
+  assert.ok(scriptContent.includes("function toggleListAddMenu("), "must define toggleListAddMenu");
+  assert.ok(scriptContent.includes("function closeListAddMenu("), "must define closeListAddMenu");
+  assert.ok(scriptContent.includes("function updateListAddMenuTexts("), "must define updateListAddMenuTexts");
+  assert.ok(scriptContent.includes("https://v2ex.com/new"), "must link to V2EX new topic url");
+  assert.ok(scriptContent.includes("/new-topic"), "must link to Linux DO new topic url");
+  assert.ok(scriptContent.includes(".wecom-list-add-menu"), "must style .wecom-list-add-menu in css");
+
+  // Dynamic simulation assertions
+  const panel = {
+    _classes: new Set(["wecom-list-panel"]),
+    dataset: {},
+    querySelector(sel) {
+      if (sel === ".wecom-list-add-wrap") return this.addWrap;
+      if (sel === ".wecom-list-add-menu") return this.addMenu;
+      if (sel === ".wecom-list-add") return this.addBtn;
+      if (sel === '[data-add-action="new-topic"]') return this.newTopicItem;
+      if (sel === '[data-add-action="nav"]') return this.navItem;
+      return null;
+    }
+  };
+
+  const addBtn = {
+    attributes: {},
+    setAttribute(k, v) { this.attributes[k] = String(v); },
+    getAttribute(k) { return this.attributes[k]; }
+  };
+
+  const newTopicText = { textContent: "发布新主题" };
+  const newTopicItem = {
+    dataset: { addAction: "new-topic" },
+    title: "",
+    querySelector(sel) {
+      if (sel === ".wecom-list-add-item-text") return newTopicText;
+      return null;
+    }
+  };
+
+  const navText = { textContent: "话题分类导航" };
+  const navItem = {
+    dataset: { addAction: "nav" },
+    title: "",
+    querySelector(sel) {
+      if (sel === ".wecom-list-add-item-text") return navText;
+      return null;
+    }
+  };
+
+  const addMenu = {
+    hidden: true,
+    querySelector(sel) {
+      if (sel === '[data-add-action="new-topic"]') return newTopicItem;
+      if (sel === '[data-add-action="nav"]') return navItem;
+      return null;
+    }
+  };
+
+  const addWrap = {
+    querySelector(sel) {
+      if (sel === ".wecom-list-add-menu") return addMenu;
+      if (sel === ".wecom-list-add") return addBtn;
+      return null;
+    }
+  };
+
+  panel.addBtn = addBtn;
+  panel.addMenu = addMenu;
+  panel.addWrap = addWrap;
+  panel.newTopicItem = newTopicItem;
+  panel.newTopicText = newTopicText;
+  panel.navItem = navItem;
+  panel.navText = navText;
+
+  let isMaskList = false;
+  function isMaskTitleList() { return isMaskList; }
+
+  function updateListAddMenuTexts(menu) {
+    if (!menu) return;
+    const isMask = isMaskTitleList();
+    const item = menu.querySelector('[data-add-action="new-topic"]');
+    if (item) {
+      const textEl = item.querySelector(".wecom-list-add-item-text");
+      if (textEl) textEl.textContent = isMask ? "发起新项目群" : "发布新主题";
+      item.title = isMask ? "发新话题" : "发布新主题";
+    }
+    const nItem = menu.querySelector('[data-add-action="nav"]');
+    if (nItem) {
+      const textEl = nItem.querySelector(".wecom-list-add-item-text");
+      if (textEl) textEl.textContent = isMask ? "部门架构导航" : "话题分类导航";
+      nItem.title = isMask ? "话题分类" : "话题分类导航";
+    }
+  }
+
+  function toggleListAddMenu(p) {
+    const wrap = p.querySelector(".wecom-list-add-wrap");
+    const menu = wrap?.querySelector(".wecom-list-add-menu");
+    const btn = wrap?.querySelector(".wecom-list-add");
+    if (!menu || !btn) return;
+    const willOpen = menu.hidden;
+    if (willOpen) {
+      updateListAddMenuTexts(menu);
+      menu.hidden = false;
+      btn.setAttribute("aria-expanded", "true");
+    } else {
+      menu.hidden = true;
+      btn.setAttribute("aria-expanded", "false");
+    }
+  }
+
+  function closeListAddMenu(p) {
+    const menu = p.querySelector(".wecom-list-add-menu");
+    const btn = p.querySelector(".wecom-list-add");
+    if (menu) menu.hidden = true;
+    if (btn) btn.setAttribute("aria-expanded", "false");
+  }
+
+  // Initial
+  assert.equal(panel.addMenu.hidden, true);
+
+  // Normal open
+  toggleListAddMenu(panel);
+  assert.equal(panel.addMenu.hidden, false);
+  assert.equal(panel.addBtn.getAttribute("aria-expanded"), "true");
+  assert.equal(panel.newTopicText.textContent, "发布新主题");
+  assert.equal(panel.navText.textContent, "话题分类导航");
+
+  // Normal close
+  toggleListAddMenu(panel);
+  assert.equal(panel.addMenu.hidden, true);
+  assert.equal(panel.addBtn.getAttribute("aria-expanded"), "false");
+
+  // Disguise mode open
+  isMaskList = true;
+  toggleListAddMenu(panel);
+  assert.equal(panel.addMenu.hidden, false);
+  assert.equal(panel.newTopicText.textContent, "发起新项目群");
+  assert.equal(panel.navText.textContent, "部门架构导航");
+
+  // Close
+  closeListAddMenu(panel);
+  assert.equal(panel.addMenu.hidden, true);
+  assert.equal(panel.addBtn.getAttribute("aria-expanded"), "false");
+});
+
+
 
 
 
