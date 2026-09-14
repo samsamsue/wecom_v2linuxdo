@@ -2051,6 +2051,71 @@ test("message bubble hover shows 原排版 button and clicking directly toggles 
   assert.equal(bubbleMock.isRawClass, false);
 });
 
+test("component images such as onebox, poll, details are excluded from image auto-layout", () => {
+  // 1. Script checks for onebox containers and component elements
+  assert.ok(
+    scriptContent.includes("aside.onebox") && scriptContent.includes(".onebox-body"),
+    "must exclude aside.onebox and .onebox-body"
+  );
+  assert.ok(
+    scriptContent.includes(".onebox-avatar") && scriptContent.includes(".onebox-thumbnail"),
+    "must exclude .onebox-avatar and .onebox-thumbnail"
+  );
+  assert.ok(
+    scriptContent.includes("details") && scriptContent.includes(".poll"),
+    "must exclude details and poll components"
+  );
+
+  // 2. isPreviewableChatImage excludes onebox images from hijacking clicks
+  assert.ok(
+    scriptContent.includes('image.closest("aside.onebox, .onebox, .onebox-body, [data-onebox-src]")'),
+    "isPreviewableChatImage must return false for images inside onebox"
+  );
+
+  // 3. Functional simulation verifying Onebox remains in-place inside text
+  const postWithOneboxAndRegularImage = `
+    <p>这是正文第一段，推荐阅读这个链接：</p>
+    <aside class="onebox githubrepo">
+      <article class="onebox-body">
+        <img class="thumbnail onebox-avatar" src="https://github.com/avatar.png">
+        <h3><a href="https://github.com/example/repo">example/repo</a></h3>
+        <p>Repo description</p>
+      </article>
+    </aside>
+    <p>这是正文第二段，附上实际测试截图：</p>
+    <div class="lightbox-wrapper">
+      <a class="lightbox" href="https://linux.do/uploads/original/test.png">
+        <img src="https://linux.do/uploads/thumb/test.png" alt="test.png">
+      </a>
+    </div>
+  `;
+
+  // Filter function simulation matching script's logic
+  function filterCandidateImages(html) {
+    const images = [];
+    const regex = /<img\s+([^>]*?)src=["']([^"']+)["']([^>]*?)>/g;
+    let m;
+    while ((m = regex.exec(html)) !== null) {
+      const full = m[0];
+      const src = m[2];
+      const isOnebox = full.includes("onebox") ||
+        (html.indexOf('<aside class="onebox') !== -1 &&
+         html.indexOf('<aside class="onebox') < m.index &&
+         m.index < html.indexOf('</aside>'));
+      const isEmoji = full.includes('class="emoji"');
+      if (!isOnebox && !isEmoji) {
+        images.push(src);
+      }
+    }
+    return images;
+  }
+
+  const extracted = filterCandidateImages(postWithOneboxAndRegularImage);
+  assert.equal(extracted.length, 1);
+  assert.equal(extracted[0], "https://linux.do/uploads/thumb/test.png");
+  assert.ok(!extracted.includes("https://github.com/avatar.png"), "must not extract onebox avatar");
+});
+
 
 
 

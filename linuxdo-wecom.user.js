@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.6
+// @version      0.7.7
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -6770,7 +6770,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.6";
+  const SCRIPT_VERSION = "0.7.7";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -9351,7 +9351,8 @@
   function isPreviewableChatImage(image) {
     if (!(image instanceof HTMLImageElement)) return false;
     if (!image.closest(".wecom-msg-bubble")) return false;
-    return !image.matches(".emoji, .site-icon, .avatar, [role='emoji']");
+    if (image.closest("aside.onebox, .onebox, .onebox-body, [data-onebox-src]")) return false;
+    return !image.matches(".emoji, .site-icon, .avatar, [role='emoji'], .onebox-avatar, .onebox-thumbnail");
   }
 
   function normalizePreviewImageUrl(value) {
@@ -9509,7 +9510,7 @@
   function isNodeVisuallyEmpty(node) {
     if (!node) return true;
     if (node.textContent.trim().length > 0) return false;
-    const meaningful = node.querySelector("img, svg, iframe, video, audio, table, pre, code, input, hr, canvas, object, embed");
+    const meaningful = node.querySelector("img, svg, iframe, video, audio, table, pre, code, input, hr, canvas, object, embed, aside.onebox, .onebox, .poll, details");
     return !meaningful;
   }
 
@@ -9532,7 +9533,8 @@
       const allImgs = Array.from(bodyEl.querySelectorAll("img"));
       const candidateImgs = allImgs.filter((img) => {
         if (!isPreviewableChatImage(img)) return false;
-        if (img.closest("blockquote, aside.quote, .wecom-reply-reference, table")) return false;
+        if (img.matches(".onebox-avatar, .onebox-thumbnail, .site-icon, .badge-icon, .avatar")) return false;
+        if (img.closest("aside.onebox, .onebox, .onebox-body, [data-onebox-src], blockquote, aside.quote, .wecom-reply-reference, table, details, .poll, .poll-ui-container, .lazyYT, .video-container, .audio-container, .chat-transcript, pre, code")) return false;
         const src = img.getAttribute("src") || img.getAttribute("data-orig-src") || img.getAttribute("data-large-src");
         if (!src || src.startsWith("data:image/svg+xml")) return false;
         return true;
