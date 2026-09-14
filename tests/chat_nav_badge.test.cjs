@@ -1370,6 +1370,17 @@ test("sidebar History replaces Docs, persists browsed topics, and enables real-t
   assert.equal(simulateRead().length, 0);
 });
 
+test("convRowHtml hover title attribute displays only the real topic title without disguise title prefix", () => {
+  assert.ok(
+    scriptContent.includes('title="${escapeHtml(String(topic.title || title || ""))}"'),
+    "must set title attribute strictly to real topic title"
+  );
+  assert.ok(
+    !scriptContent.includes('title="${escapeHtml(maskList ? `${title} · ${topic.title}` : title)}"'),
+    "must not prefix disguise title in hover tooltip"
+  );
+});
+
 
 
 
