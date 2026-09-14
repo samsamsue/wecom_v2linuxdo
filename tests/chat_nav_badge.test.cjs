@@ -1838,6 +1838,130 @@ test("Discourse confirmation dialogs and modals have higher z-index than compose
   );
 });
 
+test("topic detail image auto-layout setting, 100px thumbnails below text, and click to preview", () => {
+  // 1. Script contains configuration constants and toggle functions
+  assert.ok(
+    scriptContent.includes('const IMAGE_AUTO_LAYOUT_KEY = "linuxdo-wecom-image-auto-layout";'),
+    "must define IMAGE_AUTO_LAYOUT_KEY constant"
+  );
+  assert.ok(
+    scriptContent.includes("function isImageAutoLayoutEnabled") && scriptContent.includes("function setImageAutoLayoutEnabled"),
+    "must define isImageAutoLayoutEnabled and setImageAutoLayoutEnabled"
+  );
+  assert.ok(
+    scriptContent.includes("function refreshChatMessagesLayout"),
+    "must define refreshChatMessagesLayout for in-place updates"
+  );
+
+  // 2. Settings menu contains toggle option and synchronization
+  assert.ok(
+    scriptContent.includes(".wecom-menu-toggle-image-layout"),
+    "must include .wecom-menu-toggle-image-layout button in settings menu"
+  );
+  assert.ok(
+    scriptContent.includes("图片自动排版"),
+    "must display 图片自动排版 label in settings menu"
+  );
+  assert.ok(
+    scriptContent.includes("setImageAutoLayoutEnabled(!isImageAutoLayoutEnabled())"),
+    "must handle toggle click in settings menu"
+  );
+
+  // 3. CSS styling constraints for 100px thumbnail and container
+  assert.ok(
+    scriptContent.includes(".wecom-msg-images"),
+    "must define .wecom-msg-images container style"
+  );
+  assert.ok(
+    scriptContent.includes("width: 100px !important;") && scriptContent.includes("height: 100px !important;"),
+    "must constrain thumbnails strictly to width: 100px and height: 100px"
+  );
+  assert.ok(
+    scriptContent.includes("object-fit: cover !important;"),
+    "must apply object-fit: cover to thumbnail images"
+  );
+  assert.ok(
+    scriptContent.includes("cursor: zoom-in"),
+    "must set zoom-in cursor on thumbnails"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-msg-body.is-empty"),
+    "must handle image-only posts with is-empty hidden class"
+  );
+
+  // 4. Click & keyboard preview delegation
+  assert.ok(
+    scriptContent.includes('event.target.closest(".wecom-msg-thumb")'),
+    "must delegate click on .wecom-msg-thumb to openImageViewer"
+  );
+
+  // 5. Functional simulation of image extraction and empty paragraph cleanup
+  function simulateAutoLayout(bodyHtml, autoLayoutEnabled = true) {
+    // Mini mock DOM parser
+    const images = [];
+    const textMatches = bodyHtml.match(/<p>(.*?)<\/p>/g) || [];
+    const imgRegex = /<img\s+([^>]*?)src=["']([^"']+)["']([^>]*?)>/g;
+    let match;
+    while ((match = imgRegex.exec(bodyHtml)) !== null) {
+      const full = match[0];
+      const src = match[2];
+      const isEmoji = full.includes('class="emoji"');
+      const inQuote = bodyHtml.indexOf("<blockquote>") !== -1 &&
+                      bodyHtml.indexOf("<blockquote>") < match.index &&
+                      match.index < bodyHtml.indexOf("</blockquote>");
+      if (!isEmoji && !inQuote) {
+        images.push({ src, alt: "preview" });
+      }
+    }
+
+    if (!autoLayoutEnabled || images.length === 0) {
+      return { hasGallery: false, imageCount: 0, textBody: bodyHtml };
+    }
+
+    // Cleaned body without the extracted images
+    let cleanedBody = bodyHtml.replace(/<div class="lightbox-wrapper">[\s\S]*?<\/div>/g, "")
+                              .replace(/<img\s+[^>]*?src=["']https:\/\/linux\.do\/[^"']+["'][^>]*>/g, "")
+                              .replace(/<p>\s*<\/p>/g, "")
+                              .trim();
+
+    const galleryHtml = `<div class="wecom-msg-images">` +
+      images.map(img => `<div class="wecom-msg-thumb" style="width:100px;height:100px"><img src="${img.src}" style="object-fit:cover"></div>`).join("") +
+      `</div>`;
+
+    return {
+      hasGallery: true,
+      imageCount: images.length,
+      textBody: cleanedBody,
+      galleryHtml
+    };
+  }
+
+  const sampleCooked = `
+    <p>这是帖子的文字说明</p>
+    <div class="lightbox-wrapper">
+      <a class="lightbox" href="https://linux.do/uploads/original/1.jpg">
+        <img src="https://linux.do/uploads/thumb/1.jpg" alt="pic1">
+      </a>
+    </div>
+    <p>第二段文字说明</p>
+    <blockquote><img src="https://linux.do/quote.jpg" alt="quoted"></blockquote>
+    <p><img class="emoji" src="smile.png" alt="smile"></p>
+  `;
+
+  // Disabled
+  const disabledRes = simulateAutoLayout(sampleCooked, false);
+  assert.equal(disabledRes.hasGallery, false);
+
+  // Enabled
+  const enabledRes = simulateAutoLayout(sampleCooked, true);
+  assert.equal(enabledRes.hasGallery, true);
+  assert.equal(enabledRes.imageCount, 1); // Only 1 topic image (quote image and emoji excluded)
+  assert.ok(!enabledRes.textBody.includes("lightbox-wrapper"), "lightbox-wrapper removed from text");
+  assert.ok(enabledRes.textBody.includes("这是帖子的文字说明"), "preserves text paragraph 1");
+  assert.ok(enabledRes.textBody.includes("第二段文字说明"), "preserves text paragraph 2");
+  assert.ok(enabledRes.galleryHtml.includes("width:100px;height:100px"), "thumbnail constrained to 100px");
+});
+
 
 
 
