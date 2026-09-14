@@ -3,7 +3,7 @@
 把 [Linux DO](https://linux.do/) 的网页布局换成企业微信 5.x 桌面端风格，同时继续使用原站真实数据、路由、通知与回复能力。
 
 - 作者：**Richy**
-- 当前版本：**0.5.10**
+- 当前版本：**0.6.2**
 - 用户脚本：[`linuxdo-wecom.user.js`](linuxdo-wecom.user.js)
 - 许可证：MIT
 
@@ -98,7 +98,7 @@
 Raw 安装入口：
 
 ```text
-https://github.com/Blackwindow6/linuxdo-wecom-ui/raw/main/linuxdo-wecom.user.js
+https://github.com/samsamsue/wecom_v2linuxdo/raw/main/linuxdo-wecom.user.js
 ```
 
 同一时间只启用一套 Linux DO 外观脚本。
@@ -158,6 +158,16 @@ node --test tests/update_check.test.cjs
 
 切换到原生视图后，页面右下角会显示悬浮按钮，可切回企业微信视图。
 
+## Chrome PWA 无边框客户端模式（摸鱼神器）
+
+如果你在 Chrome / Edge 中将 Linux DO “安装为应用”（PWA），窗口默认会有浏览器自带的标题栏。
+本项目贴心提供了极简绿色免安装的 Win32 无边框助手，让 PWA 窗口瞬间变成原汁原味的企业微信桌面无边框客户端！
+
+- **一键启动**：双击运行根目录的 `一键启动无边框.bat`（自动静默运行，无需安装第三方依赖）。
+- **常用操作**：
+  - **`F8`**（或 `Alt + F11`）：随时一键切换 显示 / 隐藏 窗口标题栏。
+  - **`Alt + 鼠标左键拖动`**：按住键盘 `Alt` 键，在窗口任意位置按住鼠标左键即可随意拖动窗口。
+- **一键退出**：双击运行 `退出无边框工具.bat`，自动恢复窗口原始标题栏并退出后台助手。
 
 ## 项目结构
 

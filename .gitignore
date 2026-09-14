@@ -3,5 +3,8 @@
 node_modules/
 __pycache__/
 *.py[cod]
+.borderless_state.json
+*.state.json
 tests/*
 !tests/update_check.test.cjs
+!tests/chat_nav_badge.test.cjs

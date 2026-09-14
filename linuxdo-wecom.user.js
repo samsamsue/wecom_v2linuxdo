@@ -1,14 +1,19 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.5.10
+// @version      0.6.2
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
+// @match        *://linux.do/*
 // @match        https://linux.do/*
+// @match        *://*.v2ex.com/*
+// @match        https://*.v2ex.com/*
+// @match        *://v2ex.com/*
+// @match        https://v2ex.com/*
 // @icon         https://linux.do/favicon.ico
-// @homepageURL  https://github.com/Blackwindow6/linuxdo-wecom-ui
-// @updateURL    https://raw.githubusercontent.com/Blackwindow6/linuxdo-wecom-ui/main/linuxdo-wecom.meta.js
-// @downloadURL  https://raw.githubusercontent.com/Blackwindow6/linuxdo-wecom-ui/main/linuxdo-wecom.user.js
+// @homepageURL  https://github.com/samsamsue/wecom_v2linuxdo
+// @updateURL    https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js
+// @downloadURL  https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js
 // @grant        none
 // @run-at       document-start
 // ==/UserScript==
@@ -26,20 +31,26 @@
   const LAST_READ_KEY = "linuxdo-wecom-last-read";
   const LAST_READ_MAX_TOPICS = 200;
 
-  const RAIL_WIDTH = 162; // 企业微信 5.x 展开导航
+  const RAIL_WIDTH = 56; // 企业微信 PC 端标准 56px 侧边停靠栏
   const NAV2_WIDTH = 240; // 展开栏（原生侧栏原样搬入，默认收起）
   const STRIP_WIDTH = 0; // 企业微信布局无窄条
-  const LIST_WIDTH = 304; // 会话列表
-  const MEMBER_WIDTH = 192; // 群成员栏
+  const LIST_WIDTH = 280; // 会话列表
+  const MEMBER_WIDTH = 210; // 群成员/公告栏
   const TITLEBAR_HEIGHT = 0; // 企业微信经典布局无全局顶栏
+  const CURRENT_HOST = typeof location !== "undefined" ? location.hostname : "";
+  const IS_V2EX = /(?:^|\.)v2ex\.com$/i.test(CURRENT_HOST);
+  const IS_LINUXDO = !IS_V2EX;
+  const CURRENT_PLATFORM = IS_V2EX ? "v2ex" : "linuxdo";
+
   const WATERMARK_ENABLED_KEY = "linuxdo-wecom-watermark-enabled";
   const WATERMARK_TEXT_KEY = "linuxdo-wecom-watermark-text";
-  const DEFAULT_WATERMARK_TEXT = "linux.do · 内部资料";
+  const DEFAULT_WATERMARK_TEXT = IS_V2EX ? "v2ex.com · 内部资料" : "linux.do · 内部资料";
   const WATERMARK_MAX_LENGTH = 48;
   const WATERMARK_TILE_WIDTH = 300;
   const WATERMARK_TILE_HEIGHT = 160;
   const AVATAR_SOURCE_SIZE = 96;
   const THEME_MODE_KEY = "linuxdo-wecom-theme-mode";
+  const BOOST_ENABLED_KEY = "linuxdo-wecom-boost-enabled";
   const THEME_MODE_VALUES = Object.freeze(["light", "dark", "system"]);
   const DEFAULT_THEME_MODE = "light";
   const IMAGE_VIEWER_DEFAULT_SCALE = 1;
@@ -86,61 +97,88 @@
   /* ============================== 内联 SVG 图标 ============================== */
 
   const ICONS = {
-    msg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 6.5A2.5 2.5 0 0 1 7.5 4h9A2.5 2.5 0 0 1 19 6.5v7A2.5 2.5 0 0 1 16.5 16H10l-4.2 3.2A.8.8 0 0 1 4.5 18.6V6.5Z" stroke="currentColor" stroke-width="1.7"/></svg>`,
-    doc: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M7 4.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9.5A1.5 1.5 0 0 1 5.5 19V6A1.5 1.5 0 0 1 7 4.5Z" stroke="currentColor" stroke-width="1.7"/><path d="M14 4.5V9h4.5" stroke="currentColor" stroke-width="1.7"/></svg>`,
-    work: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="7" height="7" rx="1.4" stroke="currentColor" stroke-width="1.7"/><rect x="13" y="4" width="7" height="7" rx="1.4" stroke="currentColor" stroke-width="1.7"/><rect x="4" y="13" width="7" height="7" rx="1.4" stroke="currentColor" stroke-width="1.7"/><rect x="13" y="13" width="7" height="7" rx="1.4" stroke="currentColor" stroke-width="1.7"/></svg>`,
-    book: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="5" y="4" width="14" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M9 9h6M9 13h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`,
-    meet: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4.5 8.5A2.5 2.5 0 0 1 7 6h6.5A2.5 2.5 0 0 1 16 8.5v7A2.5 2.5 0 0 1 13.5 18H7A2.5 2.5 0 0 1 4.5 15.5v-7Z" stroke="currentColor" stroke-width="1.7"/><path d="M16 10.2l4-2.2v8l-4-2.2" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>`,
-    disk: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 8.5L12 4l8 4.5v7L12 20 4 15.5v-7Z" stroke="currentColor" stroke-width="1.7"/><path d="M12 20v-7.5M4 8.5l8 4 8-4" stroke="currentColor" stroke-width="1.7"/></svg>`,
-    cal: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="4.5" y="5.5" width="15" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 4v3M16 4v3M4.5 10h15" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`,
-    todo: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="5" y="4" width="14" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 9h8M8 13h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`,
-    ding: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 4v3M8 8a4 4 0 1 1 8 0c0 3-4 4.5-4 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="18.5" r="1.3" fill="currentColor"/></svg>`,
-    proj: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 8h14v10.5A1.5 1.5 0 0 1 17.5 20h-11A1.5 1.5 0 0 1 5 18.5V8Z" stroke="currentColor" stroke-width="1.7"/><path d="M9 8V6.5A1.5 1.5 0 0 1 10.5 5h3A1.5 1.5 0 0 1 15 6.5V8" stroke="currentColor" stroke-width="1.7"/></svg>`,
-    mail: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="4" y="6" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M5 8l7 5 7-5" stroke="currentColor" stroke-width="1.7"/></svg>`,
-    apps: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="7" cy="7" r="2.1" stroke="currentColor" stroke-width="1.7"/><circle cx="17" cy="7" r="2.1" stroke="currentColor" stroke-width="1.7"/><circle cx="7" cy="17" r="2.1" stroke="currentColor" stroke-width="1.7"/><circle cx="17" cy="17" r="2.1" stroke="currentColor" stroke-width="1.7"/></svg>`,
-    build: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M7 19V9l5-4 5 4v10" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M10 19v-5h4v5" stroke="currentColor" stroke-width="1.7"/></svg>`,
-    more: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="6" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="18" cy="12" r="1.4" fill="currentColor"/></svg>`,
-    clock: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.7"/><path d="M12 8v4l3 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`,
-    grid: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="5" y="5" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.7"/><rect x="13" y="5" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.7"/><rect x="5" y="13" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.7"/><rect x="13" y="13" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.7"/></svg>`,
-    spark: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.6 5.2L19 10l-5.4 1.8L12 17l-1.6-5.2L5 10l5.4-1.8L12 3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
-    phone: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 4.5h3.2l1 3.2-2 1.4a11 11 0 0 0 5.7 5.7l1.4-2 3.2 1V17a2 2 0 0 1-2.2 2A15 15 0 0 1 5 6.7 2 2 0 0 1 7 4.5Z" stroke="currentColor" stroke-width="1.6"/></svg>`,
-    plus: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 6v12M6 12h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
-    mute: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M10 8H7v8h3l5 3V5l-5 3Z" stroke="currentColor" stroke-width="1.6"/><path d="M18 9l3 3-3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
-    bell: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 16h12l-1.2-2.2a6.5 6.5 0 0 1-.8-3.3V9a4 4 0 1 0-8 0v1.5c0 1.16-.28 2.3-.8 3.3L6 16Z" stroke="currentColor" stroke-width="1.6"/><path d="M10 18a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.6"/></svg>`,
-    users: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="9" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 18a4.5 4.5 0 0 1 9 0" stroke="currentColor" stroke-width="1.6"/><circle cx="16.5" cy="9.5" r="2.3" stroke="currentColor" stroke-width="1.6"/><path d="M15 18c.4-1.6 1.6-2.8 3.4-3.2" stroke="currentColor" stroke-width="1.6"/></svg>`,
-    win: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="5" y="6" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M5 10h14" stroke="currentColor" stroke-width="1.6"/></svg>`,
-    gear: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M12 4.5v2M12 17.5v2M4.5 12h2M17.5 12h2M6.4 6.4l1.4 1.4M16.2 16.2l1.4 1.4M17.6 6.4l-1.4 1.4M7.8 16.2l-1.4 1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
-    emoji: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.6"/><path d="M8.5 14.2c.9 1.3 2.1 2 3.5 2s2.6-.7 3.5-2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/></svg>`,
-    like: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M8 11V20H6a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h2Zm0 0 3.2-6.2A2 2 0 0 1 13 3.6V8h5.2a2 2 0 0 1 1.96 2.4l-1.2 6A2 2 0 0 1 17 18h-9" stroke="currentColor" stroke-width="1.6"/></svg>`,
-    cut: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="7" cy="17" r="2.2" stroke="currentColor" stroke-width="1.6"/><circle cx="17" cy="17" r="2.2" stroke="currentColor" stroke-width="1.6"/><path d="M8.8 15.4L16 5M15.2 15.4L8 5" stroke="currentColor" stroke-width="1.6"/></svg>`,
-    folder: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 8h6l2 2h8v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z" stroke="currentColor" stroke-width="1.6"/></svg>`,
-    pic: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="10" r="1.4" stroke="currentColor" stroke-width="1.4"/><path d="M5 16l4.5-4 3 3 2-2L19 16" stroke="currentColor" stroke-width="1.6"/></svg>`,
-    collect: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5l1.7 4.4H18l-3.5 2.7 1.3 4.4L12 14.6 8.2 16.5l1.3-4.4L6 9.4h4.3L12 5Z" stroke="currentColor" stroke-width="1.6"/></svg>`,
-    file: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M7 4h7l4 4v12H7V4Z" stroke="currentColor" stroke-width="1.6"/><path d="M14 4v4h4" stroke="currentColor" stroke-width="1.6"/></svg>`,
-    bolt: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M13 3L6 14h6l-1 7 7-11h-6l1-7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>`,
-    cam: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="7" width="12" height="10" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M15.5 10.5l5-2.5v8l-5-2.5" stroke="currentColor" stroke-width="1.6"/></svg>`,
-    redpack: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="6" y="4" width="12" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M6 9h12" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="9" r="1.6" fill="currentColor"/></svg>`,
-    dots: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="6" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="18" cy="12" r="1.3" fill="currentColor"/></svg>`,
-    expand: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M14 6h4v4M10 18H6v-4M18 6l-5 5M6 18l5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
-    search: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
-    refresh: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M20 12a8 8 0 1 1-2.3-5.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M20 4v5h-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-    external: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M14 5h5v5M19 5l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M11 7H7a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-4" stroke="currentColor" stroke-width="1.6"/></svg>`,
-    reply: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 14L4 9l5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 9h10a6 6 0 0 1 0 12h-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
-    edit: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 16.8V19h2.2L18.4 7.8l-2.2-2.2L5 16.8Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="m14.8 7 2.2 2.2" stroke="currentColor" stroke-width="1.6"/><path d="M12.5 19H19" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
-    bookmark: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M7 5.5A1.5 1.5 0 0 1 8.5 4h7A1.5 1.5 0 0 1 17 5.5V20l-5-3.2L7 20V5.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>`,
-    menu: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M7 12h10M10 17h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
-    chevronDown: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-    chevronUp: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 15l6-6 6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-    compose: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 17.5V20h2.5L18 8.5 15.5 6 4 17.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M13.8 7.7l2.5 2.5" stroke="currentColor" stroke-width="1.6"/></svg>`,
-    filter: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h11M4 18h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
-    disguise: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="4" stroke="currentColor" stroke-width="1.6"/><path d="M8 14c1.2 1.4 2.5 2 4 2s2.8-.6 4-2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/></svg>`,
-    aitable: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="4" y="4.5" width="16" height="15" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M4 9.5h16M9.6 9.5v10M15.4 9.5v10" stroke="currentColor" stroke-width="1.7"/></svg>`,
-    aimic: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="9" y="3.5" width="6" height="11" rx="3" stroke="currentColor" stroke-width="1.7"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v2.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`,
-    monitor: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="12" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M9 20.5h6M12 17v3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
-    at: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.6"/><path d="M15.2 8.8v4.4a2.4 2.4 0 0 0 4.8 0V12a8 8 0 1 0-3.4 6.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
-    moon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 15.4A8.2 8.2 0 0 1 8.6 4a8.2 8.2 0 1 0 11.4 11.4Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-    sun: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="3.5" stroke="currentColor" stroke-width="1.7"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.4 1.4M16.6 16.6L18 18M18 6l-1.4 1.4M7.4 16.6L6 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`,
-    monitorSmall: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="5" width="17" height="12" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M9 20.5h6M12 17v3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`
+    // 停靠栏填充型图标 (Tabler filled 规范)
+    msg: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M18 3a4 4 0 0 1 4 4v8a4 4 0 0 1 -4 4h-4.724l-4.762 2.857a1 1 0 0 1 -1.508 -.743l-.006 -.114v-2h-1a4 4 0 0 1 -3.995 -3.8l-.005 -.2v-8a4 4 0 0 1 4 -4zm-4 9h-6a1 1 0 0 0 0 2h6a1 1 0 0 0 0 -2m2 -4h-8a1 1 0 1 0 0 2h8a1 1 0 0 0 0 -2" /></svg>`,
+    doc: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M12 2l.117 .007a1 1 0 0 1 .876 .876l.007 .117v4l.005 .15a2 2 0 0 0 1.838 1.844l.157 .006h4l.117 .007a1 1 0 0 1 .876 .876l.007 .117v9a3 3 0 0 1 -2.824 2.995l-.176 .005h-10a3 3 0 0 1 -2.995 -2.824l-.005 -.176v-14a3 3 0 0 1 2.824 -2.995l.176 -.005zm3 14h-6a1 1 0 0 0 0 2h6a1 1 0 0 0 0 -2m0 -4h-6a1 1 0 0 0 0 2h6a1 1 0 0 0 0 -2m-5 -4h-1a1 1 0 1 0 0 2h1a1 1 0 0 0 0 -2" /><path d="M19 7h-4l-.001 -4.001z" /></svg>`,
+    work: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M9 3a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-4a2 2 0 0 1 -2 -2v-4a2 2 0 0 1 2 -2z" /><path d="M19 3a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-4a2 2 0 0 1 -2 -2v-4a2 2 0 0 1 2 -2z" /><path d="M9 13a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-4a2 2 0 0 1 -2 -2v-4a2 2 0 0 1 2 -2z" /><path d="M19 13a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-4a2 2 0 0 1 -2 -2v-4a2 2 0 0 1 2 -2z" /></svg>`,
+    book: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M2 16.667a2.667 2.667 0 0 1 2.667 -2.667h2.666a2.667 2.667 0 0 1 2.667 2.667v2.666a2.667 2.667 0 0 1 -2.667 2.667h-2.666a2.667 2.667 0 0 1 -2.667 -2.667z" /><path d="M14 16.667a2.667 2.667 0 0 1 2.667 -2.667h2.666a2.667 2.667 0 0 1 2.667 2.667v2.666a2.667 2.667 0 0 1 -2.667 2.667h-2.666a2.667 2.667 0 0 1 -2.667 -2.667z" /><path d="M8 4.667a2.667 2.667 0 0 1 2.667 -2.667h2.666a2.667 2.667 0 0 1 2.667 2.667v2.666a2.667 2.667 0 0 1 -2.667 2.667h-2.666a2.667 2.667 0 0 1 -2.667 -2.667z" /><path d="M12 8a1 1 0 0 0 -1 1v2h-3c-1.645 0 -3 1.355 -3 3v1a1 1 0 0 0 1 1a1 1 0 0 0 1 -1v-1c0 -.564 .436 -1 1 -1h8c.564 0 1 .436 1 1v1a1 1 0 0 0 1 1a1 1 0 0 0 1 -1v-1c0 -1.645 -1.355 -3 -3 -3h-3v-2a1 1 0 0 0 -1 -1z" /></svg>`,
+    meet: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M20.117 7.625a1 1 0 0 0 -.564 .1l-4.553 2.275v4l4.553 2.275a1 1 0 0 0 1.447 -.892v-6.766a1 1 0 0 0 -.883 -.992z" /><path d="M5 5c-1.645 0 -3 1.355 -3 3v8c0 1.645 1.355 3 3 3h8c1.645 0 3 -1.355 3 -3v-8c0 -1.645 -1.355 -3 -3 -3z" /></svg>`,
+    disk: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M10.04 4.305c2.195 -.667 4.615 -.224 6.36 1.176c1.386 1.108 2.188 2.686 2.252 4.34l.003 .212l.091 .003c2.3 .107 4.143 1.961 4.25 4.27l.004 .211c0 2.407 -1.885 4.372 -4.255 4.482l-.21 .005h-11.878l-.222 -.008c-2.94 -.11 -5.317 -2.399 -5.43 -5.263l-.005 -.216c0 -2.747 2.08 -5.01 4.784 -5.417l.114 -.016l.07 -.181c.663 -1.62 2.056 -2.906 3.829 -3.518l.244 -.08z" /></svg>`,
+    cal: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M16 2a1 1 0 0 1 .993 .883l.007 .117v1h1a3 3 0 0 1 2.995 2.824l.005 .176v12a3 3 0 0 1 -2.824 2.995l-.176 .005h-12a3 3 0 0 1 -2.995 -2.824l-.005 -.176v-12a3 3 0 0 1 2.824 -2.995l.176 -.005h1v-1a1 1 0 0 1 1.993 -.117l.007 .117v1h6v-1a1 1 0 0 1 1 -1zm3 7h-14v9.625c0 .705 .386 1.286 .883 1.366l.117 .009h12c.513 0 .936 -.53 .993 -1.215l.007 -.16v-9.625z" /><path d="M12 12a1 1 0 0 1 .993 .883l.007 .117v3a1 1 0 0 1 -1.993 .117l-.007 -.117v-2a1 1 0 0 1 -.117 -1.993l.117 -.007h1z" /></svg>`,
+    todo: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M17 3.34a10 10 0 1 1 -14.995 8.984l-.005 -.324l.005 -.324a10 10 0 0 1 14.995 -8.336zm-1.293 5.953a1 1 0 0 0 -1.32 -.083l-.094 .083l-3.293 3.292l-1.293 -1.292l-.094 -.083a1 1 0 0 0 -1.403 1.403l.083 .094l2 2l.094 .083a1 1 0 0 0 1.226 0l.094 -.083l4 -4l.083 -.094a1 1 0 0 0 -.083 -1.32z" /></svg>`,
+    smartdoc: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M9 3h-4a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2z" /><path d="M9 13h-4a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2z" /><path d="M19 13h-4a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2z" /><path d="M17 3a1 1 0 0 1 .993 .883l.007 .117v2h2a1 1 0 0 1 .117 1.993l-.117 .007h-2v2a1 1 0 0 1 -1.993 .117l-.007 -.117v-2h-2a1 1 0 0 1 -.117 -1.993l.117 -.007h2v-2a1 1 0 0 1 1 -1z" /></svg>`,
+    summary: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M16 19a1 1 0 0 1 0 -2a1 1 0 0 0 1 -1c0 -1.333 2 -1.333 2 0a1 1 0 0 0 1 1c1.333 0 1.333 2 0 2a1 1 0 0 0 -1 1c0 1.333 -2 1.333 -2 0a1 1 0 0 0 -1 -1" /><path d="M3 11a5 5 0 0 0 5 -5c0 -1.333 2 -1.333 2 0a5 5 0 0 0 5 5c1.333 0 1.333 2 0 2a5 5 0 0 0 -5 5a1 1 0 0 1 -2 0a5 5 0 0 0 -5 -5c-1.333 0 -1.333 -2 0 -2" /><path d="M16 7a1 1 0 0 1 0 -2a1 1 0 0 0 1 -1c0 -1.333 2 -1.333 2 0a1 1 0 0 0 1 1c1.333 0 1.333 2 0 2a1 1 0 0 0 -1 1c0 1.333 -2 1.333 -2 0a1 1 0 0 0 -1 -1" /></svg>`,
+    advanced: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M20.894 13.553a1 1 0 0 1 -.447 1.341l-8 4a1 1 0 0 1 -.894 0l-8 -4a1 1 0 0 1 .894 -1.788l7.553 3.774l7.554 -3.775a1 1 0 0 1 1.341 .447m-8.887 -8.552q .056 0 .111 .007l.111 .02l.086 .024l.012 .006l.012 .002l.029 .014l.05 .019l.016 .009l.012 .005l8 4a1 1 0 0 1 0 1.788l-8 4a1 1 0 0 1 -.894 0l-8 -4a1 1 0 0 1 0 -1.788l8 -4l.011 -.005l.018 -.01l.078 -.032l.011 -.002l.013 -.006l.086 -.024l.11 -.02l.056 -.005z" /></svg>`,
+    group: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M9 3a1 1 0 0 1 .608 .206l.1 .087l2.706 2.707h6.586a3 3 0 0 1 2.995 2.824l.005 .176v8a3 3 0 0 1 -2.824 2.995l-.176 .005h-14a3 3 0 0 1 -2.995 -2.824l-.005 -.176v-11a3 3 0 0 1 2.824 -2.995l.176 -.005h4z" /></svg>`,
+    pin: `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M16 3a1 1 0 0 1 .117 1.993l-.117 .007v4.764l1.894 3.789a1 1 0 0 1 .1 .331l.006 .116v2a1 1 0 0 1 -.883 .993l-.117 .007h-4v4a1 1 0 0 1 -1.993 .117l-.007 -.117v-4h-4a1 1 0 0 1 -.993 -.883l-.007 -.117v-2a1 1 0 0 1 .06 -.34l.046 -.107l1.894 -3.791v-4.762a1 1 0 0 1 -.117 -1.993l.117 -.007h8z" /></svg>`,
+    gear: `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M14.647 4.081a.724 .724 0 0 0 1.08 .448c2.439 -1.485 5.23 1.305 3.745 3.744a.724 .724 0 0 0 .447 1.08c2.775 .673 2.775 4.62 0 5.294a.724 .724 0 0 0 -.448 1.08c1.485 2.439 -1.305 5.23 -3.744 3.745a.724 .724 0 0 0 -1.08 .447c-.673 2.775 -4.62 2.775 -5.294 0a.724 .724 0 0 0 -1.08 -.448c-2.439 1.485 -5.23 -1.305 -3.745 -3.744a.724 .724 0 0 0 -.447 -1.08c-2.775 -.673 -2.775 -4.62 0 -5.294a.724 .724 0 0 0 .448 -1.08c-1.485 -2.439 1.305 -5.23 3.744 -3.745a.722 .722 0 0 0 1.08 -.447c.673 -2.775 4.62 -2.775 5.294 0zm-2.647 4.919a3 3 0 1 0 0 6a3 3 0 0 0 0 -6" /></svg>`,
+    moon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M12 1.992a10 10 0 1 0 9.236 13.838c.341 -.82 -.476 -1.644 -1.298 -1.31a6.5 6.5 0 0 1 -6.864 -10.787l.077 -.08c.551 -.63 .113 -1.653 -.758 -1.653h-.266l-.068 -.006l-.06 -.002z" /></svg>`,
+    sun: `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M12 19a1 1 0 0 1 .993 .883l.007 .117v1a1 1 0 0 1 -1.993 .117l-.007 -.117v-1a1 1 0 0 1 1 -1z" /><path d="M18.313 16.91l.094 .083l.7 .7a1 1 0 0 1 -1.32 1.497l-.094 -.083l-.7 -.7a1 1 0 0 1 1.218 -1.567l.102 .07z" /><path d="M7.007 16.993a1 1 0 0 1 .083 1.32l-.083 .094l-.7 .7a1 1 0 0 1 -1.497 -1.32l.083 -.094l.7 -.7a1 1 0 0 1 1.414 0z" /><path d="M4 11a1 1 0 0 1 .117 1.993l-.117 .007h-1a1 1 0 0 1 -.117 -1.993l.117 -.007h1z" /><path d="M21 11a1 1 0 0 1 .117 1.993l-.117 .007h-1a1 1 0 0 1 -.117 -1.993l.117 -.007h1z" /><path d="M6.213 4.81l.094 .083l.7 .7a1 1 0 0 1 -1.32 1.497l-.094 -.083l-.7 -.7a1 1 0 0 1 1.217 -1.567l.102 .07z" /><path d="M19.107 4.893a1 1 0 0 1 .083 1.32l-.083 .094l-.7 .7a1 1 0 0 1 -1.497 -1.32l.083 -.094l.7 -.7a1 1 0 0 1 1.414 0z" /><path d="M12 2a1 1 0 0 1 .993 .883l.007 .117v1a1 1 0 0 1 -1.993 .117l-.007 -.117v-1a1 1 0 0 1 1 -1z" /><path d="M12 7a5 5 0 1 1 -4.995 5.217l-.005 -.217l.005 -.217a5 5 0 0 1 4.995 -4.783z" /></svg>`,
+
+    // 常用操作与工具条图标 (Tabler 线条规范)
+    ding: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /><path d="M9 17v1a3 3 0 0 0 6 0v-1" /></svg>`,
+    proj: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6v6h-6z" /><path d="M14 4h6v6h-6z" /><path d="M4 14h6v6h-6z" /><path d="M17 17m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /></svg>`,
+    mail: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10z" /><path d="M3 7l9 6l9 -6" /></svg>`,
+    apps: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /><path d="M14 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /><path d="M4 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /><path d="M14 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /></svg>`,
+    build: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9l5 5v7h-5v-4m0 4h-5v-7l5 -5m1 1v-6a1 1 0 0 1 1 -1h10a1 1 0 0 1 1 1v12h-4" /><path d="M13 7h4" /><path d="M13 11h4" /></svg>`,
+    more: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M19 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>`,
+    clock: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></svg>`,
+    grid: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6v6h-6z" /><path d="M14 4h6v6h-6z" /><path d="M4 14h6v6h-6z" /><path d="M14 14h6v6h-6z" /></svg>`,
+    spark: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2zm0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2zm-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6z" /></svg>`,
+    phone: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-3a8 8 0 1 1 16 0v3" /><path d="M18 19c0 1.657 -2.686 3 -6 3" /><path d="M4 14a2 2 0 0 1 2 -2h1a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2h-1a2 2 0 0 1 -2 -2v-3z" /><path d="M15 14a2 2 0 0 1 2 -2h1a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2h-1a2 2 0 0 1 -2 -2v-3z" /></svg>`,
+    plus: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>`,
+    mute: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18" /><path d="M17 17h-13a4 4 0 0 0 2 -3v-3a7 7 0 0 1 1.279 -3.716m2.072 -1.964c.812 -.215 1.686 -.32 2.649 -.32a7 7 0 0 1 7 7v1" /><path d="M9 17v1a3 3 0 0 0 6 0v-1" /></svg>`,
+    bell: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /><path d="M9 17v1a3 3 0 0 0 6 0v-1" /></svg>`,
+    users: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /><path d="M21 21v-2a4 4 0 0 0 -3 -3.85" /></svg>`,
+    win: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="6" width="14" height="12" rx="2" /><path d="M5 10h14" /></svg>`,
+    emoji: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M9 10l.01 0" /><path d="M15 10l.01 0" /><path d="M9.5 15a3.5 3.5 0 0 0 5 0" /></svg>`,
+    like: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11v8a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1v-7a1 1 0 0 1 1 -1h3a4 4 0 0 0 4 -4v-1a2 2 0 0 1 4 0v5h3a2 2 0 0 1 2 2l-1 5a2 3 0 0 1 -2 2h-7a3 3 0 0 1 -3 -3" /></svg>`,
+    heart: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572" /></svg>`,
+    cut: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /><path d="M6 17m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /><path d="M8.6 8.6l10.4 10.4" /><path d="M8.6 15.4l10.4 -10.4" /></svg>`,
+    folder: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l3 3h7a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-11a2 2 0 0 1 2 -2" /></svg>`,
+    pic: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01" /><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12z" /><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" /></svg>`,
+    collect: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873z" /></svg>`,
+    file: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M9 9l1 0" /><path d="M9 13l6 0" /><path d="M9 17l6 0" /></svg>`,
+    bolt: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3l0 7l6 0l-8 11l0 -7l-6 0z" /></svg>`,
+    cam: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.553 -2.276a1 1 0 0 1 1.447 .894v6.764a1 1 0 0 1 -1.447 .894l-4.553 -2.276v-4z" /><path d="M3 6m0 2a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2z" /></svg>`,
+    redpack: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19v-7l-5 -7h3l3.5 5l3.5 -5h3l-5 7v7" /><path d="M8 17l8 0" /><path d="M8 13l8 0" /></svg>`,
+    dots: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M19 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>`,
+    expand: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4l4 0l0 4" /><path d="M14 10l6 -6" /><path d="M8 20l-4 0l0 -4" /><path d="M4 20l6 -6" /></svg>`,
+    search: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg>`,
+    refresh: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" /><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" /></svg>`,
+    external: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6h-6a2 2 0 0 0 -2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-6" /><path d="M11 13l9 -9" /><path d="M15 4h5v5" /></svg>`,
+    reply: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M18 18v-6a3 3 0 0 0 -3 -3h-10l4 -4m0 8l-4 -4" /></svg>`,
+    edit: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7h-3a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-3" /><path d="M9 15h3l8.5 -8.5a1.5 1.5 0 0 0 -3 -3l-8.5 8.5v3" /><path d="M16 5l3 3" /></svg>`,
+    bookmark: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M18 7v14l-6 -4l-6 4v-14a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4z" /></svg>`,
+    boost: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13a8 8 0 0 1 7 7 6 6 0 0 0 3-5 9 9 0 0 0 6-8 3 3 0 0 0-3-3 9 9 0 0 0-8 6 6 6 0 0 0-5 3"/><path d="m9 15 3 3"/><path d="m15 9 3 3"/><path d="M9.5 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/></svg>`,
+    menu: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l16 0" /><path d="M4 12l16 0" /><path d="M4 18l16 0" /></svg>`,
+    chevronDown: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6l6 -6" /></svg>`,
+    chevronUp: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6 -6l6 6" /></svg>`,
+    chevronRight: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6" /></svg>`,
+    compose: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>`,
+    filter: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16" /><path d="M4 12h16" /><path d="M4 18h16" /></svg>`,
+    disguise: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9 -9 9s-9 -1.8 -9 -9s1.8 -9 9 -9z" /><path d="M12 3a9 9 0 0 1 0 18" fill="currentColor" /></svg>`,
+    aitable: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14z" /><path d="M3 10h18" /><path d="M10 3v18" /></svg>`,
+    aimic: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 10a7 7 0 0 0 14 0" /><path d="M8 21l8 0" /><path d="M12 17l0 4" /></svg>`,
+    monitor: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-10z" /><path d="M7 20h10" /><path d="M9 16v4" /><path d="M15 16v4" /></svg>`,
+    at: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4" /><path d="M16 12v1.5a2.5 2.5 0 0 0 5 0v-1.5a9 9 0 1 0 -5.5 8.28" /></svg>`,
+    monitorSmall: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-10z" /><path d="M7 20h10" /><path d="M9 16v4" /><path d="M15 16v4" /></svg>`,
+    checklist: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5.5l1.5 1.5l2.5 -2.5" /><path d="M3.5 11.5l1.5 1.5l2.5 -2.5" /><path d="M3.5 17.5l1.5 1.5l2.5 -2.5" /><path d="M11 6l9 0" /><path d="M11 12l9 0" /><path d="M11 18l9 0" /></svg>`,
+    history: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-13a3 3 0 0 1 3 -3h10a3 3 0 0 1 3 3v6a3 3 0 0 1 -3 3h-9l-4 4" /><path d="M12 11l0 .01" /><path d="M8 11l0 .01" /><path d="M16 11l0 .01" /></svg>`,
+    userPlus: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /><path d="M6 21v-2a4 4 0 0 1 4 -4h4c.342 0 .674 .043 .99 .124" /><path d="M16 19h6" /><path d="M19 16v6" /></svg>`,
+    watermark: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18.5h14" /><path d="M8 16l4 -10l4 10" /><path d="M9.4 12.5h5.2" /></svg>`,
+    circleOff: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><line x1="5.7" y1="5.7" x2="18.3" y2="18.3" /></svg>`,
+    docLine: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2" /><line x1="8" y1="8" x2="16" y2="8" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="8" y1="16" x2="12" y2="16" /></svg>`,
+    todoLine: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="2" /><line x1="8" y1="2.5" x2="8" y2="5.5" /><line x1="16" y1="2.5" x2="16" y2="5.5" /><path d="M8 12.5l2.5 2.5l5.5 -5.5" /></svg>`,
+    phoneReceiver: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2" /></svg>`,
+    appsGrid: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5" /><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5" /><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5" /><line x1="14" y1="15.5" x2="20" y2="15.5" /><line x1="14" y1="19" x2="20" y2="19" /></svg>`,
+    historySearch: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19v-11a3 3 0 0 1 3 -3h10a3 3 0 0 1 3 3v4" /><path d="M4 19l3 -2h4" /><circle cx="8" cy="11" r=".6" fill="currentColor" /><circle cx="12" cy="11" r=".6" fill="currentColor" /><circle cx="16" cy="11" r=".6" fill="currentColor" /><circle cx="15.5" cy="15.5" r="3" /><line x1="17.8" y1="17.8" x2="20.5" y2="20.5" /></svg>`,
+    scrollTop: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6" /><path d="M6 12l6-6 6 6" /><path d="M4 3h16" /></svg>`,
+    platformSwitch: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16m-4 -4l4 4l-4 4" /><path d="M20 15h-16m4 -4l-4 4l4 4" /></svg>`,
+    winMin: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"><line x1="1.5" y1="6" x2="10.5" y2="6" /></svg>`,
+    winMax: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="1.5" y="1.5" width="9" height="9" rx="1.5" /></svg>`,
+    winRestore: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="3.5" y="1.5" width="7" height="7" rx="1" /><path d="M1.5 4.5v6a1 1 0 0 0 1 1h6" /></svg>`,
+    winClose: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M2.2 2.2l7.6 7.6m0-7.6l-7.6 7.6" /></svg>`
   };
   ICONS.chat = ICONS.msg;
   ICONS.list = ICONS.msg;
@@ -151,7 +189,7 @@
   ICONS.task = ICONS.todo;
   ICONS.contacts = ICONS.book;
   ICONS.project = ICONS.proj;
-  ICONS.watermark = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 18.5h14M8 16l4-10 4 10M9.4 12.5h5.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.5 5.5l1 1 2-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  ICONS.watermark = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 18.5h14M8 16l4-10 4 10M9.4 12.5h5.2" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.5 5.5l1 1 2-2" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
   const FAVICON_URI = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJhIiB4MT0iOCIgeTE9IjQiIHgyPSI1NiIgeTI9IjYwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzQwOTZmZiIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzE3NjlkMiIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcng9IjE1IiBmaWxsPSJ1cmwoI2EpIi8+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTExIDI3LjVDMTEgMTguOTQgMTguODQgMTIgMjguNSAxMlM0NiAxOC45NCA0NiAyNy41IDM4LjE2IDQzIDI4LjUgNDNjLTIuMTMgMC00LjE3LS4zNC02LjA2LS45NUwxNCA0N2wyLjQ4LTcuMTZDMTMuMSAzNi45MSAxMSAzMi41NSAxMSAyNy41WiIvPjxwYXRoIGZpbGw9IiMxOWM4NzgiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIyLjUiIGQ9Ik0zNCAzNy41QzM0IDMwLjYgNDAuMjcgMjUgNDggMjVzMTQgNS42IDE0IDEyLjVTNTUuNzMgNTAgNDggNTBjLTEuNTUgMC0zLjA0LS4yMy00LjQzLS42NUwzNyA1M2wxLjg0LTUuMjNDMzUuODcgNDUuMzkgMzQgNDEuNzMgMzQgMzcuNVoiLz48Y2lyY2xlIGN4PSIyMyIgY3k9IjI3IiByPSIyIiBmaWxsPSIjMjY3ZWYwIi8+PGNpcmNsZSBjeD0iMzMiIGN5PSIyNyIgcj0iMiIgZmlsbD0iIzI2N2VmMCIvPjxjaXJjbGUgY3g9IjQ0IiBjeT0iMzcuNSIgcj0iMS43IiBmaWxsPSIjZmZmIi8+PGNpcmNsZSBjeD0iNTIiIGN5PSIzNy41IiByPSIxLjciIGZpbGw9IiNmZmYiLz48L3N2Zz4=";
 
@@ -208,8 +246,199 @@
       ` aria-label="${escapeHtml(identity.label)}" title="${escapeHtml(identity.label)}"`;
   }
 
+  /* ---------- 左上角侧栏伪装头像（企业高管/职员商务剪影） ---------- */
+  const RAIL_AVATAR_DISGUISE_KEY = "linuxdo-wecom-rail-avatar-disguise";
+
+  const RAIL_DISGUISE_AVATARS = [
+    {
+      id: "wecom-blue",
+      name: "企微商务蓝",
+      svg: '<svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="36"><rect width="36" height="36" rx="6" fill="#267EF0"/><circle cx="18" cy="12.5" r="5.2" fill="#FFFFFF"/><path d="M7.5 29c0-5.247 4.701-9.5 10.5-9.5s10.5 4.253 10.5 9.5v2a1 1 0 0 1-1 1H8.5a1 1 0 0 1-1-1v-2z" fill="#FFFFFF"/><path d="M16 19.5l2 3.5 2-3.5" stroke="#267EF0" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    },
+    {
+      id: "wecom-green",
+      name: "企业办公绿",
+      svg: '<svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="36"><rect width="36" height="36" rx="6" fill="#07C160"/><circle cx="18" cy="12.5" r="5.2" fill="#FFFFFF"/><path d="M7.5 29c0-5.247 4.701-9.5 10.5-9.5s10.5 4.253 10.5 9.5v2a1 1 0 0 1-1 1H8.5a1 1 0 0 1-1-1v-2z" fill="#FFFFFF"/><path d="M16 19.5l2 3.5 2-3.5" stroke="#07C160" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    },
+    {
+      id: "wecom-navy",
+      name: "行政深蓝",
+      svg: '<svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="36"><rect width="36" height="36" rx="6" fill="#1B5EBF"/><circle cx="18" cy="12.5" r="5.2" fill="#FFFFFF"/><path d="M7.5 29c0-5.247 4.701-9.5 10.5-9.5s10.5 4.253 10.5 9.5v2a1 1 0 0 1-1 1H8.5a1 1 0 0 1-1-1v-2z" fill="#FFFFFF"/><path d="M16 19.5l2 3.5 2-3.5" stroke="#1B5EBF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    },
+    {
+      id: "wecom-slate",
+      name: "稳重灰蓝",
+      svg: '<svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="36"><rect width="36" height="36" rx="6" fill="#4B6B94"/><circle cx="18" cy="12.5" r="5.2" fill="#FFFFFF"/><path d="M7.5 29c0-5.247 4.701-9.5 10.5-9.5s10.5 4.253 10.5 9.5v2a1 1 0 0 1-1 1H8.5a1 1 0 0 1-1-1v-2z" fill="#FFFFFF"/><path d="M16 19.5l2 3.5 2-3.5" stroke="#4B6B94" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    },
+    {
+      id: "wecom-orange",
+      name: "活力暖橙",
+      svg: '<svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="36"><rect width="36" height="36" rx="6" fill="#FA8C16"/><circle cx="18" cy="12.5" r="5.2" fill="#FFFFFF"/><path d="M7.5 29c0-5.247 4.701-9.5 10.5-9.5s10.5 4.253 10.5 9.5v2a1 1 0 0 1-1 1H8.5a1 1 0 0 1-1-1v-2z" fill="#FFFFFF"/><path d="M16 19.5l2 3.5 2-3.5" stroke="#FA8C16" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    }
+  ];
+
+  function getRailDisguiseAvatarId() {
+    try {
+      const val = localStorage.getItem(RAIL_AVATAR_DISGUISE_KEY);
+      return val || "wecom-blue";
+    } catch {
+      return "wecom-blue";
+    }
+  }
+
+  function setRailDisguiseAvatarId(id) {
+    try {
+      localStorage.setItem(RAIL_AVATAR_DISGUISE_KEY, id);
+    } catch { /* ignore */ }
+    syncRail();
+  }
+
+  function cycleRailDisguiseAvatar() {
+    const curId = getRailDisguiseAvatarId();
+    const ids = [...RAIL_DISGUISE_AVATARS.map((a) => a.id), "native"];
+    const nextIdx = (ids.indexOf(curId) + 1) % ids.length;
+    const nextId = ids[nextIdx];
+    setRailDisguiseAvatarId(nextId);
+    return nextId;
+  }
+
   /* ---------- 会话伪装头像（圆角矩形单字） ---------- */
   const MASK_AVATAR_KEY = "linuxdo-wecom-mask-avatar"; // "1" = 开
+
+  /* ---------- 标题/会话伪装模式（企业工作流拟真） ---------- */
+  const MASK_TITLE_KEY = "linuxdo-wecom-mask-title";
+  const MASK_TITLE_MODE_KEY = "linuxdo-wecom-mask-title-mode"; // "all" | "list" | "detail" | "off"
+  const MASK_TITLE_MODES = ["all", "list", "detail", "off"];
+
+  function getMaskTitleMode() {
+    try {
+      const val = localStorage.getItem(MASK_TITLE_MODE_KEY);
+      if (val && MASK_TITLE_MODES.includes(val)) return val;
+      const legacy = localStorage.getItem(MASK_TITLE_KEY);
+      if (legacy === "1") return "all";
+      if (legacy === "0") return "off";
+      return "off";
+    } catch {
+      return "off";
+    }
+  }
+
+  function isMaskTitle() {
+    return getMaskTitleMode() !== "off";
+  }
+
+  function isMaskTitleList() {
+    const mode = getMaskTitleMode();
+    return mode === "all" || mode === "list";
+  }
+
+  function isMaskTitleDetail() {
+    const mode = getMaskTitleMode();
+    return mode === "all" || mode === "detail";
+  }
+
+  function setMaskTitleMode(mode) {
+    const next = MASK_TITLE_MODES.includes(mode) ? mode : "off";
+    try {
+      localStorage.setItem(MASK_TITLE_MODE_KEY, next);
+      localStorage.setItem(MASK_TITLE_KEY, next !== "off" ? "1" : "0");
+    } catch { /* ignore */ }
+    const panel = document.querySelector(".wecom-list-panel");
+    ensureMaskTitleToggle(panel);
+    if (listState.topics && listState.topics.length) {
+      renderListRows();
+    } else if (panel) {
+      loadList(listState.apiPath || listApiForPath(location.pathname, location.search), true);
+    }
+    refreshMaskedChatTitle();
+    syncThemeControls();
+  }
+
+  function setMaskTitle(on) {
+    setMaskTitleMode(on ? "all" : "off");
+  }
+
+  function cycleMaskTitleMode() {
+    const cur = getMaskTitleMode();
+    const cycleOrder = ["all", "list", "detail", "off"];
+    const nextIdx = (cycleOrder.indexOf(cur) + 1) % cycleOrder.length;
+    setMaskTitleMode(cycleOrder[nextIdx]);
+  }
+
+  const MASK_WORK_ORGS = ["产品", "研发", "前端", "后端", "客户端", "测试", "QA", "运维", "架构", "中台", "数据", "平台"];
+  const MASK_WORK_OBJS = ["需求", "接口", "契约", "用例", "缺陷", "分支", "版本", "变更", "工单", "告警", "故障", "发布"];
+  const MASK_WORK_ACTS = ["评审群", "联调群", "值班群", "提测群", "发布群", "复盘群", "迭代群", "排期群", "需求池", "对齐会", "跟进群", "项目组"];
+  const MASK_WORK_TITLES = [
+    "需求评审排期",
+    "技术方案讨论",
+    "接口联调对齐",
+    "代码评审意见",
+    "主干合并冲突",
+    "发版窗口确认",
+    "灰度比例调整",
+    "回归范围确认",
+    "提测准入检查",
+    "缺陷定级讨论",
+    "线上告警跟进",
+    "监控大盘调整",
+    "值班交接记录",
+    "故障复盘纪要",
+    "降级预案演练",
+    "容量水位评估",
+    "慢查询治理",
+    "配置变更同步",
+    "依赖版本升级",
+    "循环依赖治理",
+    "单测覆盖率达标",
+    "Mock 数据联调",
+    "冒烟用例执行",
+    "压测结果同步",
+    "埋点方案评审",
+    "SDK 版本对齐",
+    "网关路由变更",
+    "缓存命中率排查",
+    "队列积压处理",
+    "日志脱敏改造",
+    "数据库迁移演练",
+    "容器资源扩容",
+    "发布回滚演练",
+    "需求验收清单",
+    "接口文档补全",
+    "迭代任务盘点",
+    "技术债清理周",
+    "编码规范宣讲",
+    "方案设计评审",
+    "上线检查清单"
+  ];
+
+  function disguiseTitleForTopic(topic) {
+    const tid = Math.abs(Number(topic && topic.id) || 0);
+    const seed = tid * 2654435761 >>> 0;
+    if (seed % 2 === 0) {
+      const org = MASK_WORK_ORGS[seed % MASK_WORK_ORGS.length];
+      const obj = MASK_WORK_OBJS[(seed >>> 3) % MASK_WORK_OBJS.length];
+      const act = MASK_WORK_ACTS[(seed >>> 7) % MASK_WORK_ACTS.length];
+      const mode = (seed >>> 11) % 3;
+      if (mode === 0) return `${org}${obj}${act}`;
+      if (mode === 1) return `${org}·${obj}${act}`;
+      return `【${org}】${obj}${act}`;
+    }
+    return MASK_WORK_TITLES[seed % MASK_WORK_TITLES.length];
+  }
+
+  function convDisplayTitleList(topic) {
+    if (!topic) return "";
+    return isMaskTitleList() ? disguiseTitleForTopic(topic) : String(topic.title || "");
+  }
+
+  function convDisplayTitleDetail(topic) {
+    if (!topic) return "";
+    return isMaskTitleDetail() ? disguiseTitleForTopic(topic) : String(topic.title || "");
+  }
+
+  function convDisplayTitle(topic) {
+    return convDisplayTitleList(topic);
+  }
 
   function isMaskAvatar() {
     try { return localStorage.getItem(MASK_AVATAR_KEY) === "1"; } catch { return false; }
@@ -226,6 +455,8 @@
       // 兜底：按当前路由拉一次列表再绘
       loadList(listState.apiPath || listApiForPath(location.pathname, location.search), true);
     }
+    syncThemeControls();
+    syncRail();
   }
 
 
@@ -307,17 +538,55 @@
     btn.classList.toggle("is-on", on);
   }
 
+  function ensureMaskTitleToggle(panel) {
+    if (!panel) return;
+    const actions = panel.querySelector(".wecom-list-actions");
+    if (!actions) return;
+    let btn = actions.querySelector(".wecom-mask-title-toggle");
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "wecom-icon-btn wecom-mask-title-toggle";
+      btn.innerHTML = ICONS.win;
+      actions.appendChild(btn);
+    }
+    if (btn.dataset.bound !== "1") {
+      btn.dataset.bound = "1";
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+        cycleMaskTitleMode();
+      });
+    }
+    const mode = getMaskTitleMode();
+    const on = mode !== "off";
+    const titles = {
+      all: "伪装标题：全部（列表+详情，点击切换为仅列表）",
+      list: "伪装标题：仅列表（灰字为真标题，点击切换为仅详情）",
+      detail: "伪装标题：仅详情（点击关闭）",
+      off: "伪装标题：关（点击开启全部）"
+    };
+    btn.title = titles[mode] || "伪装标题：关（点击开启）";
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.classList.toggle("is-on", on);
+  }
+
   function fullAvatarUrl(template) {
     if (!template) return "";
-    const url = template.replace("{size}", String(AVATAR_SOURCE_SIZE));
+    let url = template.replace("{size}", String(AVATAR_SOURCE_SIZE));
+    if (url.startsWith("//")) return (typeof location !== "undefined" ? location.protocol : "https:") + url;
     if (/^(?:data:|blob:|https?:)/i.test(url)) return url;
     return new URL(url, location.origin).href;
   }
 
   function formatTime(iso) {
     if (!iso) return "";
+    if (typeof iso === "string" && (iso.includes("前") || iso.includes("刚刚") || iso.includes("昨天") || iso.includes("小时") || iso.includes("天"))) {
+      return iso;
+    }
     const date = new Date(iso);
-    if (Number.isNaN(date.getTime())) return "";
+    if (Number.isNaN(date.getTime())) return String(iso);
     const now = Date.now();
     const diff = now - date.getTime();
     const minute = 60e3, hour = 3600e3, day = 86400e3;
@@ -337,13 +606,42 @@
     return `${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
   }
 
+  let rateLimitCooldownUntil = 0;
+
   async function api(path, options = {}) {
+    const token = typeof csrfToken === "function" ? csrfToken() : "";
+    const headers = {
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+      ...(IS_LINUXDO ? { "Discourse-Present": "true" } : {}),
+      ...(token && IS_LINUXDO ? { "X-CSRF-Token": token } : {}),
+      ...(options.headers || {})
+    };
     const resp = await fetch(path, {
-      headers: { Accept: "application/json" },
       credentials: "same-origin",
-      ...options
+      ...options,
+      headers
     });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    if (resp.status === 429) {
+      rateLimitCooldownUntil = Date.now() + 15000;
+      const err = new Error("HTTP 429 (访问频率受限)");
+      err.status = 429;
+      err.isRateLimit = true;
+      throw err;
+    }
+    if (!resp.ok) {
+      const err = new Error(`HTTP ${resp.status}`);
+      err.status = resp.status;
+      throw err;
+    }
+    const contentType = resp.headers.get("content-type") || "";
+    if (contentType.includes("text/html")) {
+      rateLimitCooldownUntil = Date.now() + 15000;
+      const err = new Error("触发 Cloudflare 人机验证盾");
+      err.status = 429;
+      err.isCloudflare = true;
+      throw err;
+    }
     return resp.json();
   }
 
@@ -418,6 +716,41 @@
     return null;
   }
 
+  function getPreloadedTopic(topicId) {
+    if (!topicId) return null;
+    try {
+      const element = document.getElementById("data-preloaded");
+      const raw = element?.getAttribute("data-preloaded") || element?.textContent;
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const key = `topic_${topicId}`;
+      if (parsed[key]) {
+        return typeof parsed[key] === "string" ? JSON.parse(parsed[key]) : parsed[key];
+      }
+      if (parsed.topic) {
+        const t = typeof parsed.topic === "string" ? JSON.parse(parsed.topic) : parsed.topic;
+        if (Number(t?.id) === Number(topicId)) return t;
+      }
+    } catch { /* ignore */ }
+    return null;
+  }
+
+  function getPreloadedCategories() {
+    try {
+      const element = document.getElementById("data-preloaded");
+      const raw = element?.getAttribute("data-preloaded") || element?.textContent;
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const siteData = parsed.site ? (typeof parsed.site === "string" ? JSON.parse(parsed.site) : parsed.site) : null;
+        if (siteData?.categories?.length) return siteData.categories;
+        if (parsed.categories) {
+          return typeof parsed.categories === "string" ? JSON.parse(parsed.categories) : parsed.categories;
+        }
+      }
+    } catch { /* ignore */ }
+    return null;
+  }
+
   function rememberCurrentUser(record) {
     const username = record?.username || record?.user?.username;
     const id = record?.id ?? record?.user?.id;
@@ -427,6 +760,16 @@
 
   function getCurrentUserIdentity() {
     if (cachedUsername || cachedUserId) return { username: cachedUsername, id: cachedUserId };
+    if (IS_V2EX) {
+      const memberLink = document.querySelector("#Rightbar a[href^='/member/'], #Top a[href^='/member/']");
+      if (memberLink) {
+        const match = (memberLink.getAttribute("href") || "").match(/\/member\/([^/?#]+)/);
+        if (match && match[1]) {
+          rememberCurrentUser({ username: match[1], id: match[1] });
+          return { username: cachedUsername, id: cachedUserId };
+        }
+      }
+    }
     const selectors = [
       "#current-user",
       ".header-dropdown-toggle.current-user",
@@ -519,6 +862,10 @@
     return topicRouteFromPath(pathname).topicId;
   }
 
+  const INITIAL_V2EX_TOPIC_ID = IS_V2EX ? (typeof location !== "undefined" ? topicIdFromPath(location.pathname) : null) : null;
+  let initialV2exTopicConsumed = false;
+  let suppressHistoryApply = false;
+
   function postNumberFromPath(pathname) {
     return topicRouteFromPath(pathname).postNumber;
   }
@@ -543,6 +890,9 @@
   }
 
   function isHomePath(pathname) {
+    if (IS_V2EX) {
+      return pathname === "/" || /^\/(recent|changes|notifications)\b/.test(pathname) || /^\/go\//.test(pathname);
+    }
     return pathname === "/" ||
       /^\/(latest|new|unread|unseen|top|categories|hot|posted|read|bookmarks)\b/.test(pathname) ||
       /^\/c\//.test(pathname) || /^\/tag\//.test(pathname);
@@ -569,6 +919,15 @@
   }
 
   function listApiForPath(pathname, search = "") {
+    if (IS_V2EX) {
+      const query = String(search || "");
+      if (query.includes("tab=hot")) return "/api/topics/hot.json";
+      if (query.includes("tab=all") || query.includes("tab=latest")) return "/?tab=all";
+      if (query.includes("tab=")) return `/${query}`;
+      if (/^\/go\//.test(pathname)) return pathname + query;
+      if (pathname === "/recent" || pathname === "/notifications" || pathname.includes("/replies")) return pathname + query;
+      return "/?tab=all";
+    }
     const normalized = String(pathname || "/").replace(/\/+$/, "") || "/";
     const apiPath = LIST_API_BY_PATH[normalized] || scopedListApiForPath(normalized) || "/latest.json";
     const query = String(search || "");
@@ -630,7 +989,11 @@
     }
 
     /* ---------- 字体与基础 ---------- */
-    .${ROOT_CLASS} body { font-family: var(--wc-font) !important; }
+    .${ROOT_CLASS} body {
+      font-family: var(--wc-font) !important;
+      background: var(--wc-chat-bg) !important;
+      background-image: none !important;
+    }
 
     /* 站点无全局 border-box：自绘面板统一盒模型，否则 padding 会加宽导致互相堆叠 */
     .wecom-rail, .wecom-rail *,
@@ -933,7 +1296,8 @@
       background: #F3A23A;
       cursor: pointer;
     }
-    .wecom-rail-avatar img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+    .wecom-rail-avatar img,
+    .wecom-rail-avatar svg { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
     .wecom-rail-avatar.is-notif-pinned {
       box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--wc-accent);
     }
@@ -943,7 +1307,8 @@
       background: var(--wc-danger); color: #fff;
       font-size: 10px; font-weight: 700; line-height: 16px; text-align: center;
       border-radius: 8px;
-      box-shadow: 0 0 0 2px #fff;
+      border: none !important;
+      box-shadow: none !important;
     }
     .wecom-rail-search { display: none !important; }
     .wecom-rail-items {
@@ -978,7 +1343,7 @@
       left: calc(var(--wc-nav) + 10px);
       bottom: 12px;
       z-index: 1200;
-      width: 190px;
+      width: 220px; max-height: calc(100vh - 24px); overflow-y: auto;
       padding: 7px;
       border: 1px solid var(--wc-border);
       border-radius: 10px;
@@ -987,6 +1352,11 @@
       font-family: var(--wc-font);
     }
     .wecom-theme-menu-title { padding: 5px 8px 7px; color: var(--wc-text-3); font-size: 11px; }
+    .wecom-theme-menu-divider {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid var(--wc-border);
+    }
     .wecom-theme-menu button {
       width: 100%; height: 34px; display: flex; align-items: center; gap: 8px;
       padding: 0 8px; border: 0; border-radius: 7px; background: transparent;
@@ -995,6 +1365,28 @@
     .wecom-theme-menu button:hover { background: var(--wc-hover); color: var(--wc-text); }
     .wecom-theme-menu button.is-active { background: var(--wc-accent-soft); color: var(--wc-accent); font-weight: 600; }
     .wecom-theme-menu button svg { width: 16px; height: 16px; flex: 0 0 auto; }
+    .wecom-theme-menu button .wecom-menu-label { flex: 1; min-width: 0; }
+    .wecom-menu-state-badge {
+      margin-left: auto;
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 500;
+      line-height: 1.4;
+      flex-shrink: 0;
+    }
+    .wecom-menu-state-badge.is-on {
+      color: #07C160;
+      background: rgba(7, 193, 96, 0.12);
+    }
+    .wecom-menu-state-badge.is-off {
+      color: var(--wc-text-3);
+      background: rgba(0, 0, 0, 0.04);
+    }
+    html.wecom-dark .wecom-menu-state-badge.is-off {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--wc-text-3);
+    }
     .wecom-theme-menu .wecom-check-update { margin-top: 6px; border-top: 1px solid var(--wc-border); border-radius: 0; }
     /* 更新提示沿用企微配色，不遮罩、不抢占输入焦点。 */
     .wecom-update-notice {
@@ -1043,6 +1435,7 @@
       position: absolute; top: 3px; left: 26px; right: auto;
       min-width: 16px; height: 16px; padding: 0 4px;
       background: var(--wc-danger); color: #fff; border-radius: 8px;
+      border: none !important; box-shadow: none !important;
       font-size: 10px; font-weight: 700; line-height: 16px; text-align: center;
     }
 
@@ -1079,7 +1472,12 @@
 
     /* ---------- 隐藏原生主内容（三栏路由） ---------- */
     .${ROOT_CLASS}.${LOCK_CLASS} body { overflow: hidden !important; }
-    .${ROOT_CLASS}.${LOCK_CLASS} #main-outlet > * {
+    .${ROOT_CLASS}.${LOCK_CLASS} #main-outlet > *,
+    .${ROOT_CLASS}.${LOCK_CLASS} #Top,
+    .${ROOT_CLASS}.${LOCK_CLASS} #Wrapper,
+    .${ROOT_CLASS}.${LOCK_CLASS} #Bottom,
+    .${ROOT_CLASS}.${LOCK_CLASS} #Main,
+    .${ROOT_CLASS}.${LOCK_CLASS} #Rightbar {
       visibility: hidden !important;
       height: 0 !important;
       overflow: hidden !important;
@@ -1192,7 +1590,7 @@
     .wecom-icon-btn svg { width: 18px; height: 18px; }
     .wecom-list-body { flex: 1; overflow-y: auto; overscroll-behavior: contain; }
     .wecom-list-body::-webkit-scrollbar { width: 6px; }
-    .wecom-list-body::-webkit-scrollbar-thumb { background: var(--wc-border-strong); border-radius: 3px; }
+    .wecom-list-body::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
 
     .wecom-conv {
       display: flex; gap: 8px;
@@ -1247,7 +1645,8 @@
       width: 100%; height: 100%;
       color: #fff; font-size: 7px; font-weight: 700; line-height: 1;
     }
-    .wecom-mask-avatar-toggle.is-on {
+    .wecom-mask-avatar-toggle.is-on,
+    .wecom-mask-title-toggle.is-on {
       color: var(--wc-accent); background: var(--wc-accent-soft);
     }
     .wecom-conv-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
@@ -1324,6 +1723,7 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .wecom-chat-sub { font-size: 12px; color: var(--wc-text-3); margin-top: 1px; }
+    .wecom-chat-tools,
     .wecom-chat-actions { display: flex; gap: 4px; flex-shrink: 0; }
     .wecom-chat-body {
       flex: 1; overflow-y: auto;
@@ -1332,7 +1732,7 @@
       overscroll-behavior: contain;
     }
     .wecom-chat-body::-webkit-scrollbar { width: 6px; }
-    .wecom-chat-body::-webkit-scrollbar-thumb { background: var(--wc-border-strong); border-radius: 3px; }
+    .wecom-chat-body::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
 
     .wecom-msg { display: flex; gap: 10px; max-width: 78%; }
     .wecom-msg-other { align-self: flex-start; }
@@ -1421,6 +1821,32 @@
       font-size: 11px; color: var(--wc-text-3);
       margin-top: 4px; display: flex; gap: 8px; align-items: center;
     }
+    .wecom-msg-likes {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 11px;
+      line-height: 1;
+      color: var(--wc-text-3);
+      vertical-align: middle;
+      user-select: none;
+    }
+    .wecom-msg-likes .wecom-msg-like-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wecom-msg-likes svg {
+      width: 12px;
+      height: 12px;
+      color: var(--wc-text-3);
+      fill: none;
+      stroke: currentColor;
+      flex-shrink: 0;
+    }
+    .wecom-msg-likes .wecom-msg-like-num {
+      font-variant-numeric: tabular-nums;
+    }
     .wecom-msg-time-sep {
       align-self: center;
       font-size: 12px; color: var(--wc-text-3);
@@ -1452,15 +1878,406 @@
     .wecom-msg-tool.bookmarked { color: var(--wc-accent); }
     .wecom-msg-tool.bookmarked svg path { fill: currentColor; }
 
+    /* Boost 气泡与列表 */
+    .wecom-msg-boosts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 4px;
+      max-width: 100%;
+    }
+    .wecom-msg-me .wecom-msg-boosts {
+      justify-content: flex-end;
+    }
+    .wecom-msg-other .wecom-msg-boosts {
+      justify-content: flex-start;
+    }
+    .wecom-boost-item {
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 4px !important;
+      padding: 0 7px 0 3px !important;
+      height: 22px !important;
+      max-height: 22px !important;
+      box-sizing: border-box !important;
+      background: var(--wc-hover);
+      border: 1px solid var(--wc-border);
+      border-radius: 11px !important;
+      font-size: 12px !important;
+      color: var(--wc-text-2);
+      line-height: 20px !important;
+      max-width: 260px !important;
+      transition: background 0.15s ease;
+      vertical-align: middle !important;
+      overflow: hidden !important;
+    }
+    html.wecom-dark .wecom-boost-item,
+    html.${ROOT_CLASS}.wecom-dark .wecom-boost-item {
+      background: rgba(255, 255, 255, 0.08) !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      color: #D6D6D6 !important;
+    }
+    .wecom-boost-avatar {
+      width: 16px !important;
+      height: 16px !important;
+      min-width: 16px !important;
+      min-height: 16px !important;
+      border-radius: 50% !important;
+      object-fit: cover !important;
+      flex-shrink: 0 !important;
+      display: block !important;
+    }
+    .wecom-boost-avatar-text {
+      width: 16px !important;
+      height: 16px !important;
+      min-width: 16px !important;
+      min-height: 16px !important;
+      border-radius: 50% !important;
+      background: #267EF0 !important;
+      color: #fff !important;
+      font-size: 9px !important;
+      font-weight: 700 !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      flex-shrink: 0 !important;
+    }
+    .wecom-boost-cooked {
+      display: inline-flex !important;
+      align-items: center !important;
+      height: 18px !important;
+      max-height: 18px !important;
+      line-height: 18px !important;
+      gap: 2px !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      box-sizing: border-box !important;
+      vertical-align: middle !important;
+    }
+    .wecom-boost-cooked p {
+      margin: 0 !important;
+      padding: 0 !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      height: 18px !important;
+      max-height: 18px !important;
+      min-height: 0 !important;
+      line-height: 18px !important;
+      gap: 2px !important;
+      box-sizing: border-box !important;
+    }
+    .wecom-boost-cooked img,
+    .wecom-boost-cooked img.emoji,
+    .wecom-boost-cooked img.emoji.only-emoji,
+    .wecom-boost-cooked img.only-emoji,
+    .wecom-boost-cooked .only-emoji {
+      width: 16px !important;
+      height: 16px !important;
+      min-width: 16px !important;
+      min-height: 16px !important;
+      max-width: 16px !important;
+      max-height: 16px !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      vertical-align: middle !important;
+      display: inline-block !important;
+      object-fit: contain !important;
+      font-size: 12px !important;
+      line-height: 1 !important;
+    }
+    html.${ROOT_CLASS} .wecom-boost-cooked img,
+    html.${ROOT_CLASS} .wecom-boost-cooked img.emoji,
+    html.${ROOT_CLASS} .wecom-boost-cooked img.emoji.only-emoji,
+    html.${ROOT_CLASS} .wecom-boost-cooked img.only-emoji,
+    html.${ROOT_CLASS} .wecom-boost-cooked .only-emoji {
+      width: 16px !important;
+      height: 16px !important;
+      max-width: 16px !important;
+      max-height: 16px !important;
+      min-width: 16px !important;
+      min-height: 16px !important;
+    }
+    .wecom-boost-delete {
+      border: none;
+      background: transparent;
+      color: var(--wc-text-4);
+      font-size: 13px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0 2px;
+      border-radius: 50%;
+      margin-left: 2px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wecom-boost-delete:hover {
+      color: #FA5151;
+      background: rgba(250, 81, 81, 0.12);
+    }
+
+    /* 允许通过设置关闭显示 Boost */
+    html.wecom-hide-boost .wecom-msg-boosts,
+    html.wecom-hide-boost .wecom-msg-tool-btn[data-action="boost"] {
+      display: none !important;
+    }
+
+    /* 保持消息浮动工具条在打开 Popover 时常驻 */
+    .wecom-msg.has-boost-popover .wecom-msg-tools {
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+
+    /* Boost 添加微弹窗 */
+    .wecom-boost-popover {
+      position: fixed;
+      z-index: 1000;
+      background: var(--wc-bg);
+      border: 1px solid var(--wc-border-strong);
+      border-radius: 8px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16);
+      padding: 12px;
+      width: 260px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-family: var(--wc-font);
+      box-sizing: border-box;
+      animation: wecom-popover-in 0.12s ease-out;
+    }
+    @keyframes wecom-popover-in {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    html.wecom-dark .wecom-boost-popover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-boost-popover {
+      background: #26292E;
+      border-color: #3B3E45;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+    }
+    .wecom-boost-popover-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--wc-text);
+      line-height: 1;
+    }
+    .wecom-boost-popover-head > span {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .wecom-boost-popover-head svg {
+      width: 15px;
+      height: 15px;
+      color: var(--wc-accent);
+    }
+    .wecom-boost-popover-close {
+      border: none;
+      background: transparent;
+      color: var(--wc-text-3);
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+    .wecom-boost-popover-close:hover {
+      background: var(--wc-hover);
+      color: var(--wc-text);
+    }
+    .wecom-boost-presets {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+    .wecom-boost-preset-btn {
+      border: 1px solid var(--wc-border);
+      background: var(--wc-hover);
+      color: var(--wc-text);
+      font-size: 13px;
+      height: 30px;
+      padding: 0;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: var(--wc-font);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.12s ease;
+      user-select: none;
+    }
+    .wecom-boost-preset-btn:hover {
+      background: var(--wc-active);
+      border-color: var(--wc-accent);
+      color: var(--wc-accent);
+      transform: translateY(-1px);
+    }
+    .wecom-boost-input-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .wecom-boost-input {
+      flex: 1;
+      min-width: 0;
+      height: 30px;
+      padding: 0 8px;
+      font-size: 12px;
+      border: 1px solid var(--wc-border);
+      border-radius: 6px;
+      background: var(--wc-bg);
+      color: var(--wc-text);
+      outline: none;
+      font-family: var(--wc-font);
+      box-sizing: border-box;
+    }
+    .wecom-boost-input:focus {
+      border-color: #267EF0;
+    }
+    .wecom-boost-send-btn {
+      height: 30px;
+      padding: 0 12px;
+      background: #267EF0;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: var(--wc-font);
+      font-weight: 500;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .wecom-boost-send-btn:hover:not(:disabled) {
+      background: #1B6EDB;
+    }
+    .wecom-boost-send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .wecom-boost-status {
+      font-size: 11px;
+      color: #FA5151;
+      min-height: 0;
+      line-height: 1.3;
+      display: none;
+    }
+    .wecom-boost-status:not(:empty) {
+      display: block;
+    }
+
+    /* Window Controls Overlay (把内容延伸到标题栏，融合原生窗口控制按钮) */
+    @media (display-mode: window-controls-overlay) {
+      html.${ROOT_CLASS} {
+        --wc-wco-active: 1;
+      }
+    }
+    html.${ROOT_CLASS}.wecom-wco-active .wecom-win-controls,
+    @media (display-mode: window-controls-overlay) {
+      html.${ROOT_CLASS} .wecom-win-controls {
+        display: none !important;
+      }
+    }
+    html.${ROOT_CLASS}.wecom-wco-active .wecom-chat-header,
+    html.${ROOT_CLASS}.wecom-wco-active .wecom-list-search,
+    html.${ROOT_CLASS}.wecom-wco-active .wecom-rail,
+    html.${ROOT_CLASS}.wecom-wco-active .wecom-rail-head,
+    @media (display-mode: window-controls-overlay) {
+      html.${ROOT_CLASS} .wecom-chat-header,
+      html.${ROOT_CLASS} .wecom-list-search,
+      html.${ROOT_CLASS} .wecom-rail,
+      html.${ROOT_CLASS} .wecom-rail-head {
+        -webkit-app-region: drag !important;
+        app-region: drag !important;
+      }
+    }
+    html.${ROOT_CLASS}.wecom-wco-active .wecom-chat-header button,
+    html.${ROOT_CLASS}.wecom-wco-active .wecom-chat-header a,
+    html.${ROOT_CLASS}.wecom-wco-active .wecom-platform-switcher,
+    html.${ROOT_CLASS}.wecom-wco-active .wecom-platform-switcher *,
+    html.${ROOT_CLASS}.wecom-wco-active .wecom-chat-chips,
+    html.${ROOT_CLASS}.wecom-wco-active .wecom-list-search input,
+    html.${ROOT_CLASS}.wecom-wco-active .wecom-list-search button,
+    html.${ROOT_CLASS}.wecom-wco-active .wecom-rail button,
+    html.${ROOT_CLASS}.wecom-wco-active .wecom-rail a,
+    html.${ROOT_CLASS}.wecom-wco-active .wecom-rail input,
+    html.${ROOT_CLASS}.wecom-wco-active .wecom-rail-avatar,
+    html.${ROOT_CLASS}.wecom-wco-active .wecom-rail-item,
+    @media (display-mode: window-controls-overlay) {
+      html.${ROOT_CLASS} .wecom-chat-header button,
+      html.${ROOT_CLASS} .wecom-chat-header a,
+      html.${ROOT_CLASS} .wecom-platform-switcher,
+      html.${ROOT_CLASS} .wecom-platform-switcher *,
+      html.${ROOT_CLASS} .wecom-chat-chips,
+      html.${ROOT_CLASS} .wecom-list-search input,
+      html.${ROOT_CLASS} .wecom-list-search button,
+      html.${ROOT_CLASS} .wecom-rail button,
+      html.${ROOT_CLASS} .wecom-rail a,
+      html.${ROOT_CLASS} .wecom-rail input,
+      html.${ROOT_CLASS} .wecom-rail-avatar,
+      html.${ROOT_CLASS} .wecom-rail-item {
+        -webkit-app-region: no-drag !important;
+        app-region: no-drag !important;
+      }
+    }
+    html.${ROOT_CLASS}.wecom-wco-active .wecom-chat-header,
+    @media (display-mode: window-controls-overlay) {
+      html.${ROOT_CLASS} .wecom-chat-header {
+        padding-right: calc(100vw - env(titlebar-area-width, var(--wc-titlebar-width, calc(100vw - 138px))) + 12px) !important;
+      }
+    }
+
+    /* 彻底屏蔽顶部原生加载进度条，避免切话题时闪现顶部蓝条/橙条 */
+    #loading-slider,
+    .loading-slider,
+    .loading-slider-container,
+    .loading-slider__bar,
+    .d-loading-slider,
+    div[class*="loading-slider"],
+    div[id*="loading-slider"],
+    #nprogress,
+    .pace {
+      display: none !important;
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+      height: 0 !important;
+      max-height: 0 !important;
+      overflow: hidden !important;
+      z-index: -9999 !important;
+    }
+
     .wecom-chat-empty, .wecom-chat-error, .wecom-chat-loading {
       margin: auto;
       display: flex; flex-direction: column;
-      align-items: center; gap: 10px;
+      align-items: center; gap: 12px;
       color: var(--wc-text-3); font-size: 14px;
       text-align: center; padding: 40px 20px;
     }
     .wecom-chat-empty svg, .wecom-chat-error svg {
       width: 56px; height: 56px; opacity: 0.5;
+    }
+    .wecom-chat-spinner {
+      width: 28px;
+      height: 28px;
+      border: 2.5px solid rgba(0, 0, 0, 0.08);
+      border-top-color: #267EF0;
+      border-radius: 50%;
+      animation: wecom-spin 0.7s linear infinite;
+    }
+    html.wecom-dark .wecom-chat-spinner,
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-spinner {
+      border-color: rgba(255, 255, 255, 0.12);
+      border-top-color: #267EF0;
+    }
+    @keyframes wecom-spin {
+      to { transform: rotate(360deg); }
     }
     .wecom-empty-btn {
       margin-top: 6px;
@@ -1470,6 +2287,44 @@
       font-size: 13px; cursor: pointer; font-family: var(--wc-font);
     }
     .wecom-empty-btn:hover { background: var(--wc-hover); }
+
+    .wecom-chat-error-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .wecom-chat-error-btn {
+      border: 1px solid var(--wc-border-strong);
+      background: var(--wc-bg);
+      color: var(--wc-text-2);
+      border-radius: 6px;
+      height: 32px;
+      padding: 0 16px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: var(--wc-font);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .wecom-chat-error-btn:hover {
+      background: var(--wc-hover);
+      color: var(--wc-text);
+    }
+    .wecom-chat-error-btn.primary {
+      background: #267EF0;
+      border-color: #267EF0;
+      color: #FFFFFF;
+      font-weight: 500;
+    }
+    .wecom-chat-error-btn.primary:hover {
+      background: #1B6ED8;
+      border-color: #1B6ED8;
+    }
 
     /* ---------- 企业微信 composer：白卡片，输入区 + 下方工具行 + 发送钮 ---------- */
     .wecom-composer {
@@ -1545,7 +2400,10 @@
 
     /* 锁定态：原生主区不要抢走点击；原生 composer 仅作为后台提交引擎 */
     .${ROOT_CLASS}.${LOCK_CLASS} #main-outlet-wrapper,
-    .${ROOT_CLASS}.${LOCK_CLASS} #main-outlet {
+    .${ROOT_CLASS}.${LOCK_CLASS} #main-outlet,
+    .${ROOT_CLASS}.${LOCK_CLASS} #Wrapper,
+    .${ROOT_CLASS}.${LOCK_CLASS} #Main,
+    .${ROOT_CLASS}.${LOCK_CLASS} #Rightbar {
       pointer-events: none !important;
     }
     .${ROOT_CLASS}.${LOCK_CLASS} #reply-control:not(.open):not(.fullscreen):not(.edit-title) {
@@ -1781,7 +2639,7 @@
     .wecom-rail .wecom-rail-avatar {
       width: 38px;
       height: 38px;
-      border-radius: 4px;
+      border-radius: 8px;
       background: #267EF0;
       box-shadow: none;
     }
@@ -1791,7 +2649,8 @@
     .wecom-rail .wecom-rail-avatar-badge {
       top: -7px;
       right: -9px;
-      box-shadow: 0 0 0 2px #2B2D31;
+      border: none !important;
+      box-shadow: none !important;
     }
     .wecom-rail-org-chip {
       width: 32px;
@@ -1859,7 +2718,8 @@
       top: 2px;
       left: auto;
       right: 3px;
-      box-shadow: 0 0 0 2px #2B2D31;
+      border: none !important;
+      box-shadow: none !important;
     }
     .wecom-rail-resizer { display: none !important; }
 
@@ -1975,7 +2835,7 @@
     .wecom-conv-avatar {
       width: 42px;
       height: 42px;
-      border-radius: 4px;
+      border-radius: 8px;
     }
     .wecom-conv-avatar.is-group,
     .wecom-conv-avatar.is-grid-mask { gap: 1px; padding: 1px; background: #FFFFFF; }
@@ -1999,19 +2859,19 @@
     }
     .wecom-chat-title { font-size: 15px; font-weight: 500; }
     .wecom-chat-sub { color: #999; }
-    .wecom-chat-avatar { border-radius: 4px; }
+    .wecom-chat-avatar { border-radius: 8px; }
     .wecom-chat-body { padding: 22px 30px; gap: 18px; }
     .wecom-msg { max-width: min(76%, 820px); gap: 11px; }
     .wecom-msg-avatar {
       width: 38px;
       height: 38px;
-      border-radius: 4px;
+      border-radius: 8px;
     }
     .wecom-msg-name { margin-bottom: 5px; color: #999; }
     .wecom-msg-bubble {
       position: relative;
       padding: 9px 12px;
-      border-radius: 4px !important;
+      border-radius: 8px !important;
       font-size: 14px;
       line-height: 1.62;
       box-shadow: none !important;
@@ -2041,42 +2901,7 @@
     .wecom-msg-meta { color: #AAA; }
     .wecom-msg-tools { border-radius: 4px; }
 
-    /* 企业微信底部编辑区 */
-    .wecom-composer {
-      min-height: 142px;
-      padding: 0;
-      background: #FFFFFF;
-      border-top: 1px solid #DFDFDF;
-    }
-    .wecom-composer-card {
-      min-height: 141px;
-      display: flex;
-      flex-direction: column;
-      border: 0;
-      border-radius: 0;
-      background: #FFFFFF;
-    }
-    .wecom-composer-card:hover { border: 0; box-shadow: none; }
-    .wecom-chat-compose {
-      order: 2;
-      min-height: 82px;
-      padding: 7px 18px;
-      color: #B1B1B1;
-    }
-    .wecom-composer-tools {
-      order: 1;
-      padding: 7px 13px 0;
-    }
-    .wecom-send-btn {
-      order: 3;
-      align-self: flex-end;
-      margin: auto 18px 12px 0;
-      height: 28px;
-      padding: 0 18px;
-      color: #777;
-      background: #F0F0F0;
-      border: 1px solid #DEDEDE;
-    }
+    /* 企业微信底部编辑区已统一在 WECOM_LATEST_REFINEMENTS 规范管理 */
     .wecom-mode-fab {
       background: #267EF0;
       border-radius: 6px;
@@ -2092,1270 +2917,2106 @@
     }
   `;
 
-  /* 企业微信 5.x：以 2026 年桌面客户端展开导航版为视觉基准。 */
+  /* 企业微信 PC 客户端视觉规范 (基准像素对齐 media_1789091792061.png) */
   const WECOM_LATEST_REFINEMENTS = String.raw`
+    /* 线性图标统一 1px 极细线条规范 */
+    svg[fill="none"],
+    svg[stroke],
+    svg path[stroke],
+    .wecom-composer-tools .wecom-icon-btn svg,
+    .wecom-chat-tools .wecom-icon-btn svg,
+    .wecom-chat-actions .wecom-icon-btn svg,
+    .wecom-list-search form svg,
+    .wecom-list-add-btn svg,
+    .wecom-member-actions .wecom-icon-btn svg,
+    .wecom-arrow-icon svg,
+    .wecom-tool-quick-meet svg,
+    .wecom-msg-tool svg {
+      stroke-width: 1px !important;
+    }
+
     .${ROOT_CLASS} {
-      --wc-blue: #4389F5;
-      --wc-blue-hover: #2F78E8;
-      --wc-blue-soft: #DCEBFF;
-      --wc-accent: #4389F5;
-      --wc-accent-soft: #DCEBFF;
-      --wc-text: #172033;
-      --wc-text-2: #526175;
-      --wc-text-3: #8B98AA;
-      --wc-text-4: #B5BFCC;
-      --wc-chat-bg: #F1F4F8;
-      --wc-hover: #E7EEF8;
-      --wc-active: #4B8FF7;
-      --wc-bubble-other: #E5E8ED;
-      --wc-bubble-me: #BEE4FF;
-      --wc-border: #D9E0E9;
-      --wc-border-strong: #C5CFDB;
-      --wc-rail-bg: #E3F0FF;
+      /* 核心品牌色系（像素级采样自 media_1789091792061.png） */
+      --wc-blue: #267EF0;              /* 企微经典高亮蓝 (采样自 dock 激活态 #267EF0) */
+      --wc-blue-hover: #1E6FFF;
+      --wc-blue-soft: #CCE0FA;         /* 企微激活项浅蓝底色 (采样自 dock 选中底色 #CCE0FA) */
+      --wc-list-active: #3D8AF5;       /* 会话列表选中项纯蓝底色 (采样自 list_crop.png #3D8AF5) */
+      --wc-accent: #267EF0;
+      --wc-accent-soft: #CCE0FA;
+      --wc-text: #1F2329;              /* 主要正文深灰近黑 */
+      --wc-text-2: #585C60;            /* 工具栏与副文本 Charcoal Slate (采样自 toolbar #585C60) */
+      --wc-text-3: #8F959E;            /* 时间戳/灰色说明/未选中标签 */
+      --wc-text-4: #C5C9CF;
+      --wc-rail-bg: #E1EBF5;           /* 最左侧停靠栏背景色，微蓝冷灰 (采样自 dock_crop.png) */
+      --wc-rail-border: #CFDAE6;
+      --wc-rail-icon: #7C8B9D;         /* 停靠栏未选中图标与文字颜色 #7C8B9D */
+      --wc-rail-active-bg: #CCE0FA;    /* 停靠栏选中背景，浅蓝圆角块 */
+      --wc-list-bg: #EBF0F5;           /* 会话列表背景 (采样自 list_crop.png #EBF0F5) */
+      --wc-list-border: #D9DFE5;
+      --wc-chat-bg: #F5F7FA;           /* 聊天区域背景 (采样自 chat_crop.png #F5F7FA) */
+      --wc-composer-bg: #FFFFFF;
+      --wc-hover: rgba(0, 0, 0, 0.05);
+      
+      /* 会话气泡规范（严格匹配微信生态与截图标准） */
+      --wc-bubble-other: #E4E7EB;      /* 对方气泡：精确采样自截图 bubble2_crop.png #E4E7EB */
+      --wc-bubble-other-text: #1F2329; /* 对方文字颜色 */
+      --wc-bubble-me: #95EC69;         /* 自己气泡：企微与微信标准经典绿 #95EC69 */
+      --wc-bubble-me-text: #1F2329;    /* 自己文字颜色 */
+      
+      --wc-border: #E5E8EC;
+      --wc-border-strong: #D0D5DD;
       --wc-nav: ${RAIL_WIDTH}px;
       --wc-list: ${LIST_WIDTH}px;
       --wc-members: ${MEMBER_WIDTH}px;
-      --wc-font: "Microsoft YaHei UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      --wc-font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif;
     }
 
-    /* 左侧展开导航 */
+    /* 保证布局根节点三栏固定定位 */
+    html.${ROOT_CLASS} body {
+      overflow: hidden !important;
+      font-family: var(--wc-font);
+      background: var(--wc-chat-bg);
+      color: var(--wc-text);
+    }
+
+    /* 1. 最左侧 56px 垂直停靠栏 */
     .wecom-rail {
+      position: fixed;
       top: 0;
-      padding: 10px 0 8px;
-      align-items: stretch;
-      overflow: hidden;
-      background: linear-gradient(180deg, #E7F3FF 0%, #DDEEFF 100%);
-      border-right: 1px solid #C9D9EB;
-      color: #47617E;
-    }
-    .wecom-rail-head {
-      height: 46px;
+      left: 0;
+      bottom: 0;
+      width: var(--wc-nav) !important;
+      min-width: var(--wc-nav) !important;
+      max-width: var(--wc-nav) !important;
+      height: 100vh;
+      background: var(--wc-rail-bg) !important;
+      border-right: 1px solid var(--wc-rail-border);
       display: flex;
-      flex-direction: row;
+      flex-direction: column;
       align-items: center;
-      gap: 8px;
-      padding: 0 16px;
-      flex: 0 0 46px;
-    }
-    .wecom-rail-head .me-chip { width: 26px; height: 26px; flex: 0 0 26px; }
-    .wecom-rail .wecom-rail-avatar {
-      width: 26px;
-      height: 26px;
-      border-radius: 4px;
-      font-size: 10px;
-    }
-    .wecom-current-user-name {
-      min-width: 0;
-      overflow: hidden;
-      color: #26384E;
-      font-size: 12px;
-      line-height: 1;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-    }
-    .wecom-rail-org-chip[hidden] { display: none !important; }
-    .wecom-rail-items {
-      flex: 0 0 auto;
-      width: 100%;
-      gap: 1px;
-      padding: 4px 12px 8px;
-      overflow: visible;
-    }
-    .wecom-rail-item {
-      width: 100%;
-      height: 31px;
-      min-height: 31px;
-      flex: 0 0 31px;
-      flex-direction: row;
-      justify-content: flex-start;
-      gap: 10px;
-      padding: 0 9px;
-      border-radius: 6px;
-      color: #5D718A;
-      font-size: 13px;
-      line-height: 31px;
-      text-align: left;
-    }
-    .wecom-rail-item svg { width: 16px; height: 16px; color: #7B8CA1; }
-    .wecom-rail-item:hover { background: rgba(79, 143, 234, .09); }
-    .wecom-rail-item.active,
-    .wecom-rail-more.is-on {
-      color: #2D78E7;
-      background: #CFE4FF;
-      box-shadow: none;
-    }
-    .wecom-rail-item.active svg,
-    .wecom-rail-more.is-on svg { color: #2D78E7; }
-    .wecom-rail-item.active::before { display: none; }
-    .wecom-rail-badge {
-      top: 6px;
-      left: auto;
-      right: 8px;
-      height: 17px;
-      min-width: 17px;
-      line-height: 17px;
-      border-radius: 9px;
-      box-shadow: 0 0 0 2px #CFE4FF;
-    }
-    .wecom-rail-dot {
-      position: absolute;
-      right: 10px;
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: #FF574F;
-    }
-    .wecom-rail-groups {
-      min-height: 0;
-      flex: 1 1 auto;
-      overflow-y: auto;
-      padding: 0 12px 4px;
-      scrollbar-width: none;
-    }
-    .wecom-rail-groups::-webkit-scrollbar { display: none; }
-    .wecom-rail-group-title {
-      height: 27px;
-      padding: 6px 9px 0;
-      color: #8293A8;
-      font-size: 12px;
-    }
-    .wecom-rail-group-item {
-      position: relative;
-      width: 100%;
-      height: 31px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 0 9px;
-      border: 0;
-      border-radius: 6px;
-      background: transparent;
-      color: #536A84;
-      font: 13px var(--wc-font);
-      cursor: default;
-    }
-    .wecom-rail-group-item:hover { background: rgba(79, 143, 234, .08); }
-    .wecom-rail-group-item svg { width: 16px; height: 16px; color: #7187A0; }
-    .wecom-group-unread {
-      margin-left: auto;
-      color: #8595A8;
-      font-size: 11px;
-      font-weight: 400;
-    }
-    .wecom-rail-bottom { padding: 2px 12px 0; }
-    .wecom-rail-bottom .wecom-rail-item { color: #536A84; }
-    .wecom-rail-resizer {
-      top: 0;
-      display: block !important;
-      background: transparent;
-    }
-    .wecom-rail-resizer:hover,
-    .wecom-rail-resizer.dragging { background: rgba(67, 137, 245, .24); }
-    /* 原生“更多”菜单以内联浮层挂在侧栏中，必须覆盖侧栏的透明背景重置。 */
-    html.${ROOT_CLASS} body .sidebar-wrapper .sidebar-more-section-content {
-      z-index: 1200 !important;
-      isolation: isolate;
-    }
-    html.${ROOT_CLASS} body .sidebar-wrapper .sidebar-more-section-content .fk-d-menu__inner-content,
-    html.${ROOT_CLASS} body .sidebar-wrapper .sidebar-more-section-content > .dropdown-menu {
-      min-width: 210px;
-      overflow: hidden;
-      background-color: #FFFFFF !important;
-      border-color: #D6DEE8 !important;
-      box-shadow: 0 8px 24px rgba(44, 71, 105, .18) !important;
-    }
-    html.${ROOT_CLASS} body .sidebar-wrapper .sidebar-more-section-content .dropdown-menu {
-      display: flex !important;
-      flex-direction: column !important;
-      width: 100%;
-      margin: 0 !important;
-      background-color: #FFFFFF !important;
-    }
-    html.${ROOT_CLASS} body .sidebar-wrapper .sidebar-more-section-content .dropdown-menu__item {
-      position: relative !important;
-      display: flex !important;
-      min-height: 32px !important;
-      flex: 0 0 auto !important;
-    }
-    html.${ROOT_CLASS} body .sidebar-wrapper .sidebar-more-section-content .sidebar-section-link {
-      position: relative !important;
-      display: flex !important;
-      min-height: 32px !important;
-      align-items: center !important;
-    }
-    .${ROOT_CLASS}.wecom-notif-open .user-menu.wecom-user-menu-float,
-    .${ROOT_CLASS}.wecom-notif-open .user-menu.revamped.menu-panel.wecom-user-menu-float,
-    .${ROOT_CLASS}.wecom-notif-open .user-menu.menu-panel.wecom-user-menu-float {
-      left: calc(var(--wc-nav) + 8px) !important;
-      top: 10px !important;
+      justify-content: space-between;
+      padding: 12px 0 10px 0;
+      box-sizing: border-box;
+      z-index: 1000;
+      user-select: none;
     }
 
-    /* 会话列表 */
-    .wecom-list-panel {
-      top: 0;
-      background: #F4F7FB;
-      border-right-color: #D6DEE8;
+    .wecom-rail-head {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 6px;
+      width: 100%;
     }
-    .wecom-list-search {
-      height: 62px;
-      flex: 0 0 62px;
-      padding: 14px 16px 10px;
-      gap: 8px;
-    }
-    .wecom-list-search form {
-      height: 34px;
-      padding: 0 11px;
-      margin: 0 !important;
-      border: 0 !important;
-      border-radius: 7px;
-      background: #E5EAF0;
-      box-shadow: none;
-      box-sizing: border-box;
-    }
-    .wecom-list-search form:focus-within {
-      background: #FFFFFF;
-      box-shadow: inset 0 0 0 1px #A9C9F6;
-    }
-    .wecom-list-search form > input[type="search"] {
-      appearance: none !important;
-      -webkit-appearance: none !important;
-      display: block;
-      min-width: 0 !important;
-      width: 100% !important;
-      height: 100% !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      border: 0 !important;
-      border-radius: 0 !important;
-      outline: 0 !important;
-      background: transparent !important;
-      box-shadow: none !important;
-      color: #26384E !important;
-      font-family: var(--wc-font) !important;
-      font-size: 13px !important;
-      font-weight: 400 !important;
-      line-height: normal !important;
-    }
-    .wecom-list-search form > input[type="search"]::-webkit-search-decoration,
-    .wecom-list-search form > input[type="search"]::-webkit-search-cancel-button {
-      display: none !important;
-      appearance: none !important;
-      -webkit-appearance: none !important;
-    }
-    .wecom-list-add {
+    .wecom-rail-head .me-chip {
+      position: relative;
       width: 34px;
       height: 34px;
-      border-radius: 7px;
-      background: #E5EAF0;
-    }
-    .wecom-list-header { display: none !important; }
-    .wecom-list-nav {
-      position: absolute;
-      top: 58px;
-      left: 10px;
-      right: 10px;
-      z-index: 5;
-      border: 1px solid #DCE3EC;
-      border-radius: 8px;
-      background: #FFFFFF;
-      box-shadow: 0 8px 24px rgba(44, 71, 105, .16);
-    }
-    .wecom-conv {
-      min-height: 62px;
-      gap: 10px;
-      padding: 8px 13px;
-      border-radius: 0;
-    }
-    .wecom-conv:hover { background: #E8EEF6; }
-    .wecom-conv.active { background: #4B8FF7; }
-    .wecom-conv-avatar { width: 42px; height: 42px; border-radius: 6px; }
-    .wecom-conv-info { justify-content: center; gap: 4px; }
-    .wecom-conv-name { color: #1B2A3B; font-size: 13px; font-weight: 500; }
-    .wecom-conv-msg,
-    .wecom-conv-time { color: #8A98AA; font-size: 11px; }
-    .wecom-conv.active .wecom-conv-name,
-    .wecom-conv.active .wecom-conv-msg,
-    .wecom-conv.active .wecom-conv-time { color: #FFFFFF !important; }
-    .wecom-conv.active .wecom-conv-tag {
-      color: #FFFFFF;
-      border-color: rgba(255,255,255,.45);
-      background: rgba(255,255,255,.18);
-    }
-    .wecom-conv-tag {
-      color: #2C79E9;
-      border-color: #B8D5FA;
-      background: #E8F2FF;
-    }
-    .wecom-list-resizer { top: 0; }
-
-    /* 聊天主区 */
-    .wecom-chat-panel {
-      top: 0;
-      right: 0;
-      background: #F1F4F8;
-      transition: right .16s ease;
-    }
-    .${ROOT_CLASS}.wecom-members-open .wecom-chat-panel { right: var(--wc-members); }
-    .wecom-chat-header {
-      height: 80px;
-      padding: 0 17px;
-      background: #FFFFFF;
-      border-bottom-color: #DCE3EB;
-    }
-    .wecom-chat-avatar { display: none !important; }
-    .wecom-chat-title { color: #111827; font-size: 17px; font-weight: 700; }
-    .wecom-chat-sub { margin-top: 4px; color: #75849A; font-size: 11px; }
-    .wecom-chat-title-row { gap: 7px; }
-    .wecom-chat-count { color: #8795A7; }
-    .wecom-chat-chip { border-radius: 3px; }
-    .wecom-chat-tools { gap: 1px; }
-    .wecom-chat-body {
-      padding: 18px 17px 24px;
-      gap: 15px;
-      background-color: #F1F4F8;
-      background-image: none;
-      background-repeat: repeat;
-      background-position: 0 0;
-      background-size: ${WATERMARK_TILE_WIDTH}px ${WATERMARK_TILE_HEIGHT}px;
-    }
-    .wecom-watermark-settings.is-on {
-      color: #2D78E7;
-      background: #E3EFFF;
-    }
-    .wecom-watermark-panel[hidden] { display: none !important; }
-    .wecom-watermark-panel {
-      position: absolute;
-      top: 66px;
-      right: 16px;
-      z-index: 500;
-      width: 310px;
-      padding: 16px;
-      border: 1px solid #D6DEE8;
-      border-radius: 10px;
-      background: #FFFFFF;
-      box-shadow: 0 12px 34px rgba(36, 58, 86, .18);
-      color: #25364B;
-      font: 13px var(--wc-font);
-    }
-    .wecom-watermark-head,
-    .wecom-watermark-switch-row,
-    .wecom-watermark-actions {
-      display: flex;
-      align-items: center;
-    }
-    .wecom-watermark-head { justify-content: space-between; margin-bottom: 14px; }
-    .wecom-watermark-head strong { color: #172033; font-size: 15px; }
-    .wecom-watermark-close {
-      width: 26px;
-      height: 26px;
-      border: 0;
-      border-radius: 5px;
-      background: transparent;
-      color: #7D8B9D;
-      font-size: 20px;
-      line-height: 24px;
       cursor: pointer;
     }
-    .wecom-watermark-close:hover { background: #EEF3F8; }
-    .wecom-watermark-switch-row {
-      justify-content: space-between;
-      margin-bottom: 14px;
-      cursor: pointer;
-    }
-    .wecom-watermark-switch {
-      position: relative;
-      width: 38px;
-      height: 22px;
-      flex: 0 0 38px;
-    }
-    .wecom-watermark-switch input {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      opacity: 0;
-    }
-    .wecom-watermark-switch i {
-      position: absolute;
-      inset: 0;
-      border-radius: 12px;
-      background: #C5CED9;
-      transition: background .16s ease;
-    }
-    .wecom-watermark-switch i::after {
-      content: "";
-      position: absolute;
-      top: 3px;
-      left: 3px;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: #FFFFFF;
-      box-shadow: 0 1px 3px rgba(35, 52, 72, .24);
-      transition: transform .16s ease;
-    }
-    .wecom-watermark-switch input:checked + i { background: #4389F5; }
-    .wecom-watermark-switch input:checked + i::after { transform: translateX(16px); }
-    .wecom-watermark-switch input:focus-visible + i { outline: 2px solid #9CC5FF; outline-offset: 2px; }
-    .wecom-watermark-field { display: block; }
-    .wecom-watermark-field > span { display: block; margin-bottom: 7px; color: #536378; }
-    .wecom-watermark-text {
-      width: 100%;
-      height: 36px;
-      padding: 0 10px;
-      border: 1px solid #C9D3DF;
-      border-radius: 6px;
-      outline: none;
-      background: #FFFFFF;
-      color: #172033;
-      font: 13px var(--wc-font);
-      box-sizing: border-box;
-    }
-    .wecom-watermark-text:focus { border-color: #4389F5; box-shadow: 0 0 0 2px rgba(67,137,245,.13); }
-    .wecom-watermark-hint { margin-top: 7px; color: #8B98AA; font-size: 11px; line-height: 1.5; }
-    .wecom-watermark-error { min-height: 18px; margin-top: 5px; color: #D84C4C; font-size: 11px; }
-    .wecom-watermark-actions { justify-content: flex-end; gap: 8px; margin-top: 8px; }
-    .wecom-watermark-actions button {
-      min-width: 64px;
-      height: 32px;
-      border: 1px solid #CCD6E2;
-      border-radius: 6px;
-      background: #FFFFFF;
-      color: #526175;
-      font: 13px var(--wc-font);
-      cursor: pointer;
-    }
-    .wecom-watermark-actions .wecom-watermark-save {
-      border-color: #4389F5;
-      background: #4389F5;
-      color: #FFFFFF;
-    }
-    .wecom-watermark-actions .wecom-watermark-save:hover { background: #2F78E8; }
-    .wecom-msg { max-width: 82%; gap: 9px; }
-    .wecom-msg-avatar { width: 34px; height: 34px; border-radius: 5px; }
-    .wecom-msg-name { color: #7F8EA2; font-size: 11px; }
-    .wecom-msg-bubble {
-      padding: 8px 11px;
-      border-radius: 5px !important;
-      font-size: 13px;
-      line-height: 1.55;
-    }
-    .wecom-msg-other .wecom-msg-bubble { background: #E4E7EC; }
-    .wecom-msg-me .wecom-msg-bubble { background: #BDE4FF; }
-    .wecom-msg-other .wecom-msg-bubble::before { border-right-color: #E4E7EC; }
-    .wecom-msg-me .wecom-msg-bubble::before { border-left-color: #BDE4FF; }
-    .wecom-msg-meta { color: #9AA7B8; }
-    .wecom-msg-time-sep { color: #94A2B4; }
-    .wecom-pinned-banner {
-      min-height: 58px;
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      margin: 6px 5px 0;
-      padding: 7px 12px;
-      flex: 0 0 auto;
-      border: 1px solid #BFD9FA;
-      border-radius: 5px;
-      background: #DDEEFF;
-      color: #3D536D;
-      font-size: 12px;
-    }
-    .wecom-pinned-avatar {
-      width: 30px;
-      height: 30px;
-      display: grid;
-      place-items: center;
-      flex: 0 0 30px;
-      border-radius: 4px;
-      background: #4389F5;
-      color: #FFFFFF;
-      font-weight: 700;
-    }
-    .wecom-pinned-content { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-    .wecom-pinned-content b { color: #38516D; font-weight: 500; }
-    .wecom-pinned-content span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-    .wecom-pinned-close { margin-left: auto; border: 0; background: transparent; color: #8291A4; cursor: pointer; }
-    .wecom-composer {
-      min-height: 174px;
-      padding: 0 16px 13px;
-      background: #F1F4F8;
-      border-top: 0;
-    }
-    .wecom-composer-card {
-      min-height: 160px;
-      position: relative;
-      border: 1px solid #D6DEE8;
-      border-radius: 8px;
-      background: #FFFFFF;
-      box-shadow: 0 1px 2px rgba(34,55,80,.03);
-      cursor: text;
-    }
-    .wecom-composer-card:hover { border: 1px solid #B8D0EF; box-shadow: none; }
-    .wecom-composer-tools { padding: 9px 10px 1px; }
-    textarea.wecom-chat-compose {
-      order: 3;
-      display: block;
-      box-sizing: border-box;
-      min-height: 96px;
-      max-height: 180px;
-      padding: 8px 12px 12px;
-      resize: none;
-      overflow-y: auto;
-      outline: 0;
-      color: #1F2D3D;
-      line-height: 1.55;
-      cursor: text;
-    }
-    textarea.wecom-chat-compose::placeholder { color: #A8B0BC; opacity: 1; }
-    textarea.wecom-chat-compose:focus { color: #1F2D3D; }
-    .wecom-compose-status {
-      min-width: 0;
-      margin-left: 6px;
+    /* 截图特征：头像为圆角正方形，而非圆形 */
+    .wecom-rail .wecom-rail-avatar {
+      width: 34px !important;
+      height: 34px !important;
+      border-radius: 8px !important;
       overflow: hidden;
-      color: #8795A8;
-      font-size: 11px;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-    }
-    .wecom-compose-status.busy { color: #4389F5; }
-    .wecom-compose-status.error { color: #E45C5C; }
-    .wecom-compose-status.success { color: #31A05D; }
-    .wecom-reply-target {
-      order: 2;
-      min-height: 26px;
-      margin: 4px 12px 0;
-      padding: 4px 8px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      border-left: 2px solid #4389F5;
-      background: #F3F7FC;
-      color: #65758A;
-      font-size: 11px;
-    }
-    .wecom-reply-target[hidden] { display: none !important; }
-    .wecom-reply-target span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-    .wecom-reply-cancel {
-      margin-left: auto;
-      padding: 0 2px;
-      border: 0;
-      background: transparent;
-      color: #8795A8;
-      cursor: pointer;
-    }
-    .wecom-send-btn {
-      margin: 0 4px 0 8px;
-      align-self: center;
-      color: #A8B0BC;
-      background: transparent;
-      border: 0;
-      cursor: default;
-    }
-    .wecom-send-btn:not(:disabled) { color: #4389F5; cursor: pointer; }
-    .wecom-send-btn:not(:disabled):hover { background: #EEF5FF; }
-
-    /* 本人消息编辑弹窗。 */
-    .wecom-edit-dialog,
-    .wecom-edit-dialog * { box-sizing: border-box; }
-    .wecom-edit-dialog[hidden] { display: none !important; }
-    .wecom-edit-dialog {
-      position: fixed;
-      inset: 0;
-      z-index: 12000;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
-      background: rgba(24, 35, 49, .42);
-      font-family: var(--wc-font);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
     }
-    .wecom-edit-dialog-card {
-      width: min(560px, calc(100vw - 32px));
-      max-height: calc(100vh - 40px);
+    .wecom-rail .wecom-rail-avatar img,
+    .wecom-rail .wecom-rail-avatar svg {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 8px !important;
+      display: block;
+      pointer-events: none;
+    }
+    .wecom-rail-avatar-status {
+      position: absolute;
+      bottom: -1px;
+      right: -1px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #2BA245;
+      border: 1.5px solid var(--wc-rail-bg);
+    }
+    .wecom-rail-avatar-badge {
+      position: absolute;
+      top: -3px;
+      right: -3px;
+      background: #FA5151;
+      color: #FFFFFF;
+      font-size: 9px;
+      font-weight: 600;
+      line-height: 1;
+      padding: 2px 4px;
+      border-radius: 8px;
+      border: none !important;
+      box-shadow: none !important;
+      min-width: 12px;
+      text-align: center;
+    }
+
+    /* 停靠栏按钮列表 */
+    .wecom-rail-items {
       display: flex;
       flex-direction: column;
-      padding: 18px;
-      border: 1px solid #D6DEE8;
-      border-radius: 10px;
-      background: #FFFFFF;
-      box-shadow: 0 18px 50px rgba(30, 48, 71, .24);
-      color: #172033;
+      align-items: center;
+      gap: 3px;
+      width: 100%;
+      flex: 1 1 auto;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: none;
+      padding: 0 4px;
+      box-sizing: border-box;
     }
-    .wecom-edit-dialog-head,
-    .wecom-edit-dialog-actions {
+    .wecom-rail-items::-webkit-scrollbar { display: none; }
+
+    .wecom-rail-item {
+      width: 46px;
+      height: 44px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      padding: 0;
+      margin: 0 auto;
+      border: none;
+      border-radius: 6px !important;
+      background: transparent;
+      color: var(--wc-rail-icon) !important; /* #7C8B9D */
+      cursor: pointer;
+      position: relative;
+      transition: background 0.1s ease, color 0.1s ease;
+      outline: none;
+    }
+    .wecom-rail-item:hover {
+      background: rgba(0, 0, 0, 0.04);
+      color: var(--wc-blue) !important;
+    }
+    .wecom-rail-item:hover .wecom-rail-label,
+    .wecom-rail-item:hover .wecom-rail-icon svg {
+      color: var(--wc-blue) !important;
+      fill: var(--wc-blue) !important;
+    }
+    /* 激活项：浅蓝圆角底色 + 企微高亮蓝 */
+    .wecom-rail-item.active,
+    .wecom-rail-item.is-on {
+      background: var(--wc-rail-active-bg) !important; /* #CCE0FA */
+      color: var(--wc-blue) !important; /* #267EF0 */
+    }
+    .wecom-rail-icon {
+      width: 22px;
+      height: 22px;
       display: flex;
       align-items: center;
+      justify-content: center;
     }
-    .wecom-edit-dialog-head { justify-content: space-between; margin-bottom: 12px; }
-    .wecom-edit-dialog-title { font-size: 16px; font-weight: 600; }
-    .wecom-edit-dialog-close {
-      width: 28px;
-      height: 28px;
-      padding: 0;
-      border: 0;
-      border-radius: 5px;
-      background: transparent;
-      color: #7D8B9D;
-      font-size: 21px;
-      line-height: 26px;
-      cursor: pointer;
+    /* 填充型 SVG 图标规范：必须 fill: currentColor，去掉 stroke */
+    .wecom-rail-icon svg {
+      width: 22px;
+      height: 22px;
+      fill: var(--wc-rail-icon) !important; /* #7C8B9D */
+      stroke: none !important;
+      transition: transform 0.2s ease;
     }
-    .wecom-edit-dialog-close:hover { background: #EEF3F8; }
-    .wecom-edit-input {
-      width: 100%;
-      min-height: 180px;
-      max-height: 55vh;
-      padding: 11px 12px;
-      resize: vertical;
-      border: 1px solid #C9D3DF;
-      border-radius: 7px;
-      outline: 0;
-      background: #FFFFFF;
-      color: #172033;
-      font: 14px/1.6 var(--wc-font);
+    .wecom-rail-icon.wecom-refreshing svg {
+      animation: wecom-icon-bounce 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
-    .wecom-edit-input:focus { border-color: #4389F5; box-shadow: 0 0 0 2px rgba(67,137,245,.13); }
-    .wecom-edit-status { min-height: 20px; padding-top: 6px; color: #8795A8; font-size: 12px; }
-    .wecom-edit-status.error { color: #D84C4C; }
-    .wecom-edit-status.busy { color: #4389F5; }
-    .wecom-edit-status.success { color: #07A35A; }
-    .wecom-edit-dialog-actions { justify-content: flex-end; gap: 8px; }
-    .wecom-edit-dialog-actions button {
-      min-width: 68px;
-      height: 32px;
-      border: 1px solid #CCD6E2;
-      border-radius: 6px;
-      background: #FFFFFF;
-      color: #526175;
-      font: 13px var(--wc-font);
-      cursor: pointer;
+    @keyframes wecom-icon-bounce {
+      0% { transform: scale(1); }
+      35% { transform: scale(0.8); }
+      70% { transform: scale(1.18); }
+      100% { transform: scale(1); }
     }
-    .wecom-edit-dialog-actions .wecom-edit-save {
-      border-color: #4389F5;
-      background: #4389F5;
+    .wecom-rail-item.active .wecom-rail-icon svg,
+    .wecom-rail-item.is-on .wecom-rail-icon svg {
+      fill: var(--wc-blue) !important;
+    }
+    .wecom-rail-label {
+      font-size: 11px !important;
+      line-height: 1;
+      white-space: nowrap;
+      pointer-events: none;
+      color: var(--wc-rail-icon) !important; /* #7C8B9D */
+    }
+    .wecom-rail-item.active .wecom-rail-label,
+    .wecom-rail-item.is-on .wecom-rail-label {
+      color: var(--wc-blue) !important;
+      font-weight: 500;
+    }
+    .wecom-rail-badge {
+      position: absolute;
+      top: 2px;
+      right: 4px;
+      background: #FA5151;
       color: #FFFFFF;
+      font-size: 9px;
+      font-weight: 700;
+      height: 14px;
+      line-height: 14px;
+      padding: 0 4px;
+      border-radius: 7px;
+      border: none !important;
+      box-shadow: none !important;
+      text-align: center;
+      min-width: 14px;
+      box-sizing: border-box;
+      pointer-events: none;
+      z-index: 2;
     }
-    .wecom-edit-dialog-actions .wecom-edit-save:disabled { opacity: .5; cursor: default; }
-
-    /* 最终兜底：后续响应式规则也不能把后台原生编辑器带回屏幕。 */
-    .${ROOT_CLASS}.${LOCK_CLASS} #reply-control.open,
-    .${ROOT_CLASS}.${LOCK_CLASS} #reply-control.edit-title,
-    .${ROOT_CLASS}.${LOCK_CLASS} #reply-control.fullscreen {
-      inset: 0 auto auto -10000px !important;
-      right: auto !important;
-      width: 2px !important;
-      height: 2px !important;
-      opacity: 0 !important;
-      visibility: hidden !important;
-      clip-path: inset(50%) !important;
-      pointer-events: none !important;
+    .wecom-rail-dot {
+      position: absolute;
+      top: 4px;
+      right: 8px;
+      width: 6px;
+      height: 6px;
+      background: #FA5151;
+      border-radius: 50%;
+      border: none !important;
+      box-shadow: none !important;
     }
 
-    /* 右侧群成员栏 */
-    .wecom-member-panel {
-      position: fixed;
-      top: 0;
-      right: 0;
-      bottom: 0;
-      width: var(--wc-members);
-      z-index: 421;
+    /* 停靠栏底部控制 */
+    .wecom-rail-bottom {
       display: flex;
       flex-direction: column;
-      background: #FFFFFF;
-      border-left: 1px solid #D8E0E9;
-      font-family: var(--wc-font);
+      align-items: center;
+      gap: 3px;
+      width: 100%;
+      padding-top: 6px;
+      border-top: 1px solid rgba(0, 0, 0, 0.05);
+      flex: 0 0 auto;
     }
-    .wecom-member-header {
-      height: 80px;
+    .wecom-theme-controls {
       display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      padding: 0 12px 10px;
-      flex: 0 0 80px;
-      border-bottom: 1px solid #E2E7ED;
-      color: #536378;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      width: 100%;
+    }
+    .wecom-theme-controls .wecom-rail-item {
+      color: var(--wc-rail-icon) !important;
+    }
+    .wecom-theme-controls .wecom-rail-item svg {
+      fill: currentColor !important;
+      stroke: none !important;
+    }
+
+    /* 外观模式下拉菜单 */
+    .wecom-theme-menu {
+      position: fixed;
+      left: calc(var(--wc-nav) + 8px);
+      bottom: 12px;
+      background: var(--wc-card-bg, #FFFFFF);
+      border: 1px solid var(--wc-border);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+      border-radius: 8px;
+      padding: 6px;
+      z-index: 10000;
+      width: 220px; max-height: calc(100vh - 24px); overflow-y: auto;
+    }
+    .wecom-theme-menu-title {
+      font-size: 11px;
+      color: var(--wc-text-3);
+      padding: 4px 8px;
+    }
+    .wecom-theme-menu button {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border: none;
+      background: transparent;
+      border-radius: 5px;
       font-size: 12px;
+      color: var(--wc-text);
+      cursor: pointer;
+      text-align: left;
     }
-    .wecom-member-header b { font-weight: 400; }
-    .wecom-member-actions { display: flex; gap: 8px; color: #697B92; }
-    .wecom-member-actions svg { width: 14px; height: 14px; }
-    .wecom-member-body { flex: 1; overflow-y: auto; padding: 8px 10px 18px; }
-    .wecom-member-section + .wecom-member-section { margin-top: 10px; }
-    .wecom-member-section-title { padding: 4px 0 6px; color: #D99016; font-size: 11px; }
-    .wecom-member-section + .wecom-member-section .wecom-member-section-title { color: #42A45D; }
-    .wecom-member-row { height: 28px; display: flex; align-items: center; gap: 7px; min-width: 0; }
-    .wecom-member-avatar {
-      width: 18px;
-      height: 18px;
-      display: grid;
-      place-items: center;
-      flex: 0 0 18px;
+    .wecom-theme-menu button:hover {
+      background: var(--wc-blue-soft);
+      color: var(--wc-blue);
+    }
+    .wecom-theme-menu button svg {
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+    }
+    .wecom-theme-menu button svg:not([fill="none"]) {
+      fill: currentColor;
+    }
+    html.wecom-dark .wecom-theme-menu {
+      background: #2B2F36;
+      border-color: rgba(255, 255, 255, 0.12);
+      color: #E4E7EB;
+    }
+
+    /* 2. 中间会话列表栏 280px (支持拖拽调宽) */
+    .wecom-list-panel {
+      position: fixed;
+      top: 0;
+      left: calc(var(--wc-nav) + var(--wc-nav2w)) !important;
+      bottom: 0;
+      width: var(--wc-list) !important;
+      min-width: var(--wc-list) !important;
+      max-width: var(--wc-list) !important;
+      height: 100vh;
+      background: var(--wc-list-bg) !important;
+      border-right: 1px solid var(--wc-list-border);
+      display: flex;
+      flex-direction: column;
+      z-index: 200 !important;
+      box-sizing: border-box;
       overflow: hidden;
-      border-radius: 3px;
+    }
+
+    /* 会话列表栏右边缘拖拽调整宽度柄 (z-index 1000 保证悬浮最上层，方便抓取) */
+    .wecom-list-resizer {
+      position: fixed !important;
+      top: 0 !important;
+      bottom: 0 !important;
+      height: 100vh !important;
+      left: calc(var(--wc-nav) + var(--wc-nav2w) + var(--wc-list) - 4px) !important;
+      width: 8px !important;
+      cursor: col-resize !important;
+      z-index: 1000 !important;
+      touch-action: none !important;
+      background: transparent !important;
+      transition: background 0.15s ease !important;
+    }
+    .wecom-list-resizer:hover,
+    .wecom-list-resizer.dragging {
+      background: rgba(38, 126, 240, 0.45) !important;
+    }
+    body.wecom-resizing-list,
+    body.wecom-resizing-list * {
+      cursor: col-resize !important;
+      user-select: none !important;
+    }
+
+    /* 搜索栏：高度 52px 与右侧聊天顶栏 52px 绝对对齐 */
+    .wecom-list-search {
+      height: 52px !important;
+      max-height: 52px !important;
+      min-height: 52px !important;
+      padding: 10px 12px !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 8px !important;
+      flex: 0 0 52px !important;
+      box-sizing: border-box !important;
+      background: var(--wc-list-bg) !important;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
+    }
+    /* 搜索框：灰底圆角输入框，覆盖 Discourse 全局样式 */
+    .wecom-list-search form {
+      flex: 1 !important;
+      height: 32px !important;
+      min-height: 32px !important;
+      max-height: 32px !important;
+      background: #E2E5EB !important;
+      background-color: #E2E5EB !important;
+      border-radius: 4px !important;
+      display: flex !important;
+      align-items: center !important;
+      padding: 0 8px !important;
+      border: 1px solid transparent !important;
+      box-shadow: none !important;
+      box-sizing: border-box !important;
+      gap: 6px !important;
+    }
+    .wecom-list-search form:focus-within {
+      background: #E2E5EB !important;
+      background-color: #E2E5EB !important;
+      border-color: #BDC4CE !important;
+      box-shadow: none !important;
+    }
+    .wecom-list-search form svg {
+      width: 14px !important;
+      height: 14px !important;
+      stroke: #7D8693 !important;
+      stroke-width: 1px !important;
+      fill: none !important;
+      flex: 0 0 14px !important;
+      margin: 0 !important;
+    }
+    .wecom-list-search input,
+    .wecom-list-search input[type="search"],
+    .wecom-list-search input[type="text"] {
+      width: 100% !important;
+      height: 100% !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      border: none !important;
+      outline: none !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      box-shadow: none !important;
+      font-size: 13px !important;
+      color: var(--wc-text) !important;
+      line-height: 32px !important;
+      -webkit-appearance: none !important;
+    }
+    .wecom-list-search input::placeholder {
+      color: #9CA3AF !important;
+      font-size: 13px !important;
+    }
+    /* 搜索右侧加号操作按钮 */
+    .wecom-list-add-btn {
+      width: 32px !important;
+      height: 32px !important;
+      min-width: 32px !important;
+      flex: 0 0 32px !important;
+      border-radius: 4px !important;
+      border: none !important;
+      background: #E2E5EB !important;
+      background-color: #E2E5EB !important;
+      color: #646A73 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      box-shadow: none !important;
+      transition: background 0.1s ease, color 0.1s ease;
+    }
+    .wecom-list-add-btn:hover {
+      background: #D5DAE2 !important;
+      color: var(--wc-text) !important;
+    }
+    .wecom-list-add-btn svg {
+      width: 16px !important;
+      height: 16px !important;
+      stroke: currentColor !important;
+      stroke-width: 1px !important;
+      fill: none !important;
+    }
+
+    /* 隐藏冗余筛选项占位栏，使搜索框直接连接会话列表 */
+    .wecom-list-header {
+      display: none !important;
+    }
+
+    .wecom-list-body {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 4px 0 !important;
+      box-sizing: border-box;
+      scrollbar-width: thin;
+    }
+    /* 统一高精度企微自动隐藏滚动条：平时透明隐藏，移入面板或滚动时柔和显现，与详情框完全一致 */
+    .wecom-list-body,
+    .wecom-chat-body,
+    .wecom-chat-messages,
+    .wecom-member-body {
+      scrollbar-width: thin !important;
+      scrollbar-color: transparent transparent !important;
+    }
+    .wecom-list-body::-webkit-scrollbar,
+    .wecom-chat-body::-webkit-scrollbar,
+    .wecom-chat-messages::-webkit-scrollbar,
+    .wecom-member-body::-webkit-scrollbar {
+      width: 6px !important;
+      height: 6px !important;
+    }
+    .wecom-list-body::-webkit-scrollbar-track,
+    .wecom-chat-body::-webkit-scrollbar-track,
+    .wecom-chat-messages::-webkit-scrollbar-track,
+    .wecom-member-body::-webkit-scrollbar-track {
+      background: transparent !important;
+    }
+    .wecom-list-body::-webkit-scrollbar-thumb,
+    .wecom-chat-body::-webkit-scrollbar-thumb,
+    .wecom-chat-messages::-webkit-scrollbar-thumb,
+    .wecom-member-body::-webkit-scrollbar-thumb {
+      background: transparent !important;
+      border-radius: 3px !important;
+      transition: background-color 0.2s ease-in-out !important;
+    }
+    .wecom-list-panel:hover .wecom-list-body::-webkit-scrollbar-thumb,
+    .wecom-list-body:hover::-webkit-scrollbar-thumb,
+    .wecom-list-body.is-scrolling::-webkit-scrollbar-thumb,
+    .wecom-chat-panel:hover .wecom-chat-body::-webkit-scrollbar-thumb,
+    .wecom-chat-body:hover::-webkit-scrollbar-thumb,
+    .wecom-chat-body.is-scrolling::-webkit-scrollbar-thumb,
+    .wecom-member-panel:hover .wecom-member-body::-webkit-scrollbar-thumb,
+    .wecom-member-body:hover::-webkit-scrollbar-thumb,
+    .wecom-member-body.is-scrolling::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.2) !important;
+    }
+    .wecom-list-body::-webkit-scrollbar-thumb:hover,
+    .wecom-chat-body::-webkit-scrollbar-thumb:hover,
+    .wecom-chat-messages::-webkit-scrollbar-thumb:hover,
+    .wecom-member-body::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 0, 0, 0.35) !important;
+    }
+    .wecom-list-panel:hover .wecom-list-body,
+    .wecom-list-body:hover,
+    .wecom-list-body.is-scrolling,
+    .wecom-chat-panel:hover .wecom-chat-body,
+    .wecom-chat-body:hover,
+    .wecom-chat-body.is-scrolling,
+    .wecom-member-panel:hover .wecom-member-body,
+    .wecom-member-body:hover,
+    .wecom-member-body.is-scrolling {
+      scrollbar-color: rgba(0, 0, 0, 0.2) transparent !important;
+    }
+
+    /* 会话项规范（截图特征：卡片带有左右留白和圆角，无下划线） */
+    .wecom-conv {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 2px 8px !important;
+      padding: 9px 10px !important;
+      border-radius: 6px !important;
+      border-bottom: none !important;
+      cursor: pointer;
+      text-decoration: none !important;
+      position: relative;
+      transition: background 0.1s ease;
+      color: var(--wc-text);
+      box-sizing: border-box;
+      background: transparent;
+    }
+    .wecom-conv:hover {
+      background: rgba(0, 0, 0, 0.04) !important;
+    }
+    .wecom-conv.is-pinned {
+      background: rgba(0, 0, 0, 0.02) !important;
+    }
+    .wecom-conv.is-pinned:hover {
+      background: rgba(0, 0, 0, 0.05) !important;
+    }
+    /* 核心：高亮选中态 (纯蓝卡片 #3D8AF5 + 纯白文字) */
+    .wecom-conv.active {
+      background: var(--wc-list-active) !important; /* #3D8AF5 */
+      color: #FFFFFF !important;
+      border-radius: 6px !important;
+    }
+    .wecom-conv.active .wecom-conv-name {
+      color: #FFFFFF !important;
+      font-weight: 500;
+    }
+    .wecom-conv.active .wecom-conv-msg {
+      color: rgba(255, 255, 255, 0.82) !important;
+    }
+    .wecom-conv.active .wecom-conv-time {
+      color: rgba(255, 255, 255, 0.72) !important;
+    }
+    .wecom-conv.active .wecom-conv-pin svg {
+      fill: rgba(255, 255, 255, 0.8) !important;
+    }
+    .wecom-conv.active .wecom-conv-tag {
+      border: none !important;
+      color: #FFFFFF !important;
+      background: rgba(255, 255, 255, 0.22) !important;
+    }
+
+    /* 会话头像 */
+    .wecom-conv-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px !important;
+      flex: 0 0 40px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #DFE3E8;
+    }
+    .wecom-conv-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 8px !important;
+    }
+    .wecom-conv-avatar.is-group {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 1px;
+      padding: 1px;
+      background: #E5E8EC;
+      box-sizing: border-box;
+    }
+    .wecom-conv-avatar.is-group img,
+    .wecom-conv-avatar.is-group span {
+      width: 100%;
+      height: 100%;
+      border-radius: 2px !important;
+      object-fit: cover;
+    }
+
+    .wecom-conv-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .wecom-conv-top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .wecom-conv-title {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      min-width: 0;
+      flex: 1;
+    }
+    .wecom-conv-name {
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--wc-text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      line-height: 1.3;
+    }
+    .wecom-conv-tag {
+      font-size: 10px;
+      padding: 1px 4px;
+      border-radius: 2px;
+      line-height: 1.1;
+      white-space: nowrap;
+      flex-shrink: 0;
+      font-weight: normal;
+    }
+    .wecom-conv-tag.is-dept {
+      background: #E8F3FF !important;
+      color: #1E6FFF !important;
+      border: 1px solid rgba(30, 111, 255, 0.25) !important;
+    }
+    .wecom-conv-tag.is-ext {
+      background: #E8F8EE !important;
+      color: #07C160 !important;
+      border: 1px solid rgba(7, 193, 96, 0.25) !important;
+    }
+    .wecom-conv-time {
+      font-size: 11px;
+      color: var(--wc-text-3);
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .wecom-conv-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .wecom-conv-msg {
+      font-size: 12px;
+      color: var(--wc-text-3);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      min-width: 0;
+      line-height: 1.3;
+    }
+    .wecom-conv-icons {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .wecom-conv-pin svg {
+      width: 12px;
+      height: 12px;
+      fill: var(--wc-text-3);
+    }
+    .wecom-conv-badge {
+      background: #FA5151;
       color: #FFFFFF;
-      font-size: 8px;
+      font-size: 9px;
       font-weight: 700;
+      height: 14px;
+      line-height: 14px;
+      padding: 0 4px;
+      border-radius: 7px;
+      min-width: 14px;
+      text-align: center;
+      box-sizing: border-box;
     }
-    .wecom-member-avatar img { width: 100%; height: 100%; object-fit: cover; }
-    .wecom-member-name { min-width: 0; overflow: hidden; color: #25364B; font-size: 11px; white-space: nowrap; text-overflow: ellipsis; }
-    .wecom-member-role { margin-left: auto; padding: 1px 4px; border-radius: 3px; background: #EEF2F7; color: #8C98A8; font-size: 9px; }
-    @media (max-width: 1100px) {
-      .wecom-member-panel { display: none; }
-      .${ROOT_CLASS}.wecom-members-open .wecom-chat-panel { right: 0; }
+
+    /* 3. 右侧主聊天面板 */
+    .wecom-chat-panel {
+      position: fixed;
+      top: 0;
+      left: calc(var(--wc-nav) + var(--wc-nav2w) + var(--wc-list)) !important;
+      right: 0;
+      bottom: 0;
+      height: 100vh;
+      background: var(--wc-chat-bg) !important; /* #F5F7FA */
+      display: flex;
+      flex-direction: column;
+      z-index: 100 !important;
+      box-sizing: border-box;
+      overflow: hidden;
     }
-    @media (max-width: 1000px) {
-      .${ROOT_CLASS} { --wc-nav: 68px !important; }
-      .wecom-current-user-name,
-      .wecom-rail-item > span,
-      .wecom-rail-groups,
-      .wecom-rail-bottom span { display: none !important; }
-      .wecom-rail-head { justify-content: center; padding: 0; }
-      .wecom-rail-items { padding: 4px 8px; }
-      .wecom-rail-item { justify-content: center; padding: 0; }
-      .wecom-watermark-panel { right: 10px; width: min(310px, calc(100vw - 96px)); }
+    html.${ROOT_CLASS}.wecom-members-open .wecom-chat-panel {
+      right: var(--wc-members);
+    }
+
+    /* 聊天窗口顶栏 52px */
+    .wecom-chat-head {
+      height: 52px !important;
+      min-height: 52px !important;
+      max-height: 52px !important;
+      padding: 0 16px !important;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      background: var(--wc-chat-bg) !important;
+      box-sizing: border-box;
+      user-select: none;
+      flex: 0 0 52px !important;
+    }
+    .wecom-chat-title-wrap {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      min-width: 0;
+      flex: 1;
+    }
+    .wecom-chat-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--wc-text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .wecom-chat-count {
+      font-size: 12px;
+      color: var(--wc-text-3);
+      flex-shrink: 0;
+    }
+    .wecom-chat-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .wecom-chat-actions .wecom-icon-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      border: none;
+      background: transparent;
+      color: #646A73;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .wecom-chat-actions .wecom-icon-btn:hover {
+      background: rgba(0, 0, 0, 0.05);
+      color: var(--wc-text);
+    }
+    .wecom-chat-actions .wecom-icon-btn svg {
+      width: 17px;
+      height: 17px;
+      stroke: currentColor;
+    }
+
+    /* 窗口右上角三键 (最小化、最大化、切换原生视图/关闭) 像素级精致设计 */
+    .wecom-win-controls {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 8px;
+      border-left: 1px solid rgba(0, 0, 0, 0.08);
+      padding-left: 8px;
+      height: 28px;
+      flex-shrink: 0;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-win-controls {
+      border-left-color: rgba(255, 255, 255, 0.12);
+    }
+    .wecom-win-btn {
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      color: var(--wc-text-3, #7A8599);
+      cursor: pointer;
+      border-radius: 4px;
+      padding: 0;
+      margin: 0;
+      transition: background 0.15s ease, color 0.15s ease;
+      box-sizing: border-box;
+      flex-shrink: 0;
+    }
+    .wecom-win-btn svg {
+      width: 12px;
+      height: 12px;
+      display: block;
+      stroke: currentColor;
+      stroke-width: 1.1px !important;
+      fill: none;
+      pointer-events: none;
+    }
+    .wecom-win-btn:hover {
+      background: rgba(0, 0, 0, 0.06);
+      color: var(--wc-text, #1F2329);
+    }
+    .wecom-win-btn:active {
+      background: rgba(0, 0, 0, 0.12);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-win-btn {
+      color: #8C9AB0;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-win-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #E0E6F0;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-win-btn:active {
+      background: rgba(255, 255, 255, 0.15);
+    }
+    /* 关闭/切换原生视图按钮 hover 变为红底白字 */
+    .wecom-win-btn.wecom-win-close:hover,
+    .wecom-win-close:hover {
+      background: #FA5151 !important;
+      color: #FFFFFF !important;
+    }
+    .wecom-win-btn.wecom-win-close:hover svg,
+    .wecom-win-close:hover svg {
+      stroke: #FFFFFF !important;
+    }
+    .wecom-win-btn.wecom-win-close:active,
+    .wecom-win-close:active {
+      background: #D93B3B !important;
+      color: #FFFFFF !important;
+    }
+    .wecom-chat-scroll-top:hover {
+      color: var(--wc-blue, #267EF0) !important;
+    }
+
+    /* 顶栏右上角社区平台切换器 (Linux DO ⇄ V2EX) - 极简低调图标模式 */
+    .wecom-platform-switcher {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .wecom-platform-switcher .wecom-platform-btn {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border: none;
+      background: transparent;
+      color: var(--wc-icon, #585C60);
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+      box-sizing: border-box;
+    }
+    .wecom-platform-switcher .wecom-platform-btn:hover {
+      color: var(--wc-blue, #267EF0);
+      background: var(--wc-hover, rgba(0, 0, 0, 0.05));
+    }
+    .wecom-platform-switcher.is-open .wecom-platform-btn {
+      color: var(--wc-blue, #267EF0);
+      background: rgba(38, 126, 240, 0.12);
+    }
+    .wecom-platform-dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      min-width: 220px;
+      background: var(--wc-surface-0, #FFFFFF);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      padding: 6px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      box-sizing: border-box;
+    }
+    .wecom-platform-dropdown[hidden] {
+      display: none !important;
+    }
+    .wecom-platform-dropdown-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--wc-text-3, #8F959E);
+      padding: 6px 10px 4px 10px;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      margin-bottom: 4px;
+    }
+    .wecom-platform-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      user-select: none;
+    }
+    .wecom-platform-item:hover {
+      background: rgba(0, 0, 0, 0.04);
+    }
+    .wecom-platform-item.is-active {
+      background: rgba(38, 126, 240, 0.08);
+    }
+    .wecom-platform-item-icon {
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .wecom-platform-item-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .wecom-platform-item-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--wc-text, #1F2329);
+      line-height: 1.3;
+    }
+    .wecom-platform-item.is-active .wecom-platform-item-name {
+      color: var(--wc-blue, #267EF0);
+    }
+    .wecom-platform-item-desc {
+      font-size: 11px;
+      color: var(--wc-text-3, #8F959E);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .wecom-platform-item-check {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--wc-blue, #267EF0);
+      flex-shrink: 0;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-platform-switcher .wecom-platform-btn {
+      color: #A4B1C2;
+      background: transparent;
+      border: none;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-platform-switcher .wecom-platform-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #5BA2FF;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-platform-switcher.is-open .wecom-platform-btn {
+      background: rgba(38, 126, 240, 0.22);
+      color: #5BA2FF;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-platform-dropdown {
+      background: #23272E;
+      border-color: rgba(255, 255, 255, 0.12);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-platform-dropdown-title {
+      color: #7D8899;
+      border-bottom-color: rgba(255, 255, 255, 0.08);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-platform-item:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-platform-item.is-active {
+      background: rgba(38, 126, 240, 0.22);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-platform-item-name {
+      color: #E6EDF5;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-platform-item.is-active .wecom-platform-item-name {
+      color: #5BA2FF;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-platform-item-desc {
+      color: #8C99AA;
+    }
+
+    /* 背景水印设置浮层卡片 (企业微信原生规范) */
+    .wecom-watermark-panel {
+      position: absolute;
+      top: 56px;
+      right: 16px;
+      width: 300px;
+      background: var(--wc-surface-0, #FFFFFF);
+      border-radius: 8px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      padding: 16px;
+      z-index: 500;
+      box-sizing: border-box;
+      font-family: var(--wc-font);
+      animation: wecom-popover-in 0.15s ease-out;
+    }
+    .wecom-watermark-panel[hidden] {
+      display: none !important;
+    }
+    .wecom-watermark-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .wecom-watermark-head strong {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--wc-text, #1F2329);
+    }
+    .wecom-watermark-close {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: var(--wc-text-3, #8F959E);
+      font-size: 18px;
+      line-height: 1;
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .wecom-watermark-close:hover {
+      background: rgba(0, 0, 0, 0.05);
+      color: var(--wc-text, #1F2329);
+    }
+    .wecom-watermark-switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 13px;
+      color: var(--wc-text, #1F2329);
+    }
+    .wecom-watermark-switch {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      display: inline-block;
+    }
+    .wecom-watermark-switch input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .wecom-watermark-switch i {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: #D8D8D8;
+      border-radius: 20px;
+      transition: background 0.2s ease;
+    }
+    .wecom-watermark-switch i::before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background: #FFFFFF;
+      border-radius: 50%;
+      transition: transform 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+    .wecom-watermark-switch input:checked + i {
+      background: var(--wc-blue, #267EF0);
+    }
+    .wecom-watermark-switch input:checked + i::before {
+      transform: translateX(16px);
+    }
+    .wecom-watermark-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .wecom-watermark-field span {
+      font-size: 12px;
+      color: var(--wc-text-2, #585C60);
+      font-weight: 500;
+    }
+    .wecom-watermark-text {
+      height: 32px;
+      padding: 0 10px;
+      border: 1px solid var(--wc-border, #E6E7E8);
+      border-radius: 4px;
+      font-size: 13px;
+      color: var(--wc-text, #1F2329);
+      background: var(--wc-surface-0, #FFFFFF);
+      outline: none;
+      box-sizing: border-box;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .wecom-watermark-text:focus {
+      border-color: var(--wc-blue, #267EF0);
+      box-shadow: 0 0 0 2px rgba(38, 126, 240, 0.15);
+    }
+    .wecom-watermark-hint {
+      font-size: 11px;
+      color: var(--wc-text-3, #8F959E);
+      line-height: 1.4;
+      margin-bottom: 12px;
+    }
+    .wecom-watermark-error {
+      font-size: 11px;
+      color: #FA5151;
+      min-height: 14px;
+      margin-bottom: 8px;
+    }
+    .wecom-watermark-error:empty {
+      display: none;
+    }
+    .wecom-watermark-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .wecom-watermark-cancel {
+      height: 28px;
+      padding: 0 14px;
+      border-radius: 4px;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      background: transparent;
+      color: var(--wc-text, #1F2329);
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .wecom-watermark-cancel:hover {
+      background: rgba(0, 0, 0, 0.04);
+    }
+    .wecom-watermark-save {
+      height: 28px;
+      padding: 0 16px;
+      border-radius: 4px;
+      border: none;
+      background: var(--wc-blue, #267EF0);
+      color: #FFFFFF;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .wecom-watermark-save:hover {
+      background: #1F6FD9;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-panel {
+      background: #23272E;
+      border-color: rgba(255, 255, 255, 0.12);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-head strong {
+      color: #E6EDF5;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-close {
+      color: #8C99AA;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-close:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #FFFFFF;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-switch-row {
+      color: #E6EDF5;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-switch i {
+      background: #4A5260;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-switch input:checked + i {
+      background: #3D8AF5;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-field span {
+      color: #A4B1C2;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-text {
+      background: #1A1D23;
+      border-color: rgba(255, 255, 255, 0.15);
+      color: #FFFFFF;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-text:focus {
+      border-color: #3D8AF5;
+      box-shadow: 0 0 0 2px rgba(61, 138, 245, 0.25);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-hint {
+      color: #7D8899;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-cancel {
+      border-color: rgba(255, 255, 255, 0.15);
+      color: #DCE3EE;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-cancel:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-save {
+      background: #3D8AF5;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-save:hover {
+      background: #2B7CE6;
+    }
+
+    /* 消息流主体 */
+    .wecom-chat-messages {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 16px 20px 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      background: var(--wc-chat-bg);
+      box-sizing: border-box;
+      scrollbar-width: thin;
+    }
+    /* 详情框滚动条已统一由上方规范管理 */
+
+    /* 时间分隔符 */
+    .wecom-msg-time-sep {
+      align-self: center;
+      font-size: 11px;
+      color: #8F959E;
+      background: transparent;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin: 6px 0;
+      user-select: none;
+    }
+
+    /* 单条消息包裹 */
+    .wecom-msg {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      max-width: 82%;
+      position: relative;
+    }
+    .wecom-msg-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px !important;
+      flex: 0 0 34px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .wecom-msg-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 8px !important;
+    }
+    .wecom-msg-content {
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .wecom-msg-name {
+      font-size: 12px !important;
+      color: var(--wc-text-3) !important;
+      margin-bottom: 4px !important;
+      margin-left: 1px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .wecom-msg-name .wecom-name-ext {
+      color: #07C160 !important;
+      font-size: 12px !important;
+      font-weight: 500;
+    }
+
+
+    /* 引用与回复样式（完全对齐示例图 图2：内嵌气泡、细灰竖线、作者+冒号、预览灰字） */
+    .wecom-msg-bubble .wecom-reply-reference,
+    .wecom-msg-bubble aside.quote,
+    .wecom-msg-bubble blockquote {
+      display: block !important;
+      margin: 0 0 8px 0 !important;
+      padding: 0 0 0 8px !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      border: none !important;
+      border-left: 2px solid rgba(0, 0, 0, 0.18) !important;
+      border-radius: 0 !important;
+      text-decoration: none !important;
+      cursor: pointer !important;
+      box-shadow: none !important;
+      text-align: left !important;
+    }
+    .wecom-msg-bubble .wecom-reply-reference:hover {
+      background: transparent !important;
+    }
+    .wecom-msg-me .wecom-msg-bubble .wecom-reply-reference,
+    .wecom-msg-me .wecom-msg-bubble aside.quote,
+    .wecom-msg-me .wecom-msg-bubble blockquote {
+      border-left-color: rgba(0, 0, 0, 0.22) !important;
+    }
+    .wecom-msg-bubble .wecom-reply-author,
+    .wecom-msg-bubble aside.quote .title {
+      font-size: 12px !important;
+      font-weight: 500 !important;
+      color: #585C60 !important;
+      line-height: 1.4 !important;
+      margin: 0 0 2px 0 !important;
+      padding: 0 !important;
+      display: block !important;
+    }
+    .wecom-msg-bubble aside.quote .title img,
+    .wecom-msg-bubble aside.quote .title .quote-controls,
+    .wecom-msg-bubble aside.quote .title .back,
+    .wecom-msg-bubble aside.quote .title .quote-toggle {
+      display: none !important;
+    }
+    .wecom-msg-bubble .wecom-reply-preview,
+    .wecom-msg-bubble aside.quote blockquote,
+    .wecom-msg-bubble blockquote p {
+      font-size: 12px !important;
+      color: #7D8590 !important;
+      line-height: 1.45 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      display: -webkit-box !important;
+      -webkit-line-clamp: 2 !important;
+      -webkit-box-orient: vertical !important;
+      word-break: break-word !important;
+    }
+    /* 深色模式下的引用线与文字配色 */
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble .wecom-reply-reference,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble aside.quote,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble blockquote {
+      border-left-color: rgba(255, 255, 255, 0.22) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble .wecom-reply-author,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble aside.quote .title {
+      color: #A6AFBC !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble .wecom-reply-preview,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble aside.quote blockquote,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble blockquote p {
+      color: #7D8590 !important;
+    }
+
+    /* 气泡样式规范（圆角矩形，去除三角箭头，纯净优雅） */
+    .wecom-msg-bubble {
+      padding: 8px 12px !important;
+      border-radius: 8px !important;
+      font-size: 14px !important;
+      line-height: 1.55 !important;
+      position: relative !important;
+      word-break: break-word !important;
+      box-shadow: none !important;
+      border: none !important;
+    }
+    /* 去除粗糙尖角，完全对齐截图微圆角矩形 */
+    .wecom-msg-bubble::before,
+    .wecom-msg-other .wecom-msg-bubble::before,
+    .wecom-msg-me .wecom-msg-bubble::before {
+      display: none !important;
+      content: none !important;
+    }
+    .wecom-msg-bubble p {
+      margin: 0 0 6px;
+    }
+    .wecom-msg-bubble p:last-child {
+      margin-bottom: 0;
+    }
+    .wecom-msg-bubble pre {
+      background: rgba(0,0,0,0.05);
+      padding: 8px 10px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 13px;
+      margin: 6px 0;
+    }
+    .wecom-msg-bubble blockquote {
+      border-left: 3px solid var(--wc-blue);
+      padding-left: 8px;
+      margin: 6px 0;
+      color: var(--wc-text-2);
+    }
+    .wecom-msg-bubble img {
+      max-width: 100%;
+      border-radius: 8px;
+    }
+
+    /* 对方消息 (左侧浅灰蓝气泡 #E4E7EB) */
+    .wecom-msg-other {
+      align-self: flex-start;
+    }
+    .wecom-msg-other .wecom-msg-bubble {
+      background: var(--wc-bubble-other) !important; /* #E4E7EB */
+      color: var(--wc-bubble-other-text) !important; /* #1F2329 */
+    }
+
+    /* 自己消息 (右侧微信经典绿 #95EC69) */
+    .wecom-msg-me {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+    .wecom-msg-me .wecom-msg-content {
+      align-items: flex-end;
+    }
+    .wecom-msg-me .wecom-msg-name {
+      display: none;
+    }
+    .wecom-msg-me .wecom-msg-bubble {
+      background: var(--wc-bubble-me) !important; /* #95EC69 */
+      color: var(--wc-bubble-me-text) !important; /* #1F2329 */
+    }
+
+    /* 悬停浮动工具条 */
+    .wecom-msg-tools {
+      position: absolute;
+      top: -24px;
+      right: 0;
+      display: none;
+      align-items: center;
+      gap: 2px;
+      background: #FFFFFF;
+      border: 1px solid var(--wc-border);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border-radius: 4px;
+      padding: 2px 4px;
+      z-index: 10;
+    }
+    .wecom-msg:hover .wecom-msg-tools {
+      display: flex;
+    }
+    .wecom-msg-tool {
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      color: var(--wc-text-2);
+      cursor: pointer;
+      border-radius: 3px;
+    }
+    .wecom-msg-tool:hover {
+      background: rgba(0,0,0,0.06);
+      color: var(--wc-blue);
+    }
+    .wecom-msg-tool svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+    }
+
+    /* ==========================================================================
+       4. 输入区域与工具栏规范 (基准对齐 media_1789096763016.png 企微 5.x 悬浮卡片)
+       ========================================================================== */
+    .wecom-composer {
+      background: #F5F7FA !important;
+      border-top: none !important;
+      padding: 0 14px 14px 14px !important;
+      box-sizing: border-box !important;
+      position: relative !important;
+      flex: 0 0 auto !important;
+      width: 100% !important;
+      min-height: auto !important;
+    }
+    .wecom-composer-card {
+      background: #FFFFFF !important;
+      border: 1px solid #E6E7E8 !important;
+      border-radius: 6px !important;
+      box-shadow: none !important;
+      display: flex !important;
+      flex-direction: column !important;
+      height: 164px !important;
+      min-height: 160px !important;
+      box-sizing: border-box !important;
+      position: relative !important;
+      overflow: hidden !important;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+    }
+    .wecom-composer-card:hover {
+      border-color: #D2D4D7 !important;
+    }
+    .wecom-composer-card:focus-within {
+      border-color: #BDD0E8 !important;
+    }
+
+    /* 工具栏：高 38px，水平对齐，9 个线性图标 + 快速会议 */
+    .wecom-composer-tools {
+      height: 38px !important;
+      padding: 6px 14px 0 14px !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 10px !important;
+      border-bottom: none !important;
+      box-sizing: border-box !important;
+    }
+    .wecom-composer-tools .wecom-icon-btn {
+      height: 26px !important;
+      min-width: 22px !important;
+      padding: 0 3px !important;
+      color: #3E4247 !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 3px !important;
+      cursor: pointer !important;
+      background: transparent !important;
+      border: none !important;
+      border-radius: 4px !important;
+      transition: color 0.12s ease !important;
+    }
+    .wecom-composer-tools .wecom-icon-btn.has-arrow {
+      padding: 0 4px !important;
+    }
+    .wecom-composer-tools .wecom-icon-btn:hover {
+      color: #267EF0 !important;
+    }
+    .wecom-composer-tools .wecom-icon-btn svg:not(.wecom-tool-arrow) {
+      width: 18px !important;
+      height: 18px !important;
+      stroke: currentColor !important;
+      stroke-width: 1.1px !important;
+      fill: none !important;
+      flex-shrink: 0 !important;
+    }
+    /* 下拉小三角：宽 6px，高 4px，居中对齐 */
+    .wecom-tool-arrow {
+      width: 6px !important;
+      height: 4px !important;
+      fill: #6C7075 !important;
+      flex-shrink: 0 !important;
+      margin-left: 1px !important;
+      transition: fill 0.12s ease !important;
+    }
+    .wecom-composer-tools .wecom-icon-btn:hover .wecom-tool-arrow {
+      fill: #267EF0 !important;
+    }
+
+    /* 快速会议：右浮动，灰色文本+图标，无外边框背景 */
+    .wecom-tool-quick-meet {
+      margin-left: auto !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 4px !important;
+      font-size: 12px !important;
+      color: #3E4247 !important;
+      background: transparent !important;
+      border: none !important;
+      border-radius: 4px !important;
+      padding: 3px 6px !important;
+      cursor: pointer !important;
+      transition: color 0.12s ease !important;
+    }
+    .wecom-tool-quick-meet svg {
+      width: 14px !important;
+      height: 14px !important;
+      stroke: currentColor !important;
+      stroke-width: 1.2px !important;
+      fill: none !important;
+    }
+    .wecom-tool-quick-meet:hover {
+      color: #267EF0 !important;
+    }
+
+    /* 指定回复条 */
+    .wecom-reply-target {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      padding: 4px 14px !important;
+      background: rgba(38, 126, 240, 0.08) !important;
+      font-size: 12px !important;
+      color: #267EF0 !important;
+      border-bottom: 1px solid rgba(38, 126, 240, 0.15) !important;
+      box-sizing: border-box !important;
+    }
+    .wecom-reply-target[hidden] {
+      display: none !important;
+    }
+    .wecom-reply-cancel {
+      background: transparent !important;
+      border: none !important;
+      font-size: 14px !important;
+      color: #267EF0 !important;
+      cursor: pointer !important;
+      padding: 0 4px !important;
+      line-height: 1 !important;
+    }
+
+    /* 文本输入区：无边框无底色，与企微原生完全一致 */
+    .wecom-chat-compose {
+      flex: 1 1 auto !important;
+      min-height: 70px !important;
+      max-height: 100px !important;
+      padding: 6px 14px 4px 14px !important;
+      font-size: 14px !important;
+      line-height: 1.5 !important;
+      color: #1F2329 !important;
+      border: none !important;
+      outline: none !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      resize: none !important;
+      font-family: inherit !important;
+      box-sizing: border-box !important;
+      overflow-y: auto !important;
+    }
+    .wecom-chat-compose::placeholder {
+      color: #B2B6BC !important;
+    }
+
+    /* 隐藏底部快捷键提示，保持企微原生界面的极致清爽 */
+    .wecom-composer-tip {
+      display: none !important;
+    }
+
+    /* 底部操作行与发送按钮 */
+    .wecom-composer-bottom {
+      height: 32px !important;
+      padding: 0 14px 8px 14px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: flex-end !important;
+      box-sizing: border-box !important;
+    }
+    .wecom-send-btn {
+      height: 26px !important;
+      font-size: 12px !important;
+      border-radius: 4px !important;
+      border: none !important;
+      box-sizing: border-box !important;
+      font-family: inherit !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease !important;
+    }
+    /* 未输入任何内容时：纯文本灰字 发送(S)，无背景，无边框 */
+    .wecom-send-btn:disabled,
+    .wecom-send-btn.is-disabled {
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      color: #C9CBCC !important;
+      cursor: default !important;
+      padding: 0 4px !important;
+    }
+    /* 输入有内容时：企微蓝实心按钮，白色文本 */
+    .wecom-send-btn:not(:disabled) {
+      background: #267EF0 !important;
+      color: #FFFFFF !important;
+      padding: 0 14px !important;
+      cursor: pointer !important;
+      box-shadow: 0 1px 3px rgba(38, 126, 240, 0.2) !important;
+    }
+    .wecom-send-btn:not(:disabled):hover {
+      background: #1B72E2 !important;
+    }
+    .wecom-send-btn:not(:disabled):active {
+      background: #1562C6 !important;
+    }
+
+    /* 5. 最右侧群成员与详情面板（默认收起，点击顶栏成员按钮展开） */
+    .wecom-member-panel {
+      display: none !important;
+    }
+    html.${ROOT_CLASS}.wecom-members-open .wecom-member-panel {
+      display: flex !important;
+      position: fixed !important;
+      top: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: var(--wc-members) !important;
+      min-width: var(--wc-members) !important;
+      max-width: var(--wc-members) !important;
+      height: 100vh !important;
+      background: var(--wc-chat-bg) !important;
+      border-left: 1px solid var(--wc-border) !important;
+      flex-direction: column !important;
+      z-index: 850 !important;
+      box-sizing: border-box !important;
+      overflow: hidden !important;
+    }
+
+    /* 顶栏成员切换按钮高亮 */
+    .wecom-chat-members-toggle.active {
+      background: rgba(38, 126, 240, 0.12) !important;
+      color: var(--wc-blue) !important;
+    }
+
+    /* 群公告卡片：严格对齐示例图纯白微圆角卡片 */
+    .wecom-member-announcement {
+      margin: 10px 10px 4px 10px !important;
+      padding: 10px 12px !important;
+      background: #FFFFFF !important;
+      border-radius: 6px !important;
+      border: 1px solid rgba(0, 0, 0, 0.04) !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+      box-sizing: border-box !important;
+      cursor: pointer !important;
+      flex-shrink: 0 !important;
+    }
+    .wecom-announcement-header {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      font-size: 12px !important;
+      font-weight: 600 !important;
+      color: var(--wc-text) !important;
+      margin-bottom: 6px !important;
+      line-height: 1 !important;
+    }
+    .wecom-announcement-preview {
+      font-size: 12px !important;
+      color: var(--wc-text-2) !important;
+      line-height: 1.6 !important;
+      max-height: 110px !important;
+      overflow: hidden !important;
+      display: -webkit-box !important;
+      -webkit-line-clamp: 5 !important;
+      -webkit-box-orient: vertical !important;
+      word-break: break-word !important;
+    }
+
+    /* 群成员头部（群成员·数量 与邮件/更多操作） */
+    .wecom-member-header {
+      padding: 8px 12px 4px 12px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      font-size: 12px !important;
+      color: var(--wc-text-3) !important;
+      user-select: none !important;
+      flex-shrink: 0 !important;
+    }
+    .wecom-member-count {
+      font-weight: 500 !important;
+      color: var(--wc-text-3) !important;
+    }
+    .wecom-member-actions {
+      display: flex !important;
+      align-items: center !important;
+      gap: 4px !important;
+    }
+    .wecom-member-actions .wecom-icon-btn {
+      width: 22px !important;
+      height: 22px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      border: none !important;
+      background: transparent !important;
+      color: var(--wc-text-3) !important;
+      border-radius: 3px !important;
+      cursor: pointer !important;
+      padding: 0 !important;
+    }
+    .wecom-member-actions .wecom-icon-btn:hover {
+      background: rgba(0, 0, 0, 0.05) !important;
+      color: var(--wc-text) !important;
+    }
+    .wecom-member-actions .wecom-icon-btn svg {
+      width: 14px !important;
+      height: 14px !important;
+      stroke: currentColor !important;
+    }
+
+    /* 分类标签条（橙色小卡片：如 骏德跨境财税专家 >） */
+    .wecom-member-category-bar {
+      margin: 2px 10px 8px 10px !important;
+      padding: 5px 8px !important;
+      border-radius: 4px !important;
+      background: #FFF7E6 !important;
+      border: 1px solid #FFE7BA !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      cursor: pointer !important;
+      box-sizing: border-box !important;
+      flex-shrink: 0 !important;
+    }
+    .wecom-member-cat-tag {
+      font-size: 11px !important;
+      color: #FA8C16 !important;
+      font-weight: 500 !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      white-space: nowrap !important;
+    }
+    .wecom-arrow-icon {
+      display: flex !important;
+      align-items: center !important;
+    }
+    .wecom-arrow-icon svg {
+      width: 12px !important;
+      height: 12px !important;
+      stroke: #8F959E !important;
+    }
+    .wecom-member-category-bar .wecom-arrow-icon svg {
+      stroke: #FA8C16 !important;
+    }
+
+    /* 成员列表滚动区 */
+    .wecom-member-body {
+      flex: 1 1 auto !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      padding: 0 8px 16px 8px !important;
+      box-sizing: border-box !important;
+      scrollbar-width: thin !important;
+    }
+    /* 成员栏滚动条已统一由上方规范管理 */
+    .wecom-member-section {
+      margin-bottom: 6px !important;
+    }
+    .wecom-member-section-title {
+      font-size: 11px !important;
+      color: var(--wc-text-3) !important;
+      padding: 4px 6px 2px 6px !important;
+      user-select: none !important;
+    }
+
+    /* 单个成员行 */
+    .wecom-member-row {
+      display: flex !important;
+      align-items: center !important;
+      gap: 8px !important;
+      padding: 5px 6px !important;
+      border-radius: 4px !important;
+      cursor: pointer !important;
+      transition: background 0.1s ease !important;
+      box-sizing: border-box !important;
+    }
+    .wecom-member-row:hover {
+      background: rgba(0, 0, 0, 0.04) !important;
+    }
+    .wecom-member-avatar {
+      width: 24px !important;
+      height: 24px !important;
+      min-width: 24px !important;
+      border-radius: 6px !important;
+      overflow: hidden !important;
+      flex: 0 0 24px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-size: 10px !important;
+      font-weight: 600 !important;
+      color: #FFFFFF !important;
+      background: #4A90E2 !important;
+    }
+    .wecom-member-avatar img {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+      border-radius: 6px !important;
+    }
+    .wecom-member-name {
+      font-size: 12px !important;
+      color: var(--wc-text) !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      white-space: nowrap !important;
+      flex: 1 !important;
+      line-height: 1.3 !important;
+    }
+    .wecom-member-role {
+      font-size: 10px !important;
+      padding: 1px 4px !important;
+      border-radius: 2px !important;
+      background: #E8F3FF !important;
+      color: var(--wc-blue) !important;
+      font-weight: 500 !important;
+      line-height: 1.2 !important;
+      flex-shrink: 0 !important;
+      white-space: nowrap !important;
     }
   `;
 
-  /* 企业微信深色模式：使用官方深色配色表中的分层灰阶与 #338CFF 强调色。 */
+  /* 深色主题配色微调 */
   const WECOM_DARK_REFINEMENTS = String.raw`
-    .${ROOT_CLASS}.wecom-dark {
-      color-scheme: dark !important;
-      --wc-blue: #338CFF;
-      --wc-blue-hover: #4D9CFF;
-      --wc-blue-soft: rgba(51, 140, 255, .16);
-      --wc-blue-chip: #173153;
-      --wc-title: #338CFF;
-      --wc-accent: #338CFF;
-      --wc-accent-soft: rgba(51, 140, 255, .16);
-      --wc-nav2-bg: #101011;
-      --wc-nav2-border: #2A2C2E;
-      --wc-text: #F7F7F7;
-      --wc-text-2: rgba(250, 252, 255, .72);
-      --wc-text-3: rgba(250, 252, 255, .55);
-      --wc-text-4: rgba(250, 252, 255, .4);
-      --wc-bg: #101011;
-      --wc-chat-bg: #101011;
-      --wc-hover: #272829;
-      --wc-active: rgba(51, 140, 255, .25);
-      --wc-bubble-other: #303031;
-      --wc-bubble-me: #093159;
-      --wc-border: rgba(255, 255, 255, .1);
-      --wc-border-strong: rgba(255, 255, 255, .2);
-      --wc-danger: #FF5962;
-      --wc-rail-bg: #000000;
-      --wc-surface-0: #000000;
-      --wc-surface-1: #101011;
-      --wc-surface-2: #181819;
-      --wc-surface-3: #202021;
-      --wc-surface-4: #2C2C2D;
-      --wc-divider: #2A2C2E;
-      --primary: #F7F7F7;
-      --primary-medium: rgba(250, 252, 255, .72);
-      --primary-low: rgba(250, 252, 255, .55);
-      --secondary: #101011;
-      --tertiary: #338CFF;
-      --header_background: #101011;
-      --header_primary: #F7F7F7;
-      --d-hover: #272829;
-      --d-sidebar-background: #101011;
-      --d-sidebar-border-color: #2A2C2E;
+    html.${ROOT_CLASS}.wecom-dark {
+      --wc-rail-bg: #16181C;
+      --wc-rail-border: #22252A;
+      --wc-rail-icon: #7A8699;
+      --wc-rail-active-bg: rgba(30, 111, 255, 0.22);
+      --wc-list-bg: #1C1E22;
+      --wc-list-border: #26292E;
+      --wc-chat-bg: #202328;
+      --wc-composer-bg: #1A1C20;
+      --wc-bubble-other: #2B2E34;
+      --wc-bubble-other-text: #ECEFF4;
+      --wc-bubble-me: #1E6B38;
+      --wc-bubble-me-text: #FFFFFF;
+      --wc-text: #E6E8EB;
+      --wc-text-2: #959CA6;
+      --wc-text-3: #6F7682;
+      --wc-hover: rgba(255, 255, 255, 0.06);
+      --wc-border: #2A2D33;
+      --wc-border-strong: #3A3E46;
+      --wc-list-active: #1F477A;
     }
-
-    html.${ROOT_CLASS}.wecom-dark,
-    html.${ROOT_CLASS}.wecom-dark body {
-      color-scheme: dark !important;
-      background: var(--wc-surface-0) !important;
-      color: var(--wc-text) !important;
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-search form,
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-btn {
+      background: #2B2D31 !important;
+      background-color: #2B2D31 !important;
+      color: #8F959E !important;
     }
-    html.${ROOT_CLASS}.wecom-dark #main-outlet-wrapper,
-    html.${ROOT_CLASS}.wecom-dark #main-outlet {
-      background: var(--wc-surface-0) !important;
-      color: var(--wc-text) !important;
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-search input {
+      color: #ECEFF4 !important;
     }
-
-    /* 原生展开栏与通知菜单 */
-    html.${ROOT_CLASS}.wecom-dark body .sidebar-wrapper {
-      background-color: var(--wc-surface-1) !important;
-      border-right-color: var(--wc-divider) !important;
-      color: var(--wc-text) !important;
-      --primary: #F7F7F7;
-      --primary-medium: rgba(250, 252, 255, .72);
-      --primary-low: rgba(250, 252, 255, .55);
-      --primary-low-mid: #595B5E;
-      --primary-very-low: #1F2022;
-      --primary-50: #161718;
-      --primary-100: #1B1C1D;
-      --primary-200: #2A2C2E;
-      --primary-300: #3F4143;
-      --secondary: #101011;
-      --tertiary: #338CFF;
-      --quaternary: #338CFF;
-      --d-hover: #272829;
-      --d-sidebar-background: #101011;
-      --d-sidebar-border-color: #2A2C2E;
-    }
-    html.${ROOT_CLASS}.wecom-dark body .sidebar-wrapper .sidebar-section-link {
-      color: rgba(250, 252, 255, .72) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark body .sidebar-wrapper .sidebar-section-link:hover {
-      background-color: #272829 !important;
-      color: #F7F7F7 !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark body .sidebar-wrapper .sidebar-section-link.active {
-      background-color: rgba(51, 140, 255, .2) !important;
-      color: #338CFF !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark body .sidebar-wrapper .sidebar-more-section-content .fk-d-menu__inner-content,
-    html.${ROOT_CLASS}.wecom-dark body .sidebar-wrapper .sidebar-more-section-content > .dropdown-menu,
-    html.${ROOT_CLASS}.wecom-dark body .sidebar-wrapper .sidebar-more-section-content .dropdown-menu {
-      background-color: var(--wc-surface-3) !important;
-      border-color: var(--wc-divider) !important;
-      box-shadow: 0 10px 28px rgba(0, 0, 0, .45) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .user-menu.wecom-user-menu-float,
-    html.${ROOT_CLASS}.wecom-dark .user-menu.revamped.menu-panel.wecom-user-menu-float,
-    html.${ROOT_CLASS}.wecom-dark .user-menu.menu-panel.wecom-user-menu-float {
-      background: var(--wc-surface-3) !important;
-      border-color: var(--wc-divider) !important;
-      color: var(--wc-text) !important;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, .45) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .user-menu.wecom-user-menu-float * {
-      color: inherit;
-      border-color: var(--wc-divider);
-    }
-
-    /* 工作台导航 */
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail {
-      background: var(--wc-surface-0) !important;
-      border-right-color: var(--wc-divider) !important;
-      color: var(--wc-text-2) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-current-user-name,
-    html.${ROOT_CLASS}.wecom-dark .wecom-current-user-name {
-      color: var(--wc-text) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-avatar {
-      background: #338CFF !important;
-      color: #FFFFFF !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-avatar.is-notif-pinned {
-      box-shadow: 0 0 0 2px var(--wc-surface-0), 0 0 0 4px #2DC252 !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-avatar-badge {
-      box-shadow: 0 0 0 2px var(--wc-surface-0) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-org-chip {
-      background: rgba(255, 255, 255, .05);
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-org-chip:hover {
-      background: rgba(255, 255, 255, .1);
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-org-logo {
-      background: linear-gradient(145deg, #4D9CFF, #235BA3);
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-item,
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-group-item {
-      color: rgba(250, 252, 255, .72) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-item svg,
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-group-item svg {
-      color: rgba(250, 252, 255, .55) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-item:hover,
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-group-item:hover {
-      background: rgba(255, 255, 255, .07) !important;
+    html.${ROOT_CLASS}.wecom-dark .wecom-rail-item {
+      color: #7A8699 !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-rail-item.active,
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-more.is-on {
-      background: rgba(51, 140, 255, .2) !important;
-      color: #338CFF !important;
-      box-shadow: none !important;
+    html.${ROOT_CLASS}.wecom-dark .wecom-rail-item.is-on {
+      background: rgba(30, 111, 255, 0.22) !important;
+      color: #3D8AF5 !important;
     }
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-item.active svg,
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-more.is-on svg {
-      color: #338CFF !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-theme-toggle.is-dark {
-      background: rgba(51, 140, 255, .2) !important;
-      color: #338CFF !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-theme-toggle.is-dark svg {
-      color: #338CFF !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-group-title,
-    html.${ROOT_CLASS}.wecom-dark .wecom-group-unread,
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-bottom .wecom-rail-item {
-      color: var(--wc-text-3) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-group-item svg,
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-item svg {
-      color: var(--wc-text-2) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-badge {
-      box-shadow: 0 0 0 2px var(--wc-surface-0) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-resizer:hover,
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-resizer.dragging,
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-resizer:hover,
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-resizer.dragging {
-      background: rgba(51, 140, 255, .35) !important;
-    }
-
-    /* 外观切换菜单 */
-    html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu {
-      background: var(--wc-surface-3) !important;
-      border-color: var(--wc-divider) !important;
-      box-shadow: 0 14px 36px rgba(0, 0, 0, .48) !important;
-      color: var(--wc-text) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu-title,
-    html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu button {
-      color: var(--wc-text-2) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu button:hover {
-      background: rgba(255, 255, 255, .08) !important;
-      color: var(--wc-text) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu button.is-active {
-      background: rgba(51, 140, 255, .2) !important;
-      color: #338CFF !important;
-    }
-
-    /* 会话列表 */
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-panel {
-      background: var(--wc-surface-2) !important;
-      border-right-color: var(--wc-divider) !important;
-      color: var(--wc-text) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-search form {
-      background: var(--wc-surface-4) !important;
-      color: var(--wc-text-3) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-search form:focus-within {
-      background: var(--wc-surface-3) !important;
-      box-shadow: inset 0 0 0 1px rgba(51, 140, 255, .65) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-search input,
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-search form > input[type="search"] {
-      color: var(--wc-text) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-search input::placeholder {
-      color: var(--wc-text-3) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-add,
-    html.${ROOT_CLASS}.wecom-dark .wecom-chip-icon {
-      background: var(--wc-surface-4) !important;
-      color: var(--wc-text-2) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-add:hover,
-    html.${ROOT_CLASS}.wecom-dark .wecom-chip-icon:hover {
-      background: #3F4143 !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-chips {
-      background: var(--wc-surface-3) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-chip {
-      color: var(--wc-text-2) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-chip.active {
-      background: var(--wc-surface-4) !important;
-      color: var(--wc-text) !important;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, .35) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-nav {
-      background: var(--wc-surface-3) !important;
-      border-color: var(--wc-divider) !important;
-      box-shadow: 0 10px 28px rgba(0, 0, 0, .42) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-nav a {
-      background: var(--wc-surface-2) !important;
-      border-color: var(--wc-divider) !important;
-      color: var(--wc-text-2) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-nav a:hover {
-      background: var(--wc-hover) !important;
-      color: var(--wc-text) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-nav a.active {
-      background: rgba(51, 140, 255, .2) !important;
-      border-color: rgba(51, 140, 255, .45) !important;
-      color: #338CFF !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-conv {
-      color: var(--wc-text) !important;
+    html.${ROOT_CLASS}.wecom-dark .wecom-rail-item.active .wecom-rail-icon svg,
+    html.${ROOT_CLASS}.wecom-dark .wecom-rail-item.is-on .wecom-rail-icon svg {
+      fill: #3D8AF5 !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-conv:hover {
-      background: var(--wc-hover) !important;
+      background: rgba(255, 255, 255, 0.05) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-conv.is-pinned {
+      background: rgba(255, 255, 255, 0.03) !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-conv.active {
-      background: #3D7ACC !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-conv-name {
-      color: var(--wc-text) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-conv-msg,
-    html.${ROOT_CLASS}.wecom-dark .wecom-conv-time {
-      color: var(--wc-text-3) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-conv.active .wecom-conv-name,
-    html.${ROOT_CLASS}.wecom-dark .wecom-conv.active .wecom-conv-msg,
-    html.${ROOT_CLASS}.wecom-dark .wecom-conv.active .wecom-conv-time {
+      background: #1F477A !important;
       color: #FFFFFF !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-conv-tag {
-      background: rgba(51, 140, 255, .2) !important;
-      border-color: rgba(51, 140, 255, .45) !important;
-      color: #80B7FF !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-conv.active .wecom-conv-tag {
-      background: rgba(255, 255, 255, .13) !important;
-      border-color: rgba(255, 255, 255, .35) !important;
-      color: #FFFFFF !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-conv-avatar.is-group,
-    html.${ROOT_CLASS}.wecom-dark .wecom-conv-avatar.is-grid-mask {
-      background: var(--wc-surface-4) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-status {
-      color: var(--wc-text-3) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-body::-webkit-scrollbar-thumb,
-    html.${ROOT_CLASS}.wecom-dark .wecom-chat-body::-webkit-scrollbar-thumb {
-      background: #3F4143 !important;
-    }
-
-    /* 聊天区与消息气泡 */
-    html.${ROOT_CLASS}.wecom-dark .wecom-chat-panel {
-      background: var(--wc-surface-1) !important;
-      color: var(--wc-text) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-chat-header {
-      background: var(--wc-surface-2) !important;
-      border-bottom-color: var(--wc-divider) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-chat-title {
-      color: var(--wc-text) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-chat-sub,
-    html.${ROOT_CLASS}.wecom-dark .wecom-chat-count {
-      color: var(--wc-text-3) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-chat-chip {
-      background: rgba(51, 140, 255, .2) !important;
-      border-color: rgba(51, 140, 255, .45) !important;
-      color: #80B7FF !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-icon-btn {
-      color: var(--wc-text-2) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-icon-btn:hover {
-      background: rgba(255, 255, 255, .08) !important;
-      color: var(--wc-text) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-topic-bookmark.is-bookmarked {
-      background: rgba(51, 140, 255, .2) !important;
-      color: #80B7FF !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-chat-body {
-      background-color: var(--wc-surface-1) !important;
-      color: var(--wc-text) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-msg-name,
-    html.${ROOT_CLASS}.wecom-dark .wecom-msg-meta,
-    html.${ROOT_CLASS}.wecom-dark .wecom-msg-time-sep {
-      color: var(--wc-text-3) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-reply-reference {
-      color: var(--wc-text-2) !important;
-      background: rgba(51, 140, 255, .14) !important;
-      border-left-color: #338CFF !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-reply-reference:hover {
-      background: rgba(51, 140, 255, .22) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-reply-reference-label { color: #80B7FF !important; }
-    html.${ROOT_CLASS}.wecom-dark .wecom-reply-reference-preview { color: var(--wc-text-3) !important; }
-    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble {
-      color: var(--wc-text) !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-msg-other .wecom-msg-bubble {
-      background: #303031 !important;
-      box-shadow: none !important;
+      background: #2B2E34 !important;
+      color: #ECEFF4 !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-msg-me .wecom-msg-bubble {
-      background: #093159 !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-msg-other .wecom-msg-bubble::before {
-      border-right-color: #303031 !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-msg-me .wecom-msg-bubble::before {
-      border-left-color: #093159 !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble pre {
-      background: rgba(255, 255, 255, .07) !important;
-      color: var(--wc-text) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble blockquote {
-      background: rgba(51, 140, 255, .12) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble a {
-      color: #80B7FF !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-msg-tool {
-      color: var(--wc-text-2) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-msg-tool:hover,
-    html.${ROOT_CLASS}.wecom-dark .wecom-msg-tool.liked,
-    html.${ROOT_CLASS}.wecom-dark .wecom-msg-tool.bookmarked {
-      color: #338CFF !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-msg-tools {
-      background: var(--wc-surface-3) !important;
-      border-color: var(--wc-divider) !important;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, .35) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-chat-empty,
-    html.${ROOT_CLASS}.wecom-dark .wecom-chat-error,
-    html.${ROOT_CLASS}.wecom-dark .wecom-chat-loading {
-      color: var(--wc-text-3) !important;
-    }
-
-    /* 置顶消息、水印与回复输入区 */
-    html.${ROOT_CLASS}.wecom-dark .wecom-pinned-banner {
-      background: #19191A !important;
-      border-color: #295794 !important;
-      color: var(--wc-text-2) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-pinned-content b {
-      color: var(--wc-text) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-pinned-close {
-      color: var(--wc-text-3) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-panel {
-      background: var(--wc-surface-3) !important;
-      border-color: var(--wc-divider) !important;
-      color: var(--wc-text) !important;
-      box-shadow: 0 14px 36px rgba(0, 0, 0, .5) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-head strong,
-    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-field > span {
-      color: var(--wc-text) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-close:hover {
-      background: rgba(255, 255, 255, .08) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-text {
-      background: var(--wc-surface-4) !important;
-      border-color: var(--wc-divider) !important;
-      color: var(--wc-text) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-hint,
-    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-close,
-    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-actions button {
-      color: var(--wc-text-3) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-actions button {
-      background: var(--wc-surface-4) !important;
-      border-color: var(--wc-divider) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-watermark-actions .wecom-watermark-save {
-      background: #338CFF !important;
-      border-color: #338CFF !important;
+      background: #1E6B38 !important;
       color: #FFFFFF !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-composer {
-      background: var(--wc-surface-1) !important;
+      background: #191B1F !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-composer-card {
-      background: var(--wc-surface-2) !important;
-      border-color: var(--wc-divider) !important;
-      box-shadow: none !important;
+      background: #23272E !important;
+      border-color: rgba(255, 255, 255, 0.1) !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-composer-card:hover {
-      border-color: rgba(51, 140, 255, .55) !important;
+      border-color: rgba(255, 255, 255, 0.18) !important;
     }
-    html.${ROOT_CLASS}.wecom-dark textarea.wecom-chat-compose,
+    html.${ROOT_CLASS}.wecom-dark .wecom-composer-card:focus-within {
+      border-color: rgba(38, 126, 240, 0.45) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-composer-tools .wecom-icon-btn {
+      color: #9EA3A8 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-composer-tools .wecom-icon-btn:hover {
+      color: #388BFD !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-tool-arrow {
+      fill: #80868B !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-composer-tools .wecom-icon-btn:hover .wecom-tool-arrow {
+      fill: #388BFD !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-tool-quick-meet {
+      color: #9EA3A8 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-tool-quick-meet:hover {
+      color: #388BFD !important;
+    }
     html.${ROOT_CLASS}.wecom-dark .wecom-chat-compose {
-      color: var(--wc-text) !important;
-      caret-color: #338CFF;
+      color: #ECEFF4 !important;
     }
-    html.${ROOT_CLASS}.wecom-dark textarea.wecom-chat-compose::placeholder {
-      color: var(--wc-text-3) !important;
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-compose::placeholder {
+      color: #5C6370 !important;
     }
-    html.${ROOT_CLASS}.wecom-dark .wecom-compose-status {
-      color: var(--wc-text-3) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-reply-target {
-      background: rgba(255, 255, 255, .05) !important;
-      color: var(--wc-text-2) !important;
+    html.${ROOT_CLASS}.wecom-dark .wecom-send-btn:disabled,
+    html.${ROOT_CLASS}.wecom-dark .wecom-send-btn.is-disabled {
+      color: rgba(255, 255, 255, 0.28) !important;
+      background: transparent !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-send-btn:not(:disabled) {
-      color: #338CFF !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-send-btn:not(:disabled):hover {
-      background: rgba(51, 140, 255, .14) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-composer-tools .hint {
-      color: var(--wc-text-3) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-edit-dialog-card {
-      background: var(--wc-surface-3) !important;
-      border-color: var(--wc-divider) !important;
-      color: var(--wc-text) !important;
-      box-shadow: 0 14px 36px rgba(0, 0, 0, .5) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-edit-dialog-close:hover {
-      background: rgba(255, 255, 255, .08) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-edit-dialog-close,
-    html.${ROOT_CLASS}.wecom-dark .wecom-edit-status,
-    html.${ROOT_CLASS}.wecom-dark .wecom-edit-dialog-actions button {
-      color: var(--wc-text-3) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-edit-status.error { color: #FF6B73 !important; }
-    html.${ROOT_CLASS}.wecom-dark .wecom-edit-status.busy { color: #338CFF !important; }
-    html.${ROOT_CLASS}.wecom-dark .wecom-edit-status.success { color: #21C978 !important; }
-    html.${ROOT_CLASS}.wecom-dark .wecom-edit-input,
-    html.${ROOT_CLASS}.wecom-dark .wecom-edit-dialog-actions button {
-      background: var(--wc-surface-4) !important;
-      border-color: var(--wc-divider) !important;
-      color: var(--wc-text) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-edit-dialog-actions .wecom-edit-save {
-      background: #338CFF !important;
-      border-color: #338CFF !important;
+      background: #267EF0 !important;
       color: #FFFFFF !important;
     }
-    html.${ROOT_CLASS}.wecom-dark .wecom-mode-fab {
-      background: #338CFF !important;
-      box-shadow: 0 5px 18px rgba(51, 140, 255, .32) !important;
-    }
 
-    /* 群成员栏 */
+    /* 暗色模式滚动条自适应 */
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-panel:hover .wecom-list-body::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-body:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-body.is-scrolling::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-panel:hover .wecom-chat-body::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-body:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-body.is-scrolling::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-panel:hover .wecom-member-body::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-body:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-body.is-scrolling::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.22) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-body::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-body::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-messages::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-body::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.38) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-panel:hover .wecom-list-body,
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-body:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-body.is-scrolling,
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-panel:hover .wecom-chat-body,
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-body:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-body.is-scrolling,
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-panel:hover .wecom-member-body,
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-body:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-body.is-scrolling {
+      scrollbar-color: rgba(255, 255, 255, 0.22) transparent !important;
+    }
     html.${ROOT_CLASS}.wecom-dark .wecom-member-panel {
-      background: var(--wc-surface-2) !important;
-      border-left-color: var(--wc-divider) !important;
-      color: var(--wc-text) !important;
+      background: var(--wc-chat-bg) !important;
+      border-left-color: var(--wc-border) !important;
     }
-    html.${ROOT_CLASS}.wecom-dark .wecom-member-header {
-      border-bottom-color: var(--wc-divider) !important;
-      color: var(--wc-text-2) !important;
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-announcement {
+      background: #1E2024 !important;
+      border-color: var(--wc-border) !important;
     }
-    html.${ROOT_CLASS}.wecom-dark .wecom-member-actions,
-    html.${ROOT_CLASS}.wecom-dark .wecom-member-name {
-      color: var(--wc-text-2) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-member-role {
-      background: var(--wc-surface-4) !important;
-      color: var(--wc-text-3) !important;
-    }
-
-    html.${ROOT_CLASS}.wecom-dark #d-splash {
-      background: var(--wc-surface-0) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark #d-splash .dots {
-      background-color: #338CFF !important;
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-category-bar {
+      background: #2D2318 !important;
+      border-color: #593D1E !important;
     }
   `;
 
@@ -3437,6 +5098,68 @@
     }
   }
 
+  /* ============================== 网页 Title 空白守护 ============================== */
+
+  const BLANK_PAGE_TITLE = " ";
+
+  function enforceBlankTitle() {
+    if (typeof document === "undefined") return;
+    if (getViewMode() === "native" || otherThemeActive()) return;
+    try {
+      if (document.title !== BLANK_PAGE_TITLE) {
+        document.title = BLANK_PAGE_TITLE;
+      }
+      const titleEl = document.querySelector("title");
+      if (titleEl && titleEl.textContent !== BLANK_PAGE_TITLE) {
+        titleEl.textContent = BLANK_PAGE_TITLE;
+      }
+    } catch { /* ignore */ }
+  }
+
+  function setupTitleGuard() {
+    if (typeof document === "undefined") return;
+    enforceBlankTitle();
+
+    try {
+      const proto = typeof Document !== "undefined" ? Document.prototype : null;
+      const desc = proto ? Object.getOwnPropertyDescriptor(proto, "title") : null;
+      if (desc && desc.configurable) {
+        Object.defineProperty(document, "title", {
+          get() {
+            if (getViewMode() === "native" || otherThemeActive()) {
+              return desc.get ? desc.get.call(document) : BLANK_PAGE_TITLE;
+            }
+            return BLANK_PAGE_TITLE;
+          },
+          set(val) {
+            if (getViewMode() === "native" || otherThemeActive()) {
+              if (desc.set) desc.set.call(document, val);
+              return;
+            }
+            // 企微模式下强制保持空白，不显示详情页标题
+            if (desc.set) desc.set.call(document, BLANK_PAGE_TITLE);
+          },
+          configurable: true,
+          enumerable: true
+        });
+      }
+    } catch { /* ignore */ }
+
+    try {
+      const titleEl = document.querySelector("title");
+      if (titleEl && typeof MutationObserver !== "undefined") {
+        const titleObserver = new MutationObserver(() => {
+          if (getViewMode() === "native" || otherThemeActive()) return;
+          if (titleEl.textContent !== BLANK_PAGE_TITLE) {
+            titleEl.textContent = BLANK_PAGE_TITLE;
+          }
+        });
+        titleObserver.observe(titleEl, { childList: true, characterData: true, subtree: true });
+      }
+    } catch { /* ignore */ }
+  }
+
+
   function restyleSplash() {
     const splash = document.getElementById("d-splash");
     if (!splash) return;
@@ -3448,6 +5171,9 @@
 
   function getViewMode() {
     try {
+      if (typeof location !== "undefined" && new URLSearchParams(location.search).get("wecom_view") === "native") {
+        return "native";
+      }
       return localStorage.getItem(VIEW_KEY) === "native" ? "native" : "im";
     } catch {
       return "im";
@@ -3642,12 +5368,29 @@
   function setNav2Open(open) {
     try { localStorage.setItem(NAV2_KEY, open ? "1" : "0"); } catch { /* ignore */ }
     document.documentElement.classList.toggle("wecom-nav2-open", open);
-    const moreBtn = document.querySelector(".wecom-rail-more");
+    const moreBtn = document.querySelector(".wecom-rail-more, [data-rail-key='group']");
     if (moreBtn) {
       moreBtn.classList.toggle("is-on", open);
+      moreBtn.classList.toggle("active", open);
       moreBtn.setAttribute("aria-expanded", open ? "true" : "false");
       moreBtn.title = open ? "收起话题导航" : "展开话题导航";
     }
+  }
+
+  function isBoostEnabled() {
+    try {
+      return localStorage.getItem(BOOST_ENABLED_KEY) !== "0";
+    } catch {
+      return true;
+    }
+  }
+
+  function setBoostEnabled(on) {
+    try {
+      localStorage.setItem(BOOST_ENABLED_KEY, on ? "1" : "0");
+    } catch { /* ignore */ }
+    document.documentElement.classList.toggle("wecom-hide-boost", !on);
+    syncThemeControls();
   }
 
   const THEME_MODE_LABELS = Object.freeze({
@@ -3666,6 +5409,7 @@
     if (!menu) return;
     menu.hidden = !open;
     trigger?.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open) syncThemeControls();
   }
 
   function syncThemeControls() {
@@ -3690,6 +5434,37 @@
     });
     const options = document.querySelector(".wecom-theme-options");
     if (options) options.title = `外观设置（${themeModeDescription(mode)}）`;
+
+    const curTitleMode = getMaskTitleMode();
+    menu.querySelectorAll("button[data-mask-title-mode]").forEach((button) => {
+      const active = button.dataset.maskTitleMode === curTitleMode;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-checked", active ? "true" : "false");
+    });
+
+    const maskAvatarBtn = menu.querySelector(".wecom-menu-mask-avatar");
+    if (maskAvatarBtn) {
+      const on = isMaskAvatar();
+      maskAvatarBtn.classList.toggle("is-active", on);
+      maskAvatarBtn.setAttribute("aria-checked", on ? "true" : "false");
+      const badge = maskAvatarBtn.querySelector(".wecom-menu-state-badge");
+      if (badge) {
+        badge.textContent = on ? "已开启" : "已关闭";
+        badge.className = `wecom-menu-state-badge ${on ? "is-on" : "is-off"}`;
+      }
+    }
+
+    const boostBtn = menu.querySelector(".wecom-menu-toggle-boost");
+    if (boostBtn) {
+      const on = isBoostEnabled();
+      boostBtn.classList.toggle("is-active", on);
+      boostBtn.setAttribute("aria-checked", on ? "true" : "false");
+      const badge = boostBtn.querySelector(".wecom-menu-state-badge");
+      if (badge) {
+        badge.textContent = on ? "已开启" : "已关闭";
+        badge.className = `wecom-menu-state-badge ${on ? "is-on" : "is-off"}`;
+      }
+    }
   }
 
   function bindThemeControls() {
@@ -3707,12 +5482,14 @@
     const controls = document.createElement("div");
     controls.className = "wecom-theme-controls";
     controls.innerHTML =
-      `<button type="button" class="wecom-rail-item wecom-theme-toggle" aria-pressed="false">` +
-      `<span class="wecom-theme-icon">${ICONS.moon}</span><span class="wecom-theme-label">深色模式</span></button>` +
-      `<button type="button" class="wecom-rail-item wecom-theme-options" aria-haspopup="menu" aria-expanded="false">` +
-      `<span class="wecom-theme-icon">${ICONS.gear}</span><span>外观设置</span></button>`;
+      `<button type="button" class="wecom-rail-item wecom-theme-toggle" aria-pressed="false" title="切换深色/浅色模式">` +
+      `<div class="wecom-rail-icon wecom-theme-icon">${ICONS.moon}</div>` +
+      `<span class="wecom-rail-label wecom-theme-label">深色</span></button>` +
+      `<button type="button" class="wecom-rail-item wecom-theme-options" aria-haspopup="menu" aria-expanded="false" title="外观设置">` +
+      `<div class="wecom-rail-icon wecom-theme-icon">${ICONS.gear}</div>` +
+      `<span class="wecom-rail-label">设置</span></button>`;
     const bottom = rail.querySelector(".wecom-rail-bottom");
-    if (bottom) bottom.insertBefore(controls, bottom.firstChild);
+    if (bottom) bottom.appendChild(controls);
     else rail.appendChild(controls);
     return controls;
   }
@@ -3728,6 +5505,21 @@
       `<button type="button" role="menuitemradio" data-theme-mode="light" aria-checked="false">${ICONS.sun}<span>浅色模式</span></button>` +
       `<button type="button" role="menuitemradio" data-theme-mode="dark" aria-checked="false">${ICONS.moon}<span>深色模式</span></button>` +
       `<button type="button" role="menuitemradio" data-theme-mode="system" aria-checked="false">${ICONS.monitorSmall}<span>跟随系统</span></button>` +
+      `<div class="wecom-theme-menu-title wecom-theme-menu-divider">伪装标题</div>` +
+      `<button type="button" role="menuitemradio" data-mask-title-mode="all" aria-checked="false">` +
+      `${ICONS.win}<span class="wecom-menu-label">全部（列表 + 详情）</span></button>` +
+      `<button type="button" role="menuitemradio" data-mask-title-mode="list" aria-checked="false">` +
+      `${ICONS.todo}<span class="wecom-menu-label">仅列表（灰字为真标题）</span></button>` +
+      `<button type="button" role="menuitemradio" data-mask-title-mode="detail" aria-checked="false">` +
+      `${ICONS.msg}<span class="wecom-menu-label">仅详情（聊天顶栏）</span></button>` +
+      `<button type="button" role="menuitemradio" data-mask-title-mode="off" aria-checked="false">` +
+      `${ICONS.circleOff}<span class="wecom-menu-label">关闭标题伪装</span></button>` +
+      `<div class="wecom-theme-menu-title wecom-theme-menu-divider">伪装头像</div>` +
+      `<button type="button" role="menuitemcheckbox" class="wecom-menu-mask-avatar" aria-checked="false">` +
+      `${ICONS.disguise}<span class="wecom-menu-label">百家姓/九宫格头像</span><span class="wecom-menu-state-badge is-off">已关闭</span></button>` +
+      `<div class="wecom-theme-menu-title wecom-theme-menu-divider">消息功能</div>` +
+      `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-boost" aria-checked="true">` +
+      `${ICONS.boost}<span class="wecom-menu-label">显示消息 Boost</span><span class="wecom-menu-state-badge is-on">已开启</span></button>` +
       `<button type="button" role="menuitem" class="wecom-check-update">${ICONS.refresh}<span>检查脚本更新</span></button>`;
     document.body.appendChild(menu);
     menu.addEventListener("click", (event) => {
@@ -3736,6 +5528,27 @@
         event.stopPropagation();
         setThemeMenuOpen(false);
         void checkForScriptUpdate(true);
+        return;
+      }
+      const titleModeBtn = event.target.closest("button[data-mask-title-mode]");
+      if (titleModeBtn) {
+        event.preventDefault();
+        event.stopPropagation();
+        setMaskTitleMode(titleModeBtn.dataset.maskTitleMode);
+        return;
+      }
+      const maskAvatarBtn = event.target.closest(".wecom-menu-mask-avatar");
+      if (maskAvatarBtn) {
+        event.preventDefault();
+        event.stopPropagation();
+        setMaskAvatar(!isMaskAvatar());
+        return;
+      }
+      const boostBtn = event.target.closest(".wecom-menu-toggle-boost");
+      if (boostBtn) {
+        event.preventDefault();
+        event.stopPropagation();
+        setBoostEnabled(!isBoostEnabled());
         return;
       }
       const option = event.target.closest("button[data-theme-mode]");
@@ -3773,7 +5586,12 @@
   function ensureThemeControls(rail) {
     if (!rail || !document.body) return;
     const controls = rail.querySelector(".wecom-theme-controls") || createThemeControls(rail);
-    if (!document.querySelector(".wecom-theme-menu")) createThemeMenu();
+    let menu = document.querySelector(".wecom-theme-menu");
+    if (menu && !menu.querySelector("button[data-mask-title-mode]")) {
+      menu.remove();
+      menu = null;
+    }
+    if (!menu) createThemeMenu();
     bindThemeControlButtons(controls);
     bindThemeControls();
     syncThemeControls();
@@ -3783,10 +5601,10 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.5.10";
-  const SCRIPT_REPOSITORY_URL = "https://github.com/Blackwindow6/linuxdo-wecom-ui";
-  const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/Blackwindow6/linuxdo-wecom-ui/main/linuxdo-wecom.meta.js";
-  const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/Blackwindow6/linuxdo-wecom-ui/main/linuxdo-wecom.user.js";
+  const SCRIPT_VERSION = "0.6.2";
+  const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
+  const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
+  const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
   const UPDATE_CACHE_KEY = "linuxdo-wecom-update-cache";
   const UPDATE_DISMISS_KEY = "linuxdo-wecom-update-dismiss";
   const UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
@@ -3948,41 +5766,35 @@
 
   /* ============================== 脚本更新结束 ============================== */
 
-  /** 企业微信工作台装饰项；仅消息和底部更多承接真实站点动作。 */
+  /** 企业微信工作台导航项（对齐官方截图：消息、文档、日程、待办、会议、智能文档、智能总结、工作台、通讯录、微盘、高级功能、分组） */
   const RAIL_DECO_ITEMS = [
-    { key: "mail", icon: "mail", label: "邮件" },
     { key: "doc", icon: "doc", label: "文档" },
     { key: "cal", icon: "cal", label: "日程" },
     { key: "todo", icon: "todo", label: "待办" },
     { key: "meet", icon: "meet", label: "会议" },
-    { key: "smartdoc", icon: "file", label: "智能文档", dot: true },
+    { key: "smartdoc", icon: "smartdoc", label: "智能文档", dot: true },
     { key: "summary", icon: "spark", label: "智能总结" },
     { key: "work", icon: "work", label: "工作台" },
     { key: "book", icon: "book", label: "通讯录" },
     { key: "disk", icon: "disk", label: "微盘" },
-    { key: "advanced", icon: "apps", label: "高级功能" }
+    { key: "advanced", icon: "advanced", label: "高级功能" },
+    { key: "group", icon: "group", label: "分组" }
   ];
 
-  const RAIL_GROUP_ITEMS = [
-    { key: "unread", icon: "mail", label: "未读", count: true },
-    { key: "at", icon: "at", label: "@我" },
-    { key: "single", icon: "users", label: "单聊" },
-    { key: "group", icon: "users", label: "群聊" },
-    { key: "inside", icon: "chat", label: "内部聊天" },
-    { key: "outside", icon: "cloud", label: "外部聊天" },
-    { key: "mark", icon: "collect", label: "标记" }
-  ];
+  const RAIL_GROUP_ITEMS = [];
 
   /* ---------- 组织 chip：点击改名 / 换图标 ---------- */
   const ORG_NAME_KEY = "linuxdo-wecom-org-name";
   const ORG_ICON_KEY = "linuxdo-wecom-org-icon";
 
   function getOrgName() {
-    try { return localStorage.getItem(ORG_NAME_KEY) || "linux.do"; } catch { return "linux.do"; }
+    const defaultOrg = IS_V2EX ? "v2ex.com" : "linux.do";
+    try { return localStorage.getItem(ORG_NAME_KEY) || defaultOrg; } catch { return defaultOrg; }
   }
 
   function getOrgIcon() {
-    try { return localStorage.getItem(ORG_ICON_KEY) || "do"; } catch { return "do"; }
+    const defaultIcon = IS_V2EX ? "v2" : "do";
+    try { return localStorage.getItem(ORG_ICON_KEY) || defaultIcon; } catch { return defaultIcon; }
   }
 
   function renderOrgChip(rail) {
@@ -4028,25 +5840,13 @@
     }
   }
 
-  /* ---------- rail 右边缘拖拽调宽 ---------- */
-  const RAIL_W_KEY = "linuxdo-wecom-rail-width";
-  const RAIL_W_MIN = 138;
-  const RAIL_W_MAX = 220;
-  const RAIL_W_COMPACT = 150;
-
+  /* ---------- rail 停靠栏固定为 56px ---------- */
   function getRailWidth() {
-    try {
-      const w = parseInt(localStorage.getItem(RAIL_W_KEY), 10);
-      if (w >= RAIL_W_MIN && w <= RAIL_W_MAX) return w;
-    } catch { /* ignore */ }
     return RAIL_WIDTH;
   }
 
   function applyRailWidth(w) {
-    const width = Math.min(RAIL_W_MAX, Math.max(RAIL_W_MIN, Math.round(w)));
-    document.documentElement.style.setProperty("--wc-nav", `${width}px`);
-    const rail = document.querySelector(".wecom-rail");
-    if (rail) rail.classList.toggle("wecom-rail-compact", width < RAIL_W_COMPACT);
+    document.documentElement.style.setProperty("--wc-nav", `${RAIL_WIDTH}px`);
   }
 
   function ensureRailResizer() {
@@ -4093,7 +5893,7 @@
   /* ---------- 中栏会话列表右边缘拖拽调宽 ---------- */
   const LIST_W_KEY = "linuxdo-wecom-list-width";
   const LIST_W_MIN = 200;
-  const LIST_W_MAX = 420;
+  const LIST_W_MAX = 520;
 
   function getListWidth() {
     try {
@@ -4113,35 +5913,45 @@
     if (rz) return rz;
     rz = document.createElement("div");
     rz.className = "wecom-list-resizer";
-    rz.title = "拖动调整会话列表宽度（双击复位）";
+    rz.title = "拖动调整会话列表宽度（双击恢复默认 280px）";
     document.body.appendChild(rz);
 
     let dragging = false;
     let startX = 0;
     let startW = 0;
-    rz.addEventListener("pointerdown", (e) => {
-      dragging = true;
-      startX = e.clientX;
-      startW = parseInt(document.documentElement.style.getPropertyValue("--wc-list"), 10) || getListWidth();
-      rz.classList.add("dragging");
-      try { rz.setPointerCapture(e.pointerId); } catch { /* ignore */ }
-      e.preventDefault();
-    });
-    rz.addEventListener("pointermove", (e) => {
+
+    const onMove = (e) => {
       if (!dragging) return;
       applyListWidth(startW + e.clientX - startX);
-    });
-    const endDrag = () => {
+    };
+
+    const onUp = () => {
       if (!dragging) return;
       dragging = false;
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      document.body.classList.remove("wecom-resizing-list");
       rz.classList.remove("dragging");
       const w = parseInt(document.documentElement.style.getPropertyValue("--wc-list"), 10);
       if (w) {
         try { localStorage.setItem(LIST_W_KEY, String(w)); } catch { /* ignore */ }
       }
     };
-    rz.addEventListener("pointerup", endDrag);
-    rz.addEventListener("pointercancel", endDrag);
+
+    rz.addEventListener("pointerdown", (e) => {
+      dragging = true;
+      startX = e.clientX;
+      startW = parseInt(document.documentElement.style.getPropertyValue("--wc-list"), 10) || getListWidth();
+      rz.classList.add("dragging");
+      document.body.classList.add("wecom-resizing-list");
+      try { rz.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onUp);
+      e.preventDefault();
+    });
+
     rz.addEventListener("dblclick", () => {
       applyListWidth(LIST_WIDTH);
       try { localStorage.removeItem(LIST_W_KEY); } catch { /* ignore */ }
@@ -4217,13 +6027,14 @@
 
   function ensureRail() {
     let rail = document.querySelector(".wecom-rail");
-    // 旧结构重建为企业微信 5.x 展开导航
-    if (rail && !rail.querySelector(".wecom-rail-groups")) {
+    // 重建为企业微信 56px 垂直标准停靠栏
+    if (rail && (!rail.querySelector("[data-rail-key='group']") || rail.querySelector(".wecom-rail-groups"))) {
       rail.remove();
       rail = null;
     }
     if (rail) {
       bindRailAvatarNotif(rail);
+      bindRailChatClick(rail);
       ensureThemeControls(rail);
       syncRail();
       return rail;
@@ -4238,60 +6049,56 @@
       `<div class="me-chip" title="通知与个人菜单">` +
       `<div class="wecom-rail-avatar"></div>` +
       `<span class="wecom-rail-avatar-badge" style="display:none"></span>` +
-      `</div>` +
-      `<span class="wecom-current-user-name">linux.do</span>` +
-      `<div class="wecom-rail-org-chip" hidden>` +
-      `<span class="wecom-rail-org-logo">do</span>` +
-      `<span class="wecom-rail-org-name">linux.do</span>` +
-      `<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>` +
+      `<span class="wecom-rail-avatar-status"></span>` +
       `</div>`;
     rail.appendChild(head);
 
     const items = document.createElement("div");
     items.className = "wecom-rail-items";
     items.innerHTML =
-      `<button type="button" class="wecom-rail-item active" data-rail-key="chat">${ICONS.msg}<span>消息</span>` +
+      `<button type="button" class="wecom-rail-item active" data-rail-key="chat" title="消息">` +
+      `<div class="wecom-rail-icon">${ICONS.msg}</div>` +
+      `<span class="wecom-rail-label">消息</span>` +
       `<span class="wecom-rail-badge" style="display:none"></span></button>` +
       RAIL_DECO_ITEMS.map((item) =>
-        `<button type="button" class="wecom-rail-item" data-rail-key="${item.key}">${ICONS[item.icon]}<span>${item.label}</span>${item.dot ? '<i class="wecom-rail-dot"></i>' : ""}</button>`
-      ).join("");
+        `<button type="button" class="wecom-rail-item" data-rail-key="${item.key}" title="${item.label}">` +
+        `<div class="wecom-rail-icon">${ICONS[item.icon] || ""}</div>` +
+        `<span class="wecom-rail-label">${item.label}</span>` +
+        `${item.dot ? '<i class="wecom-rail-dot"></i>' : ""}</button>`
+      ).join("") +
+      `<button type="button" class="wecom-rail-item wecom-rail-more" data-rail-key="group" title="展开/收起话题导航" aria-expanded="false">` +
+      `<div class="wecom-rail-icon">${ICONS.group}</div>` +
+      `<span class="wecom-rail-label">分组</span></button>`;
     rail.appendChild(items);
 
-    const groups = document.createElement("div");
-    groups.className = "wecom-rail-groups";
-    groups.innerHTML = `<div class="wecom-rail-group-title">分组</div>` +
-      RAIL_GROUP_ITEMS.map((item) =>
-        `<button type="button" class="wecom-rail-group-item" data-group-key="${item.key}">${ICONS[item.icon]}<span>${item.label}</span>${item.count ? '<b class="wecom-group-unread"></b>' : ""}</button>`
-      ).join("");
-    groups.querySelector('[data-group-key="unread"]')?.addEventListener("click", () => navigateInApp("/unseen"));
-    rail.appendChild(groups);
-
-    // 底部「更多」：展开 / 收起话题导航（原生侧栏）
     const bottom = document.createElement("div");
     bottom.className = "wecom-rail-bottom";
-    const more = document.createElement("button");
-    more.type = "button";
-    more.className = "wecom-rail-item wecom-rail-more";
-    more.dataset.railKey = "more";
-    more.title = "展开话题导航";
-    more.setAttribute("aria-expanded", "false");
-    more.innerHTML = `${ICONS.build}<span>我的企业</span>`;
-    more.addEventListener("click", () => setNav2Open(!isNav2Open()));
-    bottom.appendChild(more);
     rail.appendChild(bottom);
 
     document.body.appendChild(rail);
     ensureThemeControls(rail);
-    renderOrgChip(rail);
-    bindOrgChip(rail);
     bindRailAvatarNotif(rail);
-    setNav2Open(isNav2Open()); // 同步「更多」高亮态
+    bindRailChatClick(rail);
+
+    const groupBtn = rail.querySelector('[data-rail-key="group"]');
+    groupBtn?.addEventListener("click", () => setNav2Open(!isNav2Open()));
+
+    setNav2Open(isNav2Open());
     syncRail();
     return rail;
   }
 
-  /** 读取 Discourse 未读通知数（与顶栏用户菜单角标同源） */
+  /** 读取未读通知数 */
   function getUnreadNotificationCount() {
+    if (IS_V2EX) {
+      const notifLink = document.querySelector("#Top a[href^='/notifications'], #Rightbar a[href^='/notifications']");
+      if (notifLink) {
+        const text = notifLink.textContent || "";
+        const m = text.match(/\d+/);
+        if (m) return parseInt(m[0], 10);
+      }
+      return 0;
+    }
     try {
       const owner = getEmberOwner();
       const user =
@@ -4341,22 +6148,40 @@
     // 当前用户头像与名称
     const avatarEl = document.querySelector(".wecom-rail-avatar");
     if (!avatarEl) return;
-    // 头像：取原生当前用户头像
-    const img = document.querySelector("#current-user img");
-    const name = getCurrentUsername();
-    if (img && img.src) {
-      if (avatarEl.dataset.bound !== img.src) {
-        avatarEl.dataset.bound = img.src;
-        avatarEl.innerHTML = `<img src="${escapeHtml(img.src)}" alt="">`;
+
+    const disguiseId = getRailDisguiseAvatarId();
+    const disguisePreset = RAIL_DISGUISE_AVATARS.find((a) => a.id === disguiseId);
+
+    if (disguisePreset) {
+      if (avatarEl.dataset.bound !== "disguise-" + disguisePreset.id) {
+        avatarEl.dataset.bound = "disguise-" + disguisePreset.id;
+        avatarEl.innerHTML = disguisePreset.svg;
         avatarEl.style.background = "transparent";
       }
-    } else if (name && avatarEl.dataset.bound !== name) {
-      avatarEl.dataset.bound = name;
-      avatarEl.textContent = avatarLetter(name);
-      avatarEl.style.background = avatarColor(name);
+      avatarEl.setAttribute("title", `当前头像：${disguisePreset.name}（右键切换伪装头像样式）`);
+    } else {
+      // 原生头像兜底（若选择 native）
+      const img = document.querySelector(IS_V2EX ? "#Rightbar .avatar, #Top .avatar, #current-user img" : "#current-user img");
+      const name = getCurrentUsername();
+      if (img && img.src) {
+        if (avatarEl.dataset.bound !== img.src) {
+          avatarEl.dataset.bound = img.src;
+          avatarEl.innerHTML = `<img src="${escapeHtml(img.src)}" alt="">`;
+          avatarEl.style.background = "transparent";
+        }
+      } else if (name && avatarEl.dataset.bound !== name) {
+        avatarEl.dataset.bound = name;
+        avatarEl.textContent = avatarLetter(name);
+        avatarEl.style.background = avatarColor(name);
+      }
+      avatarEl.setAttribute("title", "当前头像：原站真实头像（右键切换为伪装头像）");
     }
+
+    const name = getCurrentUsername();
     const currentName = document.querySelector(".wecom-current-user-name");
-    if (currentName) currentName.textContent = name || getOrgName();
+    if (currentName) {
+      currentName.textContent = (disguisePreset || isMaskAvatar()) ? "企业员工" : (name || getOrgName());
+    }
 
     // 头像通知角标
     const notifCount = getUnreadNotificationCount();
@@ -4366,15 +6191,140 @@
       avatarBadge.textContent = notifCount > 99 ? "99+" : String(notifCount);
     }
 
-    // 「消息」项未读（中栏话题求和）
-    const unread = listState.topics.reduce((sum, t) => sum + (t.unread || 0) + (t.new_posts || 0), 0);
-    const badge = document.querySelector('[data-rail-key="chat"] .wecom-rail-badge');
-    if (badge) {
-      badge.style.display = unread > 0 ? "" : "none";
-      badge.textContent = unread > 99 ? "99+" : String(unread);
+    // 「消息」项角标：显示新主题数（从 .show-more.has-topics 提取）
+    syncChatBadge();
+  }
+
+  /* ============================== 新主题角标与「消息」刷新回到顶部 ============================== */
+
+  const SHOW_MORE_TOPICS_SEL = [
+    ".show-more.has-topics",
+    ".has-topics.show-more",
+    ".show-more[class*='has-topics']",
+    "[class*='show-more'][class*='has-topics']",
+    ".alert-info.has-topics",
+    ".topic-list-container .show-more",
+    ".contents .show-more",
+    "#main-outlet .show-more"
+  ].join(", ");
+
+  function findShowMoreElement() {
+    return document.querySelector(SHOW_MORE_TOPICS_SEL);
+  }
+
+  /** 读取新主题数（优先从原生 .show-more.has-topics 提取） */
+  function getNewTopicsCount() {
+    // 1. 优先从 DOM 中的 .show-more.has-topics 提取
+    const showMoreEl = findShowMoreElement();
+    if (showMoreEl) {
+      if (showMoreEl.style.display !== "none" && !showMoreEl.classList.contains("hidden")) {
+        const text = (showMoreEl.textContent || "").trim();
+        const match = text.match(/\d+/);
+        if (match) {
+          const num = parseInt(match[0], 10);
+          if (!Number.isNaN(num) && num > 0) return num;
+        }
+        if (showMoreEl.classList.contains("has-topics") || /主题|topic/i.test(text)) {
+          return 1;
+        }
+      }
     }
-    const groupUnread = document.querySelector(".wecom-group-unread");
-    if (groupUnread) groupUnread.textContent = unread > 99 ? "99+" : String(unread || "");
+
+    // 2. 备选：从 Discourse Ember discovery 控制器读取
+    try {
+      const owner = getEmberOwner();
+      if (owner) {
+        const discovery = safeLookup(owner, "controller:discovery/topics") || safeLookup(owner, "controller:discovery");
+        if (discovery) {
+          const count = discovery.get?.("newTopicsCount") ?? discovery.newTopicsCount;
+          if (typeof count === "number" && count > 0) return count;
+        }
+      }
+    } catch { /* ignore */ }
+
+    return 0;
+  }
+
+  /** 同步「消息」项新主题角标 */
+  function syncChatBadge() {
+    const badge = document.querySelector('[data-rail-key="chat"] .wecom-rail-badge');
+    if (!badge) return;
+    const newTopics = getNewTopicsCount();
+    if (newTopics > 0) {
+      badge.style.display = "";
+      badge.textContent = newTopics > 99 ? "99+" : String(newTopics);
+      badge.title = `${newTopics} 个新主题，点击刷新列表并回到顶部`;
+    } else {
+      badge.style.display = "none";
+      badge.textContent = "";
+      badge.removeAttribute("title");
+    }
+  }
+
+  let syncChatBadgeTimer = null;
+  function scheduleSyncChatBadge() {
+    if (syncChatBadgeTimer) return;
+    syncChatBadgeTimer = setTimeout(() => {
+      syncChatBadgeTimer = null;
+      syncChatBadge();
+    }, 200);
+  }
+
+  /** 点击左侧「消息」图标：回到顶部 + 刷新会话列表 */
+  function handleChatNavClick() {
+    // 1. 确保停靠栏「消息」项处于 active 态
+    const chatBtn = document.querySelector('.wecom-rail-item[data-rail-key="chat"]');
+    if (chatBtn) {
+      const rail = chatBtn.closest(".wecom-rail");
+      if (rail) {
+        rail.querySelectorAll(".wecom-rail-item").forEach((item) => {
+          if (item.dataset.railKey === "chat") item.classList.add("active");
+          else if (item.dataset.railKey !== "group") item.classList.remove("active");
+        });
+      }
+    }
+
+    // 2. 消息图标微动效反馈
+    const iconEl = chatBtn?.querySelector(".wecom-rail-icon");
+    if (iconEl) {
+      iconEl.classList.remove("wecom-refreshing");
+      void iconEl.offsetWidth;
+      iconEl.classList.add("wecom-refreshing");
+      setTimeout(() => iconEl.classList.remove("wecom-refreshing"), 600);
+    }
+
+    // 3. 会话列表回到顶部（平滑滚动）
+    const listBody = document.querySelector(".wecom-list-body");
+    if (listBody) {
+      listBody.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    // 4. 若存在原生 .show-more.has-topics，触发点击并清理
+    const showMoreEl = findShowMoreElement();
+    if (showMoreEl) {
+      const clickTarget = showMoreEl.querySelector("a, button") || showMoreEl;
+      try { clickTarget.click(); } catch { /* ignore */ }
+      try { showMoreEl.remove(); } catch { /* ignore */ }
+    }
+
+    // 5. 强制重新拉取当前列表数据（刷新列表）
+    const apiPath = IS_V2EX && listState.apiPath === "/notifications"
+      ? "/?tab=all"
+      : (listState.apiPath || listApiForPath(location.pathname, location.search) || "/latest.json");
+    loadList(apiPath, true);
+
+    // 6. 立即更新角标
+    syncChatBadge();
+  }
+
+  function bindRailChatClick(rail) {
+    const chatBtn = rail?.querySelector('[data-rail-key="chat"]');
+    if (!chatBtn || chatBtn.dataset.clickBound === "1") return;
+    chatBtn.dataset.clickBound = "1";
+    chatBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      handleChatNavClick();
+    });
   }
 
   /* ============================== 左侧头像 hover → 原生通知菜单 ============================== */
@@ -4658,7 +6608,39 @@
     const avatar = rail?.querySelector(".wecom-rail-avatar");
     if (!avatar || avatar.dataset.notifBound === "1") return;
     avatar.dataset.notifBound = "1";
-    avatar.removeAttribute("title");
+    avatar.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      cycleRailDisguiseAvatar();
+    });
+    if (IS_V2EX) {
+      avatar.addEventListener("click", (event) => {
+        if (event.altKey) {
+          event.preventDefault();
+          event.stopPropagation();
+          cycleRailDisguiseAvatar();
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        const body = document.querySelector(".wecom-list-body");
+        if (body) body.innerHTML = `<div class="wecom-list-status">正在加载通知…</div>`;
+        loadList("/notifications", true);
+      });
+      const badge = rail.querySelector(".wecom-rail-avatar-badge");
+      badge?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        avatar.click();
+      });
+      return;
+    }
+    avatar.addEventListener("click", (event) => {
+      if (event.altKey) {
+        event.preventDefault();
+        event.stopPropagation();
+        cycleRailDisguiseAvatar();
+      }
+    });
     ensureNotifOutsideClose();
     avatar.addEventListener("pointerdown", stopNotifAvatarPointer);
     avatar.addEventListener("mousedown", stopNotifAvatarPointer);
@@ -4723,16 +6705,29 @@
   /* ============================== 展开栏：站点原生侧栏（原样搬入） ============================== */
 
   let categoriesCache = null; // [{id,name,slug,color}]
+  let categoriesPromise = null;
 
   async function loadCategories() {
-    if (categoriesCache) return categoriesCache;
-    try {
-      const data = await api("/categories.json");
-      categoriesCache = (data.category_list && data.category_list.categories) || [];
-    } catch {
-      categoriesCache = [];
+    if (IS_V2EX) return [];
+    if (categoriesCache && categoriesCache.length) return categoriesCache;
+    const preloaded = getPreloadedCategories();
+    if (preloaded && preloaded.length) {
+      categoriesCache = preloaded;
+      return categoriesCache;
     }
-    return categoriesCache;
+    if (categoriesPromise) return categoriesPromise;
+    categoriesPromise = (async () => {
+      try {
+        const data = await api("/categories.json");
+        categoriesCache = (data.category_list && data.category_list.categories) || [];
+      } catch {
+        categoriesCache = categoriesCache || [];
+      } finally {
+        categoriesPromise = null;
+      }
+      return categoriesCache;
+    })();
+    return categoriesPromise;
   }
 
   function categoryById(id) {
@@ -4745,6 +6740,9 @@
     apiPath: "",
     loadedApiPath: "",
     moreUrl: null,
+    v2exPage: 0,
+    v2exPagePath: "",
+    v2exHasMore: false,
     loading: false,
     requestSerial: 0,
     topics: [],
@@ -4767,6 +6765,20 @@
     { href: "/read", label: "已读" },
     { href: "/bookmarks", label: "书签" },
     { href: "/categories", label: "类别" }
+  ];
+
+  const DEFAULT_V2EX_LIST_NAV = [
+    { href: "/?tab=hot", label: "最热" },
+    { href: "/?tab=all", label: "全部" },
+    { href: "/?tab=tech", label: "技术" },
+    { href: "/?tab=creative", label: "创意" },
+    { href: "/?tab=play", label: "好玩" },
+    { href: "/?tab=apple", label: "Apple" },
+    { href: "/?tab=jobs", label: "酷工作" },
+    { href: "/?tab=deals", label: "交易" },
+    { href: "/?tab=city", label: "城市" },
+    { href: "/?tab=qna", label: "问与答" },
+    { href: "/recent", label: "最新" }
   ];
 
   function applyListNavDom() {
@@ -4794,6 +6806,21 @@
   }
 
   function collectListNavItems() {
+    if (IS_V2EX) {
+      const v2exTabs = document.querySelectorAll("#Tabs a, #Main .cell table a[href^='/?tab=']");
+      if (v2exTabs.length > 0) {
+        const items = [...v2exTabs].map((a) => ({
+          href: a.getAttribute("href") || "#",
+          label: (a.textContent || "").replace(/\s+/g, " ").trim(),
+          active: a.classList.contains("tab_current") || (location.search && location.search.includes(a.getAttribute("href") || ""))
+        })).filter((it) => it.label && it.href && it.href !== "#");
+        if (items.length) return items;
+      }
+      return DEFAULT_V2EX_LIST_NAV.map((it) => ({
+        ...it,
+        active: (location.search && location.search.includes(it.href)) || (it.href === "/?tab=all" && location.pathname === "/" && !location.search)
+      }));
+    }
     const native = document.querySelector("#navigation-bar");
     if (native) {
       const items = [...native.querySelectorAll(":scope > li > a, li > a")].map((a) => ({
@@ -4854,6 +6881,10 @@
   function submitNativeSearch(value) {
     const q = (value || "").trim();
     if (!q) return;
+    if (IS_V2EX) {
+      window.open(`https://www.google.com/search?q=site:v2ex.com/t%20${encodeURIComponent(q)}`, "_blank");
+      return;
+    }
     const input = syncSearchToNative(q) || getNativeSearchInput();
     if (input) {
       try {
@@ -4890,7 +6921,7 @@
 
   /** 站内软跳转：避免中栏自定义链接触发浏览器整页重载 */
   function discourseRouteTo(url) {
-    if (!url) return false;
+    if (IS_V2EX || !url) return false;
     try {
       const mod = discourseRequire("discourse/lib/url");
       const DiscourseURL = mod?.default || mod;
@@ -4945,6 +6976,14 @@
         return;
       }
 
+      const maskTitleBtn = e.target.closest(".wecom-mask-title-toggle");
+      if (maskTitleBtn && panel.contains(maskTitleBtn)) {
+        e.preventDefault();
+        e.stopPropagation();
+        cycleMaskTitleMode();
+        return;
+      }
+
       const btn = e.target.closest(".wecom-list-nav-toggle");
       if (btn && panel.contains(btn)) {
         e.preventDefault();
@@ -4953,15 +6992,82 @@
         return;
       }
 
-      // 会话/置顶：拦截默认跳转，走 Discourse SPA / pushState
+      // 会话/置顶：拦截默认跳转，走即时渲染或 Discourse SPA / pushState
       const link = e.target.closest("a.wecom-conv, .wecom-list-nav a");
       if (!link || !panel.contains(link)) return;
       if (e.defaultPrevented) return;
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
       const href = link.getAttribute("href");
       if (!href || href === "#" || href.startsWith("javascript:")) return;
+
+      const conv = link.closest("a.wecom-conv");
+      if (conv && panel.contains(conv)) {
+        e.preventDefault();
+        e.stopPropagation();
+        try { conv.blur(); } catch { /* ignore */ }
+        const topicId = Number(conv.dataset.topicId || topicIdFromPath(href));
+        if (!topicId) {
+          navigateInApp(href);
+          return;
+        }
+        panel.querySelectorAll(".wecom-conv").forEach((row) => {
+          row.classList.toggle("active", row === conv);
+        });
+        document.documentElement.classList.add("wecom-topic-open");
+        ensureChatPanel();
+        const body = document.querySelector(".wecom-chat-body");
+        const isSame = Number(chatState.topicId) === topicId;
+        const hasRendered = isSame && Boolean(body && body.querySelector(".wecom-msg") && !body.querySelector(".wecom-chat-loading, .wecom-chat-error, .wecom-chat-empty"));
+
+        const target = parseV2exReplyTarget(conv.dataset.targetAnchor || href || location.hash);
+        if (conv.dataset.targetFloor) target.floor = Number(conv.dataset.targetFloor);
+        if (conv.dataset.targetReplyId) target.replyId = Number(conv.dataset.targetReplyId);
+        if (conv.dataset.targetPage) target.page = Number(conv.dataset.targetPage);
+
+        if (isSame && hasRendered && (target.floor || target.replyId || target.anchor)) {
+          const located = locateV2exReply(body, target);
+          if (located) {
+            if (location.pathname + location.hash !== href) {
+              suppressHistoryApply = true;
+              try {
+                history.pushState({}, "", href);
+              } finally {
+                suppressHistoryApply = false;
+              }
+            }
+            return;
+          }
+        }
+
+        if (!hasRendered) {
+          if (body) {
+            delete body.dataset.state;
+            body.innerHTML = `
+              <div class="wecom-chat-loading">
+                <div class="wecom-chat-spinner"></div>
+                <div>加载中…</div>
+              </div>`;
+          }
+          const convTitle = conv.querySelector(".wecom-conv-name")?.textContent || conv.getAttribute("title") || "";
+          const titleEl = document.querySelector(".wecom-chat-title");
+          const subEl = document.querySelector(".wecom-chat-sub");
+          if (titleEl && convTitle) titleEl.textContent = convTitle;
+          if (subEl) subEl.textContent = "加载中…";
+        }
+        if (location.pathname !== href) {
+          suppressHistoryApply = true;
+          try {
+            history.pushState({}, "", href);
+          } finally {
+            suppressHistoryApply = false;
+          }
+        }
+        loadTopic(topicId, !hasRendered, target);
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
+      try { link.blur(); } catch { /* ignore */ }
       navigateInApp(href);
     });
   }
@@ -4977,27 +7083,41 @@
       bindListPanelClicks(panel);
       bindSearchBox(panel);
       ensureMaskAvatarToggle(panel);
+      ensureMaskTitleToggle(panel);
       applyListNavDom();
       return panel;
     }
     panel = document.createElement("div");
     panel.className = "wecom-list-panel";
+    const searchPlaceholder = IS_V2EX ? "搜索 V2EX 话题" : "搜索";
+    const chipsHtml = IS_V2EX
+      ? `
+          <button type="button" class="wecom-chip active" data-chip="all">消息<span class="n"></span></button>
+          <button type="button" class="wecom-chip" data-chip="hot">最热</button>
+          <button type="button" class="wecom-chip" data-chip="tech">技术</button>
+          <button type="button" class="wecom-chip" data-chip="creative">创意</button>
+          <button type="button" class="wecom-chip" data-chip="qna">问答</button>
+        `
+      : `
+          <button type="button" class="wecom-chip active" data-chip="all">消息<span class="n"></span></button>
+          <button type="button" class="wecom-chip" data-chip="unread">未读<span class="n"></span></button>
+        `;
     panel.innerHTML = `
       <div class="wecom-list-search">
-        <form action="/search" method="get" role="search">
+        <form action="${IS_V2EX ? "https://www.google.com/search" : "/search"}" method="get"${IS_V2EX ? ' target="_blank"' : ""} role="search">
           ${ICONS.search}
-          <input type="search" name="q" placeholder="搜索" autocomplete="off" enterkeyhint="search" aria-label="搜索话题">
+          <input type="search" name="q" placeholder="${searchPlaceholder}" autocomplete="off" enterkeyhint="search" aria-label="搜索话题">
         </form>
         <button type="button" class="wecom-list-add" title="打开话题导航" aria-label="打开话题导航">${ICONS.plus}</button>
       </div>
       <div class="wecom-list-header">
         <button type="button" class="wecom-chip-icon wecom-list-nav-toggle" title="筛选" aria-expanded="false">${ICONS.filter}</button>
         <div class="wecom-list-chips">
-          <button type="button" class="wecom-chip active" data-chip="all">消息<span class="n"></span></button>
-          <button type="button" class="wecom-chip" data-chip="unread">未读<span class="n"></span></button>
+          ${chipsHtml}
         </div>
         <div class="wecom-list-actions">
           <button type="button" class="wecom-icon-btn wecom-mask-avatar-toggle" title="伪装头像：关（点击开启）" aria-pressed="false">${ICONS.disguise}</button>
+          <button type="button" class="wecom-icon-btn wecom-mask-title-toggle" title="伪装标题：关（点击开启）" aria-pressed="false">${ICONS.win}</button>
         </div>
       </div>
       <div class="wecom-list-nav" role="navigation" aria-label="话题筛选"></div>
@@ -5007,24 +7127,43 @@
     bindListPanelClicks(panel);
     bindSearchBox(panel);
     ensureMaskAvatarToggle(panel);
+    ensureMaskTitleToggle(panel);
     panel.querySelectorAll(".wecom-chip").forEach((chip) => {
       chip.addEventListener("click", () => {
         panel.querySelectorAll(".wecom-chip").forEach((c) => c.classList.remove("active"));
         chip.classList.add("active");
-        navigateInApp(chip.dataset.chip === "unread" ? "/unseen" : "/latest");
+        if (IS_V2EX) {
+          const chipKey = chip.dataset.chip;
+          if (chipKey === "all" || chipKey === "latest") loadList("/?tab=all", true);
+          else if (chipKey === "hot") loadList("/api/topics/hot.json", true);
+          else loadList(`/?tab=${chipKey}`, true);
+        } else {
+          navigateInApp(chip.dataset.chip === "unread" ? "/unseen" : "/latest");
+        }
       });
     });
-    panel.querySelector(".wecom-list-body").addEventListener("scroll", () => {
-      const body = panel.querySelector(".wecom-list-body");
-      if (body.scrollTop + body.clientHeight >= body.scrollHeight - 120) {
+    let listScrollTimer = null;
+    const listBody = panel.querySelector(".wecom-list-body");
+    listBody.addEventListener("scroll", () => {
+      listBody.classList.add("is-scrolling");
+      clearTimeout(listScrollTimer);
+      listScrollTimer = setTimeout(() => {
+        listBody.classList.remove("is-scrolling");
+      }, 800);
+      if (listBody.scrollTop + listBody.clientHeight >= listBody.scrollHeight - 120) {
         loadMoreList();
       }
-    });
+    }, { passive: true });
     applyListNavDom();
     return panel;
   }
 
   function topicHref(topic) {
+    if (IS_V2EX) {
+      const pagePart = topic.target_page > 1 ? `?p=${topic.target_page}` : "";
+      const anchorPart = topic.target_anchor ? `#${topic.target_anchor}` : "";
+      return `/t/${topic.id}${pagePart}${anchorPart}`;
+    }
     const slug = topic.slug || "topic";
     const lastRead = rememberedPostForTopic(topic);
     if (lastRead > 1) return `/t/${slug}/${topic.id}/${lastRead}`;
@@ -5036,6 +7175,9 @@
       if (isGridMaskTopic(topic)) return disguiseGridAvatar(topic);
       const d = disguiseAvatarForTopic(topic);
       return `<span class="wecom-conv-avatar${d.className ? " " + d.className : ""}" style="background:${d.bg};${d.styleExtra}">${d.html}</span>`;
+    }
+    if (topic.v2ex_avatar) {
+      return `<span class="wecom-conv-avatar"><img src="${escapeHtml(fullAvatarUrl(topic.v2ex_avatar))}" alt="" loading="lazy"></span>`;
     }
     if (isGroupConversation(topic)) {
       return groupAvatarHtml(topic, usersById || {});
@@ -5050,33 +7192,53 @@
   }
 
   function convCategoryTag(topic) {
+    if (topic.node_name) {
+      return `<span class="wecom-conv-tag is-dept">@${escapeHtml(topic.node_name)}</span>`;
+    }
     if (!categoriesCache || !topic.category_id) return "";
     const cat = categoryById(topic.category_id);
     if (!cat) return "";
-    return `<span class="wecom-conv-tag">${escapeHtml(cat.name)}</span>`;
+    const name = cat.name || "";
+    const isExt = /外|ext|资源|闲聊|搞七/i.test(name);
+    const cls = isExt ? "wecom-conv-tag is-ext" : "wecom-conv-tag is-dept";
+    return `<span class="${cls}">@${escapeHtml(name)}</span>`;
   }
 
   function convRowHtml(topic, usersById) {
     const unread = topic.unread > 0 ? topic.unread : (topic.new_posts > 0 ? topic.new_posts : 0);
     const replyCount = Math.max(0, (topic.posts_count || 1) - 1);
-    const summary = topic.last_poster_username
-      ? `[${replyCount}条] ${topic.last_poster_username}`
-      : `${topic.posts_count || 0} 回复`;
-    const tag = convCategoryTag(topic);
+    const rawSummary = topic.notification_text || (topic.last_poster_username
+      ? `${topic.last_poster_username}: ${replyCount > 0 ? `[${replyCount}条回复]` : "发起话题"}`
+      : `${topic.posts_count || 0} 回复`);
+    const maskList = isMaskTitleList();
+    // 列表伪装时：顶部大字为工作流拟真标题，下方的灰色摘要字显示真实话题标题！
+    const title = maskList ? disguiseTitleForTopic(topic) : String(topic.title || "");
+    const summary = maskList ? String(topic.title || rawSummary) : rawSummary;
+    const tag = (maskList || isMaskAvatar()) ? "" : convCategoryTag(topic);
+    const isPinned = !!(topic.pinned || topic.pinned_globally);
+    const targetAttrs = [
+      topic.target_floor ? `data-target-floor="${topic.target_floor}"` : "",
+      topic.target_reply_id ? `data-target-reply-id="${topic.target_reply_id}"` : "",
+      topic.target_anchor ? `data-target-anchor="${escapeHtml(topic.target_anchor)}"` : "",
+      topic.target_page ? `data-target-page="${topic.target_page}"` : ""
+    ].filter(Boolean).join(" ");
     return `
-      <a class="wecom-conv" href="${escapeHtml(topicHref(topic))}" data-topic-id="${topic.id}">
+      <a class="wecom-conv${isPinned ? " is-pinned" : ""}" href="${escapeHtml(topicHref(topic))}" data-topic-id="${topic.id}" ${targetAttrs} title="${escapeHtml(maskList ? `${title} · ${topic.title}` : title)}">
         ${convAvatarHtml(topic, usersById)}
         <span class="wecom-conv-info">
           <span class="wecom-conv-top">
             <span class="wecom-conv-title">
-              <span class="wecom-conv-name">${escapeHtml(topic.title)}</span>
+              <span class="wecom-conv-name">${escapeHtml(title)}</span>
               ${tag}
             </span>
             <span class="wecom-conv-time">${escapeHtml(formatTime(topic.bumped_at || topic.last_activity_at || topic.created_at))}</span>
           </span>
           <span class="wecom-conv-bottom">
             <span class="wecom-conv-msg">${escapeHtml(summary)}</span>
-            ${unread ? `<span class="wecom-conv-badge">${unread > 99 ? "99+" : unread}</span>` : ""}
+            <span class="wecom-conv-icons">
+              ${isPinned ? `<span class="wecom-conv-pin" title="置顶">${ICONS.pin}</span>` : ""}
+              ${unread ? `<span class="wecom-conv-badge">${unread > 99 ? "99+" : unread}</span>` : ""}
+            </span>
           </span>
         </span>
       </a>`;
@@ -5170,8 +7332,147 @@
     syncRail();
   }
 
+  function v2exPageForPath(apiPath) {
+    const path = String(apiPath || "");
+    const match = path.match(/[?&]p=(\d+)/);
+    if (match) return Math.max(0, Number(match[1]) || 0);
+    // V2EX /recent uses p=1 for its first page; other lists start at p=0.
+    return path === "/recent" ? 1 : 0;
+  }
+
+  function v2exPageUrl(apiPath, page) {
+    let base = String(apiPath || "");
+    if (base === "/api/topics/latest.json" || base === "latest" || base === "all") base = "/?tab=all";
+    if (base === "/api/topics/hot.json" || base === "hot") base = "/?tab=hot";
+    if (!base.startsWith("/")) base = `/${base}`;
+    try {
+      const url = new URL(base, location.origin);
+      url.searchParams.set("p", String(page));
+      return `${url.pathname}${url.search}`;
+    } catch {
+      return `${base}${base.includes("?") ? "&" : "?"}p=${page}`;
+    }
+  }
+
+  function v2exNextPageUrl(currentPath) {
+    const path = String(currentPath || "");
+    // The V2EX home page is page 1; /recent is page 2 (not /recent?p=1).
+    if (path === "/api/topics/latest.json" || path === "latest" || path === "all" || path === "/" || path === "/?tab=all") {
+      return "/recent";
+    }
+    if (path === "/recent") return "/recent?p=2";
+    return v2exPageUrl(path, v2exPageForPath(path) + 1);
+  }
+
+  function setV2exPagination(apiPath, count) {
+    listState.v2exPage = v2exPageForPath(apiPath);
+    listState.v2exPagePath = apiPath;
+    listState.v2exHasMore = apiPath !== "/notifications" && count >= 20;
+    listState.moreUrl = listState.v2exHasMore ? v2exNextPageUrl(apiPath) : null;
+  }
+
   async function loadList(apiPath, force) {
     if (!apiPath) return;
+    if (IS_V2EX) {
+      if (!force && listState.loadedApiPath === apiPath && listState.topics.length) {
+        syncListActive();
+        return;
+      }
+      if (!force && listState.loading && listState.apiPath === apiPath) return;
+      const requestSerial = ++listState.requestSerial;
+      listState.loading = true;
+      listState.apiPath = apiPath;
+      if (force || listState.loadedApiPath !== apiPath) {
+        listState.v2exPage = v2exPageForPath(apiPath);
+        listState.v2exPagePath = apiPath;
+        listState.v2exHasMore = false;
+        listState.moreUrl = null;
+      }
+      try {
+        if (!force && document.querySelectorAll("#Main .cell, #Main .item").length > 0 && listState.topics.length === 0) {
+          const domTopics = extractV2exTopicsFromDoc(document);
+          if (domTopics.length > 0) {
+            listState.topics = domTopics;
+            setV2exPagination(apiPath, domTopics.length);
+            renderListRows();
+            syncRail();
+            listState.loadedApiPath = apiPath;
+            return;
+          }
+        }
+        let topics = [];
+        if (apiPath === "/api/topics/hot.json" || apiPath === "hot") {
+          try {
+            const res = await api("/api/topics/hot.json");
+            topics = mapV2exJsonTopics(res);
+          } catch {
+            topics = [];
+          }
+          if (!topics.length) {
+            try {
+              const resp = await fetch("/?tab=hot", { credentials: "same-origin" });
+              if (resp.ok) {
+                const html = await resp.text();
+                const doc = new DOMParser().parseFromString(html, "text/html");
+                topics = extractV2exTopicsFromDoc(doc);
+              }
+            } catch { /* ignore */ }
+          }
+        } else if (apiPath === "/api/topics/latest.json" || apiPath === "latest" || apiPath === "all") {
+          try {
+            const res = await api("/api/topics/latest.json");
+            topics = mapV2exJsonTopics(res);
+          } catch {
+            topics = [];
+          }
+          if (!topics.length) {
+            try {
+              const resp = await fetch("/?tab=all", { credentials: "same-origin" });
+              if (resp.ok) {
+                const html = await resp.text();
+                const doc = new DOMParser().parseFromString(html, "text/html");
+                topics = extractV2exTopicsFromDoc(doc);
+              }
+            } catch { /* ignore */ }
+          }
+        } else {
+          const path = (apiPath && apiPath.startsWith("/")) ? apiPath : ("/" + (apiPath || ""));
+          try {
+            const resp = await fetch(path, { credentials: "same-origin" });
+            if (resp.ok) {
+              const html = await resp.text();
+              const doc = new DOMParser().parseFromString(html, "text/html");
+              topics = path === "/notifications"
+                ? extractV2exNotificationsFromDoc(doc)
+                : extractV2exTopicsFromDoc(doc);
+            }
+          } catch {
+            topics = [];
+          }
+          if (!topics.length && path !== "/notifications") {
+            try {
+              const res = await api("/api/topics/hot.json");
+              topics = mapV2exJsonTopics(res);
+            } catch { /* ignore */ }
+          }
+        }
+        if (requestSerial !== listState.requestSerial) return;
+        listState.topics = topics;
+        setV2exPagination(apiPath, topics.length);
+        renderListRows();
+        syncRail();
+        listState.loadedApiPath = apiPath;
+      } catch (error) {
+        if (requestSerial !== listState.requestSerial) return;
+        console.error("[v2ex-wecom] list load failed", error);
+        const body = document.querySelector(".wecom-list-body");
+        if (body) body.innerHTML = `<div class="wecom-list-status">V2EX 话题加载失败：${escapeHtml(error.message)}</div>`;
+      } finally {
+        if (requestSerial === listState.requestSerial) listState.loading = false;
+      }
+      return;
+    }
+
     // 用列表 API 做缓存键：进帖子时 pathname 会变，但不应重拉会话列表
     if (!force && listState.loadedApiPath === apiPath && listState.topics.length) {
       syncListActive();
@@ -5199,6 +7500,33 @@
 
   async function loadMoreList() {
     if (!listState.moreUrl || listState.loading) return;
+    if (IS_V2EX) {
+      const requestSerial = ++listState.requestSerial;
+      const pageUrl = listState.moreUrl;
+      listState.loading = true;
+      try {
+        const resp = await fetch(pageUrl, { credentials: "same-origin" });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const html = await resp.text();
+        const doc = new DOMParser().parseFromString(html, "text/html");
+        const topics = extractV2exTopicsFromDoc(doc);
+        if (requestSerial !== listState.requestSerial) return;
+        const existing = new Set(listState.topics.map((topic) => topic.id));
+        const fresh = topics.filter((topic) => !existing.has(topic.id));
+        listState.topics = listState.topics.concat(fresh);
+        listState.v2exPagePath = pageUrl;
+        listState.v2exPage = v2exPageForPath(pageUrl);
+        listState.v2exHasMore = topics.length >= 20 && fresh.length > 0;
+        listState.moreUrl = listState.v2exHasMore ? v2exNextPageUrl(pageUrl) : null;
+        renderListRows();
+        syncRail();
+      } catch (error) {
+        if (requestSerial === listState.requestSerial) console.error("[v2ex-wecom] load more topics failed", error);
+      } finally {
+        if (requestSerial === listState.requestSerial) listState.loading = false;
+      }
+      return;
+    }
     const requestSerial = ++listState.requestSerial;
     listState.loading = true;
     try {
@@ -5229,12 +7557,13 @@
     hasNewer: false,
     title: "",
     replyTotal: 0,
+    v2exPage: 1,
+    v2exHasMore: false,
+    v2exLoadingPage: false,
     topicBookmarked: false,
     pinnedPost: 0,
     pinningScroll: false
   };
-
-  let suppressHistoryApply = false;
 
   const composerBridgeState = {
     topicId: null,
@@ -5513,7 +7842,24 @@
     imageViewerTrigger = null;
   }
 
+  function hydrateChatLinks(root) {
+    if (!root) return;
+    const links = root.querySelectorAll("a[href]");
+    links.forEach((a) => {
+      const href = a.getAttribute("href") || "";
+      if (!href || href === "#" || href.startsWith("javascript:") || href.startsWith("#")) return;
+      if (a.classList.contains("wecom-reply-reference")) return;
+      a.setAttribute("target", "_blank");
+      const rel = a.getAttribute("rel") || "";
+      if (!rel.includes("noopener")) {
+        a.setAttribute("rel", rel ? `${rel} noopener noreferrer` : "noopener noreferrer");
+      }
+    });
+  }
+
   function hydrateChatImages(root) {
+    if (!root) return;
+    hydrateChatLinks(root);
     root.querySelectorAll(".wecom-msg-bubble img").forEach((image) => {
       if (!isPreviewableChatImage(image)) return;
       image.tabIndex = 0;
@@ -5623,7 +7969,8 @@
     if (panel && (!panel.querySelector(".wecom-chat-compose") || !panel.querySelector(".wecom-pinned-banner") ||
       !panel.querySelector(".wecom-watermark-panel") || !panel.querySelector(".wecom-image-input") ||
       !panel.querySelector('[data-composer-action="emoji"]') || !panel.querySelector('[data-composer-action="pic"]') ||
-      !panel.querySelector(".wecom-topic-bookmark"))) {
+      !panel.querySelector('[data-composer-action="doc"]') || !panel.querySelector('[data-composer-action="apps"]') ||
+      !panel.querySelector(".wecom-platform-switcher"))) {
       panel.remove();
       panel = null;
     }
@@ -5632,6 +7979,7 @@
         panel.dataset.composeBound = "1";
         bindChatPanelEvents(panel);
       }
+      bindPlatformSwitcher();
       bindWatermarkSettings(panel);
       renderWatermark(getWatermarkSettings());
       wireComposeButton(panel);
@@ -5644,19 +7992,21 @@
     panel.dataset.empty = "1";
     panel.dataset.composeBound = "1";
     const toolKeys = [
-      ["emoji", "表情"],
-      ["cut", "截图"],
-      ["folder", "附件"],
-      ["pic", "发送图片"],
-      ["plus", "更多"]
+      { key: "emoji", label: "表情", icon: ICONS.emoji, arrow: false },
+      { key: "cut", label: "截图", icon: ICONS.cut, arrow: true },
+      { key: "pic", label: "发送图片", icon: ICONS.pic, arrow: true },
+      { key: "doc", label: "微文档", icon: ICONS.docLine, arrow: false },
+      { key: "todo", label: "日程与待办", icon: ICONS.todoLine, arrow: true },
+      { key: "folder", label: "发送文件", icon: ICONS.folder, arrow: true },
+      { key: "phone", label: "语音视频通话", icon: ICONS.phoneReceiver, arrow: true },
+      { key: "apps", label: "工作台", icon: ICONS.appsGrid, arrow: false },
+      { key: "history", label: "聊天记录", icon: ICONS.historySearch, arrow: false }
     ];
-    const toolsHtml = toolKeys.map(([key, label]) => {
+    const toolsHtml = toolKeys.map(({ key, label, icon, arrow }) => {
       const popup = key === "emoji" ? ' aria-haspopup="dialog" aria-expanded="false"' : "";
-      return `<button type="button" class="wecom-icon-btn" data-composer-action="${key}" title="${label}" aria-label="${label}"${popup}>${ICONS[key]}</button>`;
-    }).join("");
-    const headTools = ["cam", "phone", "users", "dots"].map((k) => {
-      const dot = k === "users" ? '<span class="dot"></span>' : "";
-      return `<button type="button" class="wecom-icon-btn" title="${k}" tabindex="-1">${dot}${ICONS[k]}</button>`;
+      const arrowHtml = arrow ? `<svg class="wecom-tool-arrow" width="6" height="4" viewBox="0 0 6 4" fill="currentColor"><path d="M0 0l3 4 3-4z"/></svg>` : "";
+      const extraClass = arrow ? " has-arrow" : "";
+      return `<button type="button" class="wecom-icon-btn${extraClass}" data-composer-action="${key}" title="${label}" aria-label="${label}"${popup}>${icon || ""}${arrowHtml}</button>`;
     }).join("");
     panel.innerHTML = `
       <div class="wecom-chat-header">
@@ -5671,12 +8021,36 @@
             <div class="wecom-chat-sub"></div>
           </div>
         </div>
-        <div class="wecom-chat-tools">${headTools}</div>
-        <div class="wecom-chat-actions">
-          <button type="button" class="wecom-icon-btn wecom-topic-bookmark" title="收藏话题" aria-label="收藏话题" aria-pressed="false">${ICONS.bookmark}</button>
+        <div class="wecom-chat-tools">
+          <button type="button" class="wecom-icon-btn wecom-chat-members-toggle" title="群成员与详情">${ICONS.users}</button>
+          <button type="button" class="wecom-icon-btn wecom-topic-bookmark"${IS_V2EX ? ' style="display:none"' : ""} title="收藏话题" aria-label="收藏话题" aria-pressed="false">${ICONS.bookmark}</button>
           <button type="button" class="wecom-icon-btn wecom-watermark-settings" title="背景水印设置" aria-label="背景水印设置" aria-expanded="false" aria-pressed="false">${ICONS.watermark}</button>
-          <button class="wecom-icon-btn wecom-chat-refresh" title="刷新本话题">${ICONS.refresh}</button>
-          <button class="wecom-icon-btn wecom-chat-native" title="切换原生视图">${ICONS.external}</button>
+          <div class="wecom-platform-switcher">
+            <button type="button" class="wecom-icon-btn wecom-platform-btn" aria-haspopup="true" aria-expanded="false" title="切换社区平台">
+              ${ICONS.platformSwitch}
+            </button>
+            <div class="wecom-platform-dropdown" hidden>
+              <div class="wecom-platform-dropdown-title">选择社区平台</div>
+              <div class="wecom-platform-item${!IS_V2EX ? " is-active" : ""}" data-target-platform="linuxdo">
+                <span class="wecom-platform-item-icon">🐧</span>
+                <div class="wecom-platform-item-info">
+                  <div class="wecom-platform-item-name">Linux DO</div>
+                  <div class="wecom-platform-item-desc">linux.do · 新时代技术社区</div>
+                </div>
+                ${!IS_V2EX ? '<span class="wecom-platform-item-check">✓</span>' : ""}
+              </div>
+              <div class="wecom-platform-item${IS_V2EX ? " is-active" : ""}" data-target-platform="v2ex">
+                <span class="wecom-platform-item-icon">✌️</span>
+                <div class="wecom-platform-item-info">
+                  <div class="wecom-platform-item-name">V2EX</div>
+                  <div class="wecom-platform-item-desc">v2ex.com · 创意工作者社区</div>
+                </div>
+                ${IS_V2EX ? '<span class="wecom-platform-item-check">✓</span>' : ""}
+              </div>
+            </div>
+          </div>
+          <button type="button" class="wecom-icon-btn wecom-chat-scroll-top" title="回到顶部" aria-label="回到顶部">${ICONS.scrollTop}</button>
+          <button type="button" class="wecom-icon-btn wecom-chat-refresh" title="刷新本话题">${ICONS.refresh}</button>
         </div>
       </div>
       <section class="wecom-watermark-panel" aria-label="聊天背景水印" hidden>
@@ -5710,14 +8084,23 @@
       <div class="wecom-chat-body"></div>
       <div class="wecom-composer">
         <div class="wecom-composer-card">
-          <div class="wecom-composer-tools">${toolsHtml}<input class="wecom-image-input" type="file" accept="image/*" multiple aria-label="选择图片"><span class="wecom-compose-status" aria-live="polite"></span><div class="spacer"></div><button type="button" class="wecom-send-btn" disabled>发送</button></div>
+          <div class="wecom-composer-tools">
+            ${toolsHtml}
+            <button type="button" class="wecom-tool-quick-meet" title="快速会议">${ICONS.bolt}<span>快速会议</span></button>
+            <input class="wecom-image-input" type="file" accept="image/*" multiple aria-label="选择图片">
+            <span class="wecom-compose-status" aria-live="polite"></span>
+          </div>
           <div class="wecom-reply-target" hidden><span></span><button type="button" class="wecom-reply-cancel" aria-label="取消指定回复">×</button></div>
           <textarea class="wecom-chat-compose" data-wecom-compose="1" rows="3" aria-label="消息" placeholder="发送消息"></textarea>
+          <div class="wecom-composer-bottom">
+            <button type="button" class="wecom-send-btn" disabled>发送(S)</button>
+          </div>
         </div>
       </div>
     `;
     document.body.appendChild(panel);
     bindChatPanelEvents(panel);
+    bindPlatformSwitcher();
     bindUserCardEvents(panel);
     bindWatermarkSettings(panel);
     renderWatermark(getWatermarkSettings());
@@ -5755,6 +8138,27 @@
     return `<div class="wecom-member-row">${memberAvatarHtml(user)}<span class="wecom-member-name">${escapeHtml(name)}</span>${roleHtml}</div>`;
   }
 
+  function isMembersPanelOpen() {
+    try {
+      const saved = localStorage.getItem("linuxdo-wecom-members-open");
+      return saved !== "0"; // 默认展示，用户主动收起后保持收起
+    } catch {
+      return true;
+    }
+  }
+
+  function setMembersPanelOpen(open) {
+    try {
+      localStorage.setItem("linuxdo-wecom-members-open", open ? "1" : "0");
+    } catch {}
+    document.documentElement.classList.toggle("wecom-members-open", open);
+    const btn = document.querySelector(".wecom-chat-members-toggle");
+    if (btn) {
+      btn.classList.toggle("active", open);
+      btn.setAttribute("aria-pressed", open ? "true" : "false");
+    }
+  }
+
   function ensureMemberPanel() {
     let panel = document.querySelector(".wecom-member-panel");
     if (panel) {
@@ -5764,27 +8168,89 @@
     panel = document.createElement("aside");
     panel.className = "wecom-member-panel";
     panel.innerHTML = `
+      <div class="wecom-member-announcement">
+        <div class="wecom-announcement-header">
+          <span>群公告</span>
+          <span class="wecom-arrow-icon">${ICONS.chevronRight}</span>
+        </div>
+        <div class="wecom-announcement-preview">暂无群公告内容</div>
+      </div>
       <div class="wecom-member-header">
         <span>群成员 · <b class="wecom-member-count">0</b></span>
-        <span class="wecom-member-actions">${ICONS.mail}${ICONS.dots}</span>
+        <span class="wecom-member-actions">
+          <button type="button" class="wecom-icon-btn" title="邮件">${ICONS.mail}</button>
+          <button type="button" class="wecom-icon-btn" title="更多">${ICONS.dots}</button>
+        </span>
+      </div>
+      <div class="wecom-member-category-bar">
+        <span class="wecom-member-cat-tag">技术交流</span>
+        <span class="wecom-arrow-icon">${ICONS.chevronRight}</span>
       </div>
       <div class="wecom-member-body"></div>`;
     document.body.appendChild(panel);
     bindUserCardEvents(panel);
+    panel.addEventListener("click", (event) => {
+      const link = event.target.closest("a[href]");
+      if (link && panel.contains(link) && isPlainClick(event)) {
+        const href = link.getAttribute("href") || "";
+        if (href && href !== "#" && !href.startsWith("javascript:")) {
+          consumeClick(event);
+          link.setAttribute("target", "_blank");
+          if (!link.getAttribute("rel")?.includes("noopener")) {
+            link.setAttribute("rel", "noopener noreferrer");
+          }
+          let fullUrl = href;
+          try { fullUrl = new URL(href, location.origin).href; } catch { /* ignore */ }
+          window.open(fullUrl, "_blank", "noopener,noreferrer");
+        }
+      }
+    });
     return panel;
   }
 
   function renderMemberPanel(data, posts) {
     const panel = ensureMemberPanel();
+    hydrateChatLinks(panel);
     const users = topicParticipants(data, posts);
     const owner = posts.find((post) => post.post_number === 1) || users[0] || null;
     const others = users.filter((user) => normalizeUsername(user.username) !== normalizeUsername(owner?.username));
     const total = data.participant_count || users.length;
-    panel.querySelector(".wecom-member-count").textContent = String(total);
-    panel.querySelector(".wecom-member-body").innerHTML =
-      `<div class="wecom-member-section"><div class="wecom-member-section-title">群主/管理员</div>${owner ? memberRowHtml(owner, "群主") : ""}</div>` +
-      `<div class="wecom-member-section"><div class="wecom-member-section-title">群成员</div>${others.map((user) => memberRowHtml(user, "")).join("")}</div>`;
-    document.documentElement.classList.add("wecom-members-open");
+    const countEl = panel.querySelector(".wecom-member-count");
+    if (countEl) countEl.textContent = String(total);
+
+    // 群公告 preview
+    const firstPost = posts.find((post) => post.post_number === 1);
+    const previewEl = panel.querySelector(".wecom-announcement-preview");
+    if (previewEl) {
+      if (isMaskTitleDetail()) {
+        previewEl.textContent = "本群用于项目日常交流及工单跟进，请遵守信息安全规范。";
+      } else if (firstPost) {
+        const text = String(firstPost.cooked || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+        previewEl.textContent = text.slice(0, 80) || "暂无群公告内容";
+      } else {
+        previewEl.textContent = "暂无群公告内容";
+      }
+    }
+
+    // 分类 tag
+    const catBar = panel.querySelector(".wecom-member-cat-tag");
+    if (catBar) {
+      if (isMaskTitleDetail()) {
+        catBar.textContent = "项目沟通";
+      } else {
+        const cat = data?.category_id ? categoryById(data.category_id) : null;
+        catBar.textContent = cat ? cat.name : (IS_V2EX && data?.node_name ? (data.node_title || data.node_name) : (data?.title ? data.title.slice(0, 10) : "技术交流"));
+      }
+    }
+
+    const body = panel.querySelector(".wecom-member-body");
+    if (body) {
+      body.innerHTML =
+        `<div class="wecom-member-section"><div class="wecom-member-section-title">群主/管理员</div>${owner ? memberRowHtml(owner, "群主") : ""}</div>` +
+        `<div class="wecom-member-section"><div class="wecom-member-section-title">群成员</div>${others.map((user) => memberRowHtml(user, "")).join("")}</div>`;
+    }
+    hydrateChatLinks(panel);
+    setMembersPanelOpen(isMembersPanelOpen());
   }
 
   function renderPinnedBanner(posts) {
@@ -5837,6 +8303,11 @@
       button.addEventListener("pointerdown", stopComposerPointer, true);
       button.addEventListener("mousedown", stopComposerPointer, true);
       button.addEventListener("click", handleComposerToolClick);
+    });
+    panel.querySelector(".wecom-tool-quick-meet")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      insertComposerInlineText("【快速会议】已发起会议，欢迎加入沟通\n");
     });
     updateComposeSendState();
   }
@@ -5900,25 +8371,158 @@
     return true;
   }
 
+  function syncWinMaxState() {
+    const btn = document.querySelector(".wecom-win-max");
+    if (!btn) return;
+    const isFs = !!document.fullscreenElement;
+    btn.innerHTML = isFs ? ICONS.winRestore : ICONS.winMax;
+    btn.title = isFs ? "退出全屏" : "全屏/窗口化";
+    btn.setAttribute("aria-label", btn.title);
+  }
+
+  function bindPlatformSwitcher() {
+    if (window.__wecomPlatformSwitcherBound) return;
+    window.__wecomPlatformSwitcherBound = true;
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest(".wecom-platform-switcher")) {
+        document.querySelectorAll(".wecom-platform-switcher.is-open").forEach((switcher) => {
+          switcher.classList.remove("is-open");
+          const dropdown = switcher.querySelector(".wecom-platform-dropdown");
+          if (dropdown) dropdown.hidden = true;
+          const btn = switcher.querySelector(".wecom-platform-btn");
+          if (btn) btn.setAttribute("aria-expanded", "false");
+        });
+      }
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        document.querySelectorAll(".wecom-platform-switcher.is-open").forEach((switcher) => {
+          switcher.classList.remove("is-open");
+          const dropdown = switcher.querySelector(".wecom-platform-dropdown");
+          if (dropdown) dropdown.hidden = true;
+          const btn = switcher.querySelector(".wecom-platform-btn");
+          if (btn) btn.setAttribute("aria-expanded", "false");
+        });
+      }
+    });
+  }
+
   function handleChatHeaderClick(event, panel) {
+    if (event.target.closest(".wecom-platform-btn")) {
+      consumeClick(event);
+      const switcher = event.target.closest(".wecom-platform-switcher");
+      if (switcher) {
+        const dropdown = switcher.querySelector(".wecom-platform-dropdown");
+        const isOpen = switcher.classList.toggle("is-open");
+        if (dropdown) dropdown.hidden = !isOpen;
+        const btn = switcher.querySelector(".wecom-platform-btn");
+        if (btn) btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      }
+      return true;
+    }
+    if (event.target.closest(".wecom-platform-item")) {
+      consumeClick(event);
+      const item = event.target.closest(".wecom-platform-item");
+      const target = item?.dataset?.targetPlatform;
+      const switcher = event.target.closest(".wecom-platform-switcher");
+      if (switcher) {
+        switcher.classList.remove("is-open");
+        const dropdown = switcher.querySelector(".wecom-platform-dropdown");
+        if (dropdown) dropdown.hidden = true;
+        const btn = switcher.querySelector(".wecom-platform-btn");
+        if (btn) btn.setAttribute("aria-expanded", "false");
+      }
+      if (target === "linuxdo" && IS_V2EX) {
+        window.location.href = "https://linux.do/";
+      } else if (target === "v2ex" && !IS_V2EX) {
+        window.location.href = "https://www.v2ex.com/";
+      }
+      return true;
+    }
+    if (event.target.closest(".wecom-chat-scroll-top")) {
+      consumeClick(event);
+      const scrollContainer = panel?.querySelector(".wecom-chat-body, .wecom-chat-messages") || document.querySelector(".wecom-chat-body, .wecom-chat-messages");
+      if (scrollContainer) {
+        scrollContainer.scrollTo({ top: 0, behavior: "smooth" });
+        if (scrollContainer.scrollTop <= 30 && chatState.hasOlder && !chatState.loading) {
+          loadOlderPosts();
+        }
+      }
+      return true;
+    }
+    if (event.target.closest(".wecom-chat-members-toggle")) {
+      consumeClick(event);
+      const next = !document.documentElement.classList.contains("wecom-members-open");
+      setMembersPanelOpen(next);
+      return true;
+    }
+    if (event.target.closest(".wecom-win-min")) {
+      consumeClick(event);
+      document.documentElement.classList.toggle("wecom-zen-mode");
+      return true;
+    }
+    if (event.target.closest(".wecom-win-max")) {
+      consumeClick(event);
+      if (!document.fullscreenElement) {
+        try { document.documentElement.requestFullscreen(); } catch { /* ignore */ }
+      } else {
+        try { document.exitFullscreen(); } catch { /* ignore */ }
+      }
+      setTimeout(syncWinMaxState, 50);
+      return true;
+    }
+    if (event.target.closest(".wecom-win-close")) {
+      consumeClick(event);
+      setViewMode("native");
+      location.reload();
+      return true;
+    }
     if (event.target.closest(".wecom-topic-bookmark")) {
       consumeClick(event);
       openOriginalTopicBookmark();
       return true;
     }
     if (event.target.closest(".wecom-chat-refresh")) {
-      if (chatState.topicId) loadTopic(chatState.topicId, true);
+      if (chatState.topicId) {
+        rateLimitCooldownUntil = 0;
+        topicDataCache.delete(Number(chatState.topicId));
+        loadTopic(chatState.topicId, true);
+      }
       return true;
     }
     if (event.target.closest(".wecom-chat-native")) {
-      setViewMode("native");
-      location.reload();
+      openNativeTopicView();
+      return true;
+    }
+    if (event.target.closest(".wecom-chat-error-popup")) {
+      consumeClick(event);
+      openNativePopup();
+      return true;
+    }
+    if (event.target.closest(".wecom-chat-error-native")) {
+      consumeClick(event);
+      openNativeTopicView();
+      return true;
+    }
+    if (event.target.closest(".wecom-chat-error-retry")) {
+      consumeClick(event);
+      const tid = chatState.topicId || topicIdFromPath(location.pathname);
+      if (tid) {
+        rateLimitCooldownUntil = 0;
+        topicDataCache.delete(Number(tid));
+        loadTopic(tid, true);
+      }
       return true;
     }
     const chip = event.target.closest("a.wecom-chat-chip");
     if (!chip || !panel.contains(chip) || !isPlainClick(event)) return false;
     consumeClick(event);
-    navigateInApp(chip.getAttribute("href"));
+    const href = chip.getAttribute("href") || "";
+    if (href) {
+      let fullUrl = href;
+      try { fullUrl = new URL(href, location.origin).href; } catch { /* ignore */ }
+      window.open(fullUrl, "_blank", "noopener,noreferrer");
+    }
     return true;
   }
 
@@ -5931,12 +8535,39 @@
     if (action === "like") return toggleLike(Number(message.dataset.postId), button);
     consumeClick(event);
     if (action === "reply") return replyToPost(Number(message.dataset.postNumber));
+    if (action === "boost") return openBoostPopover(message, button);
     if (action === "bookmark") return openOriginalPostBookmark(message).catch(reportPostBookmarkError);
     if (action === "edit") return openEditPost(message, button);
   }
 
   function handleChatPanelClick(event, panel) {
     if (handleReplyReferenceClick(event, panel)) return;
+    const anchorLink = event.target.closest(".wecom-msg-body a[href*='#reply'], .wecom-msg-body a[href*='#r_'], .wecom-msg-body a[href^='#']");
+    if (anchorLink && panel.contains(anchorLink) && isPlainClick(event)) {
+      const href = anchorLink.getAttribute("href") || "";
+      const target = parseV2exReplyTarget(href);
+      if (target.floor || target.replyId || target.anchor) {
+        const matchTopic = href.match(/\/t\/(\d+)/);
+        const targetTopicId = matchTopic ? Number(matchTopic[1]) : chatState.topicId;
+        if (!matchTopic || targetTopicId === Number(chatState.topicId)) {
+          const body = panel.querySelector(".wecom-chat-body");
+          if (body && locateV2exReply(body, target)) {
+            consumeClick(event);
+            return;
+          }
+        }
+      }
+    }
+    const delBoostBtn = event.target.closest(".wecom-boost-delete");
+    if (delBoostBtn && panel.contains(delBoostBtn)) {
+      consumeClick(event);
+      const boostId = Number(delBoostBtn.dataset.boostId);
+      const message = delBoostBtn.closest(".wecom-msg");
+      deletePostBoost(boostId, message).catch((err) => {
+        alert(`删除 Boost 失败: ${err.message}`);
+      });
+      return;
+    }
     const previewImage = event.target.closest(".wecom-msg-bubble img");
     if (isPreviewableChatImage(previewImage)) {
       consumeClick(event);
@@ -5944,7 +8575,35 @@
       return;
     }
     if (handleChatHeaderClick(event, panel)) return;
-    handleMessageToolClick(event, panel);
+    if (handleMessageToolClick(event, panel)) return;
+
+    // 详情所有链接都 _blank 方式打开：拦截聊天面板中所有常规链接
+    const generalLink = event.target.closest("a[href]");
+    if (generalLink && panel.contains(generalLink) && isPlainClick(event)) {
+      if (generalLink.classList.contains("wecom-reply-reference")) return;
+      const href = generalLink.getAttribute("href") || "";
+      if (href && href !== "#" && !href.startsWith("javascript:")) {
+        if (href.startsWith("#")) {
+          try {
+            const targetEl = panel.querySelector(href);
+            if (targetEl) {
+              consumeClick(event);
+              targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
+              return;
+            }
+          } catch { /* ignore */ }
+          return;
+        }
+        consumeClick(event);
+        generalLink.setAttribute("target", "_blank");
+        if (!generalLink.getAttribute("rel")?.includes("noopener")) {
+          generalLink.setAttribute("rel", "noopener noreferrer");
+        }
+        let fullUrl = href;
+        try { fullUrl = new URL(href, location.origin).href; } catch { /* ignore */ }
+        window.open(fullUrl, "_blank", "noopener,noreferrer");
+      }
+    }
   }
 
   function handleChatImageKeydown(event) {
@@ -5966,7 +8625,65 @@
   function bindChatPanelEvents(panel) {
     panel.addEventListener("click", (event) => handleChatPanelClick(event, panel));
     panel.addEventListener("keydown", handleChatImageKeydown);
-    panel.querySelector(".wecom-chat-body").addEventListener("scroll", () => handleChatBodyScroll(panel));
+    document.removeEventListener("fullscreenchange", syncWinMaxState);
+    document.addEventListener("fullscreenchange", syncWinMaxState);
+    let chatScrollTimer = null;
+    let chatBodyScrollThrottleTimer = null;
+    const chatBody = panel.querySelector(".wecom-chat-body");
+    chatBody.addEventListener("scroll", () => {
+      chatBody.classList.add("is-scrolling");
+      clearTimeout(chatScrollTimer);
+      chatScrollTimer = setTimeout(() => {
+        chatBody.classList.remove("is-scrolling");
+      }, 800);
+      if (!chatBodyScrollThrottleTimer) {
+        chatBodyScrollThrottleTimer = setTimeout(() => {
+          chatBodyScrollThrottleTimer = null;
+          handleChatBodyScroll(panel);
+        }, 120);
+      }
+    }, { passive: true });
+  }
+
+  function refreshMaskedChatTitle() {
+    if (!chatState.topicId) return;
+    const maskDetail = isMaskTitleDetail();
+    const displayTitle = maskDetail ? disguiseTitleForTopic({ id: chatState.topicId, title: chatState.title }) : chatState.title;
+    const titleEl = document.querySelector(".wecom-chat-title");
+    if (titleEl) titleEl.textContent = displayTitle;
+    const sub = document.querySelector(".wecom-chat-sub");
+    if (sub) {
+      if (maskDetail) {
+        sub.textContent = `企业内部群 · ${chatState.replyTotal || 0} 条消息`;
+      } else {
+        const cat = chatState.categoryId ? categoryById(chatState.categoryId) : null;
+        sub.textContent = cat ? `归属于 ${cat.name} · ${chatState.replyTotal || 0} 条回复` : `归属于 linux.do · ${chatState.replyTotal || 0} 条回复`;
+      }
+    }
+    const chipsBox = document.querySelector(".wecom-chat-chips");
+    if (chipsBox) {
+      if (maskDetail) {
+        chipsBox.innerHTML = "";
+      } else if (chatState.categoryId) {
+        const cat = categoryById(chatState.categoryId);
+        if (cat) {
+          chipsBox.innerHTML = `<a class="wecom-chat-chip" target="_blank" rel="noopener noreferrer" href="/c/${escapeHtml(cat.slug)}/${cat.id}"><span class="wecom-nav2-cat-dot" style="background:#${escapeHtml(cat.color || "8F959E")}"></span>${escapeHtml(cat.name)}</a>`;
+        }
+      }
+    }
+    document.title = " ";
+    enforceBlankTitle();
+    setComposerPlaceholder(displayTitle);
+
+    const memberPanel = document.querySelector(".wecom-member-panel");
+    if (memberPanel) {
+      const previewEl = memberPanel.querySelector(".wecom-announcement-preview");
+      const catBar = memberPanel.querySelector(".wecom-member-cat-tag");
+      if (maskDetail) {
+        if (previewEl) previewEl.textContent = "本群用于项目日常交流及工单跟进，请遵守信息安全规范。";
+        if (catBar) catBar.textContent = "项目沟通";
+      }
+    }
   }
 
   function renderChatEmpty() {
@@ -6006,15 +8723,118 @@
       </div>`;
   }
 
-  function renderChatError(message) {
+  function getTopicNativePath() {
+    const tid = chatState.topicId || topicIdFromPath(location.pathname);
+    if (IS_V2EX) {
+      return tid ? `/t/${tid}` : (location.pathname || "/");
+    }
+    const slug = chatState.slug || "topic";
+    const postNumber = chatState.renderedFirstIdx >= 0 ? openingPostNumber(tid, null) : 0;
+    let target = tid ? `/t/${slug}/${tid}` : location.pathname;
+    if (tid && postNumber > 1) {
+      target = `/t/${slug}/${tid}/${postNumber}`;
+    }
+    return target;
+  }
+
+  function openNativePopup(url) {
+    const target = url || getTopicNativePath();
+    const popupUrl = new URL(target, location.origin);
+    popupUrl.searchParams.set("wecom_view", "native");
+    const w = 780;
+    const h = 760;
+    const left = Math.max(0, Math.round((window.screenX || 0) + (window.outerWidth - w) / 2));
+    const top = Math.max(0, Math.round((window.screenY || 0) + (window.outerHeight - h) / 2));
+    const features = `width=${w},height=${h},left=${left},top=${top},menubar=no,toolbar=no,location=yes,status=no,resizable=yes,scrollbars=yes`;
+    let win = null;
+    try {
+      win = window.open(popupUrl.toString(), "wecom_native_cf_popup", features);
+    } catch { /* popup blocked */ }
+    if (!win) {
+      win = window.open(popupUrl.toString(), "_blank");
+    }
+    if (win) {
+      try { win.focus(); } catch { /* ignore */ }
+      const checkTimer = setInterval(() => {
+        try {
+          if (!win || win.closed) {
+            clearInterval(checkTimer);
+            const tid = chatState.topicId || topicIdFromPath(location.pathname);
+            if (tid) {
+              rateLimitCooldownUntil = 0;
+              topicDataCache.delete(Number(tid));
+              loadTopic(tid, true);
+            }
+          }
+        } catch {
+          clearInterval(checkTimer);
+        }
+      }, 1000);
+    }
+    return win;
+  }
+
+  function openNativeTopicView() {
+    setViewMode("native");
+    const target = getTopicNativePath();
+    if (location.pathname === target || location.href === target) {
+      location.reload();
+    } else {
+      location.href = target;
+    }
+  }
+
+  function renderChatError(err) {
     const body = document.querySelector(".wecom-chat-body");
     if (!body) return;
+    const msg = err instanceof Error ? err.message : String(err || "加载失败");
+    const isRateLimitOrCf = (err && (err.status === 429 || err.isRateLimit || err.isCloudflare)) ||
+      /429|cloudflare|人机验证|频率/i.test(msg);
+
+    let titleText = "话题加载失败";
+    let descText = `${msg}，可能无权限或已被删除`;
+    if (isRateLimitOrCf) {
+      titleText = "触发访问频率限制（HTTP 429）或 Cloudflare 盾";
+      descText = "站点开启了人机验证或访问频率限制。请点击下方按钮弹出原生窗口完成验证，验证后会自动重试加载。";
+    }
+
     body.innerHTML = `
-      <div class="wecom-chat-error">
+      <div class="wecom-chat-error" data-error-type="${isRateLimitOrCf ? "rate-limit" : "generic"}">
         ${ICONS.chat}
-        <div>${escapeHtml(message)}</div>
-        <button class="wecom-empty-btn" onclick="location.reload()">打开原生页面</button>
+        <div style="font-weight:600;font-size:15px;color:var(--wc-text);margin-bottom:4px;">${escapeHtml(titleText)}</div>
+        <div style="max-width:420px;line-height:1.5;color:var(--wc-text-3);margin-bottom:12px;">${escapeHtml(descText)}</div>
+        <div class="wecom-chat-error-actions">
+          <button type="button" class="wecom-chat-error-btn primary wecom-chat-error-popup">弹出原生窗口（过盾）</button>
+          <button type="button" class="wecom-chat-error-btn wecom-chat-error-retry">重试加载</button>
+          <button type="button" class="wecom-chat-error-btn wecom-chat-error-native" title="切换全屏原生页面">切为原生页面</button>
+        </div>
       </div>`;
+
+    const popupBtn = body.querySelector(".wecom-chat-error-popup");
+    if (popupBtn) {
+      popupBtn.addEventListener("click", () => {
+        openNativePopup();
+      });
+    }
+
+    const nativeBtn = body.querySelector(".wecom-chat-error-native");
+    if (nativeBtn) {
+      nativeBtn.addEventListener("click", () => {
+        openNativeTopicView();
+      });
+    }
+
+    const retryBtn = body.querySelector(".wecom-chat-error-retry");
+    if (retryBtn) {
+      retryBtn.addEventListener("click", () => {
+        const tid = chatState.topicId || topicIdFromPath(location.pathname);
+        if (tid) {
+          rateLimitCooldownUntil = 0;
+          topicDataCache.delete(Number(tid));
+          loadTopic(tid, true);
+        }
+      });
+    }
   }
 
   const likedPosts = new Set();
@@ -6071,15 +8891,16 @@
   }
 
   function replyReferenceHtml(post) {
+    // 若正文中已包含原生引用块，不再重复渲染引用
+    if (post?.cooked && (post.cooked.includes('class="quote') || post.cooked.includes('<aside class="quote') || post.cooked.includes('<blockquote>'))) {
+      return "";
+    }
     const info = replyReferenceInfo(post);
     if (!info) return "";
-    const label = `回复 ${info.name} · #${info.number}`;
-    const title = `${label}：${info.preview}`;
     return `<a class="wecom-reply-reference" href="${escapeHtml(info.href)}"` +
-      ` data-reply-post-number="${info.number}" title="${escapeHtml(title)}"` +
-      ` aria-label="${escapeHtml(title)}">${ICONS.reply}` +
-      `<span class="wecom-reply-reference-label">${escapeHtml(label)}</span>` +
-      `<span class="wecom-reply-reference-preview">${escapeHtml(info.preview)}</span></a>`;
+      ` data-reply-post-number="${info.number}" title="跳转到原消息 #${info.number}">` +
+      `<div class="wecom-reply-author">${escapeHtml(info.name)}:</div>` +
+      `<div class="wecom-reply-preview">${escapeHtml(info.preview)}</div></a>`;
   }
 
   function syncRenderedReplyReferences(posts, body) {
@@ -6094,7 +8915,7 @@
       } else if (current) {
         current.outerHTML = html;
       } else {
-        message.querySelector(".wecom-msg-bubble")?.insertAdjacentHTML("beforebegin", html);
+        message.querySelector(".wecom-msg-bubble")?.insertAdjacentHTML("afterbegin", html);
       }
     }
   }
@@ -6115,6 +8936,311 @@
     return true;
   }
 
+  function parseV2exReplyTarget(urlOrHash) {
+    const res = { floor: 0, replyId: 0, anchor: "", page: 1 };
+    if (!urlOrHash) return res;
+    const str = String(urlOrHash);
+    const pMatch = str.match(/[?&]p=(\d+)/);
+    if (pMatch) res.page = Number(pMatch[1]) || 1;
+    const hashIdx = str.indexOf("#");
+    const anchor = hashIdx !== -1 ? str.slice(hashIdx + 1) : str;
+    res.anchor = anchor;
+    const floorMatch = anchor.match(/^reply(\d+)/i) || anchor.match(/(?:^|[?&#])reply(\d+)/i);
+    if (floorMatch) {
+      res.floor = Number(floorMatch[1]);
+      if (!pMatch && res.floor > 100) {
+        res.page = Math.floor((res.floor - 1) / 100) + 1;
+      }
+    }
+    const rMatch = anchor.match(/^r_(\d+)/i) || anchor.match(/(?:^|[?&#])r_(\d+)/i);
+    if (rMatch) res.replyId = Number(rMatch[1]);
+    return res;
+  }
+
+  function locateV2exReply(body, target) {
+    if (!body || !target) return false;
+    let el = null;
+    if (target.floor) {
+      el = body.querySelector(`.wecom-msg[data-floor="${target.floor}"]`);
+      if (!el) {
+        el = body.querySelector(`.wecom-msg[data-post-number="${target.floor + 1}"]`);
+      }
+    }
+    if (!el && target.replyId) {
+      el = body.querySelector(`.wecom-msg[data-post-id="${target.replyId}"]`);
+    }
+    if (!el && target.anchor) {
+      const fMatch = target.anchor.match(/reply(\d+)/i);
+      if (fMatch) {
+        const f = Number(fMatch[1]);
+        el = body.querySelector(`.wecom-msg[data-floor="${f}"], .wecom-msg[data-post-number="${f + 1}"]`);
+      }
+      const rMatch = target.anchor.match(/r_(\d+)/i);
+      if (!el && rMatch) {
+        el = body.querySelector(`.wecom-msg[data-post-id="${rMatch[1]}"]`);
+      }
+    }
+    if (!el) return false;
+
+    clearTimeout(replyHighlightTimer);
+    highlightedReplyMessage?.classList.remove("is-reply-target");
+    highlightedReplyMessage = el;
+    el.classList.add("is-reply-target");
+    el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    replyHighlightTimer = setTimeout(() => {
+      el.classList.remove("is-reply-target");
+      if (highlightedReplyMessage === el) highlightedReplyMessage = null;
+    }, REPLY_HIGHLIGHT_DURATION_MS);
+    return true;
+  }
+
+  function keepChatAtV2exReply(body, target) {
+    if (!body || !target) return;
+    const pin = () => locateV2exReply(body, target);
+    pin();
+    const pending = [...body.querySelectorAll("img")].filter((image) => !image.complete);
+    pending.forEach((image) => {
+      image.addEventListener("load", pin, { once: true });
+      image.addEventListener("error", pin, { once: true });
+    });
+    [50, 160, 350, 700, 1200].forEach((delay) => setTimeout(pin, delay));
+  }
+
+  function formatBoostCooked(cooked, raw) {
+    let content = (cooked || "").trim() || escapeHtml(raw || "");
+    if (!content) return "";
+    // 移除外层 <p> 标签并清除 Discourse 自动赋予的 only-emoji 大图类名，防止把 boost 气泡撑大撑高
+    content = content
+      .replace(/^<p\b[^>]*>/i, "")
+      .replace(/<\/p>$/i, "")
+      .replace(/\bonly-emoji\b/g, "");
+    return content;
+  }
+
+  function boostsHtml(post) {
+    if (!isBoostEnabled()) return "";
+    const boosts = Array.isArray(post?.boosts) ? post.boosts : [];
+    if (!boosts.length) return "";
+    const myUsername = getCurrentUsername();
+    const items = boosts.map((b) => {
+      const u = b.user || {};
+      const uname = userDisplayName(u, u.username || "");
+      const avatarSrc = u.avatar_template ? fullAvatarUrl(u.avatar_template) : "";
+      const avatarHtml = avatarSrc
+        ? `<img class="wecom-boost-avatar" src="${escapeHtml(avatarSrc)}" alt="" loading="lazy">`
+        : `<span class="wecom-boost-avatar-text">${escapeHtml(avatarLetter(uname || "?"))}</span>`;
+      const canDel = Boolean(b.can_delete || (myUsername && u.username === myUsername));
+      const delBtn = canDel
+        ? `<button type="button" class="wecom-boost-delete" data-boost-id="${b.id}" title="删除此 Boost" aria-label="删除此 Boost">×</button>`
+        : "";
+      return `
+        <div class="wecom-boost-item" data-boost-id="${b.id || ""}" title="${escapeHtml(uname)}: ${escapeHtml(b.raw || "")}">
+          ${avatarHtml}
+          <div class="wecom-boost-cooked">${formatBoostCooked(b.cooked, b.raw)}</div>
+          ${delBtn}
+        </div>`;
+    }).join("");
+    return `<div class="wecom-msg-boosts">${items}</div>`;
+  }
+
+  let activeBoostPopover = null;
+  let activeBoostDocClickHandler = null;
+
+  function closeBoostPopover() {
+    if (activeBoostDocClickHandler) {
+      document.removeEventListener("mousedown", activeBoostDocClickHandler);
+      activeBoostDocClickHandler = null;
+    }
+    if (activeBoostPopover) {
+      activeBoostPopover.remove();
+      activeBoostPopover = null;
+    }
+    document.querySelectorAll(".wecom-msg.has-boost-popover").forEach((el) => {
+      el.classList.remove("has-boost-popover");
+    });
+  }
+
+  function openBoostPopover(msgEl, anchorBtn) {
+    closeBoostPopover();
+    const postId = Number(msgEl?.dataset.postId);
+    const postNumber = Number(msgEl?.dataset.postNumber);
+    if (!postId) return;
+
+    msgEl?.classList.add("has-boost-popover");
+
+    const popover = document.createElement("div");
+    popover.className = "wecom-boost-popover";
+    popover.innerHTML = `
+      <div class="wecom-boost-popover-head">
+        <span>${ICONS.boost} 添加 Boost</span>
+        <button type="button" class="wecom-boost-popover-close" aria-label="关闭">×</button>
+      </div>
+      <div class="wecom-boost-presets">
+        <button type="button" class="wecom-boost-preset-btn" data-preset="🚀">🚀</button>
+        <button type="button" class="wecom-boost-preset-btn" data-preset="👍">👍</button>
+        <button type="button" class="wecom-boost-preset-btn" data-preset="❤️">❤️</button>
+        <button type="button" class="wecom-boost-preset-btn" data-preset="🎉">🎉</button>
+        <button type="button" class="wecom-boost-preset-btn" data-preset="💯">💯</button>
+        <button type="button" class="wecom-boost-preset-btn" data-preset="666">666</button>
+        <button type="button" class="wecom-boost-preset-btn" data-preset="加油">加油</button>
+        <button type="button" class="wecom-boost-preset-btn" data-preset="收到">收到</button>
+      </div>
+      <div class="wecom-boost-input-row">
+        <input type="text" class="wecom-boost-input" maxlength="16" placeholder="输入 Boost 内容..." />
+        <button type="button" class="wecom-boost-send-btn">发送</button>
+      </div>
+      <div class="wecom-boost-status" role="alert"></div>
+    `;
+
+    document.body.appendChild(popover);
+    activeBoostPopover = popover;
+
+    const rect = anchorBtn.getBoundingClientRect();
+    const popoverWidth = 260;
+    const popoverHeight = popover.offsetHeight || 165;
+    let left = Math.round(rect.left + rect.width / 2 - popoverWidth / 2);
+    if (left < 10) left = 10;
+    if (left + popoverWidth > window.innerWidth - 10) left = window.innerWidth - popoverWidth - 10;
+
+    let top = Math.round(rect.top - popoverHeight - 6);
+    if (top < 10) {
+      top = Math.round(rect.bottom + 6);
+    }
+    popover.style.left = `${left}px`;
+    popover.style.top = `${top}px`;
+
+    const input = popover.querySelector(".wecom-boost-input");
+    const sendBtn = popover.querySelector(".wecom-boost-send-btn");
+    const statusEl = popover.querySelector(".wecom-boost-status");
+    input?.focus();
+
+    async function doSubmit(text) {
+      const raw = String(text || "").trim();
+      if (!raw) return;
+      sendBtn.disabled = true;
+      if (input) input.disabled = true;
+      statusEl.textContent = "发送中…";
+      statusEl.style.color = "var(--wc-text-3)";
+      try {
+        const newBoost = await submitPostBoost(postId, raw);
+        const post = chatState.postsByNumber.get(postNumber);
+        if (post) {
+          if (!Array.isArray(post.boosts)) post.boosts = [];
+          post.boosts.push(newBoost);
+        }
+        let boostsContainer = msgEl.querySelector(".wecom-msg-boosts");
+        if (!boostsContainer) {
+          boostsContainer = document.createElement("div");
+          boostsContainer.className = "wecom-msg-boosts";
+          const bubble = msgEl.querySelector(".wecom-msg-bubble");
+          if (bubble) bubble.after(boostsContainer);
+          else msgEl.querySelector(".wecom-msg-content")?.appendChild(boostsContainer);
+        }
+        const u = newBoost.user || { username: getCurrentUsername() };
+        const uname = userDisplayName(u, u.username || "");
+        const avatarSrc = u.avatar_template ? fullAvatarUrl(u.avatar_template) : "";
+        const avatarHtml = avatarSrc
+          ? `<img class="wecom-boost-avatar" src="${escapeHtml(avatarSrc)}" alt="" loading="lazy">`
+          : `<span class="wecom-boost-avatar-text">${escapeHtml(avatarLetter(uname || "?"))}</span>`;
+        const canDel = Boolean(newBoost.can_delete ?? true);
+        const delBtn = canDel
+          ? `<button type="button" class="wecom-boost-delete" data-boost-id="${newBoost.id}" title="删除此 Boost" aria-label="删除此 Boost">×</button>`
+          : "";
+        const itemHtml = `
+          <div class="wecom-boost-item" data-boost-id="${newBoost.id || ""}" title="${escapeHtml(uname)}: ${escapeHtml(newBoost.raw || raw)}">
+            ${avatarHtml}
+            <div class="wecom-boost-cooked">${formatBoostCooked(newBoost.cooked, raw)}</div>
+            ${delBtn}
+          </div>`;
+        boostsContainer.insertAdjacentHTML("beforeend", itemHtml);
+        closeBoostPopover();
+      } catch (err) {
+        sendBtn.disabled = false;
+        if (input) input.disabled = false;
+        statusEl.style.color = "#FA5151";
+        statusEl.textContent = err.message || "发送失败";
+      }
+    }
+
+    popover.querySelectorAll(".wecom-boost-preset-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        doSubmit(btn.dataset.preset);
+      });
+    });
+
+    sendBtn?.addEventListener("click", () => {
+      doSubmit(input?.value);
+    });
+
+    input?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        doSubmit(input.value);
+      } else if (e.key === "Escape") {
+        closeBoostPopover();
+      }
+    });
+
+    popover.querySelector(".wecom-boost-popover-close")?.addEventListener("click", closeBoostPopover);
+
+    const onDocClick = (e) => {
+      if (!popover.contains(e.target) && e.target !== anchorBtn && !anchorBtn.contains(e.target)) {
+        closeBoostPopover();
+      }
+    };
+    activeBoostDocClickHandler = onDocClick;
+    setTimeout(() => {
+      if (activeBoostPopover === popover) {
+        document.addEventListener("mousedown", onDocClick);
+      }
+    }, 50);
+  }
+
+  async function submitPostBoost(postId, raw) {
+    const resp = await fetch(`/discourse-boosts/posts/${postId}/boosts`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: bridgeHeaders("application/json"),
+      body: JSON.stringify({ raw })
+    });
+    if (!resp.ok) {
+      let errorMsg = `HTTP ${resp.status}`;
+      try {
+        const data = await resp.json();
+        if (data.errors && data.errors.length) {
+          errorMsg = data.errors.join(", ");
+        } else if (data.failed) {
+          errorMsg = "该帖子无法添加 Boost 或已达上限";
+        }
+      } catch { /* ignore */ }
+      throw new Error(errorMsg);
+    }
+    return await resp.json();
+  }
+
+  async function deletePostBoost(boostId, msgEl) {
+    if (!boostId) return;
+    const resp = await fetch(`/discourse-boosts/boosts/${boostId}`, {
+      method: "DELETE",
+      credentials: "same-origin",
+      headers: bridgeHeaders("application/json")
+    });
+    if (!resp.ok && resp.status !== 204 && resp.status !== 200) {
+      throw new Error(`HTTP ${resp.status}`);
+    }
+    const postNumber = Number(msgEl?.dataset.postNumber);
+    const post = chatState.postsByNumber.get(postNumber);
+    if (post && Array.isArray(post.boosts)) {
+      post.boosts = post.boosts.filter((b) => Number(b.id) !== Number(boostId));
+    }
+    const item = msgEl.querySelector(`.wecom-boost-item[data-boost-id="${boostId}"]`);
+    if (item) {
+      const parent = item.closest(".wecom-msg-boosts");
+      item.remove();
+      if (parent && !parent.children.length) parent.remove();
+    }
+  }
+
   function bubbleHtml(post, myName) {
     const me = isMyPost(post, myName);
     const side = me ? "me" : "other";
@@ -6133,26 +9259,40 @@
     const isBookmarked = booleanFlag(post.bookmarked) || Boolean(post.bookmark_id);
     const bookmarkClass = isBookmarked ? " bookmarked" : "";
     const bookmarkLabel = isBookmarked ? "编辑楼层书签" : "收藏本楼层";
-    const bookmarkButton = post.id
+    const bookmarkButton = !IS_V2EX && post.id
       ? `<button type="button" class="wecom-msg-tool${bookmarkClass}" data-action="bookmark" title="${bookmarkLabel}" aria-label="${bookmarkLabel}" aria-pressed="${isBookmarked}">${ICONS.bookmark}</button>`
       : "";
-    const editButton = me && (post.id || post.post_number)
+    const editButton = !IS_V2EX && me && (post.id || post.post_number)
       ? `<button type="button" class="wecom-msg-tool" data-action="edit" title="编辑">${ICONS.edit}</button>`
       : "";
+    const boostButton = !IS_V2EX
+      ? `<button type="button" class="wecom-msg-tool" data-action="boost" title="添加 Boost">${ICONS.boost}</button>`
+      : "";
+    const likeCount = Number(post.like_count) || (post.actions_summary || []).find((a) => a.id === 2)?.count || 0;
+    const likeLabel = IS_V2EX ? "感谢回复" : "点赞";
+    const likeToolIcon = IS_V2EX ? ICONS.heart : ICONS.like;
+    const likesBadgeHtml = likeCount > 0
+      ? `<span class="wecom-msg-likes" title="${likeLabel}：${likeCount}"><span class="wecom-msg-like-icon">${ICONS.heart}</span><span class="wecom-msg-like-num">${likeCount}</span></span>`
+      : "";
     return `
-      <div class="wecom-msg wecom-msg-${side}" data-post-number="${post.post_number}"${post.id ? ` data-post-id="${post.id}"` : ""}${me ? ' data-mine="1"' : ""}>
+      <div class="wecom-msg wecom-msg-${side}" data-post-number="${post.post_number}"${post.id ? ` data-post-id="${post.id}"` : ""}${post.floor != null ? ` data-floor="${post.floor}"` : ""}${me ? ' data-mine="1"' : ""}>
         <span class="wecom-msg-avatar" style="background:${avatarBg}"${userCardAttributes(post)}>${avatar}</span>
         <div class="wecom-msg-content">
           <span class="wecom-msg-name">${escapeHtml(displayName)}</span>
-          ${replyReferenceHtml(post)}
-          <div class="wecom-msg-bubble">${post.cooked || ""}</div>
+          <div class="wecom-msg-bubble">
+            ${replyReferenceHtml(post)}
+            <div class="wecom-msg-body">${post.cooked || ""}</div>
+          </div>
+          ${boostsHtml(post)}
           <span class="wecom-msg-meta">
-            <span>#${post.post_number}</span>
+            <span>#${IS_V2EX && post.floor != null && post.floor > 0 ? post.floor : post.post_number}</span>
             <span>${escapeHtml(formatTime(post.created_at))}</span>
+            ${likesBadgeHtml}
           </span>
           <div class="wecom-msg-tools">
-            <button type="button" class="wecom-msg-tool${liked}" data-action="like" title="点赞">${ICONS.like}</button>
+            <button type="button" class="wecom-msg-tool${liked}" data-action="like" title="${likeLabel}">${likeToolIcon}</button>
             <button type="button" class="wecom-msg-tool" data-action="reply" title="回复">${ICONS.reply}</button>
+            ${boostButton}
             ${bookmarkButton}
             ${editButton}
           </div>
@@ -6625,12 +9765,68 @@
       return;
     }
     closeOfficialEmojiPicker();
-    if (action === "pic" || action === "folder") panel?.querySelector(".wecom-image-input")?.click();
-    else if (input) input.focus({ preventScroll: true });
+    if (action === "pic" || action === "folder" || action === "doc") {
+      panel?.querySelector(".wecom-image-input")?.click();
+    } else if (action === "cut") {
+      flashComposeHint("提示：直接按 Ctrl+V 即可粘贴剪贴板截图", "info");
+      if (input) input.focus({ preventScroll: true });
+    } else if (action === "history") {
+      flashComposeHint("聊天记录：向上滚动可加载更早消息", "info");
+      if (input) input.focus({ preventScroll: true });
+    } else if (input) {
+      input.focus({ preventScroll: true });
+    }
   }
 
   async function toggleLike(postId, btn) {
     if (!postId) return;
+    if (IS_V2EX) {
+      const wasLiked = likedPosts.has(postId);
+      if (wasLiked) return;
+      btn.classList.add("liked");
+      likedPosts.add(postId);
+      const msg = btn.closest(".wecom-msg");
+      let likeNumEl = msg?.querySelector(".wecom-msg-like-num");
+      let addedBadge = false;
+      if (likeNumEl) {
+        likeNumEl.textContent = String((parseInt(likeNumEl.textContent.trim(), 10) || 0) + 1);
+      } else if (msg) {
+        const meta = msg.querySelector(".wecom-msg-meta");
+        if (meta) {
+          const badge = document.createElement("span");
+          badge.className = "wecom-msg-likes";
+          badge.title = "感谢回复：1";
+          badge.innerHTML = `<span class="wecom-msg-like-icon">${ICONS.heart}</span><span class="wecom-msg-like-num">1</span>`;
+          meta.appendChild(badge);
+          addedBadge = true;
+        }
+      }
+      try {
+        let once = document.querySelector("#Main form input[name='once'], input[name='once']")?.value;
+        if (!once) {
+          const res = await fetch(location.pathname, { credentials: "same-origin" });
+          const html = await res.text();
+          const doc = new DOMParser().parseFromString(html, "text/html");
+          once = doc.querySelector("input[name='once']")?.value;
+        }
+        if (!once) throw new Error("请先登录 V2EX");
+        const resp = await fetch(`/thank/reply/${postId}?once=${once}`, {
+          method: "POST",
+          credentials: "same-origin"
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      } catch (err) {
+        likedPosts.delete(postId);
+        btn.classList.remove("liked");
+        if (likeNumEl) {
+          likeNumEl.textContent = String(Math.max(0, (parseInt(likeNumEl.textContent.trim(), 10) || 1) - 1));
+        } else if (addedBadge) {
+          msg?.querySelector(".wecom-msg-likes")?.remove();
+        }
+        console.warn("[v2ex] thank reply failed", err);
+      }
+      return;
+    }
     const wasLiked = likedPosts.has(postId);
     // 乐观更新，失败回滚
     if (wasLiked) likedPosts.delete(postId); else likedPosts.add(postId);
@@ -6748,6 +9944,10 @@
   function openOriginalUserCard(trigger, event) {
     const username = String(trigger?.dataset?.userCard || "").trim();
     if (!username) throw new Error("用户头像缺少 data-user-card");
+    if (IS_V2EX) {
+      window.open(`/member/${encodeURIComponent(username)}`, "_blank");
+      return;
+    }
     const appEvents = safeLookup(getEmberOwner(), "service:app-events");
     if (typeof appEvents?.trigger !== "function") {
       throw new Error("无法连接 Discourse 原生用户卡事件服务");
@@ -7438,7 +10638,7 @@
     composerBridgeState.nativeTopicId = null;
     composerBridgeState.nativeReplyToPostNumber = null;
     setComposeStatus("已发送", "success", false);
-    if (topicId) {
+    if (topicId && !IS_V2EX) {
       const rawPost = submittedPost?.post || submittedPost;
       const post = withSubmittedReplyMetadata(rawPost, requestedReply);
       if (post && (post.id || post.post_number)) {
@@ -7502,6 +10702,18 @@
     const raw = input.value;
     const replyTo = composerBridgeState.replyToPostNumber;
     try {
+      if (IS_V2EX) {
+        await submitV2exReply(chatState.topicId, raw);
+        completeComposerSubmission(input);
+        await loadTopic(chatState.topicId, true);
+        const chatBody = document.querySelector(".wecom-chat-body");
+        if (chatBody) {
+          setTimeout(() => {
+            chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: "smooth" });
+          }, 100);
+        }
+        return;
+      }
       let apiError = null;
       try {
         const post = await submitReplyViaApi(raw, replyTo);
@@ -7543,7 +10755,15 @@
 
   function replyToPost(postNumber) {
     showTargetedReply(postNumber);
-    composeUi().input?.focus();
+    const { input } = composeUi();
+    if (IS_V2EX && input) {
+      const message = document.querySelector(`.wecom-msg[data-post-number="${postNumber}"]`);
+      const name = message?.querySelector(".wecom-msg-name")?.textContent?.trim();
+      if (name && !input.value.includes(`@${name}`)) {
+        input.value = `@${name} ` + input.value;
+      }
+    }
+    input?.focus();
   }
 
   const TIME_SEP_GAP = 10 * 60 * 1000;
@@ -7566,14 +10786,41 @@
     return frag.join("");
   }
 
-  async function fetchPostsByIds(topicId, ids) {
+  const TOPIC_CACHE_MAX = 30;
+  const TOPIC_CACHE_TTL_MS = 3 * 60 * 1000;
+  const topicDataCache = new Map();
+
+  function getCachedTopic(topicId) {
+    const entry = topicDataCache.get(Number(topicId));
+    if (!entry) return null;
+    if (Date.now() - entry.timestamp > TOPIC_CACHE_TTL_MS) {
+      topicDataCache.delete(Number(topicId));
+      return null;
+    }
+    return entry.data;
+  }
+
+  function setCachedTopic(topicId, data) {
+    if (!topicId || !data) return;
+    const id = Number(topicId);
+    topicDataCache.delete(id);
+    if (topicDataCache.size >= TOPIC_CACHE_MAX) {
+      const oldestKey = topicDataCache.keys().next().value;
+      if (oldestKey) topicDataCache.delete(oldestKey);
+    }
+    topicDataCache.set(id, { data, timestamp: Date.now() });
+  }
+
+  async function fetchPostsByIds(topicId, ids, signal) {
     if (!ids.length) return [];
     const query = ids.map((id) => `post_ids[]=${encodeURIComponent(id)}`).join("&");
-    const data = await api(`/t/${topicId}/posts.json?${query}`);
+    const opts = signal ? { signal } : {};
+    const data = await api(`/t/${topicId}/posts.json?${query}`, opts);
     return data?.post_stream?.posts || data?.posts || [];
   }
 
-  async function postsForTopicOpening(topicId, stream, posts, aroundPostNumber) {
+  async function postsForTopicOpening(topicId, stream, posts, aroundPostNumber, signal) {
+    if (IS_V2EX) return posts;
     const ordered = orderedTopicPosts(posts, stream);
     const target = Number(aroundPostNumber) || 0;
     if (target > 1) return ordered;
@@ -7583,11 +10830,367 @@
       .filter((id) => !loaded.has(String(id)));
     if (!missing.length) return ordered;
     try {
-      const fetched = await fetchPostsByIds(topicId, missing);
+      const fetched = await fetchPostsByIds(topicId, missing, signal);
       return orderedTopicPosts(ordered.concat(fetched), stream);
     } catch (error) {
+      if (error?.name === "AbortError") throw error;
       console.error("[linuxdo-wecom] failed to load the topic opening posts", error);
       return ordered;
+    }
+  }
+
+  /* ============================== V2EX 社区适配器 ============================== */
+
+  function extractV2exTopicsFromDoc(doc) {
+    if (!doc) return [];
+    const dockAreas = doc.querySelectorAll("#Main .dock_area");
+    if (dockAreas.length) {
+      const topics = [];
+      const seen = new Set();
+      dockAreas.forEach((dock, idx) => {
+        const topicLink = dock.querySelector("a[href*='/t/']");
+        if (!topicLink) return;
+        const rawHref = topicLink.getAttribute("href") || "";
+        const match = rawHref.match(/\/t\/(\d+)/);
+        if (!match) return;
+        const id = Number(match[1]);
+        const target = parseV2exReplyTarget(rawHref);
+        const dedupKey = `${id}_${target.anchor || ""}_${idx}`;
+        if (seen.has(dedupKey)) return;
+        seen.add(dedupKey);
+
+        const nextInner = dock.nextElementSibling?.classList.contains("inner") ? dock.nextElementSibling : null;
+        const replyContent = nextInner?.querySelector(".reply_content")?.textContent?.trim() || "";
+        const timeEl = dock.querySelector(".fade, .ago");
+        const nodeLink = dock.querySelector("a[href^='/go/']");
+        const title = topicLink.textContent.trim() || `话题 #${id}`;
+
+        topics.push({
+          id,
+          target_floor: target.floor,
+          target_reply_id: target.replyId,
+          target_anchor: target.anchor,
+          target_page: target.page || (target.floor ? Math.max(1, Math.floor((target.floor - 1) / 100) + 1) : 1),
+          title,
+          posts_count: target.floor ? target.floor + 1 : 1,
+          reply_count: target.floor || 0,
+          created_at: timeEl?.textContent?.trim() || "",
+          bumped_at: timeEl?.textContent?.trim() || "",
+          last_poster_username: "",
+          node_name: nodeLink?.textContent?.trim() || "回复",
+          v2ex_avatar: "",
+          notification_text: replyContent,
+          posters: [{ user_id: id, description: "V2EX member reply" }]
+        });
+      });
+      if (topics.length) return topics;
+    }
+
+    const items = doc.querySelectorAll("#Main .cell, #Main .item");
+    const topics = [];
+    items.forEach((item) => {
+      const titleLink = item.querySelector(".item_title a, a.topic-link");
+      if (!titleLink) return;
+      const href = titleLink.getAttribute("href") || "";
+      const idMatch = href.match(/\/t\/(\d+)/);
+      if (!idMatch) return;
+      const id = Number(idMatch[1]);
+      const title = titleLink.textContent.trim();
+      const avatarImg = item.querySelector("img.avatar");
+      const avatar = avatarImg?.getAttribute("src") || "";
+      const authorLink = item.querySelector(".topic_info strong a, a[href^='/member/']");
+      const author = authorLink?.textContent.trim() || "";
+      const nodeLink = item.querySelector("a.node");
+      const nodeName = nodeLink?.textContent.trim() || "";
+      const countLink = item.querySelector("a.count_livid, a.count_orange");
+      const replies = countLink ? parseInt(countLink.textContent.trim(), 10) || 0 : 0;
+      const timeEl = item.querySelector(".topic_info span[title], .topic_info .ago");
+      const infoText = timeEl?.getAttribute("title") || timeEl?.textContent?.trim() || item.querySelector(".topic_info")?.textContent?.trim() || "";
+
+      topics.push({
+        id,
+        title,
+        posts_count: replies + 1,
+        reply_count: replies,
+        created_at: infoText,
+        bumped_at: infoText,
+        last_poster_username: author,
+        node_name: nodeName,
+        v2ex_avatar: avatar,
+        posters: [{ user_id: id, description: "Original Poster" }]
+      });
+    });
+    return topics;
+  }
+
+  function mapV2exJsonTopics(list) {
+    return (list || []).map((t) => ({
+      id: t.id,
+      title: t.title,
+      posts_count: (t.replies || 0) + 1,
+      reply_count: t.replies || 0,
+      created_at: t.created ? new Date(t.created * 1000).toISOString() : "",
+      bumped_at: t.created ? new Date(t.created * 1000).toISOString() : "",
+      last_poster_username: t.member?.username || "",
+      node_name: t.node?.title || t.node?.name || "",
+      v2ex_avatar: t.member?.avatar_normal || t.member?.avatar_large || "",
+      posters: [{ user_id: t.id, description: "Original Poster" }]
+    }));
+  }
+
+  function extractV2exNotificationsFromDoc(doc) {
+    if (!doc) return [];
+    const topics = [];
+    const seen = new Set();
+    const cells = doc.querySelectorAll("#Main .cell, #Main .item, #Main li");
+    cells.forEach((cell, idx) => {
+      const topicLink = [...cell.querySelectorAll("a[href]")].find((a) => /\/t\/\d+/.test(a.getAttribute("href") || ""));
+      if (!topicLink) return;
+      const rawHref = topicLink.getAttribute("href") || "";
+      const match = rawHref.match(/\/t\/(\d+)/);
+      const id = match ? Number(match[1]) : 0;
+      if (!id) return;
+      const target = parseV2exReplyTarget(rawHref);
+      const dedupKey = cell.id || `${id}_${target.anchor || ""}_${idx}`;
+      if (seen.has(dedupKey)) return;
+      seen.add(dedupKey);
+
+      const memberLink = cell.querySelector("a[href^='/member/']");
+      const avatar = cell.querySelector("img.avatar")?.getAttribute("src") || "";
+      const timeEl = cell.querySelector("[title], .ago, .fade");
+      const payloadEl = cell.querySelector(".payload");
+      const text = payloadEl?.textContent?.trim() || (cell.textContent || "").replace(/\s+/g, " ").trim();
+
+      topics.push({
+        id,
+        target_floor: target.floor,
+        target_reply_id: target.replyId,
+        target_anchor: target.anchor,
+        target_page: target.page || (target.floor ? Math.max(1, Math.floor((target.floor - 1) / 100) + 1) : 1),
+        title: (topicLink.textContent || "").replace(/\s+/g, " ").trim() || `话题 #${id}`,
+        posts_count: target.floor ? target.floor + 1 : 1,
+        reply_count: target.floor || 0,
+        created_at: timeEl?.getAttribute("title") || timeEl?.textContent?.trim() || "",
+        bumped_at: timeEl?.getAttribute("title") || timeEl?.textContent?.trim() || "",
+        last_poster_username: memberLink?.textContent?.trim() || "",
+        node_name: "通知",
+        v2ex_avatar: avatar,
+        notification_text: text,
+        posters: [{ user_id: id, description: "V2EX notification" }]
+      });
+    });
+    return topics;
+  }
+
+  function parseV2exTopicDoc(topicId, doc, page = 1) {
+    if (!doc) return null;
+    const title = doc.querySelector("#Main .header h1, #Main h1")?.textContent?.trim() || `主题 #${topicId}`;
+    const opUsername = doc.querySelector("#Main .header .gray a, #Main .header a[href^='/member/']")?.textContent?.trim() || "楼主";
+    const opAvatar = doc.querySelector("#Main .header img.avatar")?.getAttribute("src") || "";
+    const opContent = doc.querySelector("#Main .topic_content, #Main .entry-content")?.innerHTML || "<p>（无正文）</p>";
+    const opCreated = doc.querySelector("#Main .header .gray")?.textContent?.trim() || "";
+    const opNode = doc.querySelector("#Main .header a[href^='/go/']")?.textContent?.trim() || "";
+
+    const opLikesEl = doc.querySelector("#Main .topic_thank, #Main .votes, #Main .header .fade, #Main .topic_buttons .fade");
+    let opLikesCount = 0;
+    if (opLikesEl && (opLikesEl.textContent.includes("感谢") || opLikesEl.querySelector("img[alt='❤️']"))) {
+      opLikesCount = parseInt(opLikesEl.textContent.trim().replace(/\D/g, ""), 10) || 0;
+    }
+
+    const opPost = {
+      id: Number(topicId),
+      post_number: 1,
+      floor: 0,
+      username: opUsername,
+      name: opUsername,
+      avatar_template: opAvatar,
+      cooked: opContent,
+      created_at: opCreated,
+      like_count: opLikesCount,
+      actions_summary: opLikesCount > 0 ? [{ id: 2, count: opLikesCount }] : []
+    };
+    const posts = [opPost];
+
+    const replyCells = doc.querySelectorAll("#Main .cell[id^='r_'], #Main div[id^='r_']");
+    replyCells.forEach((cell, idx) => {
+      const rid = Number(cell.id.replace("r_", "")) || (idx + 2);
+      const username = cell.querySelector("a.dark, a[href^='/member/']")?.textContent?.trim() || `用户_${idx + 2}`;
+      const avatar = cell.querySelector("img.avatar")?.getAttribute("src") || "";
+      const content = cell.querySelector(".reply_content")?.innerHTML || "";
+      const timeText = cell.querySelector(".ago, .fade")?.textContent?.trim() || "";
+      const likesEl = cell.querySelector(".small.fade") || cell.querySelector("img[alt='❤️']")?.closest(".small, .fade, span");
+      const likesCount = likesEl ? parseInt(likesEl.textContent.trim().replace(/\D/g, ""), 10) || 0 : 0;
+      const floorEl = cell.querySelector(".no");
+      const floorNo = floorEl ? parseInt(floorEl.textContent.trim(), 10) : ((page - 1) * 100 + idx + 1);
+
+      posts.push({
+        id: rid,
+        floor: floorNo,
+        post_number: floorNo + 1,
+        username,
+        name: username,
+        avatar_template: avatar,
+        cooked: content,
+        created_at: timeText,
+        like_count: likesCount,
+        actions_summary: likesCount > 0 ? [{ id: 2, count: likesCount }] : []
+      });
+    });
+
+    const pageNumbers = [...doc.querySelectorAll("a[href]")]
+      .map((a) => (a.getAttribute("href") || "").match(new RegExp(`^/t/${topicId}\\?p=(\\d+)`)))
+      .filter(Boolean)
+      .map((m) => Number(m[1]));
+    const hasNextPage = pageNumbers.some((n) => n > page) || Boolean(doc.querySelector(`a[rel="next"][href*="/t/${topicId}"]`));
+    return {
+      id: Number(topicId),
+      title,
+      posts_count: posts.length,
+      node_name: opNode,
+      post_stream: {
+        posts,
+        stream: posts.map((p) => p.id)
+      },
+      v2ex_page: page,
+      v2ex_has_more: hasNextPage
+    };
+  }
+
+  async function fetchV2exTopicHtml(topicId, signal, page = 1) {
+    const path = page > 1 ? `/t/${topicId}?p=${page}` : `/t/${topicId}`;
+    const resp = await fetch(path, {
+      signal,
+      credentials: "same-origin"
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    if (resp.redirected && (resp.url.includes("/signin") || resp.url.includes("/login"))) {
+      throw new Error("查看该主题需要先登录 V2EX");
+    }
+    const html = await resp.text();
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    if (doc.querySelector("form[action*='signin']") || (doc.querySelector(".message")?.textContent?.includes("登录"))) {
+      const msg = doc.querySelector(".message")?.textContent?.trim() || "查看该主题需要先登录 V2EX";
+      throw new Error(msg);
+    }
+    const parsed = parseV2exTopicDoc(topicId, doc, page);
+    if (!parsed || !parsed.posts_count || !parsed.post_stream?.posts?.length) {
+      throw new Error(`未能解析主题 #${topicId} 的内容`);
+    }
+    return parsed;
+  }
+
+  function mapV2exTopicApiResponse(topicObj, replies = []) {
+    if (!topicObj) return null;
+    const opUsername = topicObj.member?.username || "楼主";
+    const opAvatar = topicObj.member?.avatar_normal || topicObj.member?.avatar_large || "";
+    const opContent = topicObj.content_rendered || (topicObj.content ? `<p>${escapeHtml(topicObj.content)}</p>` : "<p>（无正文）</p>");
+    const opCreated = topicObj.created ? new Date(topicObj.created * 1000).toISOString() : "";
+    const opNode = topicObj.node?.title || topicObj.node?.name || "";
+
+    const opPost = {
+      id: Number(topicObj.id),
+      post_number: 1,
+      floor: 0,
+      username: opUsername,
+      name: opUsername,
+      avatar_template: opAvatar,
+      cooked: opContent,
+      created_at: opCreated,
+      like_count: 0,
+      actions_summary: []
+    };
+    const posts = [opPost];
+
+    (replies || []).forEach((r, idx) => {
+      const rid = Number(r.id) || (idx + 2);
+      const username = r.member?.username || `用户_${idx + 2}`;
+      const avatar = r.member?.avatar_normal || r.member?.avatar_large || "";
+      const content = r.content_rendered || (r.content ? `<p>${escapeHtml(r.content)}</p>` : "");
+      const timeText = r.created ? new Date(r.created * 1000).toISOString() : "";
+      const likesCount = Number(r.thanks) || 0;
+      const floorNo = idx + 1;
+
+      posts.push({
+        id: rid,
+        floor: floorNo,
+        post_number: floorNo + 1,
+        username,
+        name: username,
+        avatar_template: avatar,
+        cooked: content,
+        created_at: timeText,
+        like_count: likesCount,
+        actions_summary: likesCount > 0 ? [{ id: 2, count: likesCount }] : []
+      });
+    });
+
+    return {
+      id: Number(topicObj.id),
+      title: topicObj.title || `主题 #${topicObj.id}`,
+      posts_count: posts.length,
+      node_name: topicObj.node?.name || "",
+      node_title: opNode,
+      post_stream: {
+        posts,
+        stream: posts.map((p) => p.id)
+      },
+      v2ex_page: 1,
+      v2ex_has_more: false
+    };
+  }
+
+  async function fetchV2exTopicApi(topicId, signal) {
+    const id = Number(topicId);
+    const opts = signal ? { signal } : {};
+    const [topicRes, repliesRes] = await Promise.all([
+      api(`/api/topics/show.json?id=${id}`, opts),
+      api(`/api/replies/show.json?topic_id=${id}`, opts).catch(() => [])
+    ]);
+    const topicObj = Array.isArray(topicRes) ? topicRes[0] : topicRes;
+    if (!topicObj || !topicObj.id) {
+      throw new Error(`未能获取主题 #${id} 的内容`);
+    }
+    const replies = Array.isArray(repliesRes) ? repliesRes : [];
+    return mapV2exTopicApiResponse(topicObj, replies);
+  }
+
+  async function fetchV2exTopicData(topicId, signal, page = 1) {
+    try {
+      return await fetchV2exTopicHtml(topicId, signal, page);
+    } catch (htmlErr) {
+      if (htmlErr?.name === "AbortError" || signal?.aborted) throw htmlErr;
+      console.warn("[v2ex-wecom] html fetch failed, falling back to JSON API:", htmlErr);
+      try {
+        return await fetchV2exTopicApi(topicId, signal);
+      } catch (apiErr) {
+        if (apiErr?.name === "AbortError" || signal?.aborted) throw apiErr;
+        throw htmlErr || apiErr;
+      }
+    }
+  }
+
+  async function submitV2exReply(topicId, content) {
+    let once = document.querySelector("#Main form input[name='once'], input[name='once']")?.value;
+    if (!once) {
+      const res = await fetch(`/t/${topicId}`, { credentials: "same-origin" });
+      const html = await res.text();
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      once = doc.querySelector("input[name='once']")?.value;
+    }
+    if (!once) throw new Error("未能获取 V2EX 发帖 once token，请先登录 V2EX");
+    const params = new URLSearchParams();
+    params.append("content", content);
+    params.append("once", once);
+    const postRes = await fetch(`/t/${topicId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: params.toString(),
+      credentials: "same-origin"
+    });
+    if (!postRes.ok && postRes.status !== 302 && postRes.status !== 200) {
+      throw new Error(`回复提交失败 (HTTP ${postRes.status})`);
     }
   }
 
@@ -7601,17 +11204,61 @@
     return fromTopic > 0 ? fromTopic : 0;
   }
 
-  async function fetchTopicJson(topicId, postNumber, force) {
+  async function fetchTopicJson(topicId, postNumber, force, signal, targetPage = 1) {
+    const id = Number(topicId);
+    if (IS_V2EX) {
+      const page = targetPage || 1;
+      const cacheKey = `${id}_p${page}`;
+      if (!force) {
+        const cached = getCachedTopic(cacheKey) || (page === 1 ? getCachedTopic(id) : null);
+        if (cached) return cached;
+      }
+      if (!force && page === 1 && id === INITIAL_V2EX_TOPIC_ID && !initialV2exTopicConsumed &&
+          document.querySelector("#Main .topic_content") &&
+          topicIdFromPath(location.pathname) === id) {
+        const parsed = parseV2exTopicDoc(id, document, 1);
+        if (parsed && parsed.posts_count > 0 && (parsed.post_stream?.posts?.length || 0) > 0) {
+          initialV2exTopicConsumed = true;
+          setCachedTopic(id, parsed);
+          setCachedTopic(cacheKey, parsed);
+          return parsed;
+        }
+      }
+      const data = await fetchV2exTopicData(id, signal, page);
+      setCachedTopic(id, data);
+      setCachedTopic(cacheKey, data);
+      return data;
+    }
+
+    if (!force) {
+      const preloaded = getPreloadedTopic(id);
+      if (preloaded && preloaded.id) {
+        setCachedTopic(id, preloaded);
+        return preloaded;
+      }
+      const cached = getCachedTopic(id);
+      if (cached) return cached;
+    }
+
     const opts = force ? { cache: "no-store" } : {};
+    if (signal) opts.signal = signal;
     const n = Number(postNumber) || 0;
+    let data = null;
     if (n > 1) {
       try {
-        return await api(`/t/${topicId}/${n}.json`, opts);
+        data = await api(`/t/${topicId}/${n}.json`, opts);
       } catch (error) {
+        if (error?.name === "AbortError") throw error;
         console.warn("[linuxdo-wecom] failed to load topic at post", n, error);
       }
     }
-    return await api(`/t/${topicId}.json`, opts);
+    if (!data) {
+      data = await api(`/t/${topicId}.json`, opts);
+    }
+    if (data && data.id) {
+      setCachedTopic(id, data);
+    }
+    return data;
   }
 
   function rememberTopicPost(topicId, postNumber) {
@@ -7639,6 +11286,10 @@
   function syncTopicLastReadHref(topicId, postNumber) {
     const row = document.querySelector(`.wecom-conv[data-topic-id="${topicId}"]`);
     if (!row) return;
+    if (IS_V2EX) {
+      row.setAttribute("href", `/t/${topicId}`);
+      return;
+    }
     const current = row.getAttribute("href") || "";
     const slug = topicRouteFromPath(current).slug || chatState.slug || "topic";
     const next = postNumber > 1 ? `/t/${slug}/${topicId}/${postNumber}` : `/t/${slug}/${topicId}`;
@@ -7646,6 +11297,12 @@
   }
 
   function replaceTopicPostUrl(topicId, postNumber) {
+    if (IS_V2EX) {
+      if (location.pathname !== `/t/${topicId}`) {
+        try { history.replaceState(history.state, "", `/t/${topicId}`); } catch { /* ignore */ }
+      }
+      return;
+    }
     const current = topicRouteFromPath(location.pathname);
     if (Number(current.topicId) !== Number(topicId)) return;
     const n = Number(postNumber) || 0;
@@ -7721,7 +11378,7 @@
   }
 
   function reportReadTimings(topicId, postNumbers) {
-    if (!topicId || !postNumbers.length) return;
+    if (IS_V2EX || !topicId || !postNumbers.length) return;
     if (markPostsOnscreen(postNumbers)) return;
     const body = new URLSearchParams();
     body.set("topic_id", String(topicId));
@@ -7750,44 +11407,80 @@
     reportReadTimings(chatState.topicId, visible);
   }, 220);
 
-  async function loadTopic(topicId, force = false) {
-    if (!topicId || chatState.loading) return;
-    if (!force && chatState.topicId === topicId) {
+  let topicAbortController = null;
+
+  async function loadTopic(topicId, force = false, targetOption = null) {
+    if (!topicId) return;
+    let target = targetOption;
+    if (!target && IS_V2EX) {
+      target = parseV2exReplyTarget(location.href);
+    }
+    const initialBody = document.querySelector(".wecom-chat-body");
+    const hasRenderedMsgs = Boolean(initialBody && initialBody.querySelector(".wecom-msg") && !initialBody.querySelector(".wecom-chat-loading, .wecom-chat-error, .wecom-chat-empty"));
+    if (!force && chatState.loading && chatState.topicId === topicId) return;
+    if (!force && chatState.topicId === topicId && chatState.renderedLastIdx >= 0 && hasRenderedMsgs) {
       syncListActive();
       return;
     }
+    if (topicAbortController) {
+      topicAbortController.abort();
+      topicAbortController = null;
+    }
+    const controller = new AbortController();
+    topicAbortController = controller;
+    const signal = controller.signal;
+
     const sameTopic = chatState.topicId === topicId;
-    if (!sameTopic) chatState.postsByNumber = new Map();
-    if (!sameTopic) closeEditDialog(true);
+    if (!sameTopic) {
+      chatState.postsByNumber = new Map();
+      chatState.renderedFirstIdx = -1;
+      chatState.renderedLastIdx = -1;
+      chatState.renderedLastNumber = 0;
+      chatState.stream = [];
+      chatState.hasOlder = false;
+      chatState.hasNewer = false;
+      closeEditDialog(true);
+    }
     const requestedPost = openingPostNumber(topicId, null);
     chatState.loading = true;
     chatState.topicId = topicId;
     ensureChatPanel();
     if (!sameTopic) switchComposerTopic(topicId);
     const body = document.querySelector(".wecom-chat-body");
-    if (body && !sameTopic) {
+    if (body && (!sameTopic || force)) {
       delete body.dataset.state;
-      body.innerHTML = `<div class="wecom-chat-loading">加载中…</div>`;
+      body.innerHTML = `
+        <div class="wecom-chat-loading">
+          <div class="wecom-chat-spinner"></div>
+          <div>加载中…</div>
+        </div>`;
     }
+    const subEl = document.querySelector(".wecom-chat-sub");
+    if (subEl && !sameTopic) subEl.textContent = "加载中…";
     try {
-      let data = await fetchTopicJson(topicId, requestedPost, force);
-      if (chatState.topicId !== topicId) return; // 路由已切走
+      const targetPage = (IS_V2EX && target && target.page) ? target.page : 1;
+      let data = await fetchTopicJson(topicId, requestedPost, force, signal, targetPage);
+      if (signal.aborted || chatState.topicId !== topicId) return; // 路由已切走或已取消
       let openPost = openingPostNumber(topicId, data);
       if (!requestedPost && openPost > 1 && !((data.post_stream && data.post_stream.posts) || [])
         .some((post) => postNumberOf(post) === openPost)) {
         try {
-          data = await fetchTopicJson(topicId, openPost, force);
-        } catch { /* 保留首页 */ }
-        if (chatState.topicId !== topicId) return;
+          data = await fetchTopicJson(topicId, openPost, force, signal);
+        } catch (err) {
+          if (err?.name === "AbortError") throw err;
+          /* 保留首页 */
+        }
+        if (signal.aborted || chatState.topicId !== topicId) return;
       }
       const stream = (data.post_stream && data.post_stream.stream) || [];
       const posts = await postsForTopicOpening(
         topicId,
         stream,
         (data.post_stream && data.post_stream.posts) || [],
-        openPost
+        openPost,
+        signal
       );
-      if (chatState.topicId !== topicId) return;
+      if (signal.aborted || chatState.topicId !== topicId) return;
       renderPinnedBanner(posts);
       renderMemberPanel(data, posts);
       chatState.stream = stream.length ? stream.slice() : posts.map((post) => post.id);
@@ -7800,9 +11493,13 @@
         0
       );
       chatState.hasOlder = chatState.renderedFirstIdx > 0;
-      chatState.hasNewer = chatState.renderedLastIdx >= 0 &&
-        chatState.renderedLastIdx < chatState.stream.length - 1;
+      chatState.v2exPage = Number(data.v2ex_page) || 1;
+      chatState.v2exHasMore = Boolean(data.v2ex_has_more);
+      chatState.hasNewer = IS_V2EX
+        ? chatState.v2exHasMore
+        : (chatState.renderedLastIdx >= 0 && chatState.renderedLastIdx < chatState.stream.length - 1);
       chatState.title = data.title || "";
+      chatState.categoryId = data.category_id || null;
       setTopicBookmarkState(Boolean(topicBookmarkFrom(data)));
       bindBookmarkEvents();
 
@@ -7810,7 +11507,9 @@
       if (panel) panel.dataset.empty = "0";
       const title = document.querySelector(".wecom-chat-title");
       const sub = document.querySelector(".wecom-chat-sub");
-      if (title) title.textContent = chatState.title;
+      const maskDetail = isMaskTitleDetail();
+      const displayTitle = maskDetail ? disguiseTitleForTopic({ id: chatState.topicId, title: chatState.title }) : chatState.title;
+      if (title) title.textContent = displayTitle;
       const participants = data.participant_count ||
         (data.details && data.details.participants ? data.details.participants.length : 0);
       const count = document.querySelector(".wecom-chat-count");
@@ -7825,10 +11524,16 @@
       }
       const replyTotal = data.posts_count || posts.length;
       chatState.replyTotal = replyTotal;
-      if (sub) sub.textContent = `归属于 linux.do · ${replyTotal} 条回复`;
-      document.title = `${chatState.title} - Linux DO`;
+      const orgName = IS_V2EX ? (data.node_title || data.node_name || "v2ex.com") : "linux.do";
+      if (sub) {
+        sub.textContent = maskDetail
+          ? `企业内部群 · ${replyTotal} 条消息`
+          : `归属于 ${orgName} · ${replyTotal} 条回复`;
+      }
+      document.title = " ";
+      enforceBlankTitle();
 
-      setComposerPlaceholder(chatState.title);
+      setComposerPlaceholder(displayTitle);
 
       const chatAvatar = document.querySelector(".wecom-chat-avatar");
       if (chatAvatar) {
@@ -7848,12 +11553,26 @@
         if (chatState.topicId !== topicId) return;
         const cat = data.category_id ? categoryById(data.category_id) : null;
         const chipsBox = document.querySelector(".wecom-chat-chips");
+        const maskDetail = isMaskTitleDetail();
         if (chipsBox) {
-          chipsBox.innerHTML = cat
-            ? `<a class="wecom-chat-chip" href="/c/${escapeHtml(cat.slug)}/${cat.id}"><span class="wecom-nav2-cat-dot" style="background:#${escapeHtml(cat.color || "8F959E")}"></span>${escapeHtml(cat.name)}</a>`
-            : "";
+          if (IS_V2EX && data.node_name && !maskDetail) {
+            chipsBox.innerHTML = `<a class="wecom-chat-chip" target="_blank" rel="noopener noreferrer" href="/go/${escapeHtml(data.node_name)}"><span class="wecom-nav2-cat-dot" style="background:#1A87FF"></span>${escapeHtml(data.node_title || data.node_name)}</a>`;
+          } else {
+            chipsBox.innerHTML = (cat && !maskDetail)
+              ? `<a class="wecom-chat-chip" target="_blank" rel="noopener noreferrer" href="/c/${escapeHtml(cat.slug)}/${cat.id}"><span class="wecom-nav2-cat-dot" style="background:#${escapeHtml(cat.color || "8F959E")}"></span>${escapeHtml(cat.name)}</a>`
+              : "";
+          }
         }
-        if (cat && sub) sub.textContent = `归属于 ${cat.name} · ${chatState.replyTotal || replyTotal} 条回复`;
+        if (sub) {
+          if (maskDetail) {
+            sub.textContent = `企业内部群 · ${chatState.replyTotal || replyTotal} 条消息`;
+          } else if (IS_V2EX) {
+            const nodePart = (data.node_title || data.node_name) ? `归属于 ${data.node_title || data.node_name} · ` : "归属于 v2ex.com · ";
+            sub.textContent = `${nodePart}${chatState.replyTotal || replyTotal} 条回复`;
+          } else if (cat) {
+            sub.textContent = `归属于 ${cat.name} · ${chatState.replyTotal || replyTotal} 条回复`;
+          }
+        }
       });
 
       if (body) {
@@ -7861,7 +11580,10 @@
           `<div class="wecom-chat-empty">${ICONS.msg}<div>暂无消息</div></div>`;
         hydrateChatImages(body);
         syncRenderedWindow(body);
-        if (sameTopic) {
+        if (IS_V2EX && target && (target.floor || target.replyId || target.anchor)) {
+          rememberTopicPost(topicId, target.floor ? target.floor + 1 : 1);
+          keepChatAtV2exReply(body, target);
+        } else if (sameTopic) {
           body.scrollTop = Math.min(body.scrollTop, body.scrollHeight);
         } else if (openPost > 1) {
           rememberTopicPost(topicId, openPost);
@@ -7875,9 +11597,13 @@
       }
       syncListActive();
     } catch (err) {
-      renderChatError(`话题加载失败（${err && err.message}），可能无权限或已被删除`);
+      if (err?.name === "AbortError" || signal.aborted) return;
+      renderChatError(err);
     } finally {
-      chatState.loading = false;
+      if (topicAbortController === controller) {
+        topicAbortController = null;
+        chatState.loading = false;
+      }
     }
   }
 
@@ -7927,9 +11653,15 @@
     chatState.hasNewer = last < chatState.stream.length - 1;
   }
 
+  let lastPaginationTime = 0;
+  const PAGINATION_THROTTLE_MS = 600;
+
   /** 向上滚动加载更早的帖子 */
   async function loadOlderPosts() {
-    if (!chatState.hasOlder || chatState.loading || !chatState.topicId) return;
+    if (IS_V2EX || !chatState.hasOlder || chatState.loading || !chatState.topicId) return;
+    if (Date.now() < rateLimitCooldownUntil) return;
+    if (Date.now() - lastPaginationTime < PAGINATION_THROTTLE_MS) return;
+    lastPaginationTime = Date.now();
     const ids = chatState.stream.slice(Math.max(0, chatState.renderedFirstIdx - 20), chatState.renderedFirstIdx);
     if (!ids.length) return;
     chatState.loading = true;
@@ -7955,7 +11687,33 @@
 
   /** 向下滚动加载更新的帖子（话题很长时不能只留首屏一页） */
   async function loadNewerPosts() {
-    if (!chatState.hasNewer || chatState.loading || !chatState.topicId) return;
+    if (IS_V2EX || !chatState.hasNewer || chatState.loading || !chatState.topicId) {
+      if (!IS_V2EX || !chatState.v2exHasMore || chatState.loading || !chatState.topicId) return;
+    }
+    if (Date.now() < rateLimitCooldownUntil) return;
+    if (Date.now() - lastPaginationTime < PAGINATION_THROTTLE_MS) return;
+    lastPaginationTime = Date.now();
+    if (IS_V2EX) {
+      const body = document.querySelector(".wecom-chat-body");
+      const nextPage = (Number(chatState.v2exPage) || 1) + 1;
+      chatState.loading = true;
+      try {
+        const data = await fetchV2exTopicHtml(chatState.topicId, null, nextPage);
+        const posts = (data?.post_stream?.posts || []).filter((post) => postNumberOf(post) > 1);
+        const fresh = posts.filter((post) => !chatState.postsByNumber.has(postNumberOf(post)));
+        if (fresh.length) {
+          chatState.stream = chatState.stream.concat(fresh.map((post) => post.id));
+          appendFreshPosts(fresh, body, { scroll: false });
+        }
+        chatState.v2exPage = nextPage;
+        chatState.v2exHasMore = Boolean(data?.v2ex_has_more) && fresh.length > 0;
+        chatState.hasNewer = chatState.v2exHasMore;
+      } catch { /* 保留当前已加载回复 */
+      } finally {
+        chatState.loading = false;
+      }
+      return;
+    }
     const start = chatState.renderedLastIdx + 1;
     if (start <= 0 || start >= chatState.stream.length) {
       chatState.hasNewer = false;
@@ -8077,7 +11835,7 @@
 
   /** 发帖后：原生隐藏流里出现的新帖 → 追加为气泡 */
   function syncNewPostsFromDom() {
-    if (!chatState.topicId) return 0;
+    if (IS_V2EX || !chatState.topicId) return 0;
     const articles = nativeTopicPostElements();
     if (!articles.length) return 0;
     const body = document.querySelector(".wecom-chat-body");
@@ -8214,6 +11972,66 @@
 
   /* ============================== 编排 ============================== */
 
+  function ensureWcoManifest() {
+    try {
+      let manifestLink = document.querySelector('link[rel="manifest"]');
+      if (manifestLink && manifestLink.dataset.wecomWco === "1") return;
+      const manifestData = {
+        name: "Linux DO",
+        short_name: "Linux DO",
+        start_url: "/",
+        display: "standalone",
+        display_override: ["window-controls-overlay", "standalone", "minimal-ui"],
+        theme_color: isDarkMode() ? "#2B2D31" : "#F7F8FA",
+        background_color: isDarkMode() ? "#1E1F22" : "#FFFFFF",
+        icons: [
+          {
+            src: "https://linux.do/favicon.ico",
+            sizes: "64x64 32x32 24x24 16x16",
+            type: "image/x-icon"
+          }
+        ]
+      };
+      const blob = new Blob([JSON.stringify(manifestData)], { type: "application/manifest+json" });
+      const manifestUrl = URL.createObjectURL(blob);
+      if (!manifestLink) {
+        manifestLink = document.createElement("link");
+        manifestLink.rel = "manifest";
+        document.head?.appendChild(manifestLink);
+      }
+      manifestLink.dataset.wecomWco = "1";
+      manifestLink.href = manifestUrl;
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function setupWindowControlsOverlay() {
+    ensureWcoManifest();
+    if (window.__wecomWcoBound) return;
+    window.__wecomWcoBound = true;
+
+    const updateWcoState = () => {
+      const isWco = Boolean(
+        navigator.windowControlsOverlay && navigator.windowControlsOverlay.visible
+      );
+      document.documentElement.classList.toggle("wecom-wco-active", isWco);
+      if (isWco && navigator.windowControlsOverlay.getTitlebarAreaRect) {
+        const rect = navigator.windowControlsOverlay.getTitlebarAreaRect();
+        document.documentElement.style.setProperty("--wc-titlebar-width", `${rect.width}px`);
+        document.documentElement.style.setProperty("--wc-titlebar-height", `${rect.height}px`);
+      } else {
+        document.documentElement.style.removeProperty("--wc-titlebar-width");
+        document.documentElement.style.removeProperty("--wc-titlebar-height");
+      }
+    };
+
+    if (navigator.windowControlsOverlay) {
+      navigator.windowControlsOverlay.addEventListener("geometrychange", updateWcoState);
+      updateWcoState();
+    }
+  }
+
   function removePanels() {
     closeNotifMenu();
     closeImageViewer();
@@ -8255,8 +12073,11 @@
     injectStyle();
     document.documentElement.classList.add(ROOT_CLASS);
     document.documentElement.classList.toggle("wecom-nav2-open", isNav2Open());
+    document.documentElement.classList.toggle("wecom-hide-boost", !isBoostEnabled());
+    setupWindowControlsOverlay();
     restyleSplash();
     makeFavicon();
+    enforceBlankTitle();
     ensureModeFab();
     if (!document.body) return;
 
@@ -8278,6 +12099,7 @@
       document.querySelector(".wecom-list-panel")?.remove();
       document.querySelector(".wecom-chat-panel")?.remove();
       document.querySelector(".wecom-member-panel")?.remove();
+      document.querySelector(".wecom-list-resizer")?.remove();
       document.documentElement.classList.remove("wecom-members-open");
       return;
     }
@@ -8293,7 +12115,7 @@
       if (listState.topics.length && listState.apiPath) {
         syncListActive();
       } else {
-        loadList(listState.apiPath || "/latest.json", false);
+        loadList(listState.apiPath || (IS_V2EX ? "/?tab=all" : "/latest.json"), false);
       }
       loadTopic(topicIdFromPath(pathname));
       syncNewPostsFromDom();
@@ -8316,6 +12138,61 @@
 
   const scheduleSyncNewPosts = debounce(syncNewPostsFromDom, 600);
 
+  function isEditableTarget(target) {
+    if (!target || !(target instanceof Element)) return false;
+    const tag = target.tagName;
+    if (tag === "TEXTAREA") return true;
+    if (tag === "INPUT") {
+      const type = (target.getAttribute("type") || "text").toLowerCase();
+      const nonTextTypes = ["button", "submit", "reset", "checkbox", "radio", "range", "color", "image", "file"];
+      return !nonTextTypes.includes(type);
+    }
+    if (target.isContentEditable || (typeof target.closest === "function" && target.closest("[contenteditable='true']"))) {
+      return true;
+    }
+    return false;
+  }
+
+  function isModalOrViewerOpen() {
+    return Boolean(
+      document.querySelector(
+        ".wecom-image-viewer:not([hidden]), .wecom-edit-dialog:not([hidden]), .wecom-watermark-dialog:not([hidden]), .wecom-boost-popover:not([hidden])"
+      )
+    );
+  }
+
+  function handleChatNavigationKeydown(event) {
+    const isHome = event.key === "Home" || event.keyCode === 36;
+    const isEnd = event.key === "End" || event.keyCode === 35;
+    if (!isHome && !isEnd) return;
+    if (event.altKey || event.metaKey || event.shiftKey) return;
+    if (getViewMode() === "native" || otherThemeActive()) return;
+    if (isEditableTarget(event.target)) return;
+    if (isModalOrViewerOpen()) return;
+    if (!chatState.topicId || !document.documentElement.classList.contains("wecom-topic-open")) return;
+
+    const chatBody = document.querySelector(".wecom-chat-body, .wecom-chat-messages");
+    if (!chatBody) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof event.stopImmediatePropagation === "function") {
+      event.stopImmediatePropagation();
+    }
+
+    if (isHome) {
+      chatBody.scrollTo({ top: 0, behavior: "smooth" });
+      if (chatBody.scrollTop <= 30 && chatState.hasOlder && !chatState.loading) {
+        loadOlderPosts();
+      }
+    } else if (isEnd) {
+      chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: "smooth" });
+      if (chatState.hasNewer && !chatState.loading) {
+        loadNewerPosts();
+      }
+    }
+  }
+
   function bootstrap() {
     if (!document.documentElement) {
       setTimeout(bootstrap, 0);
@@ -8328,16 +12205,20 @@
     }
     if (getViewMode() !== "native" && !otherThemeActive()) {
       document.documentElement.classList.add(ROOT_CLASS);
+      document.documentElement.classList.toggle("wecom-hide-boost", !isBoostEnabled());
       restyleSplash();
       makeFavicon(); // document-start 尽早换标，减少未聚焦标签仍显示原 icon
+      setupTitleGuard(); // document-start 守护标题为空白，彻底隐藏详情页标题
+      setupWindowControlsOverlay();
     }
 
-    // 标签重新可见时再刷一次（部分浏览器未聚焦时会缓存旧 favicon）
+    // 标签重新可见时再刷一次（部分浏览器未聚焦时会缓存旧 favicon 与 title）
     if (!window.__wecomFaviconVisibilityBound) {
       window.__wecomFaviconVisibilityBound = true;
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "visible" && getViewMode() !== "native" && !otherThemeActive()) {
           makeFavicon();
+          enforceBlankTitle();
         }
       });
     }
@@ -8357,6 +12238,7 @@
       });
       if (external) scheduleApply();
       scheduleSyncNewPosts();
+      scheduleSyncChatBadge();
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
 
@@ -8380,13 +12262,18 @@
       window.__wecomComposerShortcutGuardBound = true;
       window.addEventListener("keydown", guardComposerShortcut, true);
     }
-    // 定时同步头像通知角标（currentUser 未读数会变）
+    // 在 window 捕获阶段拦截 Home / End 键：在对话详情中仅平滑滚动消息体，防止列表被动滚动或误触穿透点开
+    if (!window.__wecomHomeKeyNavBound) {
+      window.__wecomHomeKeyNavBound = true;
+      window.addEventListener("keydown", handleChatNavigationKeydown, true);
+    }
+    // 定时同步头像通知角标与新主题角标（3 秒轮询）
     if (!window.__wecomNotifBadgeTimer) {
       window.__wecomNotifBadgeTimer = setInterval(() => {
         if (getViewMode() === "native" || otherThemeActive()) return;
         if (!document.querySelector(".wecom-rail")) return;
         syncRail();
-      }, 15000);
+      }, 3000);
     }
 
     // ⌘/Ctrl+K → 会话栏搜索（并同步原生 welcome-banner）
