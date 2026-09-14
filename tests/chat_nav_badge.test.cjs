@@ -1788,6 +1788,38 @@ test("openNewTopic directly invokes Discourse composer service in-page or falls 
   assert.equal(docEl.classList.contains("wecom-composing-new"), false);
 });
 
+test("new topic composer applies Enterprise WeChat layout, grippie header, and component styles", () => {
+  assert.ok(
+    scriptContent.includes("wecom-composing-new #reply-control .grippie"),
+    "must style grippie top handle"
+  );
+  assert.ok(
+    scriptContent.includes('content: "发布新主题"'),
+    "must show 发布新主题 title in grippie"
+  );
+  assert.ok(
+    scriptContent.includes('content: "发起新项目群"'),
+    "must show 发起新项目群 in disguised mode"
+  );
+  assert.ok(
+    scriptContent.includes("wecom-composing-new #reply-control input#reply-title"),
+    "must style reply-title input in WeCom aesthetic"
+  );
+  assert.ok(
+    scriptContent.includes("wecom-composing-new #reply-control .d-editor"),
+    "must style d-editor card and toolbar"
+  );
+  assert.ok(
+    scriptContent.includes("wecom-composing-new #reply-control .submit-panel button.create"),
+    "must style create topic submit button with WeCom blue"
+  );
+  assert.ok(
+    scriptContent.includes("wecom-dark.wecom-composing-new #reply-control"),
+    "must provide complete dark mode theme for composer"
+  );
+});
+
+
 
 
 

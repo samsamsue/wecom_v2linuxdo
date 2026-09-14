@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.2
+// @version      0.7.3
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -2637,7 +2637,7 @@
       pointer-events: none !important;
     }
 
-    /* 发布新主题时唤起的原生 Discourse Composer 抽屉/浮层 */
+    /* 发布新主题时唤起的原生 Discourse Composer 抽屉/浮层 (企业微信视觉规范) */
     html.${ROOT_CLASS}.wecom-composing-new #reply-control {
       display: flex !important;
       flex-direction: column !important;
@@ -2649,26 +2649,371 @@
       width: auto !important;
       min-width: 320px !important;
       max-width: none !important;
-      height: 72vh !important;
-      min-height: 420px !important;
-      max-height: 92vh !important;
-      overflow: visible !important;
+      height: 75vh !important;
+      min-height: 460px !important;
+      max-height: 94vh !important;
+      overflow: hidden !important;
       opacity: 1 !important;
       visibility: visible !important;
       user-select: auto !important;
       clip-path: none !important;
       pointer-events: auto !important;
       z-index: 1500 !important;
-      background: var(--secondary, var(--wc-chat-bg, #fff)) !important;
-      box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.18) !important;
-      border-top: 1px solid var(--wc-border, #e0e0e0) !important;
+      background: #FFFFFF !important;
+      box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.14) !important;
+      border: 1px solid #D8DCE0 !important;
+      border-bottom: none !important;
+      border-radius: 10px 10px 0 0 !important;
+      font-family: var(--wc-font) !important;
     }
     html.${ROOT_CLASS}.wecom-composing-new #reply-control * {
       pointer-events: auto !important;
+      box-sizing: border-box !important;
     }
+
+    /* 顶部拖动手柄与标题栏 */
     html.${ROOT_CLASS}.wecom-composing-new #reply-control .grippie {
+      height: 32px !important;
+      min-height: 32px !important;
+      background: #F5F7FA !important;
+      border-bottom: 1px solid #EAEBED !important;
+      border-radius: 10px 10px 0 0 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
       cursor: row-resize !important;
+      position: relative !important;
+      padding: 0 16px !important;
+      user-select: none !important;
     }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .grippie::before {
+      content: "" !important;
+      display: block !important;
+      width: 40px !important;
+      height: 4px !important;
+      border-radius: 2px !important;
+      background: #C8CDD4 !important;
+      transition: background 0.15s ease !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .grippie:hover::before {
+      background: #267EF0 !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new:not(.wecom-mask-composing) #reply-control .grippie::after {
+      content: "发布新主题" !important;
+      position: absolute !important;
+      left: 16px !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      font-size: 13px !important;
+      font-weight: 600 !important;
+      color: #4E5359 !important;
+      pointer-events: none !important;
+    }
+    html.${ROOT_CLASS}.wecom-mask-composing #reply-control .grippie::after {
+      content: "发起新项目群" !important;
+      position: absolute !important;
+      left: 16px !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      font-size: 13px !important;
+      font-weight: 600 !important;
+      color: #4E5359 !important;
+      pointer-events: none !important;
+    }
+
+    /* 顶部右侧原生控制钮 (最小化/切换大小) */
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .composer-controls,
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .toggler {
+      position: absolute !important;
+      right: 12px !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 4px !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .composer-controls button,
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .toggler button {
+      background: transparent !important;
+      border: none !important;
+      color: #8F959E !important;
+      width: 22px !important;
+      height: 22px !important;
+      border-radius: 4px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer !important;
+      transition: all 0.12s ease !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .composer-controls button:hover,
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .toggler button:hover {
+      background: rgba(0, 0, 0, 0.06) !important;
+      color: #1F2329 !important;
+    }
+
+    /* 编辑区主体容器 */
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .reply-area {
+      padding: 14px 20px 14px 20px !important;
+      background: #FFFFFF !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 10px !important;
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    /* 字段区：标题 + 分类 + 标签 */
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .composer-fields {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 8px !important;
+      margin-bottom: 2px !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .title-and-category {
+      display: flex !important;
+      align-items: center !important;
+      gap: 10px !important;
+      flex-wrap: wrap !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .title-input {
+      flex: 1 1 320px !important;
+      min-width: 240px !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control input#reply-title {
+      font-family: var(--wc-font) !important;
+      font-size: 14px !important;
+      font-weight: 500 !important;
+      color: #1F2329 !important;
+      background: #FFFFFF !important;
+      border: 1px solid #D8DCE0 !important;
+      border-radius: 6px !important;
+      padding: 0 12px !important;
+      height: 36px !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+      box-shadow: none !important;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control input#reply-title:focus {
+      border-color: #267EF0 !important;
+      box-shadow: 0 0 0 2px rgba(38, 126, 240, 0.15) !important;
+      outline: none !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control input#reply-title::placeholder {
+      color: #8F959E !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .category-input {
+      flex: 0 0 auto !important;
+      min-width: 160px !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .select-kit.combobox .select-kit-header,
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .category-chooser .select-kit-header,
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .mini-tag-chooser .select-kit-header {
+      font-family: var(--wc-font) !important;
+      font-size: 13px !important;
+      color: #1F2329 !important;
+      background: #FFFFFF !important;
+      border: 1px solid #D8DCE0 !important;
+      border-radius: 6px !important;
+      height: 36px !important;
+      padding: 0 10px !important;
+      box-sizing: border-box !important;
+      box-shadow: none !important;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .select-kit.is-expanded .select-kit-header {
+      border-color: #267EF0 !important;
+      box-shadow: 0 0 0 2px rgba(38, 126, 240, 0.15) !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .select-kit-body {
+      border: 1px solid #D8DCE0 !important;
+      border-radius: 6px !important;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12) !important;
+      font-family: var(--wc-font) !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .select-kit-row.is-highlighted {
+      background: #F0F2F5 !important;
+      color: #267EF0 !important;
+    }
+
+    /* 编辑器整体卡片 */
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .d-editor {
+      border: 1px solid #D8DCE0 !important;
+      border-radius: 6px !important;
+      overflow: hidden !important;
+      display: flex !important;
+      flex-direction: column !important;
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      background: #FFFFFF !important;
+      box-sizing: border-box !important;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .d-editor:focus-within {
+      border-color: #267EF0 !important;
+      box-shadow: 0 0 0 2px rgba(38, 126, 240, 0.12) !important;
+    }
+    /* 工具栏：企微灰底、微小圆角按钮 */
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .d-editor-toolbar,
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .d-editor-button-bar {
+      background: #F7F8FA !important;
+      border-bottom: 1px solid #EAEBED !important;
+      padding: 4px 8px !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 2px !important;
+      min-height: 36px !important;
+      box-sizing: border-box !important;
+      flex-shrink: 0 !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .d-editor-button-bar button,
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .d-editor-toolbar button {
+      height: 28px !important;
+      min-width: 28px !important;
+      padding: 0 4px !important;
+      border: none !important;
+      background: transparent !important;
+      border-radius: 4px !important;
+      color: #4E5359 !important;
+      cursor: pointer !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      transition: background 0.12s ease, color 0.12s ease !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .d-editor-button-bar button:hover,
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .d-editor-toolbar button:hover {
+      background: #EAF3FF !important;
+      color: #267EF0 !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .d-editor-button-bar button svg,
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .d-editor-toolbar button svg {
+      width: 16px !important;
+      height: 16px !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .d-editor-textarea-wrapper {
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control textarea.d-editor-input {
+      font-family: var(--wc-font) !important;
+      font-size: 14px !important;
+      line-height: 1.65 !important;
+      color: #1F2329 !important;
+      background: #FFFFFF !important;
+      padding: 10px 14px !important;
+      border: none !important;
+      outline: none !important;
+      resize: none !important;
+      box-shadow: none !important;
+      box-sizing: border-box !important;
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .d-editor-preview-wrapper {
+      border-left: 1px solid #EAEBED !important;
+      background: #FAFBFC !important;
+      padding: 10px 16px !important;
+      box-sizing: border-box !important;
+      overflow-y: auto !important;
+    }
+
+    /* 底部操作行 */
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .submit-panel {
+      display: flex !important;
+      align-items: center !important;
+      gap: 12px !important;
+      padding: 4px 0 0 0 !important;
+      margin-top: 0 !important;
+      background: transparent !important;
+      border-top: none !important;
+      flex-shrink: 0 !important;
+    }
+    /* 创建话题主按钮：企微高亮商务蓝 */
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .submit-panel button.create,
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .submit-panel button.btn-primary {
+      background: #267EF0 !important;
+      color: #FFFFFF !important;
+      border: 1px solid #267EF0 !important;
+      border-radius: 4px !important;
+      height: 32px !important;
+      min-width: 88px !important;
+      padding: 0 16px !important;
+      font-family: var(--wc-font) !important;
+      font-size: 13px !important;
+      font-weight: 500 !important;
+      cursor: pointer !important;
+      box-shadow: 0 2px 6px rgba(38, 126, 240, 0.22) !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      transition: background 0.15s ease, box-shadow 0.15s ease !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .submit-panel button.create:hover,
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .submit-panel button.btn-primary:hover {
+      background: #176BCE !important;
+      border-color: #176BCE !important;
+      box-shadow: 0 3px 8px rgba(38, 126, 240, 0.3) !important;
+    }
+    /* 取消/放弃按钮：企微次级按钮 */
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .submit-panel button.cancel,
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .submit-panel button.btn-default {
+      background: #FFFFFF !important;
+      color: #33383E !important;
+      border: 1px solid #D2D4D7 !important;
+      border-radius: 4px !important;
+      height: 32px !important;
+      min-width: 64px !important;
+      padding: 0 14px !important;
+      font-family: var(--wc-font) !important;
+      font-size: 13px !important;
+      cursor: pointer !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      transition: background 0.12s ease, border-color 0.12s ease !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .submit-panel button.cancel:hover,
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .submit-panel button.btn-default:hover {
+      background: #F5F7FA !important;
+      border-color: #BDD0E8 !important;
+      color: #1F2329 !important;
+    }
+    /* 底部辅助文字与控制 */
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .submit-panel .composer-bottom-right {
+      margin-left: auto !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 10px !important;
+      font-family: var(--wc-font) !important;
+      font-size: 12px !important;
+      color: #8F959E !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .submit-panel .draft-status {
+      font-size: 12px !important;
+      color: #8F959E !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .submit-panel .toggle-preview {
+      height: 28px !important;
+      padding: 0 8px !important;
+      font-size: 12px !important;
+      border-radius: 4px !important;
+      border: 1px solid #E1E4E8 !important;
+      background: #FFFFFF !important;
+      color: #4E5359 !important;
+      cursor: pointer !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .submit-panel .toggle-preview:hover {
+      background: #F5F7FA !important;
+      color: #267EF0 !important;
+    }
+
+    /* 浮层下拉与自动补全 */
     html.${ROOT_CLASS}.wecom-composing-new .autocomplete,
     html.${ROOT_CLASS}.wecom-composing-new .autocomplete-container,
     html.${ROOT_CLASS}.wecom-composing-new .d-editor-popup,
@@ -2677,6 +3022,113 @@
     html.${ROOT_CLASS}.wecom-composing-new .select-kit-collection {
       z-index: 1600 !important;
       pointer-events: auto !important;
+    }
+
+    /* 深色模式深层适配 */
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control {
+      background: #191B1F !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.45) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .grippie {
+      background: #14161A !important;
+      border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .grippie::before {
+      background: #4C525C !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .grippie:hover::before {
+      background: #388BFD !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .grippie::after {
+      color: #9EA3A8 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .composer-controls button,
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .toggler button {
+      color: #9EA3A8 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .composer-controls button:hover,
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .toggler button:hover {
+      background: rgba(255, 255, 255, 0.1) !important;
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .reply-area {
+      background: #191B1F !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control input#reply-title,
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .select-kit.combobox .select-kit-header,
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .category-chooser .select-kit-header,
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .mini-tag-chooser .select-kit-header {
+      background: #23272E !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control input#reply-title:focus,
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .select-kit.is-expanded .select-kit-header {
+      border-color: #388BFD !important;
+      box-shadow: 0 0 0 2px rgba(56, 139, 253, 0.25) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .select-kit-body {
+      background: #23272E !important;
+      border-color: rgba(255, 255, 255, 0.15) !important;
+      color: #ECEFF4 !important;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .select-kit-row.is-highlighted {
+      background: #2C313A !important;
+      color: #388BFD !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .d-editor {
+      background: #23272E !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .d-editor:focus-within {
+      border-color: rgba(56, 139, 253, 0.45) !important;
+      box-shadow: 0 0 0 2px rgba(56, 139, 253, 0.2) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .d-editor-toolbar,
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .d-editor-button-bar {
+      background: #1C1F24 !important;
+      border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .d-editor-button-bar button,
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .d-editor-toolbar button {
+      color: #9EA3A8 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .d-editor-button-bar button:hover,
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .d-editor-toolbar button:hover {
+      background: #388BFD1A !important;
+      color: #388BFD !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control textarea.d-editor-input {
+      background: #23272E !important;
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .d-editor-preview-wrapper {
+      background: #14161A !important;
+      border-left-color: rgba(255, 255, 255, 0.08) !important;
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .submit-panel button.cancel,
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .submit-panel button.btn-default {
+      background: #23272E !important;
+      border-color: rgba(255, 255, 255, 0.18) !important;
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .submit-panel button.cancel:hover,
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .submit-panel button.btn-default:hover {
+      background: #2C313A !important;
+      border-color: rgba(255, 255, 255, 0.28) !important;
+      color: #FFFFFF !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .submit-panel .toggle-preview {
+      background: #23272E !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      color: #9EA3A8 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark.wecom-composing-new #reply-control .submit-panel .toggle-preview:hover {
+      background: #2C313A !important;
+      color: #388BFD !important;
     }
 
     /* ---------- native 模式悬浮恢复钮 ---------- */
@@ -5923,7 +6375,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.2";
+  const SCRIPT_VERSION = "0.7.3";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -7380,7 +7832,7 @@
       if (isOpen) {
         hasBeenOpen = true;
       } else if (hasBeenOpen) {
-        document.documentElement.classList.remove("wecom-composing-new");
+        document.documentElement.classList.remove("wecom-composing-new", "wecom-mask-composing");
         if (newTopicObserver) {
           newTopicObserver.disconnect();
           newTopicObserver = null;
@@ -7396,7 +7848,7 @@
         if (currentRc && currentRc.classList.contains("open")) {
           hasBeenOpen = true;
         } else {
-          document.documentElement.classList.remove("wecom-composing-new");
+          document.documentElement.classList.remove("wecom-composing-new", "wecom-mask-composing");
           if (newTopicObserver) {
             newTopicObserver.disconnect();
             newTopicObserver = null;
@@ -7440,6 +7892,7 @@
 
     if (opened) {
       document.documentElement.classList.add("wecom-composing-new");
+      document.documentElement.classList.toggle("wecom-mask-composing", isMaskTitleList());
       monitorNewTopicComposerClose();
     } else {
       window.open(`${location.origin}/?create_topic=true`, "_blank", "noopener,noreferrer");
@@ -13164,7 +13617,7 @@
     closeImageViewer();
     closeEditDialog(true);
     closeOfficialEmojiPicker();
-    document.documentElement.classList.remove("wecom-members-open", "wecom-composing-new");
+    document.documentElement.classList.remove("wecom-members-open", "wecom-composing-new", "wecom-mask-composing");
     document.querySelector(".wecom-list-panel")?.remove();
     document.querySelector(".wecom-chat-panel")?.remove();
     document.querySelector(".wecom-member-panel")?.remove();
