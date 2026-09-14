@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.10
+// @version      0.7.11
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -58,6 +58,9 @@
   const DEFAULT_IMAGE_AUTO_LAYOUT_SIZE = 100;
   const MIN_IMAGE_AUTO_LAYOUT_SIZE = 50;
   const MAX_IMAGE_AUTO_LAYOUT_SIZE = 400;
+  const IMAGE_AUTO_LAYOUT_ASPECT_KEY = "linuxdo-wecom-image-layout-aspect";
+  const DEFAULT_IMAGE_AUTO_LAYOUT_ASPECT = "1:1";
+  const SUPPORTED_IMAGE_AUTO_LAYOUT_ASPECTS = Object.freeze(["4:3", "1:1", "16:9"]);
   const THEME_MODE_VALUES = Object.freeze(["light", "dark", "system"]);
   const DEFAULT_THEME_MODE = "light";
   const IMAGE_VIEWER_DEFAULT_SCALE = 1;
@@ -3352,17 +3355,30 @@
     .wecom-msg-body:empty + .wecom-msg-images {
       margin-top: 0 !important;
     }
+    .wecom-msg-body > *:last-child {
+      margin-bottom: 0 !important;
+    }
+    .wecom-msg-body > p:last-child {
+      margin-bottom: 0 !important;
+    }
+    .wecom-msg-body p:empty,
+    .wecom-msg-body div:empty {
+      display: none !important;
+    }
     .wecom-msg-thumb {
       position: relative !important;
       width: 100px !important;
       width: var(--wecom-image-thumb-size, 100px) !important;
+      width: var(--wecom-image-thumb-width, var(--wecom-image-thumb-size, 100px)) !important;
       height: 100px !important;
       height: var(--wecom-image-thumb-size, 100px) !important;
-      min-width: var(--wecom-image-thumb-size, 100px) !important;
-      min-height: var(--wecom-image-thumb-size, 100px) !important;
-      max-width: var(--wecom-image-thumb-size, 100px) !important;
-      max-height: var(--wecom-image-thumb-size, 100px) !important;
-      flex: 0 0 var(--wecom-image-thumb-size, 100px) !important;
+      height: var(--wecom-image-thumb-height, var(--wecom-image-thumb-size, 100px)) !important;
+      min-width: var(--wecom-image-thumb-width, var(--wecom-image-thumb-size, 100px)) !important;
+      min-height: var(--wecom-image-thumb-height, var(--wecom-image-thumb-size, 100px)) !important;
+      max-width: var(--wecom-image-thumb-width, var(--wecom-image-thumb-size, 100px)) !important;
+      max-height: var(--wecom-image-thumb-height, var(--wecom-image-thumb-size, 100px)) !important;
+      flex: 0 0 var(--wecom-image-thumb-width, var(--wecom-image-thumb-size, 100px)) !important;
+      aspect-ratio: var(--wecom-image-thumb-aspect, 1 / 1) !important;
       border-radius: 6px !important;
       overflow: hidden !important;
       background: rgba(0, 0, 0, 0.04) !important;
@@ -3394,12 +3410,15 @@
     .wecom-msg-thumb img {
       width: 100px !important;
       width: var(--wecom-image-thumb-size, 100px) !important;
+      width: var(--wecom-image-thumb-width, var(--wecom-image-thumb-size, 100px)) !important;
       height: 100px !important;
       height: var(--wecom-image-thumb-size, 100px) !important;
-      min-width: var(--wecom-image-thumb-size, 100px) !important;
-      min-height: var(--wecom-image-thumb-size, 100px) !important;
-      max-width: var(--wecom-image-thumb-size, 100px) !important;
-      max-height: var(--wecom-image-thumb-size, 100px) !important;
+      height: var(--wecom-image-thumb-height, var(--wecom-image-thumb-size, 100px)) !important;
+      min-width: var(--wecom-image-thumb-width, var(--wecom-image-thumb-size, 100px)) !important;
+      min-height: var(--wecom-image-thumb-height, var(--wecom-image-thumb-size, 100px)) !important;
+      max-width: var(--wecom-image-thumb-width, var(--wecom-image-thumb-size, 100px)) !important;
+      max-height: var(--wecom-image-thumb-height, var(--wecom-image-thumb-size, 100px)) !important;
+      aspect-ratio: var(--wecom-image-thumb-aspect, 1 / 1) !important;
       object-fit: cover !important;
       display: block !important;
       border-radius: 4px !important;
@@ -3516,6 +3535,90 @@
       color: #FFFFFF !important;
     }
     html.wecom-dark .wecom-theme-menu .wecom-size-chip.is-active {
+      background: var(--wc-blue, #267EF0) !important;
+      border-color: var(--wc-blue, #267EF0) !important;
+      color: #FFFFFF !important;
+    }
+
+    /* 图片排版比例设置行 */
+    .wecom-menu-image-aspect-row {
+      padding: 6px 8px 8px !important;
+      margin: 0 4px 4px !important;
+      background: rgba(0, 0, 0, 0.025);
+      border-radius: 6px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 5px !important;
+      box-sizing: border-box !important;
+      transition: opacity 0.15s ease !important;
+    }
+    html.wecom-dark .wecom-menu-image-aspect-row {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    .wecom-menu-aspect-header {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      font-size: 11px !important;
+      color: var(--wc-text-3) !important;
+      user-select: none !important;
+    }
+    .wecom-menu-aspect-val {
+      font-weight: 600 !important;
+      color: var(--wc-blue, #267EF0) !important;
+      font-size: 11px !important;
+    }
+    .wecom-menu-aspect-chips {
+      display: flex !important;
+      align-items: center !important;
+      gap: 4px !important;
+      width: 100% !important;
+    }
+    .wecom-theme-menu .wecom-aspect-chip {
+      flex: 1 1 0 !important;
+      width: auto !important;
+      min-width: 0 !important;
+      height: 22px !important;
+      line-height: 20px !important;
+      padding: 0 !important;
+      border: 1px solid rgba(0, 0, 0, 0.1) !important;
+      background: rgba(0, 0, 0, 0.03) !important;
+      border-radius: 4px !important;
+      font-size: 11px !important;
+      color: var(--wc-text-2) !important;
+      cursor: pointer !important;
+      text-align: center !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      transition: all 0.12s ease !important;
+      box-sizing: border-box !important;
+      user-select: none !important;
+    }
+    .wecom-theme-menu .wecom-aspect-chip:hover {
+      background: rgba(38, 126, 240, 0.1) !important;
+      border-color: rgba(38, 126, 240, 0.4) !important;
+      color: var(--wc-blue, #267EF0) !important;
+    }
+    .wecom-theme-menu .wecom-aspect-chip.is-active {
+      background: var(--wc-blue, #267EF0) !important;
+      border-color: var(--wc-blue, #267EF0) !important;
+      color: #FFFFFF !important;
+      font-weight: 600 !important;
+    }
+    html.wecom-dark .wecom-theme-menu .wecom-aspect-chip {
+      background: rgba(255, 255, 255, 0.06) !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      color: #B2B8C2 !important;
+    }
+    html.wecom-dark .wecom-theme-menu .wecom-aspect-chip:hover {
+      background: rgba(38, 126, 240, 0.2) !important;
+      border-color: rgba(38, 126, 240, 0.6) !important;
+      color: #FFFFFF !important;
+    }
+    html.wecom-dark .wecom-theme-menu .wecom-aspect-chip.is-active {
       background: var(--wc-blue, #267EF0) !important;
       border-color: var(--wc-blue, #267EF0) !important;
       color: #FFFFFF !important;
@@ -6642,9 +6745,55 @@
     return DEFAULT_IMAGE_AUTO_LAYOUT_SIZE;
   }
 
+  function normalizeImageAutoLayoutAspect(val) {
+    const raw = String(val || "").trim();
+    if (SUPPORTED_IMAGE_AUTO_LAYOUT_ASPECTS.includes(raw)) return raw;
+    return DEFAULT_IMAGE_AUTO_LAYOUT_ASPECT;
+  }
+
+  function getImageAutoLayoutAspect() {
+    try {
+      return normalizeImageAutoLayoutAspect(localStorage.getItem(IMAGE_AUTO_LAYOUT_ASPECT_KEY));
+    } catch {
+      return DEFAULT_IMAGE_AUTO_LAYOUT_ASPECT;
+    }
+  }
+
+  function computeImageAutoLayoutDimensions(size, aspect) {
+    const baseSize = Math.min(MAX_IMAGE_AUTO_LAYOUT_SIZE, Math.max(MIN_IMAGE_AUTO_LAYOUT_SIZE, Number(size) || DEFAULT_IMAGE_AUTO_LAYOUT_SIZE));
+    const normalizedAspect = normalizeImageAutoLayoutAspect(aspect);
+    let width = baseSize;
+    let height = baseSize;
+    let cssAspect = "1 / 1";
+
+    if (normalizedAspect === "4:3") {
+      // 4:3 比例：以 baseSize 为基准高度，宽度为 baseSize * 4 / 3
+      height = baseSize;
+      width = Math.round(baseSize * 4 / 3);
+      cssAspect = "4 / 3";
+    } else if (normalizedAspect === "16:9") {
+      // 16:9 比例：以 baseSize 为基准高度，宽度为 baseSize * 16 / 9
+      height = baseSize;
+      width = Math.round(baseSize * 16 / 9);
+      cssAspect = "16 / 9";
+    } else {
+      // 1:1 比例：正方形
+      height = baseSize;
+      width = baseSize;
+      cssAspect = "1 / 1";
+    }
+
+    return { width, height, aspect: normalizedAspect, cssAspect, baseSize };
+  }
+
   function applyImageAutoLayoutSizeCss(size) {
-    const num = Number(size) || DEFAULT_IMAGE_AUTO_LAYOUT_SIZE;
-    document.documentElement.style.setProperty("--wecom-image-thumb-size", `${num}px`);
+    const num = Number(size) || getImageAutoLayoutSize();
+    const curAspect = arguments[1] !== undefined ? normalizeImageAutoLayoutAspect(arguments[1]) : getImageAutoLayoutAspect();
+    const dims = computeImageAutoLayoutDimensions(num, curAspect);
+    document.documentElement.style.setProperty("--wecom-image-thumb-size", `${dims.baseSize}px`);
+    document.documentElement.style.setProperty("--wecom-image-thumb-width", `${dims.width}px`);
+    document.documentElement.style.setProperty("--wecom-image-thumb-height", `${dims.height}px`);
+    document.documentElement.style.setProperty("--wecom-image-thumb-aspect", dims.cssAspect);
   }
 
   function setImageAutoLayoutSize(size) {
@@ -6653,6 +6802,16 @@
       localStorage.setItem(IMAGE_AUTO_LAYOUT_SIZE_KEY, String(num));
     } catch { /* ignore */ }
     applyImageAutoLayoutSizeCss(num);
+    syncThemeControls();
+    refreshChatMessagesLayout();
+  }
+
+  function setImageAutoLayoutAspect(aspect) {
+    const normalized = normalizeImageAutoLayoutAspect(aspect);
+    try {
+      localStorage.setItem(IMAGE_AUTO_LAYOUT_ASPECT_KEY, normalized);
+    } catch { /* ignore */ }
+    applyImageAutoLayoutSizeCss(getImageAutoLayoutSize(), normalized);
     syncThemeControls();
     refreshChatMessagesLayout();
   }
@@ -6765,6 +6924,21 @@
         customChip.textContent = !matched ? `${curSize}px` : "自定义";
       }
     }
+
+    const imageAspectRow = menu.querySelector(".wecom-menu-image-aspect-row");
+    if (imageAspectRow) {
+      const isAuto = isImageAutoLayoutEnabled();
+      imageAspectRow.style.opacity = isAuto ? "" : "0.55";
+      const curAspect = getImageAutoLayoutAspect();
+      const valEl = imageAspectRow.querySelector(".wecom-menu-aspect-val");
+      if (valEl) valEl.textContent = curAspect;
+      imageAspectRow.querySelectorAll(".wecom-aspect-chip").forEach((chip) => {
+        const a = chip.dataset.aspect;
+        const active = a === curAspect;
+        chip.classList.toggle("is-active", active);
+        chip.setAttribute("aria-checked", active ? "true" : "false");
+      });
+    }
   }
 
   function bindThemeControls() {
@@ -6833,6 +7007,14 @@
       `    <button type="button" class="wecom-size-chip wecom-size-chip-custom" data-size="custom">自定义</button>` +
       `  </div>` +
       `</div>` +
+      `<div class="wecom-menu-image-aspect-row" title="点击切换图片自动排版显示比例">` +
+      `  <div class="wecom-menu-aspect-header"><span class="wecom-menu-sub-label">显示比例</span><span class="wecom-menu-aspect-val">1:1</span></div>` +
+      `  <div class="wecom-menu-aspect-chips">` +
+      `    <button type="button" class="wecom-aspect-chip" data-aspect="4:3">4:3</button>` +
+      `    <button type="button" class="wecom-aspect-chip" data-aspect="1:1">1:1</button>` +
+      `    <button type="button" class="wecom-aspect-chip" data-aspect="16:9">16:9</button>` +
+      `  </div>` +
+      `</div>` +
       `<button type="button" role="menuitem" class="wecom-check-update">${ICONS.refresh}<span>检查脚本更新</span></button>`;
     document.body.appendChild(menu);
     menu.addEventListener("click", (event) => {
@@ -6898,6 +7080,17 @@
         }
         return;
       }
+      const aspectChip = event.target.closest(".wecom-aspect-chip");
+      if (aspectChip) {
+        event.preventDefault();
+        event.stopPropagation();
+        const aspectVal = aspectChip.dataset.aspect;
+        if (!isImageAutoLayoutEnabled()) {
+          setImageAutoLayoutEnabled(true);
+        }
+        setImageAutoLayoutAspect(aspectVal);
+        return;
+      }
       const option = event.target.closest("button[data-theme-mode]");
       if (!option) return;
       event.preventDefault();
@@ -6948,7 +7141,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.10";
+  const SCRIPT_VERSION = "0.7.11";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -9790,9 +9983,98 @@
 
   function isNodeVisuallyEmpty(node) {
     if (!node) return true;
-    if (node.textContent.trim().length > 0) return false;
+    if (node.textContent.replace(/[\s\u200B\u00A0]+/g, "").length > 0) return false;
     const meaningful = node.querySelector("img, svg, iframe, video, audio, table, pre, code, input, hr, canvas, object, embed, aside.onebox, .onebox, .poll, details");
     return !meaningful;
+  }
+
+  function cleanMessageBodyWhitespace(bodyEl) {
+    if (!bodyEl) return;
+
+    // 1. 递归清理视觉为空的段落与块级容器（包括仅含空白、&nbsp;、<br> 的节点）
+    const emptyNodes = bodyEl.querySelectorAll("p, div, span, blockquote, section, article, h1, h2, h3, h4, h5, h6");
+    for (let i = emptyNodes.length - 1; i >= 0; i--) {
+      const el = emptyNodes[i];
+      if (el.parentNode && isNodeVisuallyEmpty(el)) {
+        el.remove();
+      }
+    }
+
+    // 2. 清理连续的 <br>，将连续 2 个以上的 <br> 缩减为最多 1 个换行
+    // 同时清理紧挨块级元素（p, div, blockquote, pre, table, ul, ol 等）前后的冗余 <br>
+    const allBrs = Array.from(bodyEl.querySelectorAll("br"));
+    for (const br of allBrs) {
+      if (!br.parentNode) continue;
+
+      let prev = br.previousSibling;
+      while (prev && prev.nodeType === 3 && prev.textContent.trim() === "") {
+        const toRemove = prev;
+        prev = prev.previousSibling;
+        toRemove.remove();
+      }
+      if (prev) {
+        if (prev.nodeName === "BR") {
+          br.remove();
+          continue;
+        }
+        if (prev.nodeType === 1 && /^(P|DIV|BLOCKQUOTE|PRE|TABLE|UL|OL|H[1-6]|HR|ASIDE|DETAILS)$/i.test(prev.nodeName)) {
+          br.remove();
+          continue;
+        }
+      }
+
+      let next = br.nextSibling;
+      while (next && next.nodeType === 3 && next.textContent.trim() === "") {
+        next = next.nextSibling;
+      }
+      if (next && next.nodeType === 1 && /^(P|DIV|BLOCKQUOTE|PRE|TABLE|UL|OL|H[1-6]|HR|ASIDE|DETAILS)$/i.test(next.nodeName)) {
+        br.remove();
+        continue;
+      }
+    }
+
+    // 3. 清理段落或行内容器内部首尾的空节点与 <br>
+    bodyEl.querySelectorAll("p, div, blockquote, li").forEach((container) => {
+      while (container.firstChild && (container.firstChild.nodeName === "BR" || (container.firstChild.nodeType === 3 && container.firstChild.textContent.trim() === ""))) {
+        container.firstChild.remove();
+      }
+      while (container.lastChild && (container.lastChild.nodeName === "BR" || (container.lastChild.nodeType === 3 && container.lastChild.textContent.trim() === ""))) {
+        container.lastChild.remove();
+      }
+    });
+
+    // 4. 清理 bodyEl 首尾的空文本节点与 <br>，彻底消除正文顶部与底部（紧贴图片栏处）的空行
+    while (bodyEl.firstChild) {
+      const first = bodyEl.firstChild;
+      if (first.nodeType === 3 && first.textContent.trim() === "") {
+        first.remove();
+      } else if (first.nodeName === "BR") {
+        first.remove();
+      } else if (first.nodeType === 1 && isNodeVisuallyEmpty(first)) {
+        first.remove();
+      } else {
+        break;
+      }
+    }
+    while (bodyEl.lastChild) {
+      const last = bodyEl.lastChild;
+      if (last.nodeType === 3 && last.textContent.trim() === "") {
+        last.remove();
+      } else if (last.nodeName === "BR") {
+        last.remove();
+      } else if (last.nodeType === 1 && isNodeVisuallyEmpty(last)) {
+        last.remove();
+      } else {
+        break;
+      }
+    }
+
+    // 5. 整体状态判断
+    if (isNodeVisuallyEmpty(bodyEl)) {
+      bodyEl.classList.add("is-empty");
+    } else {
+      bodyEl.classList.remove("is-empty");
+    }
   }
 
   function parsePixelDimension(val) {
@@ -9870,8 +10152,9 @@
     const dim = getImageEffectiveDimensions(img);
     if (!dim) return false;
     const targetSize = Number(layoutSize) || getImageAutoLayoutSize();
+    const dims = computeImageAutoLayoutDimensions(targetSize, getImageAutoLayoutAspect());
     // 小于排版尺寸：图片的宽度和高度均小于设定的排版缩略图尺寸
-    return dim.width < targetSize && dim.height < targetSize;
+    return dim.width < dims.width && dim.height < dims.height;
   }
 
   function attachImageAutoLayoutLoadCheck(img, bubble) {
@@ -9999,6 +10282,7 @@
         }
       }
 
+      cleanMessageBodyWhitespace(bodyEl);
       bubble.appendChild(gallery);
       if (isNodeVisuallyEmpty(bodyEl)) {
         bodyEl.classList.add("is-empty");

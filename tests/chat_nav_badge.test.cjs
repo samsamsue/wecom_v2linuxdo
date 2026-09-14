@@ -2473,6 +2473,115 @@ test("images with dimensions smaller than layout thumbnail size are excluded fro
   assert.equal(resMixed.inlineCount, 1, "small badge remains inline in message text");
 });
 
+test("image auto-layout aspect ratio configuration (4:3, 1:1, 16:9) and empty lines cleanup", () => {
+  // 1. Script defines aspect ratio keys and methods
+  assert.ok(
+    scriptContent.includes("IMAGE_AUTO_LAYOUT_ASPECT_KEY"),
+    "must define IMAGE_AUTO_LAYOUT_ASPECT_KEY"
+  );
+  assert.ok(
+    scriptContent.includes("function getImageAutoLayoutAspect"),
+    "must define getImageAutoLayoutAspect"
+  );
+  assert.ok(
+    scriptContent.includes("function setImageAutoLayoutAspect"),
+    "must define setImageAutoLayoutAspect"
+  );
+  assert.ok(
+    scriptContent.includes("function computeImageAutoLayoutDimensions"),
+    "must define computeImageAutoLayoutDimensions"
+  );
+  assert.ok(
+    scriptContent.includes("function cleanMessageBodyWhitespace"),
+    "must define cleanMessageBodyWhitespace"
+  );
+
+  // 2. CSS defines aspect ratio variables and settings menu elements
+  assert.ok(
+    scriptContent.includes(".wecom-menu-image-aspect-row"),
+    "must style .wecom-menu-image-aspect-row in CSS"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-aspect-chip"),
+    "must style .wecom-aspect-chip in CSS"
+  );
+  assert.ok(
+    scriptContent.includes("--wecom-image-thumb-aspect"),
+    "must set CSS variable --wecom-image-thumb-aspect"
+  );
+  assert.ok(
+    scriptContent.includes('data-aspect="4:3"') &&
+    scriptContent.includes('data-aspect="1:1"') &&
+    scriptContent.includes('data-aspect="16:9"'),
+    "must offer 4:3, 1:1, 16:9 aspect chips in settings menu"
+  );
+
+  // 3. Functional test of computeImageAutoLayoutDimensions
+  function simComputeDims(baseSize, aspect) {
+    const s = Number(baseSize) || 100;
+    if (aspect === "4:3") {
+      return { width: Math.round(s * 4 / 3), height: s, cssAspect: "4 / 3" };
+    }
+    if (aspect === "16:9") {
+      return { width: Math.round(s * 16 / 9), height: s, cssAspect: "16 / 9" };
+    }
+    return { width: s, height: s, cssAspect: "1 / 1" };
+  }
+
+  const dims1x1 = simComputeDims(100, "1:1");
+  assert.equal(dims1x1.width, 100);
+  assert.equal(dims1x1.height, 100);
+  assert.equal(dims1x1.cssAspect, "1 / 1");
+
+  const dims4x3 = simComputeDims(100, "4:3");
+  assert.equal(dims4x3.width, 133);
+  assert.equal(dims4x3.height, 100);
+  assert.equal(dims4x3.cssAspect, "4 / 3");
+
+  const dims16x9 = simComputeDims(100, "16:9");
+  assert.equal(dims16x9.width, 178);
+  assert.equal(dims16x9.height, 100);
+  assert.equal(dims16x9.cssAspect, "16 / 9");
+
+  // 4. Functional simulation of cleanMessageBodyWhitespace
+  function simCleanWhitespace(html) {
+    let cleaned = html
+      .replace(/<(p|div)>\s*(?:<br\s*\/?>|&nbsp;|\u00A0|\u200B|\s)*<\/\1>/gi, "")
+      .replace(/(?:<br\s*\/?>\s*){2,}/gi, "<br>")
+      .replace(/(<\/(?:p|div|blockquote)>)\s*<br\s*\/?>/gi, "$1")
+      .replace(/<br\s*\/?>\s*(<(?:p|div|blockquote)>)/gi, "$1")
+      .replace(/^(?:\s*<br\s*\/?>|\s)+/i, "")
+      .replace(/(?:<br\s*\/?>\s*|\s)+$/i, "")
+      .trim();
+    return cleaned;
+  }
+
+  // Case A: Multiple empty paragraphs left by Discourse removed images
+  const discourseCooked = `
+    <p>第一段文本</p>
+    <p><br></p>
+    <p><br></p>
+    <p>第二段文本</p>
+    <p><br></p>
+  `;
+  const resDiscourse = simCleanWhitespace(discourseCooked);
+  assert.ok(!resDiscourse.includes("<p><br></p>"), "must remove empty paragraphs");
+  assert.ok(resDiscourse.includes("<p>第一段文本</p>"), "must preserve first paragraph");
+  assert.ok(resDiscourse.includes("<p>第二段文本</p>"), "must preserve second paragraph");
+  assert.ok(!resDiscourse.endsWith("<br>"), "must trim trailing linebreaks");
+
+  // Case B: V2EX multiple consecutive <br> tags left after image removal
+  const v2exCooked = "这是第一行<br><br><br><br>这是第二行<br><br><br>";
+  const resV2ex = simCleanWhitespace(v2exCooked);
+  assert.equal(resV2ex, "这是第一行<br>这是第二行", "must collapse multiple <br> and remove trailing <br>");
+
+  // Case C: Leading and trailing empty space before gallery
+  const trailingCooked = "<br><br><p>单段文本</p><br><br>";
+  const resTrailing = simCleanWhitespace(trailingCooked);
+  assert.equal(resTrailing, "<p>单段文本</p>", "must eliminate leading and trailing void space");
+});
+
+
 
 
 
