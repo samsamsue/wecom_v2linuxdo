@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.6.6
+// @version      0.6.7
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -30,6 +30,8 @@
   const VIEW_KEY = "linuxdo-wecom-view"; // "im" | "native"
   const LAST_READ_KEY = "linuxdo-wecom-last-read";
   const LAST_READ_MAX_TOPICS = 200;
+  const TOPIC_HISTORY_KEY = "linuxdo-wecom-topic-history";
+  const TOPIC_HISTORY_MAX = 200;
 
   const RAIL_WIDTH = 56; // 企业微信 PC 端标准 56px 侧边停靠栏
   const NAV2_WIDTH = 240; // 展开栏（原生侧栏原样搬入，默认收起）
@@ -164,7 +166,7 @@
     at: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4" /><path d="M16 12v1.5a2.5 2.5 0 0 0 5 0v-1.5a9 9 0 1 0 -5.5 8.28" /></svg>`,
     monitorSmall: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-10z" /><path d="M7 20h10" /><path d="M9 16v4" /><path d="M15 16v4" /></svg>`,
     checklist: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5.5l1.5 1.5l2.5 -2.5" /><path d="M3.5 11.5l1.5 1.5l2.5 -2.5" /><path d="M3.5 17.5l1.5 1.5l2.5 -2.5" /><path d="M11 6l9 0" /><path d="M11 12l9 0" /><path d="M11 18l9 0" /></svg>`,
-    history: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-13a3 3 0 0 1 3 -3h10a3 3 0 0 1 3 3v6a3 3 0 0 1 -3 3h-9l-4 4" /><path d="M12 11l0 .01" /><path d="M8 11l0 .01" /><path d="M16 11l0 .01" /></svg>`,
+    history: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 2a10 10 0 1 1 -7.071 17.071l-.117 -.117l-.094 -.104a1 1 0 0 1 1.414 -1.414l.094 .104l.117 .117a8 8 0 1 0 5.657 -13.657a7.95 7.95 0 0 0 -5.657 2.343l-.117 .117h2.774a1 1 0 0 1 .117 1.993l-.117 .007h-5a1 1 0 0 1 -.993 -.883l-.007 -.117v-5a1 1 0 0 1 1.993 -.117l.007 .117v2.365l.172 -.18a9.96 9.96 0 0 1 7.07 -2.902zm1 6a1 1 0 0 1 .993 .883l.007 .117v3.585l2.707 2.708a1 1 0 0 1 -1.32 1.497l-.094 -.083l-3 -3a1 1 0 0 1 -.286 -.55l-.007 -.157v-4a1 1 0 0 1 1 -1z"/></svg>`,
     userPlus: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /><path d="M6 21v-2a4 4 0 0 1 4 -4h4c.342 0 .674 .043 .99 .124" /><path d="M16 19h6" /><path d="M19 16v6" /></svg>`,
     watermark: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18.5h14" /><path d="M8 16l4 -10l4 10" /><path d="M9.4 12.5h5.2" /></svg>`,
     circleOff: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><line x1="5.7" y1="5.7" x2="18.3" y2="18.3" /></svg>`,
@@ -889,6 +891,78 @@
     return getRememberedPost(topic.id) || Number(topic.last_read_post_number) || 0;
   }
 
+  function readTopicHistory() {
+    try {
+      const raw = localStorage.getItem(TOPIC_HISTORY_KEY);
+      const list = JSON.parse(raw || "[]");
+      return Array.isArray(list) ? list : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveTopicHistory(list) {
+    try {
+      localStorage.setItem(TOPIC_HISTORY_KEY, JSON.stringify((list || []).slice(0, TOPIC_HISTORY_MAX)));
+    } catch { /* ignore */ }
+  }
+
+  function recordTopicHistory(data, posts = []) {
+    if (!data || !data.id) return;
+    const topicId = Number(data.id);
+    const existing = readTopicHistory();
+    const opPost = (posts && posts.length) ? posts[0] : (data.post_stream?.posts?.[0] || null);
+
+    let author = opPost?.username || data.details?.created_by?.username || "";
+    let avatar = opPost?.avatar_template || data.details?.created_by?.avatar_template || "";
+    if (IS_V2EX) {
+      author = author || opPost?.name || data.member?.username || "";
+      avatar = avatar || opPost?.avatar || data.member?.avatar_normal || "";
+    }
+
+    let nodeName = "";
+    let categoryColor = "";
+    if (IS_V2EX) {
+      nodeName = data.node_title || data.node_name || "";
+    } else {
+      const cat = categoryById(data.category_id);
+      if (cat) {
+        nodeName = cat.name || "";
+        categoryColor = cat.color || "";
+      }
+    }
+
+    const replyCount = Number(data.total_replies != null ? data.total_replies : (data.posts_count ? data.posts_count - 1 : 0)) || 0;
+
+    const convTopic = (listState.topics || []).find((t) => Number(t.id) === topicId);
+    if (convTopic) {
+      if (!author) author = convTopic.last_poster_username || "";
+      if (!avatar) avatar = convTopic.v2ex_avatar || convTopic.avatar_template || "";
+      if (!nodeName) nodeName = convTopic.node_name || "";
+    }
+
+    const item = {
+      id: topicId,
+      title: data.title || convTopic?.title || `话题 #${topicId}`,
+      last_poster_username: author,
+      v2ex_avatar: IS_V2EX ? avatar : "",
+      avatar_template: !IS_V2EX ? avatar : "",
+      node_name: nodeName,
+      category_id: data.category_id || convTopic?.category_id || null,
+      category_color: categoryColor,
+      reply_count: replyCount,
+      posts_count: replyCount + 1,
+      visited_at: Date.now(),
+      bumped_at: Date.now(),
+      platform: IS_V2EX ? "v2ex" : "linuxdo",
+      slug: data.slug || convTopic?.slug || ""
+    };
+
+    const filtered = existing.filter((t) => Number(t.id) !== topicId || (t.platform && t.platform !== item.platform));
+    filtered.unshift(item);
+    saveTopicHistory(filtered);
+  }
+
   function isHomePath(pathname) {
     if (IS_V2EX) {
       return pathname === "/" || /^\/(recent|changes|notifications)\b/.test(pathname) || /^\/go\//.test(pathname);
@@ -1526,6 +1600,51 @@
       display: inline-flex; align-items: center; gap: 2px;
       background: #E7EAF1; border-radius: 14px; padding: 2px;
       flex-shrink: 0;
+    }
+    .wecom-history-header-bar {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+    }
+    .wecom-list-panel.is-history-mode .wecom-list-nav-toggle,
+    .wecom-list-panel.is-history-mode .wecom-list-chips,
+    .wecom-list-panel.is-history-mode .wecom-list-add {
+      display: none !important;
+    }
+    .wecom-list-panel.is-history-mode .wecom-history-header-bar {
+      display: inline-flex !important;
+    }
+    .wecom-history-tag {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--wc-text);
+      white-space: nowrap;
+    }
+    .wecom-history-count {
+      font-size: 12px;
+      color: var(--wc-text-3);
+      white-space: nowrap;
+    }
+    .wecom-history-clear-btn {
+      margin-left: auto;
+      height: 22px;
+      padding: 0 8px;
+      border-radius: 4px;
+      border: 1px solid var(--wc-border);
+      background: transparent;
+      color: var(--wc-text-3);
+      font-size: 11px;
+      cursor: pointer;
+      font-family: var(--wc-font);
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .wecom-history-clear-btn:hover {
+      color: #E54545;
+      border-color: #E54545;
+      background: rgba(229, 69, 69, 0.08);
     }
     .wecom-chip {
       height: 24px; padding: 0 12px; border: 0; border-radius: 12px;
@@ -5665,7 +5784,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.6.6";
+  const SCRIPT_VERSION = "0.6.7";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -5830,9 +5949,9 @@
 
   /* ============================== 脚本更新结束 ============================== */
 
-  /** 企业微信工作台导航项（对齐官方截图：消息、文档、日程、待办、会议、智能文档、智能总结、工作台、通讯录、微盘、高级功能、分组） */
+  /** 企业微信工作台导航项（对齐官方截图：消息、历史、日程、待办、会议、智能文档、智能总结、工作台、通讯录、微盘、高级功能、分组） */
   const RAIL_DECO_ITEMS = [
-    { key: "doc", icon: "doc", label: "文档" },
+    { key: "history", icon: "history", label: "历史" },
     { key: "cal", icon: "cal", label: "日程" },
     { key: "todo", icon: "todo", label: "待办" },
     { key: "meet", icon: "meet", label: "会议" },
@@ -6074,8 +6193,15 @@
     const input = form?.querySelector("input");
     if (!form || !input) return;
     container.dataset.searchBound = "1";
-    input.addEventListener("input", () => syncSearchToNative(input.value));
+    input.addEventListener("input", () => {
+      if (listState.listMode === "history") {
+        renderHistoryList(input.value.trim());
+        return;
+      }
+      syncSearchToNative(input.value);
+    });
     input.addEventListener("focus", () => {
+      if (listState.listMode === "history") return;
       syncSearchToNative(input.value);
       const native = getNativeSearchInput();
       if (native && native !== input) {
@@ -6085,6 +6211,10 @@
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       e.stopPropagation();
+      if (listState.listMode === "history") {
+        renderHistoryList(input.value.trim());
+        return;
+      }
       submitNativeSearch(input.value);
     });
   }
@@ -6092,13 +6222,13 @@
   function ensureRail() {
     let rail = document.querySelector(".wecom-rail");
     // 重建为企业微信 56px 垂直标准停靠栏
-    if (rail && (!rail.querySelector("[data-rail-key='group']") || rail.querySelector(".wecom-rail-groups"))) {
+    if (rail && (!rail.querySelector("[data-rail-key='group']") || !rail.querySelector("[data-rail-key='history']") || rail.querySelector(".wecom-rail-groups"))) {
       rail.remove();
       rail = null;
     }
     if (rail) {
       bindRailAvatarNotif(rail);
-      bindRailChatClick(rail);
+      bindRailNavClicks(rail);
       ensureThemeControls(rail);
       syncRail();
       return rail;
@@ -6142,7 +6272,7 @@
     document.body.appendChild(rail);
     ensureThemeControls(rail);
     bindRailAvatarNotif(rail);
-    bindRailChatClick(rail);
+    bindRailNavClicks(rail);
 
     const groupBtn = rail.querySelector('[data-rail-key="group"]');
     groupBtn?.addEventListener("click", () => setNav2Open(!isNav2Open()));
@@ -6350,6 +6480,11 @@
       }
     }
 
+    if (listState.listMode === "history") {
+      switchToListMode("chat");
+      return;
+    }
+
     // 若当前处于原生未支持页面（例如 /u/... 个人中心），点击「消息」应切回首页三栏
     const currentPath = location.pathname;
     if (!isHomePath(currentPath) && !isTopicPath(currentPath)) {
@@ -6390,6 +6525,31 @@
     syncChatBadge();
   }
 
+  /** 点击左侧「历史」图标：切换中栏至浏览历史模式 */
+  function handleHistoryNavClick() {
+    closeNotifMenu();
+
+    const historyBtn = document.querySelector('.wecom-rail-item[data-rail-key="history"]');
+    if (historyBtn) {
+      const rail = historyBtn.closest(".wecom-rail");
+      if (rail) {
+        rail.querySelectorAll(".wecom-rail-item").forEach((item) => {
+          if (item.dataset.railKey === "history") item.classList.add("active");
+          else if (item.dataset.railKey !== "group") item.classList.remove("active");
+        });
+      }
+    }
+
+    if (listState.listMode !== "history") {
+      switchToListMode("history");
+    } else {
+      const listBody = document.querySelector(".wecom-list-body");
+      if (listBody) {
+        listBody.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }
+  }
+
   function bindRailChatClick(rail) {
     const chatBtn = rail?.querySelector('[data-rail-key="chat"]');
     if (!chatBtn || chatBtn.dataset.clickBound === "1") return;
@@ -6398,6 +6558,21 @@
       e.preventDefault();
       handleChatNavClick();
     });
+  }
+
+  function bindRailHistoryClick(rail) {
+    const historyBtn = rail?.querySelector('[data-rail-key="history"]');
+    if (!historyBtn || historyBtn.dataset.clickBound === "1") return;
+    historyBtn.dataset.clickBound = "1";
+    historyBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      handleHistoryNavClick();
+    });
+  }
+
+  function bindRailNavClicks(rail) {
+    bindRailChatClick(rail);
+    bindRailHistoryClick(rail);
   }
 
   /* ============================== 左侧头像 hover → 原生通知菜单 ============================== */
@@ -6834,6 +7009,7 @@
   /* ============================== 中栏：会话列表 ============================== */
 
   const listState = {
+    listMode: "chat", // "chat" | "history"
     apiPath: "",
     loadedApiPath: "",
     moreUrl: null,
@@ -7089,6 +7265,17 @@
         return;
       }
 
+      const clearBtn = e.target.closest(".wecom-history-clear-btn");
+      if (clearBtn && panel.contains(clearBtn)) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (window.confirm("确定要清空所有浏览历史吗？")) {
+          saveTopicHistory([]);
+          renderHistoryList();
+        }
+        return;
+      }
+
       const statusEl = e.target.closest(".wecom-list-status");
       if (statusEl && panel.contains(statusEl)) {
         if (listState.moreUrl && !listState.loading) {
@@ -7190,7 +7377,7 @@
   function ensureListPanel() {
     let panel = document.querySelector(".wecom-list-panel");
     // 旧面板缺筛选按钮/容器时重建
-    if (panel && (!panel.querySelector(".wecom-list-search") || !panel.querySelector(".wecom-list-nav-toggle") || !panel.querySelector(".wecom-list-nav") || !panel.querySelector(".wecom-chip"))) {
+    if (panel && (!panel.querySelector(".wecom-list-search") || !panel.querySelector(".wecom-list-nav-toggle") || !panel.querySelector(".wecom-list-nav") || !panel.querySelector(".wecom-chip") || !panel.querySelector(".wecom-history-header-bar"))) {
       panel.remove();
       panel = null;
     }
@@ -7230,6 +7417,11 @@
         <div class="wecom-list-chips">
           ${chipsHtml}
         </div>
+        <div class="wecom-history-header-bar">
+          <span class="wecom-history-tag">浏览历史</span>
+          <span class="wecom-history-count"></span>
+          <button type="button" class="wecom-history-clear-btn" title="清空全部浏览历史">清空</button>
+        </div>
         <div class="wecom-list-actions">
           <button type="button" class="wecom-icon-btn wecom-mask-avatar-toggle" title="伪装头像：关（点击开启）" aria-pressed="false">${ICONS.disguise}</button>
           <button type="button" class="wecom-icon-btn wecom-mask-title-toggle" title="伪装标题：关（点击开启）" aria-pressed="false">${ICONS.win}</button>
@@ -7266,7 +7458,9 @@
         listBody.classList.remove("is-scrolling");
       }, 800);
       if (listBody.scrollTop + listBody.clientHeight >= listBody.scrollHeight - 120) {
-        loadMoreList();
+        if (listState.listMode !== "history") {
+          loadMoreList();
+        }
       }
     }, { passive: true });
     applyListNavDom();
@@ -7303,6 +7497,9 @@
     }
     if (topic.v2ex_avatar) {
       return `<span class="wecom-conv-avatar"><img src="${escapeHtml(fullAvatarUrl(topic.v2ex_avatar))}" alt="" loading="lazy"></span>`;
+    }
+    if (topic.avatar_template) {
+      return `<span class="wecom-conv-avatar"><img src="${escapeHtml(fullAvatarUrl(topic.avatar_template))}" alt="" loading="lazy"></span>`;
     }
     if (isGroupConversation(topic)) {
       return groupAvatarHtml(topic, usersById || {});
@@ -7452,6 +7649,80 @@
     for (const row of document.querySelectorAll(".wecom-conv")) {
       row.classList.toggle("active", currentId != null && Number(row.dataset.topicId) === currentId);
     }
+  }
+
+  function switchToListMode(mode) {
+    listState.listMode = mode;
+    const panel = document.querySelector(".wecom-list-panel");
+    const rail = document.querySelector(".wecom-rail");
+    if (rail) {
+      rail.querySelectorAll(".wecom-rail-item").forEach((item) => {
+        if (item.dataset.railKey === (mode === "history" ? "history" : "chat")) item.classList.add("active");
+        else if (item.dataset.railKey !== "group") item.classList.remove("active");
+      });
+    }
+    if (panel) {
+      panel.classList.toggle("is-history-mode", mode === "history");
+      const searchInput = panel.querySelector(".wecom-list-search input");
+      if (searchInput) {
+        searchInput.value = "";
+        searchInput.placeholder = mode === "history" ? "搜索历史帖子" : (IS_V2EX ? "搜索 V2EX 话题" : "搜索");
+      }
+    }
+    if (mode === "history") {
+      renderHistoryList();
+    } else {
+      renderListRows();
+    }
+  }
+
+  function renderHistoryList(searchQuery = "") {
+    const body = document.querySelector(".wecom-list-body");
+    const countEl = document.querySelector(".wecom-history-count");
+    const rawList = readTopicHistory();
+    const currentPlatform = IS_V2EX ? "v2ex" : "linuxdo";
+    const historyList = rawList.filter((item) => !item.platform || item.platform === currentPlatform);
+
+    let displayList = historyList;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      displayList = historyList.filter((item) =>
+        (item.title && item.title.toLowerCase().includes(q)) ||
+        (item.node_name && item.node_name.toLowerCase().includes(q)) ||
+        (item.last_poster_username && item.last_poster_username.toLowerCase().includes(q))
+      );
+    }
+
+    if (countEl) {
+      countEl.textContent = `共 ${displayList.length} 条`;
+    }
+
+    if (!body) return;
+
+    if (!displayList.length) {
+      body.innerHTML = `<div class="wecom-list-status">${searchQuery ? "未找到相关历史帖子" : "暂无浏览历史"}</div>`;
+      return;
+    }
+
+    const usersById = {};
+    body.innerHTML = displayList.map((item) => {
+      const topicObj = {
+        id: item.id,
+        title: item.title,
+        last_poster_username: item.last_poster_username,
+        v2ex_avatar: item.v2ex_avatar,
+        avatar_template: item.avatar_template,
+        node_name: item.node_name,
+        category_id: item.category_id,
+        reply_count: item.reply_count,
+        posts_count: item.posts_count || (item.reply_count + 1),
+        bumped_at: item.visited_at || item.bumped_at || Date.now(),
+        slug: item.slug || "topic"
+      };
+      return convRowHtml(topicObj, usersById);
+    }).join("") + `<div class="wecom-list-status">没有更多历史了</div>`;
+
+    syncListActive();
   }
 
   function applyListJson(data, append) {
@@ -11843,6 +12114,10 @@
       chatState.categoryId = data.category_id || null;
       setTopicBookmarkState(Boolean(topicBookmarkFrom(data)));
       bindBookmarkEvents();
+      recordTopicHistory(data, posts);
+      if (listState.listMode === "history") {
+        renderHistoryList();
+      }
 
       const panel = document.querySelector(".wecom-chat-panel");
       if (panel) panel.dataset.empty = "0";

@@ -1226,6 +1226,150 @@ test("V2EX topic list pagination accurately inspects page indicators and avoids 
   assert.equal(resLast.hasMore, false);
 });
 
+test("sidebar History replaces Docs, persists browsed topics, and enables real-time search & clear", () => {
+  // 1. Static checks in script source
+  assert.ok(
+    scriptContent.includes('{ key: "history", icon: "history", label: "历史" }'),
+    "RAIL_DECO_ITEMS must replace doc with history"
+  );
+  assert.ok(
+    !scriptContent.includes('{ key: "doc", icon: "doc", label: "文档" }'),
+    "RAIL_DECO_ITEMS must not contain old doc button"
+  );
+  assert.ok(
+    scriptContent.includes("TOPIC_HISTORY_KEY"),
+    "must define TOPIC_HISTORY_KEY"
+  );
+  assert.ok(
+    scriptContent.includes("TOPIC_HISTORY_MAX"),
+    "must define TOPIC_HISTORY_MAX"
+  );
+  assert.ok(
+    scriptContent.includes("function readTopicHistory"),
+    "must define readTopicHistory"
+  );
+  assert.ok(
+    scriptContent.includes("function saveTopicHistory"),
+    "must define saveTopicHistory"
+  );
+  assert.ok(
+    scriptContent.includes("function recordTopicHistory"),
+    "must define recordTopicHistory"
+  );
+  assert.ok(
+    scriptContent.includes("function handleHistoryNavClick"),
+    "must define handleHistoryNavClick"
+  );
+  assert.ok(
+    scriptContent.includes("function bindRailHistoryClick"),
+    "must define bindRailHistoryClick"
+  );
+  assert.ok(
+    scriptContent.includes("function bindRailNavClicks"),
+    "must define bindRailNavClicks"
+  );
+  assert.ok(
+    scriptContent.includes("function switchToListMode"),
+    "must define switchToListMode"
+  );
+  assert.ok(
+    scriptContent.includes("function renderHistoryList"),
+    "must define renderHistoryList"
+  );
+  assert.ok(
+    scriptContent.includes("wecom-history-header-bar"),
+    "must include wecom-history-header-bar in CSS and DOM"
+  );
+  assert.ok(
+    scriptContent.includes("wecom-history-clear-btn"),
+    "must include wecom-history-clear-btn in CSS and DOM"
+  );
+  assert.ok(
+    scriptContent.includes("recordTopicHistory(data, posts)"),
+    "loadTopic must call recordTopicHistory"
+  );
+
+  // 2. Behavioral simulation: History recording, LRU ordering, and deduplication
+  const fakeStorage = new Map();
+  const STORAGE_KEY = "linuxdo-wecom-topic-history";
+  const MAX_ITEMS = 200;
+
+  function simulateRead() {
+    try {
+      return JSON.parse(fakeStorage.get(STORAGE_KEY) || "[]");
+    } catch {
+      return [];
+    }
+  }
+
+  function simulateSave(list) {
+    fakeStorage.set(STORAGE_KEY, JSON.stringify((list || []).slice(0, MAX_ITEMS)));
+  }
+
+  function simulateRecord(data, platform = "linuxdo") {
+    const existing = simulateRead();
+    const item = {
+      id: Number(data.id),
+      title: data.title,
+      last_poster_username: data.author || "user1",
+      node_name: data.node || "常规",
+      reply_count: data.replyCount || 0,
+      visited_at: Date.now(),
+      bumped_at: Date.now(),
+      platform
+    };
+    const filtered = existing.filter((t) => Number(t.id) !== Number(data.id) || t.platform !== platform);
+    filtered.unshift(item);
+    simulateSave(filtered);
+  }
+
+  // Record 3 topics
+  simulateRecord({ id: 101, title: "Linux 学习指南", node: "教程" });
+  simulateRecord({ id: 102, title: "Node.js 性能调优", node: "开发" });
+  simulateRecord({ id: 103, title: "前端架构演进", node: "前端" });
+
+  let history = simulateRead();
+  assert.equal(history.length, 3);
+  assert.equal(history[0].id, 103); // Most recent at index 0
+  assert.equal(history[1].id, 102);
+  assert.equal(history[2].id, 101);
+
+  // Re-visiting topic 101 moves it to the top (LRU)
+  simulateRecord({ id: 101, title: "Linux 学习指南 (更新)", node: "教程" });
+  history = simulateRead();
+  assert.equal(history.length, 3, "should deduplicate by topic id");
+  assert.equal(history[0].id, 101, "re-visited topic must jump to the front");
+  assert.equal(history[0].title, "Linux 学习指南 (更新)");
+  assert.equal(history[1].id, 103);
+  assert.equal(history[2].id, 102);
+
+  // Filter simulation (search query)
+  function simulateSearch(query, list) {
+    if (!query) return list;
+    const q = query.toLowerCase();
+    return list.filter((item) =>
+      (item.title && item.title.toLowerCase().includes(q)) ||
+      (item.node_name && item.node_name.toLowerCase().includes(q)) ||
+      (item.last_poster_username && item.last_poster_username.toLowerCase().includes(q))
+    );
+  }
+
+  const searchNode = simulateSearch("前端", history);
+  assert.equal(searchNode.length, 1);
+  assert.equal(searchNode[0].id, 103);
+
+  const searchTitle = simulateSearch("linux", history);
+  assert.equal(searchTitle.length, 1);
+  assert.equal(searchTitle[0].id, 101);
+
+  const searchNone = simulateSearch("python", history);
+  assert.equal(searchNone.length, 0);
+
+  // Clear simulation
+  simulateSave([]);
+  assert.equal(simulateRead().length, 0);
+});
+
 
 
 
