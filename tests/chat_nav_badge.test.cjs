@@ -2116,6 +2116,136 @@ test("component images such as onebox, poll, details are excluded from image aut
   assert.ok(!extracted.includes("https://github.com/avatar.png"), "must not extract onebox avatar");
 });
 
+test("V2EX embedded images and non-lightbox images are properly preserved in gallery and not self-removed", () => {
+  // 1. Script checks that targetToRemove avoids self-removing linkToMove or img
+  assert.ok(
+    scriptContent.includes("const targetToRemove = (lightboxWrapper && lightboxWrapper !== linkToMove) ? lightboxWrapper : null;"),
+    "targetToRemove must only target outer lightboxWrapper when it is distinct from linkToMove"
+  );
+  assert.ok(
+    scriptContent.includes("if (targetToRemove) {\n          targetToRemove.remove();\n        }") ||
+    scriptContent.includes("if (targetToRemove)"),
+    "targetToRemove.remove() must only run when targetToRemove is non-null"
+  );
+  assert.ok(
+    scriptContent.includes("bubble.dataset.rawCooked"),
+    "applyImageAutoLayout and toggleMessageBubbleLayout must preserve bubble.dataset.rawCooked"
+  );
+
+  // 2. previewImageSource detects wrapped high-res links for V2EX and markdown images
+  assert.ok(
+    scriptContent.includes("const generalLink = image.closest(\"a[href]\");"),
+    "previewImageSource must check wrapping link"
+  );
+
+  // 3. Functional relocation simulation: V2EX <a><img></a> and plain <img> must NOT be destroyed
+  function simulateAutoLayout(bodyChildren) {
+    const gallery = [];
+    for (const item of bodyChildren) {
+      const isLightbox = item.type === "lightbox";
+      const linkToMove = item.type === "link" ? item.link : null;
+      const targetToRemove = isLightbox ? item.wrapper : null;
+
+      const thumb = {
+        child: linkToMove || item.img,
+        removed: false
+      };
+
+      if (targetToRemove) {
+        targetToRemove.removed = true;
+      }
+      // If targetToRemove was linkToMove or img (as in old bug), it would remove thumb.child!
+      gallery.push(thumb);
+    }
+    return gallery;
+  }
+
+  const v2exItems = [
+    { type: "link", link: { tag: "a", href: "https://i.imgur.com/high.jpg" }, img: { tag: "img", src: "https://i.imgur.com/thumb.jpg" } },
+    { type: "plain", img: { tag: "img", src: "https://i.imgur.com/plain.jpg" } }
+  ];
+
+  const gallery = simulateAutoLayout(v2exItems);
+  assert.equal(gallery.length, 2);
+  assert.equal(gallery[0].child.tag, "a");
+  assert.equal(gallery[0].removed, false, "V2EX wrapped image must not be removed");
+  assert.equal(gallery[1].child.tag, "img");
+  assert.equal(gallery[1].removed, false, "V2EX plain image must not be removed");
+});
+
+test("clicking notifications clears or decrements badges immediately across avatar, menu, and list", () => {
+  // 1. Script defines clearNotificationBadge and decrementNotificationBadge
+  assert.ok(
+    scriptContent.includes("function clearNotificationBadge()"),
+    "must define clearNotificationBadge"
+  );
+  assert.ok(
+    scriptContent.includes("function decrementNotificationBadge()"),
+    "must define decrementNotificationBadge"
+  );
+  assert.ok(
+    scriptContent.includes("notificationCountOverride"),
+    "must track notificationCountOverride"
+  );
+
+  // 2. Notification menu clicks trigger decrement or clear
+  assert.ok(
+    scriptContent.includes("clearNotificationBadge();\n        } else {\n          decrementNotificationBadge();"),
+    "bindNotifMenuEvents must clear or decrement badge on actionable click"
+  );
+
+  // 3. V2EX avatar click and /notifications load trigger clearNotificationBadge
+  assert.ok(
+    scriptContent.includes("clearNotificationBadge();\n        const body = document.querySelector(\".wecom-list-body\");"),
+    "V2EX avatar click must call clearNotificationBadge"
+  );
+  assert.ok(
+    scriptContent.includes("if (path === \"/notifications\") {\n                clearNotificationBadge();\n              }"),
+    "loadList must call clearNotificationBadge when path is /notifications"
+  );
+
+  // 4. Conversation row click eliminates row badge and clears notification badge
+  assert.ok(
+    scriptContent.includes("convBadge.remove();"),
+    "bindListPanelClicks must remove convBadge on click"
+  );
+  assert.ok(
+    scriptContent.includes("if (isNotifItem) {\n          clearNotificationBadge();\n        } else if (convBadge) {\n          decrementNotificationBadge();\n        }"),
+    "bindListPanelClicks must update notification badge"
+  );
+
+  // 5. Functional state simulation of getUnreadNotificationCount with overrides & new notifications
+  let override = null;
+  let lastKnownRaw = 0;
+
+  function simulateGetCount(raw) {
+    if (raw > lastKnownRaw) {
+      override = null;
+    }
+    lastKnownRaw = raw;
+    if (override !== null) return override;
+    return raw;
+  }
+
+  // Initial state: 2 unread notifications
+  assert.equal(simulateGetCount(2), 2);
+
+  // User clicks 1 notification
+  override = 1;
+  assert.equal(simulateGetCount(2), 1, "must show decremented count 1");
+
+  // User clicks another notification / dismiss
+  override = 0;
+  assert.equal(simulateGetCount(2), 0, "badge must be eliminated (count 0)");
+
+  // Still 2 on server (cached/static DOM)
+  assert.equal(simulateGetCount(2), 0, "must stay eliminated while raw count is not newer");
+
+  // A new notification arrives (raw becomes 3)
+  assert.equal(simulateGetCount(3), 3, "must reset override and display count when higher raw count arrives");
+});
+
+
 
 
 

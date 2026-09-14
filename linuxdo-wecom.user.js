@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.7
+// @version      0.7.8
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -6770,7 +6770,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.7";
+  const SCRIPT_VERSION = "0.7.8";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -7268,60 +7268,131 @@
     return rail;
   }
 
-  /** 读取未读通知数 */
-  function getUnreadNotificationCount() {
+  let notificationCountOverride = null;
+  let lastKnownRawNotifCount = 0;
+
+  /** 消除未读通知角标（支持 Linux DO 与 V2EX） */
+  function clearNotificationBadge() {
+    notificationCountOverride = 0;
+    const avatarBadge = document.querySelector(".wecom-rail-avatar-badge");
+    if (avatarBadge) {
+      avatarBadge.style.display = "none";
+      avatarBadge.textContent = "";
+    }
+    // 清除 V2EX 原生 DOM 中的未读提示文本
     if (IS_V2EX) {
       const notifLink = document.querySelector("#Top a[href^='/notifications'], #Rightbar a[href^='/notifications']");
       if (notifLink) {
-        const text = notifLink.textContent || "";
-        const m = text.match(/\d+/);
-        if (m) return parseInt(m[0], 10);
+        notifLink.textContent = notifLink.textContent.replace(/\d+\s*条未读提醒?/g, "").replace(/\(\d+\)/g, "");
       }
-      return 0;
     }
+    // 同步更新 Discourse Ember current-user 与原生通知角标
     try {
       const owner = getEmberOwner();
-      const user =
-        safeLookup(owner, "service:current-user") ||
-        window.Discourse?.User?.current?.() ||
-        null;
+      const user = safeLookup(owner, "service:current-user") || window.Discourse?.User?.current?.();
       if (user) {
-        const pick = (key) => {
-          try {
-            const v = user.get?.(key);
-            if (v != null && v !== "") return Number(v);
-          } catch { /* ignore */ }
-          const direct = user[key];
-          return direct == null || direct === "" ? null : Number(direct);
-        };
-        const all = pick("all_unread_notifications_count");
-        if (all != null && !Number.isNaN(all)) return Math.max(0, all);
-        const unread = pick("unread_notifications");
-        const high = pick("unread_high_priority_notifications");
-        const pm = pick("new_personal_messages_notifications_count");
-        const sum = (unread || 0) + (high || 0) + (pm || 0);
-        if (sum > 0) return sum;
-        if (unread != null && !Number.isNaN(unread)) return Math.max(0, unread);
+        user.set?.("unread_notifications", 0);
+        user.set?.("all_unread_notifications_count", 0);
+        user.set?.("unread_high_priority_notifications", 0);
+        user.set?.("new_personal_messages_notifications_count", 0);
       }
     } catch { /* ignore */ }
-
-    const domBadge = document.querySelector(
+    const domBadges = document.querySelectorAll(
       "#current-user .badge-notification, " +
       ".header-dropdown-toggle.current-user .badge-notification, " +
       "#toggle-current-user .badge-notification, " +
       ".current-user .badge-notification"
     );
-    if (domBadge) {
-      const text = (domBadge.textContent || "").replace(/\s+/g, "").trim();
-      if (/^\d+$/.test(text)) return Number(text);
-      if (/\d/.test(text)) {
-        const n = parseInt(text, 10);
-        if (!Number.isNaN(n)) return Math.min(n, 99);
-      }
-      // 只有红点/图标、无数字时视为至少 1
-      if (domBadge.classList.contains("unread") || domBadge.querySelector("svg")) return 1;
+    domBadges.forEach((b) => {
+      b.classList.remove("unread");
+      b.remove();
+    });
+  }
+
+  /** 递减或消除未读通知角标 */
+  function decrementNotificationBadge() {
+    const current = getUnreadNotificationCount();
+    if (current <= 1) {
+      clearNotificationBadge();
+      return;
     }
-    return 0;
+    const next = current - 1;
+    notificationCountOverride = next;
+    const avatarBadge = document.querySelector(".wecom-rail-avatar-badge");
+    if (avatarBadge) {
+      avatarBadge.style.display = next > 0 ? "" : "none";
+      avatarBadge.textContent = next > 99 ? "99+" : String(next);
+    }
+  }
+
+  /** 读取未读通知数 */
+  function getUnreadNotificationCount() {
+    let raw = 0;
+    if (IS_V2EX) {
+      const notifLink = document.querySelector("#Top a[href^='/notifications'], #Rightbar a[href^='/notifications']");
+      if (notifLink) {
+        const text = notifLink.textContent || "";
+        const m = text.match(/\d+/);
+        if (m) raw = parseInt(m[0], 10);
+      }
+    } else {
+      try {
+        const owner = getEmberOwner();
+        const user =
+          safeLookup(owner, "service:current-user") ||
+          window.Discourse?.User?.current?.() ||
+          null;
+        if (user) {
+          const pick = (key) => {
+            try {
+              const v = user.get?.(key);
+              if (v != null && v !== "") return Number(v);
+            } catch { /* ignore */ }
+            const direct = user[key];
+            return direct == null || direct === "" ? null : Number(direct);
+          };
+          const all = pick("all_unread_notifications_count");
+          if (all != null && !Number.isNaN(all)) raw = Math.max(0, all);
+          else {
+            const unread = pick("unread_notifications");
+            const high = pick("unread_high_priority_notifications");
+            const pm = pick("new_personal_messages_notifications_count");
+            const sum = (unread || 0) + (high || 0) + (pm || 0);
+            if (sum > 0) raw = sum;
+            else if (unread != null && !Number.isNaN(unread)) raw = Math.max(0, unread);
+          }
+        }
+      } catch { /* ignore */ }
+
+      if (raw === 0) {
+        const domBadge = document.querySelector(
+          "#current-user .badge-notification, " +
+          ".header-dropdown-toggle.current-user .badge-notification, " +
+          "#toggle-current-user .badge-notification, " +
+          ".current-user .badge-notification"
+        );
+        if (domBadge) {
+          const text = (domBadge.textContent || "").replace(/\s+/g, "").trim();
+          if (/^\d+$/.test(text)) raw = Number(text);
+          else if (/\d/.test(text)) {
+            const n = parseInt(text, 10);
+            if (!Number.isNaN(n)) raw = Math.min(n, 99);
+          } else if (domBadge.classList.contains("unread") || domBadge.querySelector("svg")) {
+            raw = 1;
+          }
+        }
+      }
+    }
+
+    if (raw > lastKnownRawNotifCount) {
+      notificationCountOverride = null;
+    }
+    lastKnownRawNotifCount = raw;
+
+    if (notificationCountOverride !== null) {
+      return notificationCountOverride;
+    }
+    return raw;
   }
 
   function syncRail() {
@@ -7814,6 +7885,12 @@
       if (actionable && menu.contains(actionable)) {
         notifIgnoreHoverUntil = Date.now() + 500;
         closeNotifMenu();
+        const isDismissAll = Boolean(actionable.closest(".btn-dismiss-read, .dismiss-notification, [data-action='dismiss-all']"));
+        if (isDismissAll) {
+          clearNotificationBadge();
+        } else {
+          decrementNotificationBadge();
+        }
       }
     }, true);
   }
@@ -7875,6 +7952,7 @@
         }
         event.preventDefault();
         event.stopPropagation();
+        clearNotificationBadge();
         const body = document.querySelector(".wecom-list-body");
         if (body) body.innerHTML = `<div class="wecom-list-status">正在加载通知…</div>`;
         loadList("/notifications", true);
@@ -7882,6 +7960,7 @@
       const badge = rail.querySelector(".wecom-rail-avatar-badge");
       badge?.addEventListener("click", (e) => {
         e.stopPropagation();
+        clearNotificationBadge();
         avatar.click();
       });
       return;
@@ -8434,6 +8513,22 @@
         e.preventDefault();
         e.stopPropagation();
         try { conv.blur(); } catch { /* ignore */ }
+        // 消除被点击会话自身角标
+        const convBadge = conv.querySelector(".wecom-conv-badge");
+        if (convBadge) {
+          convBadge.remove();
+        }
+        // 如果是通知列表项或带有通知/回复特征，消除头像通知角标
+        const isNotifItem = (
+          listState.apiPath === "/notifications" ||
+          Boolean(conv.dataset.targetReplyId || conv.dataset.targetFloor || conv.dataset.targetAnchor) ||
+          Boolean(conv.querySelector(".wecom-conv-tag")?.textContent?.includes("通知"))
+        );
+        if (isNotifItem) {
+          clearNotificationBadge();
+        } else if (convBadge) {
+          decrementNotificationBadge();
+        }
         const topicId = Number(conv.dataset.topicId || topicIdFromPath(href));
         if (!topicId) {
           navigateInApp(href);
@@ -9091,6 +9186,9 @@
               topics = path === "/notifications"
                 ? extractV2exNotificationsFromDoc(fetchedDoc)
                 : extractV2exTopicsFromDoc(fetchedDoc);
+              if (path === "/notifications") {
+                clearNotificationBadge();
+              }
             }
           } catch {
             topics = [];
@@ -9371,13 +9469,18 @@
 
   function previewImageSource(image) {
     const lightbox = image.closest("a.lightbox, .lightbox-wrapper a[href]");
+    const generalLink = image.closest("a[href]");
+    const linkHref = generalLink?.getAttribute("href");
+    const isImageLink = linkHref && (generalLink.classList.contains("lightbox") || /\.(?:png|jpe?g|gif|webp|bmp|svg)(?:\?.*)?$/i.test(linkHref) || /image|photo|img|uploads/i.test(linkHref));
     const candidates = [
       image.getAttribute("data-large-src"),
       image.getAttribute("data-orig-src"),
       image.getAttribute("data-original"),
       lightbox?.getAttribute("href"),
+      isImageLink ? linkHref : null,
       image.currentSrc,
-      image.getAttribute("src")
+      image.getAttribute("src"),
+      linkHref
     ];
     for (const candidate of candidates) {
       const url = normalizePreviewImageUrl(candidate);
@@ -9530,6 +9633,10 @@
       const bodyEl = bubble.querySelector(".wecom-msg-body");
       if (!bodyEl) continue;
 
+      if (!bubble.dataset.rawCooked) {
+        bubble.dataset.rawCooked = bodyEl.innerHTML;
+      }
+
       const allImgs = Array.from(bodyEl.querySelectorAll("img"));
       const candidateImgs = allImgs.filter((img) => {
         if (!isPreviewableChatImage(img)) return false;
@@ -9552,7 +9659,8 @@
         const lightboxLink = img.closest("a.lightbox, .lightbox-wrapper a[href]");
         const normalLink = img.closest("a");
         const linkToMove = lightboxLink || (normalLink && normalLink.textContent.trim() === "" ? normalLink : null);
-        const targetToRemove = lightboxWrapper || linkToMove || img;
+        const targetToRemove = (lightboxWrapper && lightboxWrapper !== linkToMove) ? lightboxWrapper : null;
+        const originalParent = (lightboxWrapper || linkToMove || img).parentElement;
 
         if (lightboxWrapper) {
           lightboxWrapper.querySelector(".meta")?.remove();
@@ -9584,10 +9692,11 @@
 
         gallery.appendChild(thumb);
 
-        const parent = targetToRemove.parentElement;
-        targetToRemove.remove();
+        if (targetToRemove) {
+          targetToRemove.remove();
+        }
 
-        let cur = parent;
+        let cur = originalParent;
         while (cur && cur !== bodyEl && isNodeVisuallyEmpty(cur)) {
           const next = cur.parentElement;
           cur.remove();
@@ -9622,7 +9731,7 @@
     if (!msgEl) return;
     const postNum = Number(msgEl.dataset.postNumber);
     const post = chatState.postsByNumber.get(postNum);
-    if (!post) return;
+    const rawContent = post?.cooked || bubble.dataset.rawCooked || "";
 
     const isRaw = bubble.dataset.layoutMode === "raw";
     if (isRaw) {
@@ -9630,7 +9739,7 @@
       bubble.dataset.layoutMode = "auto";
       const bodyEl = bubble.querySelector(".wecom-msg-body");
       if (bodyEl) {
-        bodyEl.innerHTML = post.cooked || "";
+        bodyEl.innerHTML = rawContent;
         bodyEl.classList.remove("is-empty");
       }
       bubble.querySelector(".wecom-msg-images")?.remove();
@@ -9644,7 +9753,7 @@
       bubble.querySelector(".wecom-msg-images")?.remove();
       const bodyEl = bubble.querySelector(".wecom-msg-body");
       if (bodyEl) {
-        bodyEl.innerHTML = post.cooked || "";
+        bodyEl.innerHTML = rawContent;
         bodyEl.classList.remove("is-empty");
       }
       btn.title = "点击显示自动排版";
