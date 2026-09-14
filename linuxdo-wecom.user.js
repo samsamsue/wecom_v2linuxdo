@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.1
+// @version      0.7.2
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -2606,9 +2606,9 @@
       pointer-events: none !important;
       z-index: 0 !important;
     }
-    .${ROOT_CLASS}.${LOCK_CLASS} #reply-control.open,
-    .${ROOT_CLASS}.${LOCK_CLASS} #reply-control.edit-title,
-    .${ROOT_CLASS}.${LOCK_CLASS} #reply-control.fullscreen {
+    html.${ROOT_CLASS}.${LOCK_CLASS}:not(.wecom-composing-new) #reply-control.open,
+    html.${ROOT_CLASS}.${LOCK_CLASS}:not(.wecom-composing-new) #reply-control.edit-title,
+    html.${ROOT_CLASS}.${LOCK_CLASS}:not(.wecom-composing-new) #reply-control.fullscreen {
       display: block !important;
       position: fixed !important;
       inset: 0 auto auto -10000px !important;
@@ -2627,13 +2627,56 @@
       box-shadow: none !important;
     }
     /* 原生编辑器可能把补全菜单挂到 body；IM 输入框不应被这些浮层打断。 */
-    .${ROOT_CLASS}.${LOCK_CLASS} .autocomplete,
-    .${ROOT_CLASS}.${LOCK_CLASS} .autocomplete-container,
-    .${ROOT_CLASS}.${LOCK_CLASS} .d-editor-popup,
-    .${ROOT_CLASS}.${LOCK_CLASS} .tag-chooser {
+    html.${ROOT_CLASS}.${LOCK_CLASS}:not(.wecom-composing-new) .autocomplete,
+    html.${ROOT_CLASS}.${LOCK_CLASS}:not(.wecom-composing-new) .autocomplete-container,
+    html.${ROOT_CLASS}.${LOCK_CLASS}:not(.wecom-composing-new) .d-editor-popup,
+    html.${ROOT_CLASS}.${LOCK_CLASS}:not(.wecom-composing-new) .tag-chooser,
+    html.${ROOT_CLASS}.${LOCK_CLASS}:not(.wecom-composing-new) .select-kit-body {
       display: none !important;
       visibility: hidden !important;
       pointer-events: none !important;
+    }
+
+    /* 发布新主题时唤起的原生 Discourse Composer 抽屉/浮层 */
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control {
+      display: flex !important;
+      flex-direction: column !important;
+      position: fixed !important;
+      left: calc(var(--wc-nav) + var(--wc-nav2w) + var(--wc-strip) + var(--wc-list)) !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      top: auto !important;
+      width: auto !important;
+      min-width: 320px !important;
+      max-width: none !important;
+      height: 72vh !important;
+      min-height: 420px !important;
+      max-height: 92vh !important;
+      overflow: visible !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      user-select: auto !important;
+      clip-path: none !important;
+      pointer-events: auto !important;
+      z-index: 1500 !important;
+      background: var(--secondary, var(--wc-chat-bg, #fff)) !important;
+      box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.18) !important;
+      border-top: 1px solid var(--wc-border, #e0e0e0) !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control * {
+      pointer-events: auto !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new #reply-control .grippie {
+      cursor: row-resize !important;
+    }
+    html.${ROOT_CLASS}.wecom-composing-new .autocomplete,
+    html.${ROOT_CLASS}.wecom-composing-new .autocomplete-container,
+    html.${ROOT_CLASS}.wecom-composing-new .d-editor-popup,
+    html.${ROOT_CLASS}.wecom-composing-new .tag-chooser,
+    html.${ROOT_CLASS}.wecom-composing-new .select-kit-body,
+    html.${ROOT_CLASS}.wecom-composing-new .select-kit-collection {
+      z-index: 1600 !important;
+      pointer-events: auto !important;
     }
 
     /* ---------- native 模式悬浮恢复钮 ---------- */
@@ -2768,6 +2811,7 @@
       .${ROOT_CLASS}.${LOCK_CLASS}.wecom-topic-open .wecom-list-panel { display: none; }
       .${ROOT_CLASS}.${LOCK_CLASS}:not(.wecom-topic-open) .wecom-chat-panel { display: none; }
       .${ROOT_CLASS}.${LOCK_CLASS} .wecom-chat-panel { left: var(--wc-nav); }
+      .${ROOT_CLASS}.${LOCK_CLASS}.wecom-composing-new #reply-control { left: var(--wc-nav) !important; }
       .wecom-image-viewer-stage { inset: 68px 12px 44px; }
       .wecom-image-viewer-close { top: 14px; right: 14px; }
       .wecom-image-viewer-zoom { top: 14px; left: 14px; }
@@ -3176,6 +3220,7 @@
     }
     @media (max-width: 1000px) {
       .${ROOT_CLASS}.${LOCK_CLASS} .wecom-chat-panel { left: var(--wc-nav); }
+      .${ROOT_CLASS}.${LOCK_CLASS}.wecom-composing-new #reply-control { left: var(--wc-nav) !important; }
     }
   `;
 
@@ -5878,7 +5923,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.1";
+  const SCRIPT_VERSION = "0.7.2";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -7321,6 +7366,86 @@
     scheduleApply();
   }
 
+  let newTopicObserver = null;
+  function monitorNewTopicComposerClose() {
+    if (newTopicObserver) {
+      newTopicObserver.disconnect();
+      newTopicObserver = null;
+    }
+    const rc = document.getElementById("reply-control");
+    let hasBeenOpen = Boolean(rc && rc.classList.contains("open") && !rc.classList.contains("closed"));
+    const check = () => {
+      const currentRc = document.getElementById("reply-control");
+      const isOpen = Boolean(currentRc && currentRc.classList.contains("open") && !currentRc.classList.contains("closed"));
+      if (isOpen) {
+        hasBeenOpen = true;
+      } else if (hasBeenOpen) {
+        document.documentElement.classList.remove("wecom-composing-new");
+        if (newTopicObserver) {
+          newTopicObserver.disconnect();
+          newTopicObserver = null;
+        }
+      }
+    };
+    newTopicObserver = new MutationObserver(check);
+    const target = rc || document.body || document.documentElement;
+    newTopicObserver.observe(target, { attributes: true, subtree: target !== rc, attributeFilter: ["class"] });
+    setTimeout(() => {
+      if (!hasBeenOpen) {
+        const currentRc = document.getElementById("reply-control");
+        if (currentRc && currentRc.classList.contains("open")) {
+          hasBeenOpen = true;
+        } else {
+          document.documentElement.classList.remove("wecom-composing-new");
+          if (newTopicObserver) {
+            newTopicObserver.disconnect();
+            newTopicObserver = null;
+          }
+        }
+      }
+    }, 10000);
+  }
+
+  function openNewTopic() {
+    if (IS_V2EX) {
+      window.open("https://v2ex.com/new", "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    let opened = false;
+    try {
+      const owner = getEmberOwner();
+      const composer = owner ? getComposerService(owner) : null;
+      if (composer && typeof composer.open === "function") {
+        const Composer = discourseRequire("discourse/models/composer");
+        const CREATE_TOPIC = Composer?.CREATE_TOPIC || Composer?.default?.CREATE_TOPIC || "createTopic";
+        const DRAFT_KEY = Composer?.NEW_TOPIC_KEY || Composer?.default?.NEW_TOPIC_KEY || "new_topic";
+        composer.open({
+          action: CREATE_TOPIC,
+          draftKey: DRAFT_KEY
+        });
+        opened = true;
+      }
+    } catch (err) {
+      console.warn("[linuxdo-wecom] openNewTopic via composer service failed", err);
+    }
+
+    if (!opened) {
+      const createBtn = document.querySelector("#create-topic, button.create-topic, .btn-primary.create-topic");
+      if (createBtn) {
+        createBtn.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
+        opened = true;
+      }
+    }
+
+    if (opened) {
+      document.documentElement.classList.add("wecom-composing-new");
+      monitorNewTopicComposerClose();
+    } else {
+      window.open(`${location.origin}/?create_topic=true`, "_blank", "noopener,noreferrer");
+    }
+  }
+
   function closeListAddMenu() {
     const menu = document.querySelector(".wecom-list-add-menu");
     const addBtn = document.querySelector(".wecom-list-add");
@@ -7376,9 +7501,9 @@
   }
 
   function bindListPanelClicks(panel) {
-    // v4：含新建菜单与话题导航下拉；旧面板需重绑
-    if (!panel || panel.dataset.linkBound === "4") return;
-    panel.dataset.linkBound = "4";
+    // v5：含新建菜单与话题导航下拉，并支持站内发帖器；旧面板需重绑
+    if (!panel || panel.dataset.linkBound === "5") return;
+    panel.dataset.linkBound = "5";
     ensureListAddOutsideClose();
     panel.addEventListener("click", (e) => {
       const addBtn = e.target.closest(".wecom-list-add");
@@ -7396,8 +7521,7 @@
         const action = addActionBtn.dataset.addAction;
         closeListAddMenu();
         if (action === "new-topic") {
-          const newTopicUrl = IS_V2EX ? "https://v2ex.com/new" : "/new-topic";
-          window.open(newTopicUrl, "_blank", "noopener,noreferrer");
+          openNewTopic();
         } else if (action === "nav") {
           setNav2Open(!isNav2Open());
         }
@@ -13040,7 +13164,7 @@
     closeImageViewer();
     closeEditDialog(true);
     closeOfficialEmojiPicker();
-    document.documentElement.classList.remove("wecom-members-open");
+    document.documentElement.classList.remove("wecom-members-open", "wecom-composing-new");
     document.querySelector(".wecom-list-panel")?.remove();
     document.querySelector(".wecom-chat-panel")?.remove();
     document.querySelector(".wecom-member-panel")?.remove();
@@ -13052,6 +13176,17 @@
     document.querySelector(".wecom-theme-menu")?.remove();
     document.querySelector(".wecom-update-notice")?.remove();
     document.querySelector(".wecom-edit-dialog")?.remove();
+  }
+
+  let initialNewTopicChecked = false;
+  function checkInitialNewTopicParam() {
+    if (initialNewTopicChecked || IS_V2EX) return;
+    initialNewTopicChecked = true;
+    try {
+      if (new URLSearchParams(location.search).get("create_topic") === "true") {
+        setTimeout(openNewTopic, 600);
+      }
+    } catch { /* ignore */ }
   }
 
   function applyTheme() {
@@ -13134,6 +13269,7 @@
       renderChatEmpty();
     }
     syncListActive();
+    checkInitialNewTopicParam();
   }
 
   let scheduled = false;

@@ -1572,7 +1572,9 @@ test("list panel + button renders dropdown menu with create topic and topic navi
   assert.ok(scriptContent.includes("function closeListAddMenu("), "must define closeListAddMenu");
   assert.ok(scriptContent.includes("function updateListAddMenuTexts("), "must define updateListAddMenuTexts");
   assert.ok(scriptContent.includes("https://v2ex.com/new"), "must link to V2EX new topic url");
-  assert.ok(scriptContent.includes("/new-topic"), "must link to Linux DO new topic url");
+  assert.ok(scriptContent.includes("function openNewTopic("), "must define openNewTopic");
+  assert.ok(scriptContent.includes("wecom-composing-new"), "must style and manage wecom-composing-new state");
+  assert.ok(scriptContent.includes("create_topic=true"), "must provide create_topic=true fallback");
   assert.ok(scriptContent.includes(".wecom-list-add-menu"), "must style .wecom-list-add-menu in css");
 
   // Dynamic simulation assertions
@@ -1710,6 +1712,82 @@ test("list panel + button renders dropdown menu with create topic and topic navi
   assert.equal(panel.addMenu.hidden, true);
   assert.equal(panel.addBtn.getAttribute("aria-expanded"), "false");
 });
+
+test("openNewTopic directly invokes Discourse composer service in-page or falls back gracefully", () => {
+  // Test 1: On Linux DO with Ember composer service
+  let emberComposerOpened = false;
+  let emberPayload = null;
+  let windowOpenedUrl = null;
+  const docClasses = new Set();
+  const docEl = {
+    classList: {
+      add(c) { docClasses.add(c); },
+      remove(c) { docClasses.delete(c); },
+      contains(c) { return docClasses.has(c); }
+    }
+  };
+
+  const composerService = {
+    open(payload) {
+      emberComposerOpened = true;
+      emberPayload = payload;
+    }
+  };
+
+  function simulateOpenNewTopic({ isV2ex = false, hasService = true, hasDomBtn = false } = {}) {
+    windowOpenedUrl = null;
+    emberComposerOpened = false;
+    emberPayload = null;
+    docClasses.clear();
+
+    if (isV2ex) {
+      windowOpenedUrl = "https://v2ex.com/new";
+      return;
+    }
+
+    let opened = false;
+    if (hasService) {
+      composerService.open({
+        action: "createTopic",
+        draftKey: "new_topic"
+      });
+      opened = true;
+    } else if (hasDomBtn) {
+      opened = true;
+    }
+
+    if (opened) {
+      docEl.classList.add("wecom-composing-new");
+    } else {
+      windowOpenedUrl = "https://linux.do/?create_topic=true";
+    }
+  }
+
+  // Scenario 1: Native Ember service available on Linux DO
+  simulateOpenNewTopic({ isV2ex: false, hasService: true });
+  assert.equal(emberComposerOpened, true);
+  assert.deepEqual(emberPayload, { action: "createTopic", draftKey: "new_topic" });
+  assert.equal(docEl.classList.contains("wecom-composing-new"), true);
+  assert.equal(windowOpenedUrl, null);
+
+  // Scenario 2: Service missing, fallback to DOM #create-topic click
+  simulateOpenNewTopic({ isV2ex: false, hasService: false, hasDomBtn: true });
+  assert.equal(emberComposerOpened, false);
+  assert.equal(docEl.classList.contains("wecom-composing-new"), true);
+  assert.equal(windowOpenedUrl, null);
+
+  // Scenario 3: Neither ready, fallback to ?create_topic=true (never /new-topic)
+  simulateOpenNewTopic({ isV2ex: false, hasService: false, hasDomBtn: false });
+  assert.equal(docEl.classList.contains("wecom-composing-new"), false);
+  assert.equal(windowOpenedUrl, "https://linux.do/?create_topic=true");
+  assert.ok(!windowOpenedUrl.includes("/new-topic"), "must never use /new-topic");
+
+  // Scenario 4: V2EX opens https://v2ex.com/new
+  simulateOpenNewTopic({ isV2ex: true });
+  assert.equal(windowOpenedUrl, "https://v2ex.com/new");
+  assert.equal(docEl.classList.contains("wecom-composing-new"), false);
+});
+
 
 
 
