@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.21
+// @version      0.7.22
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -10,6 +10,8 @@
 // @match        https://*.v2ex.com/*
 // @match        *://v2ex.com/*
 // @match        https://v2ex.com/*
+// @connect      api.imgur.com
+// @connect      imgur.com
 // @icon         https://linux.do/favicon.ico
 // @homepageURL  https://github.com/samsamsue/wecom_v2linuxdo
 // @updateURL    https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js
@@ -83,6 +85,8 @@
   const REPLY_PREVIEW_LENGTH = 72;
   const REPLY_HIGHLIGHT_DURATION_MS = 1800;
   const UPLOAD_ENDPOINTS = ["/uploads.json", "/uploads"];
+  const V2EX_IMGUR_CLIENT_ID = "60605aad4a62882";
+  const V2EX_IMGUR_UPLOAD_URL = "https://api.imgur.com/3/upload";
   const POST_ENDPOINTS = ["/posts.json", "/posts"];
   const RETRYABLE_ENDPOINT_STATUS = new Set([404, 405, 415]);
   const COMPOSER_ERROR_PREVIEW_LENGTH = 240;
@@ -8507,7 +8511,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.21";
+  const SCRIPT_VERSION = "0.7.22";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -14056,8 +14060,11 @@
 
   function uploadedImageMarkdown(payload, file) {
     const upload = uploadPayload(payload);
-    const url = uploadedImageUrl(upload);
+    const url = uploadedImageUrl(upload) || payload?.url || payload?.link || payload?.data?.link;
     if (!url) throw new Error("站点未返回图片地址");
+    if (IS_V2EX) {
+      return url;
+    }
     const rawLabel = String(upload?.original_filename || file?.name || "图片");
     const label = rawLabel.replace(/\.[^.]+$/, "").replace(/[\[\]\\|]/g, "_");
     const width = Number(upload?.thumbnail_width || upload?.width) || 0;
@@ -14066,7 +14073,33 @@
     return `![${label}${dimensions}](${markdownImageUrl(url)})`;
   }
 
+  async function uploadImageFileToImgur(file) {
+    const formData = new FormData();
+    formData.set("image", file);
+    const resp = await fetch(V2EX_IMGUR_UPLOAD_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Client-ID ${V2EX_IMGUR_CLIENT_ID}`
+      },
+      body: formData
+    });
+    const payload = await resp.json().catch(() => null);
+    if (!resp.ok || !payload?.success || !payload?.data?.link) {
+      const errObj = payload?.data?.error;
+      const errMsg = (typeof errObj === "string" ? errObj : errObj?.message) ||
+        payload?.error?.message ||
+        payload?.error ||
+        `Imgur upload failed with ${resp.status}`;
+      throw new Error(errMsg);
+    }
+    return String(payload.data.link).replace(/^http:\/\//i, "https://");
+  }
+
   async function uploadImageFile(file) {
+    if (IS_V2EX) {
+      const link = await uploadImageFileToImgur(file);
+      return { url: link, short_url: link, link, data: { link } };
+    }
     let lastError = null;
     for (const endpoint of UPLOAD_ENDPOINTS) {
       const form = new FormData();
@@ -14153,7 +14186,7 @@
     try {
       const markdown = [];
       for (const file of images) {
-        setComposeStatus(`正在上传 ${file.name || "图片"}…`, "busy", true);
+        setComposeStatus(IS_V2EX ? `正在通过 Imgur 上传 ${file.name || "图片"}…` : `正在上传 ${file.name || "图片"}…`, "busy", true);
         const payload = await uploadImageFile(file);
         markdown.push(uploadedImageMarkdown(payload, file));
       }

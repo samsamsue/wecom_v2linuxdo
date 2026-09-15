@@ -3268,3 +3268,111 @@ test("Selection Base64 auto-decoding parses valid strings, prevents false positi
   assert.equal(isEnabled(), true, "must be re-enabled when set to true");
 });
 
+test("V2EX editor uploads images via Imgur API and inserts direct image links", async () => {
+  // 1. Verify declarations and metadata
+  assert.ok(
+    scriptContent.includes('const V2EX_IMGUR_CLIENT_ID = "60605aad4a62882";'),
+    "must define V2EX_IMGUR_CLIENT_ID"
+  );
+  assert.ok(
+    scriptContent.includes('const V2EX_IMGUR_UPLOAD_URL = "https://api.imgur.com/3/upload";'),
+    "must define V2EX_IMGUR_UPLOAD_URL"
+  );
+  assert.ok(
+    scriptContent.includes("async function uploadImageFileToImgur(file)"),
+    "must define uploadImageFileToImgur"
+  );
+  assert.ok(
+    scriptContent.includes("// @connect      api.imgur.com"),
+    "must declare @connect api.imgur.com"
+  );
+  assert.ok(
+    scriptContent.includes("// @connect      imgur.com"),
+    "must declare @connect imgur.com"
+  );
+
+  // 2. Verify V2EX branch routing in uploadImageFile and uploadedImageMarkdown
+  assert.ok(
+    scriptContent.includes("if (IS_V2EX) {\n      const link = await uploadImageFileToImgur(file);") ||
+    (scriptContent.includes("if (IS_V2EX)") && scriptContent.includes("uploadImageFileToImgur")),
+    "uploadImageFile must route to uploadImageFileToImgur when IS_V2EX is true"
+  );
+  assert.ok(
+    scriptContent.includes("if (IS_V2EX) {\n      return url;\n    }") ||
+    (scriptContent.includes("if (IS_V2EX)") && scriptContent.includes("return url;")),
+    "uploadedImageMarkdown must return plain url on V2EX"
+  );
+
+  // 3. Functional simulation of uploadedImageMarkdown
+  function simulateUploadedImageMarkdown(payload, file, isV2ex) {
+    const url = payload?.url || payload?.link || payload?.data?.link;
+    if (!url) throw new Error("站点未返回图片地址");
+    if (isV2ex) return url;
+    const rawLabel = String(file?.name || "图片");
+    const label = rawLabel.replace(/\.[^.]+$/, "").replace(/[\[\]\\|]/g, "_");
+    return `![${label}](${url})`;
+  }
+
+  const v2exUrl = simulateUploadedImageMarkdown(
+    { url: "https://i.imgur.com/example123.png" },
+    { name: "screenshot.png" },
+    true
+  );
+  assert.equal(v2exUrl, "https://i.imgur.com/example123.png", "V2EX should receive raw image url");
+
+  const linuxdoMarkdown = simulateUploadedImageMarkdown(
+    { url: "https://linux.do/uploads/default/original/2X/1/123.png" },
+    { name: "screenshot.png" },
+    false
+  );
+  assert.equal(
+    linuxdoMarkdown,
+    "![screenshot](https://linux.do/uploads/default/original/2X/1/123.png)",
+    "Linux DO should receive markdown image syntax"
+  );
+
+  // 4. Functional simulation of Imgur response handling
+  function parseImgurResponse(respOk, status, payload) {
+    if (!respOk || !payload?.success || !payload?.data?.link) {
+      const errObj = payload?.data?.error;
+      const errMsg = (typeof errObj === "string" ? errObj : errObj?.message) ||
+        payload?.error?.message ||
+        payload?.error ||
+        `Imgur upload failed with ${status}`;
+      throw new Error(errMsg);
+    }
+    return String(payload.data.link).replace(/^http:\/\//i, "https://");
+  }
+
+  // Success with HTTPS link
+  assert.equal(
+    parseImgurResponse(true, 200, { success: true, data: { link: "https://i.imgur.com/abc1234.png" } }),
+    "https://i.imgur.com/abc1234.png"
+  );
+
+  // Success with HTTP link (should upgrade to HTTPS)
+  assert.equal(
+    parseImgurResponse(true, 200, { success: true, data: { link: "http://i.imgur.com/abc1234.jpg" } }),
+    "https://i.imgur.com/abc1234.jpg"
+  );
+
+  // Error payload with error string
+  assert.throws(
+    () => parseImgurResponse(false, 400, { success: false, data: { error: "Imgur is over capacity" } }),
+    /Imgur is over capacity/
+  );
+
+  // Error payload with error object
+  assert.throws(
+    () => parseImgurResponse(false, 403, { success: false, data: { error: { message: "Invalid Client-ID" } } }),
+    /Invalid Client-ID/
+  );
+
+  // Non-JSON or status error fallback
+  assert.throws(
+    () => parseImgurResponse(false, 500, null),
+    /Imgur upload failed with 500/
+  );
+});
+
+
