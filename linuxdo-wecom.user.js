@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.13
+// @version      0.7.14
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -2381,7 +2381,7 @@
       }
     }
 
-    /* 彻底屏蔽顶部原生加载进度条，避免切话题时闪现顶部蓝条/橙条 */
+    /* 彻底屏蔽顶部原生及各类第三方加载进度条、时间线进度条，避免切话题时闪现进度条 */
     #loading-slider,
     .loading-slider,
     .loading-slider-container,
@@ -2389,8 +2389,23 @@
     .d-loading-slider,
     div[class*="loading-slider"],
     div[id*="loading-slider"],
+    .loading-indicator-container,
+    .loading-indicator,
+    div[class*="loading-indicator"],
+    div[id*="loading-indicator"],
+    #page-loading-slider,
+    .page-loading-slider,
+    .ember-load-indicator,
     #nprogress,
-    .pace {
+    .pace,
+    .progress-bar,
+    div[class*="progress-bar"],
+    div[class*="progress"],
+    [data-loading-indicator],
+    .topic-navigation,
+    .topic-timeline,
+    .timeline-container,
+    .timeline-scrollarea {
       display: none !important;
       opacity: 0 !important;
       visibility: hidden !important;
@@ -7792,7 +7807,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.13";
+  const SCRIPT_VERSION = "0.7.14";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -8897,6 +8912,95 @@
     }, 220);
   }
 
+  /** 判断点击目标是否属于「忽略 / 全部忽略 / 标记为已读」相关操作 */
+  function isDismissAllTarget(target) {
+    if (!target) return false;
+    const btn = (typeof target.closest === "function") ? target.closest("button, a, [role='button'], .btn") : null;
+    if (!btn) return false;
+    if (btn.matches(
+      ".btn-dismiss-read, .dismiss-read, .dismiss-notification, .dismiss-notifications, " +
+      "[data-action='dismiss-all'], [data-action='dismiss'], .notifications-dismiss-button, " +
+      ".user-menu-dismiss, .user-menu__dismiss"
+    )) return true;
+    const title = (btn.getAttribute("title") || btn.getAttribute("aria-label") || "").trim();
+    if (/忽略|已读|dismiss|mark.*read/i.test(title)) return true;
+    const text = (btn.textContent || "").trim();
+    if (/^(全部)?忽略$|^(全部)?标记为已读$|^dismiss( all)?$/i.test(text)) return true;
+    if (btn.querySelector(".d-icon-check, .d-icon-check-double")) return true;
+    return false;
+  }
+
+  /** 判断点击目标是否属于用户菜单内部的 Tab / 分类切换项（不应收起菜单也不改角标） */
+  function isUserMenuTab(target) {
+    if (!target || typeof target.closest !== "function") return false;
+    return Boolean(target.closest(
+      ".user-menu-tab, [data-tab-name], .tabs-list, .user-menu-tabs, " +
+      ".btn-flat[aria-controls], .user-menu-tab-icon, .filter-item, " +
+      ".dropdown-menu, .select-kit, .select-kit-header, nav.nav-pills"
+    ));
+  }
+
+  /** 向 Discourse 官方接口标记单个通知为已读 */
+  async function markDiscourseNotificationRead(notificationId) {
+    if (!notificationId) return;
+    try {
+      await fetch("/notifications/mark-read", {
+        method: "PUT",
+        headers: bridgeHeaders("application/json"),
+        body: JSON.stringify({ id: Number(notificationId) })
+      });
+    } catch { /* ignore */ }
+  }
+
+  /** 全部标记为已读（Linux DO 通知列表「全部忽略/忽略」） */
+  async function dismissAllDiscourseNotifications() {
+    clearNotificationBadge();
+
+    // 1. 同步 Ember 用户通知状态
+    try {
+      const owner = getEmberOwner();
+      const user = safeLookup(owner, "service:current-user") || window.Discourse?.User?.current?.();
+      if (user) {
+        user.set?.("unread_notifications", 0);
+        user.set?.("all_unread_notifications_count", 0);
+        user.set?.("unread_high_priority_notifications", 0);
+        user.set?.("new_personal_messages_notifications_count", 0);
+      }
+      const notifService = safeLookup(owner, "service:notifications") || safeLookup(owner, "service:user-menu");
+      if (typeof notifService?.dismissAll === "function") {
+        try { await notifService.dismissAll(); } catch { /* ignore */ }
+      } else if (typeof notifService?.markAllAsRead === "function") {
+        try { await notifService.markAllAsRead(); } catch { /* ignore */ }
+      }
+    } catch { /* ignore */ }
+
+    // 2. 发送官方 PUT /notifications/mark-read 接口持久化到服务端
+    try {
+      await fetch("/notifications/mark-read", {
+        method: "PUT",
+        headers: bridgeHeaders("application/json"),
+        body: JSON.stringify({})
+      });
+    } catch (err) {
+      console.warn("[linuxdo-wecom] PUT /notifications/mark-read failed:", err);
+    }
+
+    // 3. 将当前通知菜单内渲染的所有未读项即时更新为已读样式并移除未读指示点
+    const menu = findUserMenu();
+    if (menu) {
+      menu.querySelectorAll(".notification.unread, [data-notification-id].unread, li.unread, .user-menu-item.unread").forEach((item) => {
+        item.classList.remove("unread");
+        item.classList.add("read");
+      });
+      menu.querySelectorAll(".unread-indicator, .notification-unread-dot, .badge-notification").forEach((dot) => {
+        dot.remove();
+      });
+    }
+
+    // 4. 定时刷新左侧停靠栏头像未读角标
+    setTimeout(() => syncRail(), 300);
+  }
+
   function bindNotifMenuEvents(menu) {
     if (!menu || menu.dataset.wecomBound === "1") return;
     menu.dataset.wecomBound = "1";
@@ -8905,14 +9009,30 @@
     menu.addEventListener("click", (e) => {
       const actionable = e.target.closest("a[href], button, .notification, [data-notification-id]");
       if (actionable && menu.contains(actionable)) {
+        // 如果点击的是菜单顶部的分类 Tab（通知/书签/消息等），不收起菜单，不改角标，放行原生切换
+        if (isUserMenuTab(actionable)) return;
+
         notifIgnoreHoverUntil = Date.now() + 500;
-        closeNotifMenu();
-        const isDismissAll = Boolean(actionable.closest(".btn-dismiss-read, .dismiss-notification, [data-action='dismiss-all']"));
+        const isDismissAll = isDismissAllTarget(actionable) || Boolean(actionable.closest(".btn-dismiss-read, .dismiss-notification, [data-action='dismiss-all']"));
         if (isDismissAll) {
+          dismissAllDiscourseNotifications();
           clearNotificationBadge();
         } else {
           decrementNotificationBadge();
+          const notifId = actionable.dataset?.notificationId || actionable.closest("[data-notification-id]")?.dataset?.notificationId;
+          if (notifId) markDiscourseNotificationRead(notifId);
+          closeNotifMenu();
         }
+      }
+    }, true);
+  }
+
+  // 全局兜底：任何位置点击「全部忽略 / 忽略」按钮时，均同步调用后端 mark-read API 并清除角标
+  if (!window.__wecomDismissAllBound) {
+    window.__wecomDismissAllBound = true;
+    document.addEventListener("click", (e) => {
+      if (isDismissAllTarget(e.target)) {
+        dismissAllDiscourseNotifications();
       }
     }, true);
   }
@@ -9279,20 +9399,70 @@
     }
   }
 
+  /** 彻底清理并移除注入到页面的各类型加载指示器与进度条节点 */
+  function removeLoadingSliderDom() {
+    const selectors = [
+      ".loading-indicator-container",
+      ".loading-indicator",
+      "#loading-slider",
+      ".loading-slider",
+      ".loading-slider-container",
+      ".loading-slider__bar",
+      ".d-loading-slider",
+      "#page-loading-slider",
+      ".page-loading-slider",
+      ".ember-load-indicator",
+      "#nprogress",
+      ".pace",
+      ".progress-bar",
+      ".timeline-container"
+    ];
+    try {
+      document.querySelectorAll(selectors.join(",")).forEach((el) => {
+        try {
+          el.remove();
+        } catch {
+          el.style.setProperty("display", "none", "important");
+          el.style.setProperty("opacity", "0", "important");
+          el.style.setProperty("visibility", "hidden", "important");
+        }
+      });
+    } catch { /* ignore */ }
+  }
+
+  /** 禁用 Discourse 原生页面加载进度条设置 */
+  function disablePageLoadingIndicator() {
+    if (IS_V2EX) return;
+    try {
+      if (window.Discourse?.SiteSettings) {
+        window.Discourse.SiteSettings.page_loading_indicator = "none";
+      }
+      const owner = getEmberOwner();
+      const settings = safeLookup(owner, "service:site-settings");
+      if (settings) {
+        if ("page_loading_indicator" in settings) settings.page_loading_indicator = "none";
+        settings.set?.("page_loading_indicator", "none");
+      }
+    } catch { /* ignore */ }
+  }
+
   /** 站内软跳转：避免中栏自定义链接触发浏览器整页重载 */
   function discourseRouteTo(url) {
     if (IS_V2EX || !url) return false;
+    removeLoadingSliderDom();
     try {
       const mod = discourseRequire("discourse/lib/url");
       const DiscourseURL = mod?.default || mod;
       if (DiscourseURL && typeof DiscourseURL.routeTo === "function") {
         DiscourseURL.routeTo(url);
+        removeLoadingSliderDom();
         return true;
       }
     } catch { /* ignore */ }
     try {
       if (typeof window.Discourse?.URL?.routeTo === "function") {
         window.Discourse.URL.routeTo(url);
+        removeLoadingSliderDom();
         return true;
       }
     } catch { /* ignore */ }
@@ -9629,6 +9799,7 @@
             suppressHistoryApply = false;
           }
         }
+        removeLoadingSliderDom();
         discourseRouteTo(href);
         loadTopic(topicId, !hasRendered, target);
         return;
@@ -14827,6 +14998,7 @@
     const numericTopicId = Number(topicId);
     if (!numericTopicId) return;
     topicId = numericTopicId;
+    removeLoadingSliderDom();
     let target = targetOption;
     if (!target && IS_V2EX) {
       target = parseV2exReplyTarget(location.href);
@@ -15688,6 +15860,8 @@
     document.documentElement.classList.toggle("wecom-hide-boost", !isBoostEnabled());
     applyImageAutoLayoutSizeCss(getImageAutoLayoutSize());
     setupWindowControlsOverlay();
+    disablePageLoadingIndicator();
+    removeLoadingSliderDom();
     restyleSplash();
     makeFavicon();
     enforceBlankTitle();
@@ -15864,11 +16038,14 @@
         return true;
       });
       if (external) {
+        removeLoadingSliderDom();
         scheduleApply();
         scheduleSyncNewPosts();
       }
       scheduleSyncChatBadge();
     });
+    disablePageLoadingIndicator();
+    removeLoadingSliderDom();
     observer.observe(document.documentElement, { childList: true, subtree: true });
 
     for (const method of ["pushState", "replaceState"]) {

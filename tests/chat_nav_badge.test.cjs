@@ -2632,3 +2632,132 @@ test("comprehensive dark mode stylesheet covers tokens, user menus, list chips, 
   assert.ok(scriptContent.includes("html.wecom-dark .box"), "must style V2EX .box in dark mode");
   assert.ok(scriptContent.includes(".wecom-mode-fab"), "must style wecom-mode-fab in dark mode");
 });
+
+test("Linux DO notification list dismiss ('全部忽略') triggers Discourse mark-read API, updates DOM, and clears badges", () => {
+  // 1. Verify isDismissAllTarget recognizes all variations of dismiss buttons
+  assert.ok(
+    scriptContent.includes("function isDismissAllTarget(target)"),
+    "must define isDismissAllTarget"
+  );
+  assert.ok(
+    scriptContent.includes(".btn-dismiss-read") &&
+    scriptContent.includes(".dismiss-read") &&
+    scriptContent.includes(".dismiss-notification") &&
+    scriptContent.includes("dismiss-all"),
+    "isDismissAllTarget must cover core Discourse dismiss selectors"
+  );
+  assert.ok(
+    scriptContent.includes("/忽略|已读|dismiss|mark.*read/i"),
+    "isDismissAllTarget must match title and aria-label in Chinese and English"
+  );
+  assert.ok(
+    scriptContent.includes(".d-icon-check"),
+    "isDismissAllTarget must support checkmark icon buttons"
+  );
+
+  // 2. Verify isUserMenuTab prevents premature menu close on tab clicks
+  assert.ok(
+    scriptContent.includes("function isUserMenuTab(target)"),
+    "must define isUserMenuTab"
+  );
+  assert.ok(
+    scriptContent.includes(".user-menu-tab") && scriptContent.includes("tabs-list"),
+    "isUserMenuTab must recognize user menu tab components"
+  );
+
+  // 3. Verify dismissAllDiscourseNotifications calls PUT /notifications/mark-read with CSRF headers
+  assert.ok(
+    scriptContent.includes("async function dismissAllDiscourseNotifications()"),
+    "must define dismissAllDiscourseNotifications"
+  );
+  assert.ok(
+    scriptContent.includes('await fetch("/notifications/mark-read"'),
+    "dismissAllDiscourseNotifications must call PUT /notifications/mark-read"
+  );
+  assert.ok(
+    scriptContent.includes('headers: bridgeHeaders("application/json")'),
+    "dismissAllDiscourseNotifications must include CSRF bridge headers"
+  );
+
+  // 4. Verify unread notification DOM items are immediately marked as read
+  assert.ok(
+    scriptContent.includes('item.classList.remove("unread");') &&
+    scriptContent.includes('item.classList.add("read");'),
+    "dismissAllDiscourseNotifications must update unread class to read on items"
+  );
+  assert.ok(
+    scriptContent.includes(".unread-indicator") &&
+    scriptContent.includes(".notification-unread-dot"),
+    "dismissAllDiscourseNotifications must strip unread indicators/dots"
+  );
+
+  // 5. Verify single notification click calls markDiscourseNotificationRead with notification ID
+  assert.ok(
+    scriptContent.includes("async function markDiscourseNotificationRead(notificationId)"),
+    "must define markDiscourseNotificationRead"
+  );
+  assert.ok(
+    scriptContent.includes("markDiscourseNotificationRead(notifId)"),
+    "bindNotifMenuEvents must call markDiscourseNotificationRead on notification item click"
+  );
+
+  // 6. Verify global click fallback for dismiss-all
+  assert.ok(
+    scriptContent.includes("window.__wecomDismissAllBound"),
+    "must bind global click listener fallback for dismiss-all"
+  );
+});
+
+test("Topic opening suppresses Discourse page loading indicator and timeline progress bars via CSS and runtime helpers", () => {
+  // 1. Verify CSS rules cover Discourse core page loading indicator container and bars
+  assert.ok(
+    scriptContent.includes(".loading-indicator-container") &&
+    scriptContent.includes(".loading-indicator") &&
+    scriptContent.includes("#loading-slider") &&
+    scriptContent.includes(".d-loading-slider"),
+    "RAW_CSS must hide Discourse page loading indicator containers and sliders"
+  );
+  assert.ok(
+    scriptContent.includes(".topic-timeline") &&
+    scriptContent.includes(".timeline-container"),
+    "RAW_CSS must hide Discourse topic timeline progress bars"
+  );
+
+  // 2. Verify removeLoadingSliderDom cleans up lingering DOM nodes
+  assert.ok(
+    scriptContent.includes("function removeLoadingSliderDom()"),
+    "must define removeLoadingSliderDom"
+  );
+  assert.ok(
+    scriptContent.includes("el.remove()"),
+    "removeLoadingSliderDom must remove matched loading elements"
+  );
+
+  // 3. Verify disablePageLoadingIndicator disables Discourse site setting
+  assert.ok(
+    scriptContent.includes("function disablePageLoadingIndicator()"),
+    "must define disablePageLoadingIndicator"
+  );
+  assert.ok(
+    scriptContent.includes('page_loading_indicator = "none"'),
+    "disablePageLoadingIndicator must set page_loading_indicator to none"
+  );
+
+  // 4. Verify runtime invocations on topic navigation and DOM mutation
+  assert.ok(
+    scriptContent.includes("discourseRouteTo(url) {\n    if (IS_V2EX || !url) return false;\n    removeLoadingSliderDom();"),
+    "discourseRouteTo must invoke removeLoadingSliderDom"
+  );
+  assert.ok(
+    scriptContent.includes("removeLoadingSliderDom();\n        discourseRouteTo(href);"),
+    "bindListPanelClicks must invoke removeLoadingSliderDom before routing"
+  );
+  assert.ok(
+    scriptContent.includes("topicId = numericTopicId;\n    removeLoadingSliderDom();"),
+    "loadTopic must invoke removeLoadingSliderDom"
+  );
+  assert.ok(
+    scriptContent.includes("disablePageLoadingIndicator();\n    removeLoadingSliderDom();\n    restyleSplash();"),
+    "applyTheme must invoke disablePageLoadingIndicator and removeLoadingSliderDom"
+  );
+});
