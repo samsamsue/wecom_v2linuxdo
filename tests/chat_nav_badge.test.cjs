@@ -2761,3 +2761,117 @@ test("Topic opening suppresses Discourse page loading indicator and timeline pro
     "applyTheme must invoke disablePageLoadingIndicator and removeLoadingSliderDom"
   );
 });
+
+test("Linux DO notification menu sticky positioning for tabs and dismiss button", () => {
+  // 1. Verify CSS sticky top rules for menu tabs
+  assert.ok(
+    scriptContent.includes(".user-menu .menu-tabs-container") &&
+    scriptContent.includes(".user-menu .panel-header") &&
+    scriptContent.includes(".user-menu .tabs-list"),
+    "RAW_CSS must target user-menu tab header elements"
+  );
+  assert.ok(
+    scriptContent.includes("position: sticky !important;\n      top: 0 !important;\n      z-index: 35 !important;"),
+    "RAW_CSS must make user-menu tabs sticky at top 0"
+  );
+
+  // 2. Verify intermediate containers have overflow: visible
+  assert.ok(
+    scriptContent.includes(".user-menu .panel-body,") &&
+    scriptContent.includes(".user-menu .panel-body-contents,") &&
+    scriptContent.includes(".user-menu .user-menu-notifications-list,") &&
+    scriptContent.includes(".user-menu .quick-access-panel {\n      overflow: visible !important;"),
+    "RAW_CSS must set overflow: visible on intermediate containers to enable sticky positioning"
+  );
+
+  // 3. Verify CSS sticky bottom rules for dismiss containers and buttons
+  assert.ok(
+    scriptContent.includes(".user-menu .panel-bottom,") &&
+    scriptContent.includes(".user-menu .bottom-tabs,") &&
+    scriptContent.includes(".user-menu .user-menu-dismiss-container,") &&
+    scriptContent.includes(".user-menu .notifications-dismiss-container,") &&
+    scriptContent.includes(".user-menu .wecom-notif-sticky-dismiss {"),
+    "RAW_CSS must target dismiss containers for sticky bottom"
+  );
+  assert.ok(
+    scriptContent.includes("position: sticky !important;\n      bottom: 0 !important;\n      z-index: 30 !important;"),
+    "RAW_CSS must make dismiss bar sticky at bottom 0"
+  );
+
+  // 4. Verify dark mode styling for sticky elements
+  assert.ok(
+    scriptContent.includes("html.wecom-dark .user-menu .panel-bottom") &&
+    scriptContent.includes("html.wecom-dark .user-menu .bottom-tabs"),
+    "RAW_CSS must support dark mode for sticky dismiss bar"
+  );
+
+  // 5. Verify ensureStickyDismissButton definition and calls
+  assert.ok(
+    scriptContent.includes("function ensureStickyDismissButton(menu)"),
+    "must define ensureStickyDismissButton"
+  );
+  assert.ok(
+    scriptContent.includes("ensureStickyDismissButton(menu);\n    bindNotifMenuEvents(menu);"),
+    "positionNotifMenu must call ensureStickyDismissButton"
+  );
+  assert.ok(
+    scriptContent.includes("ensureStickyDismissButton(menu);\n    menu.addEventListener(\"mouseenter\""),
+    "bindNotifMenuEvents must call ensureStickyDismissButton"
+  );
+  assert.ok(
+    scriptContent.includes("const menu = findUserMenu();\n      if (menu) ensureStickyDismissButton(menu);"),
+    "ensureNotifMenuObserver must call ensureStickyDismissButton"
+  );
+
+  // 6. Test simulation of ensureStickyDismissButton
+  function isDismissAllTarget(target) {
+    if (!target) return false;
+    const el = target.closest ? target.closest("button, a, [role='button'], .btn") || target : target;
+    const text = (el.textContent || "").trim();
+    if (text.includes("全部忽略") || text.includes("忽略") || text.includes("Dismiss") || text.includes("Mark all read")) return true;
+    return false;
+  }
+
+  function simulateEnsureSticky(menu) {
+    if (!menu) return;
+    const candidates = menu.querySelectorAll("button, a, .btn-dismiss-read");
+    let btn = null;
+    for (const el of candidates) {
+      if (isDismissAllTarget(el)) {
+        btn = el;
+        break;
+      }
+    }
+    if (!btn) return;
+    btn.classList.add("wecom-notif-sticky-btn");
+    const parent = btn.parentElement;
+    if (parent && parent !== menu && !["notifications", "ul", "ol", "li"].includes(parent.tagName.toLowerCase())) {
+      parent.classList.add("wecom-notif-sticky-dismiss");
+    } else {
+      btn.classList.add("wecom-notif-sticky-dismiss");
+    }
+  }
+
+  const btnSet = new Set();
+  const parentSet = new Set();
+  const mockBtn = {
+    textContent: "全部忽略",
+    parentElement: null,
+    tagName: "BUTTON",
+    closest() { return this; },
+    classList: { add: (c) => btnSet.add(c), contains: (c) => btnSet.has(c) }
+  };
+  const mockParent = {
+    tagName: "DIV",
+    children: [mockBtn],
+    classList: { add: (c) => parentSet.add(c), contains: (c) => parentSet.has(c) }
+  };
+  mockBtn.parentElement = mockParent;
+  const mockMenu = {
+    querySelectorAll() { return [mockBtn]; }
+  };
+
+  simulateEnsureSticky(mockMenu);
+  assert.ok(mockBtn.classList.contains("wecom-notif-sticky-btn"), "btn must have wecom-notif-sticky-btn");
+  assert.ok(mockParent.classList.contains("wecom-notif-sticky-dismiss"), "parent container must have wecom-notif-sticky-dismiss");
+});

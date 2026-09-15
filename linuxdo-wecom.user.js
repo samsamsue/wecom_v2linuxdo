@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.14
+// @version      0.7.15
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -1279,6 +1279,80 @@
       background: #fff !important;
       color: var(--wc-text) !important;
       clip: auto !important;
+    }
+
+    /* ---------- 通知浮层：Tab 置顶与「忽略」按钮置底 sticky ---------- */
+    .${ROOT_CLASS}.wecom-notif-open .user-menu .menu-tabs-container,
+    .${ROOT_CLASS}.wecom-notif-open .user-menu .panel-header,
+    .${ROOT_CLASS}.wecom-notif-open .user-menu .tabs-list {
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 35 !important;
+      background: #ffffff !important;
+      border-bottom: 1px solid var(--wc-border, #E6E8EB) !important;
+    }
+    html.wecom-dark .user-menu .menu-tabs-container,
+    html.wecom-dark .user-menu .panel-header,
+    html.wecom-dark .user-menu .tabs-list,
+    html.${ROOT_CLASS}.wecom-dark .user-menu .menu-tabs-container,
+    html.${ROOT_CLASS}.wecom-dark .user-menu .panel-header,
+    html.${ROOT_CLASS}.wecom-dark .user-menu .tabs-list {
+      background: #23272e !important;
+      border-bottom-color: #383e4a !important;
+    }
+
+    .${ROOT_CLASS}.wecom-notif-open .user-menu .panel-body,
+    .${ROOT_CLASS}.wecom-notif-open .user-menu .panel-body-contents,
+    .${ROOT_CLASS}.wecom-notif-open .user-menu .user-menu-notifications-list,
+    .${ROOT_CLASS}.wecom-notif-open .user-menu .quick-access-panel {
+      overflow: visible !important;
+    }
+
+    .${ROOT_CLASS}.wecom-notif-open .user-menu .panel-bottom,
+    .${ROOT_CLASS}.wecom-notif-open .user-menu .bottom-tabs,
+    .${ROOT_CLASS}.wecom-notif-open .user-menu .user-menu-dismiss-container,
+    .${ROOT_CLASS}.wecom-notif-open .user-menu .notifications-dismiss-container,
+    .${ROOT_CLASS}.wecom-notif-open .user-menu .wecom-notif-sticky-dismiss {
+      position: sticky !important;
+      bottom: 0 !important;
+      z-index: 30 !important;
+      background: #ffffff !important;
+      border-top: 1px solid var(--wc-border, #E6E8EB) !important;
+      box-shadow: 0 -3px 10px rgba(0, 0, 0, 0.07) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: flex-end !important;
+      padding: 6px 12px !important;
+      box-sizing: border-box !important;
+      width: 100% !important;
+      margin-top: auto !important;
+    }
+
+    .${ROOT_CLASS}.wecom-notif-open .user-menu .wecom-notif-sticky-btn:not(.wecom-notif-sticky-dismiss) {
+      position: sticky !important;
+      bottom: 0 !important;
+      z-index: 30 !important;
+      background: #ffffff !important;
+    }
+
+    html.wecom-dark .user-menu .panel-bottom,
+    html.wecom-dark .user-menu .bottom-tabs,
+    html.wecom-dark .user-menu .user-menu-dismiss-container,
+    html.wecom-dark .user-menu .notifications-dismiss-container,
+    html.wecom-dark .user-menu .wecom-notif-sticky-dismiss,
+    html.${ROOT_CLASS}.wecom-dark .user-menu .panel-bottom,
+    html.${ROOT_CLASS}.wecom-dark .user-menu .bottom-tabs,
+    html.${ROOT_CLASS}.wecom-dark .user-menu .user-menu-dismiss-container,
+    html.${ROOT_CLASS}.wecom-dark .user-menu .notifications-dismiss-container,
+    html.${ROOT_CLASS}.wecom-dark .user-menu .wecom-notif-sticky-dismiss {
+      background: #23272e !important;
+      border-top-color: #383e4a !important;
+      box-shadow: 0 -3px 10px rgba(0, 0, 0, 0.25) !important;
+    }
+
+    html.wecom-dark .user-menu .wecom-notif-sticky-btn:not(.wecom-notif-sticky-dismiss),
+    html.${ROOT_CLASS}.wecom-dark .user-menu .wecom-notif-sticky-btn:not(.wecom-notif-sticky-dismiss) {
+      background: #23272e !important;
     }
 
     /* ---------- 最左：企业微信文字导航栏（浅色渐变；仅「更多」可点，展开原生侧栏） ---------- */
@@ -7807,7 +7881,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.14";
+  const SCRIPT_VERSION = "0.7.15";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -8746,6 +8820,7 @@
     menu.style.bottom = "";
     menu.style.transform = "";
     setNotifOpenClass(true);
+    ensureStickyDismissButton(menu);
     bindNotifMenuEvents(menu);
   }
 
@@ -9001,16 +9076,44 @@
     setTimeout(() => syncRail(), 300);
   }
 
+  /** 确保通知列表的「全部忽略/忽略」按钮及其容器具备 sticky 置底吸附类名 */
+  function ensureStickyDismissButton(menu) {
+    if (!menu) return;
+    const candidates = menu.querySelectorAll(
+      "button, a, .btn-dismiss-read, .dismiss-read, .dismiss-notification, [data-action='dismiss-all'], [data-action='dismiss']"
+    );
+    let btn = null;
+    for (const el of candidates) {
+      if (isDismissAllTarget(el)) {
+        btn = el.closest("button, a, [role='button'], .btn") || el;
+        break;
+      }
+    }
+    if (!btn) return;
+    btn.classList.add("wecom-notif-sticky-btn");
+    const parent = btn.parentElement;
+    if (parent && parent !== menu && !parent.matches(".notifications, ul, ol, li")) {
+      parent.classList.add("wecom-notif-sticky-dismiss");
+    } else {
+      btn.classList.add("wecom-notif-sticky-dismiss");
+    }
+  }
+
   function bindNotifMenuEvents(menu) {
     if (!menu || menu.dataset.wecomBound === "1") return;
     menu.dataset.wecomBound = "1";
+    ensureStickyDismissButton(menu);
     menu.addEventListener("mouseenter", clearNotifLeaveTimer);
     menu.addEventListener("mouseleave", scheduleCloseNotifMenu);
     menu.addEventListener("click", (e) => {
       const actionable = e.target.closest("a[href], button, .notification, [data-notification-id]");
       if (actionable && menu.contains(actionable)) {
         // 如果点击的是菜单顶部的分类 Tab（通知/书签/消息等），不收起菜单，不改角标，放行原生切换
-        if (isUserMenuTab(actionable)) return;
+        if (isUserMenuTab(actionable)) {
+          setTimeout(() => ensureStickyDismissButton(menu), 50);
+          setTimeout(() => ensureStickyDismissButton(menu), 200);
+          return;
+        }
 
         notifIgnoreHoverUntil = Date.now() + 500;
         const isDismissAll = isDismissAllTarget(actionable) || Boolean(actionable.closest(".btn-dismiss-read, .dismiss-notification, [data-action='dismiss-all']"));
@@ -9042,6 +9145,8 @@
     notifMenuObserver = new MutationObserver(() => {
       if (getViewMode() === "native" || otherThemeActive()) return;
       if (!notifWantOpen) return;
+      const menu = findUserMenu();
+      if (menu) ensureStickyDismissButton(menu);
       if (adoptNotifMenuIfAny() || notifOpenInFlight) return;
       // 原版路由或菜单项主动关闭后，同步清掉企微侧的钉住/显示状态。
       if (getHeaderService()?.userVisible === false || !findUserMenu()) resetNotifPresentation();
