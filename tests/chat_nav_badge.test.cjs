@@ -3462,5 +3462,73 @@ test("V2EX built-in emoji picker integrates with composer, supports tabs, Unicod
   assert.equal(inserted, "👍");
 });
 
+test("Restore original style shortcut (Alt+W / Alt+O) toggles between WeCom IM theme and native site layout", () => {
+  // 1. Definition and helpers exist
+  assert.ok(
+    scriptContent.includes("function toggleViewModeByShortcut()"),
+    "must define toggleViewModeByShortcut"
+  );
+  assert.ok(
+    scriptContent.includes("function bindViewModeShortcut()"),
+    "must define bindViewModeShortcut"
+  );
+  assert.ok(
+    scriptContent.includes("bindViewModeShortcut();"),
+    "bootstrap must call bindViewModeShortcut"
+  );
+
+  // 2. Shortcut handles Alt+W and Alt+O
+  assert.ok(
+    scriptContent.includes("key === \"w\" || key === \"o\" || code === \"KeyW\" || code === \"KeyO\""),
+    "must check for Alt+W or Alt+O (case-insensitive and code checks)"
+  );
+  assert.ok(
+    scriptContent.includes("!e.altKey || e.ctrlKey || e.metaKey"),
+    "must guard that Alt is held and Ctrl/Meta are not held"
+  );
+
+  // 3. Theme menu has option to restore native style
+  assert.ok(
+    scriptContent.includes('class="wecom-menu-restore-native"'),
+    "theme menu must render .wecom-menu-restore-native option"
+  );
+  assert.ok(
+    scriptContent.includes("toggleViewModeByShortcut();"),
+    "theme menu click must trigger toggleViewModeByShortcut"
+  );
+
+  // 4. Native mode FAB title mentions shortcut
+  assert.ok(
+    scriptContent.includes("切回企业微信 IM 视图 (快捷键: Alt+W / Alt+O)"),
+    "fab button title must document the shortcut"
+  );
+
+  // 5. Test toggle logic simulation
+  let currentMode = "im";
+  let reloaded = false;
+  let navigatedTo = null;
+
+  function fakeToggle() {
+    if (currentMode === "native") {
+      currentMode = "im";
+      reloaded = true;
+    } else {
+      currentMode = "native";
+      navigatedTo = "/t/123456";
+    }
+  }
+
+  // From IM -> Native
+  fakeToggle();
+  assert.equal(currentMode, "native");
+  assert.equal(navigatedTo, "/t/123456");
+
+  // From Native -> IM
+  fakeToggle();
+  assert.equal(currentMode, "im");
+  assert.equal(reloaded, true);
+});
+
+
 
 

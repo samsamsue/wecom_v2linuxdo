@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.24
+// @version      0.7.25
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -8502,9 +8502,17 @@
       `    <button type="button" class="wecom-aspect-chip" data-aspect="16:9">16:9</button>` +
       `  </div>` +
       `</div>` +
+      `<button type="button" role="menuitem" class="wecom-menu-restore-native">${ICONS.external}<span>恢复原风格 (Alt+W)</span></button>` +
       `<button type="button" role="menuitem" class="wecom-check-update">${ICONS.refresh}<span>检查脚本更新</span></button>`;
     document.body.appendChild(menu);
     menu.addEventListener("click", (event) => {
+      if (event.target.closest(".wecom-menu-restore-native")) {
+        event.preventDefault();
+        event.stopPropagation();
+        setThemeMenuOpen(false);
+        toggleViewModeByShortcut();
+        return;
+      }
       if (event.target.closest(".wecom-check-update")) {
         event.preventDefault();
         event.stopPropagation();
@@ -8642,7 +8650,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.24";
+  const SCRIPT_VERSION = "0.7.25";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -13548,7 +13556,7 @@
     }
     const slug = chatState.slug || "topic";
     const postNumber = chatState.renderedFirstIdx >= 0 ? openingPostNumber(tid, null) : 0;
-    let target = tid ? `/t/${slug}/${tid}` : location.pathname;
+    let target = tid ? `/t/${slug}/${tid}` : (location.pathname || "/");
     if (tid && postNumber > 1) {
       target = `/t/${slug}/${tid}/${postNumber}`;
     }
@@ -13595,7 +13603,8 @@
   function openNativeTopicView() {
     setViewMode("native");
     const target = getTopicNativePath();
-    if (location.pathname === target || location.href === target) {
+    const current = location.pathname + location.search;
+    if (current === target || location.pathname === target || location.href === target) {
       location.reload();
     } else {
       location.href = target;
@@ -17102,6 +17111,31 @@
 
   /* ============================== 原生视图切换 ============================== */
 
+  function toggleViewModeByShortcut() {
+    if (otherThemeActive()) return;
+    if (getViewMode() === "native") {
+      setViewMode("im");
+      location.reload();
+    } else {
+      openNativeTopicView();
+    }
+  }
+
+  function bindViewModeShortcut() {
+    if (window.__wecomViewModeShortcutBound) return;
+    window.__wecomViewModeShortcutBound = true;
+    window.addEventListener("keydown", (e) => {
+      if (!e.altKey || e.ctrlKey || e.metaKey) return;
+      const key = (e.key || "").toLowerCase();
+      const code = e.code || "";
+      if (key === "w" || key === "o" || code === "KeyW" || code === "KeyO") {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleViewModeByShortcut();
+      }
+    }, true);
+  }
+
   function ensureModeFab() {
     let fab = document.querySelector(".wecom-mode-fab");
     if (getViewMode() !== "native") {
@@ -17111,7 +17145,8 @@
     if (fab) return;
     fab = document.createElement("button");
     fab.className = "wecom-mode-fab";
-    fab.title = "切回企业微信 IM 视图";
+    fab.title = "切回企业微信 IM 视图 (快捷键: Alt+W / Alt+O)";
+    fab.setAttribute("aria-label", "切回企业微信 IM 视图");
     fab.innerHTML = ICONS.chat;
     fab.addEventListener("click", () => {
       setViewMode("im");
@@ -17458,6 +17493,8 @@
     bindBase64Selection();
     // V2EX 内置表情选择器外部点击与快捷键监听
     bindV2exEmojiPickerEvents();
+    // 快捷键 Alt+W / Alt+O：在企微 IM 视图与原站风格间快速切换
+    bindViewModeShortcut();
     // 定时同步头像通知角标与新主题角标（3 秒轮询）
     if (!window.__wecomNotifBadgeTimer) {
       window.__wecomNotifBadgeTimer = setInterval(() => {
