@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.22
+// @version      0.7.23
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -6425,6 +6425,47 @@
       align-items: center !important;
       justify-content: flex-end !important;
       box-sizing: border-box !important;
+      gap: 10px !important;
+    }
+    .wecom-compose-status {
+      font-size: 11px !important;
+      line-height: 1.3 !important;
+      color: var(--wc-text-3, #8F959E) !important;
+      max-width: 360px !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      pointer-events: none !important;
+      user-select: none !important;
+      transition: opacity 0.2s ease !important;
+    }
+    .wecom-compose-status:empty {
+      display: none !important;
+    }
+    .wecom-compose-status.busy {
+      color: var(--wc-accent, #267EF0) !important;
+    }
+    .wecom-compose-status.success {
+      color: #07C160 !important;
+    }
+    .wecom-compose-status.error {
+      color: #FA5151 !important;
+    }
+    html.wecom-dark .wecom-compose-status,
+    html.${ROOT_CLASS}.wecom-dark .wecom-compose-status {
+      color: #8F959E !important;
+    }
+    html.wecom-dark .wecom-compose-status.busy,
+    html.${ROOT_CLASS}.wecom-dark .wecom-compose-status.busy {
+      color: #388BFD !important;
+    }
+    html.wecom-dark .wecom-compose-status.success,
+    html.${ROOT_CLASS}.wecom-dark .wecom-compose-status.success {
+      color: #3FB950 !important;
+    }
+    html.wecom-dark .wecom-compose-status.error,
+    html.${ROOT_CLASS}.wecom-dark .wecom-compose-status.error {
+      color: #F85149 !important;
     }
     .wecom-send-btn {
       height: 26px !important;
@@ -8511,7 +8552,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.22";
+  const SCRIPT_VERSION = "0.7.23";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -12337,7 +12378,8 @@
       !panel.querySelector(".wecom-watermark-panel") || !panel.querySelector(".wecom-image-input") ||
       !panel.querySelector('[data-composer-action="emoji"]') || !panel.querySelector('[data-composer-action="pic"]') ||
       !panel.querySelector('[data-composer-action="doc"]') || !panel.querySelector('[data-composer-action="apps"]') ||
-      !panel.querySelector(".wecom-platform-switcher") || !panel.querySelector(".wecom-chat-avatar-toggle"))) {
+      !panel.querySelector(".wecom-platform-switcher") || !panel.querySelector(".wecom-chat-avatar-toggle") ||
+      !panel.querySelector(".wecom-composer-bottom .wecom-compose-status"))) {
       panel.remove();
       panel = null;
     }
@@ -12456,11 +12498,11 @@
             ${toolsHtml}
             <button type="button" class="wecom-tool-quick-meet" title="快速会议">${ICONS.bolt}<span>快速会议</span></button>
             <input class="wecom-image-input" type="file" accept="image/*" multiple aria-label="选择图片">
-            <span class="wecom-compose-status" aria-live="polite"></span>
           </div>
           <div class="wecom-reply-target" hidden><span></span><button type="button" class="wecom-reply-cancel" aria-label="取消指定回复">×</button></div>
           <textarea class="wecom-chat-compose" data-wecom-compose="1" rows="3" aria-label="消息" placeholder="发送消息"></textarea>
           <div class="wecom-composer-bottom">
+            <span class="wecom-compose-status" aria-live="polite"></span>
             <button type="button" class="wecom-send-btn" disabled>发送(S)</button>
           </div>
         </div>

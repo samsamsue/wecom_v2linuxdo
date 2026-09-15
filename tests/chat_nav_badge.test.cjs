@@ -3375,4 +3375,32 @@ test("V2EX editor uploads images via Imgur API and inserts direct image links", 
   );
 });
 
+test("wecom-compose-status is positioned in wecom-composer-bottom with refined 11px font styling", () => {
+  // 1. Verify it is located in .wecom-composer-bottom, not in .wecom-composer-tools
+  assert.ok(
+    scriptContent.includes(
+      '<div class="wecom-composer-bottom">\n            <span class="wecom-compose-status" aria-live="polite"></span>\n            <button type="button" class="wecom-send-btn" disabled>发送(S)</button>\n          </div>'
+    ),
+    "must place .wecom-compose-status inside .wecom-composer-bottom next to send button"
+  );
+
+  // 2. Verify CSS styling defines 11px font size and appropriate layout
+  assert.ok(
+    scriptContent.includes(".wecom-compose-status {\n      font-size: 11px !important;"),
+    "must style .wecom-compose-status with 11px font size"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-compose-status:empty {\n      display: none !important;\n    }"),
+    "must hide .wecom-compose-status when empty"
+  );
+
+  // 3. Verify status color classes
+  assert.ok(
+    scriptContent.includes(".wecom-compose-status.busy") &&
+    scriptContent.includes(".wecom-compose-status.success") &&
+    scriptContent.includes(".wecom-compose-status.error"),
+    "must define busy, success, and error colors"
+  );
+});
+
 
