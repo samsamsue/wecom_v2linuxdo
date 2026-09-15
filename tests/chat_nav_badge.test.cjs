@@ -3047,18 +3047,23 @@ test("Quote title aside.quote .title is beautified with transparent background, 
     "aside.quote .title must explicitly remove white background and border"
   );
 
-  // 2. Verify subtle muted typography for light mode
+  // 2. Verify subtle muted typography and bold weight (font-weight: 600) for light mode
   assert.ok(
     scriptContent.includes("color: #767C85 !important;"),
     "quote title should use muted non-conspicuous text color in light mode"
   );
+  assert.ok(
+    scriptContent.includes("font-weight: 600 !important;"),
+    "quote title and links must be bold (font-weight: 600)"
+  );
 
-  // 3. Verify quote title links inherit muted color without jarring underlines
+  // 3. Verify quote title links inherit muted color without jarring underlines and keep bold weight
   assert.ok(
     scriptContent.includes(".wecom-msg-bubble aside.quote .title a") &&
     scriptContent.includes("color: inherit !important;") &&
-    scriptContent.includes("text-decoration: none !important;"),
-    "quote title links must inherit muted color and omit default link styling"
+    scriptContent.includes("text-decoration: none !important;") &&
+    scriptContent.includes("font-weight: 600 !important;"),
+    "quote title links must inherit muted color, omit default link styling, and be bold"
   );
 
   // 4. Verify outgoing bubble (.wecom-msg-me) styles for quotes
