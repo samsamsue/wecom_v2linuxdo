@@ -3033,3 +3033,44 @@ test("Images inside blockquote are auto-laid out into independent galleries with
     "blockquote gallery must only contain images from inside quote"
   );
 });
+
+test("Quote title aside.quote .title is beautified with transparent background, no borders, and muted typography", () => {
+  const scriptContent = fs.readFileSync(path.resolve(__dirname, "../linuxdo-wecom.user.js"), "utf8");
+
+  // 1. Verify aside.quote and aside.quote .title background transparency and border removal
+  assert.ok(
+    scriptContent.includes(".wecom-msg-bubble aside.quote .title,") &&
+    scriptContent.includes("background: transparent !important;") &&
+    scriptContent.includes("background-color: transparent !important;") &&
+    scriptContent.includes("border: none !important;") &&
+    scriptContent.includes("border-left: none !important;"),
+    "aside.quote .title must explicitly remove white background and border"
+  );
+
+  // 2. Verify subtle muted typography for light mode
+  assert.ok(
+    scriptContent.includes("color: #767C85 !important;"),
+    "quote title should use muted non-conspicuous text color in light mode"
+  );
+
+  // 3. Verify quote title links inherit muted color without jarring underlines
+  assert.ok(
+    scriptContent.includes(".wecom-msg-bubble aside.quote .title a") &&
+    scriptContent.includes("color: inherit !important;") &&
+    scriptContent.includes("text-decoration: none !important;"),
+    "quote title links must inherit muted color and omit default link styling"
+  );
+
+  // 4. Verify outgoing bubble (.wecom-msg-me) styles for quotes
+  assert.ok(
+    scriptContent.includes(".wecom-msg-me .wecom-msg-bubble aside.quote .title"),
+    "outgoing bubbles must have dedicated quote title styling"
+  );
+
+  // 5. Verify dark mode overrides for quotes
+  assert.ok(
+    scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble aside.quote .title") &&
+    scriptContent.includes("color: #929AA7 !important;"),
+    "dark mode must style quote title with soft muted dark-mode color"
+  );
+});

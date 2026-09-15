@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.17
+// @version      0.7.18
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -5833,10 +5833,12 @@
     }
 
 
-    /* 引用与回复样式（完全对齐示例图 图2：内嵌气泡、细灰竖线、作者+冒号、预览灰字） */
+    /* 引用与回复样式（完全对齐企微规范：透明背景、细竖线、作者低对比度、无白色高亮） */
     .wecom-msg-bubble .wecom-reply-reference,
     .wecom-msg-bubble aside.quote,
-    .wecom-msg-bubble blockquote {
+    .wecom-msg-bubble blockquote,
+    .cooked aside.quote,
+    aside.quote {
       display: block !important;
       margin: 0 0 8px 0 !important;
       padding: 0 0 0 8px !important;
@@ -5859,30 +5861,63 @@
       border-left-color: rgba(0, 0, 0, 0.22) !important;
     }
     .wecom-msg-bubble .wecom-reply-author,
-    .wecom-msg-bubble aside.quote .title {
+    .wecom-msg-bubble aside.quote .title,
+    .cooked aside.quote .title,
+    aside.quote .title {
       font-size: 12px !important;
       font-weight: 500 !important;
-      color: #585C60 !important;
+      color: #767C85 !important;
       line-height: 1.4 !important;
-      margin: 0 0 2px 0 !important;
+      margin: 0 0 3px 0 !important;
       padding: 0 !important;
       display: block !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      border: none !important;
+      border-left: none !important;
+      box-shadow: none !important;
+      outline: none !important;
+      user-select: text !important;
+    }
+    .wecom-msg-bubble aside.quote .title a,
+    .wecom-msg-bubble aside.quote .title a:visited,
+    .cooked aside.quote .title a,
+    .cooked aside.quote .title a:visited,
+    aside.quote .title a,
+    aside.quote .title a:visited {
+      color: inherit !important;
+      text-decoration: none !important;
+      font-weight: 500 !important;
+    }
+    .wecom-msg-bubble aside.quote .title a:hover,
+    .cooked aside.quote .title a:hover,
+    aside.quote .title a:hover {
+      text-decoration: underline !important;
+      color: var(--wc-accent, #267EF0) !important;
     }
     .wecom-msg-bubble aside.quote .title img,
     .wecom-msg-bubble aside.quote .title .quote-controls,
     .wecom-msg-bubble aside.quote .title .back,
-    .wecom-msg-bubble aside.quote .title .quote-toggle {
+    .wecom-msg-bubble aside.quote .title .quote-toggle,
+    aside.quote .title img,
+    aside.quote .title .quote-controls,
+    aside.quote .title .back,
+    aside.quote .title .quote-toggle {
       display: none !important;
     }
     .wecom-msg-bubble .wecom-reply-preview,
     .wecom-msg-bubble aside.quote blockquote,
-    .wecom-msg-bubble blockquote p {
+    .wecom-msg-bubble blockquote p,
+    .cooked aside.quote blockquote {
       font-size: 12px !important;
       color: #7D8590 !important;
       line-height: 1.45 !important;
       margin: 0 !important;
       padding: 0 !important;
       border: none !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      box-shadow: none !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
       display: -webkit-box !important;
@@ -5890,20 +5925,74 @@
       -webkit-box-orient: vertical !important;
       word-break: break-word !important;
     }
+    .wecom-msg-me .wecom-msg-bubble aside.quote .title,
+    .wecom-msg-me .wecom-msg-bubble .wecom-reply-author {
+      color: rgba(0, 0, 0, 0.52) !important;
+      background: transparent !important;
+      background-color: transparent !important;
+    }
+    .wecom-msg-me .wecom-msg-bubble .wecom-reply-preview,
+    .wecom-msg-me .wecom-msg-bubble aside.quote blockquote,
+    .wecom-msg-me .wecom-msg-bubble blockquote p {
+      color: rgba(0, 0, 0, 0.48) !important;
+      background: transparent !important;
+      background-color: transparent !important;
+    }
     /* 深色模式下的引用线与文字配色 */
     html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble .wecom-reply-reference,
     html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble aside.quote,
-    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble blockquote {
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble blockquote,
+    html.wecom-dark .wecom-msg-bubble .wecom-reply-reference,
+    html.wecom-dark .wecom-msg-bubble aside.quote,
+    html.wecom-dark .wecom-msg-bubble blockquote,
+    html.wecom-dark aside.quote,
+    html.wecom-dark .cooked aside.quote {
       border-left-color: rgba(255, 255, 255, 0.22) !important;
+      background: transparent !important;
+      background-color: transparent !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble .wecom-reply-author,
-    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble aside.quote .title {
-      color: #A6AFBC !important;
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble aside.quote .title,
+    html.wecom-dark .wecom-msg-bubble .wecom-reply-author,
+    html.wecom-dark .wecom-msg-bubble aside.quote .title,
+    html.wecom-dark aside.quote .title,
+    html.wecom-dark .cooked aside.quote .title {
+      color: #929AA7 !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      border: none !important;
+      border-left: none !important;
+      box-shadow: none !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble .wecom-reply-preview,
     html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble aside.quote blockquote,
-    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble blockquote p {
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble blockquote p,
+    html.wecom-dark .wecom-msg-bubble .wecom-reply-preview,
+    html.wecom-dark .wecom-msg-bubble aside.quote blockquote,
+    html.wecom-dark .wecom-msg-bubble blockquote p,
+    html.wecom-dark aside.quote blockquote,
+    html.wecom-dark .cooked aside.quote blockquote {
       color: #7D8590 !important;
+      background: transparent !important;
+      background-color: transparent !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-me .wecom-msg-bubble aside.quote .title,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-me .wecom-msg-bubble .wecom-reply-author,
+    html.wecom-dark .wecom-msg-me .wecom-msg-bubble aside.quote .title,
+    html.wecom-dark .wecom-msg-me .wecom-msg-bubble .wecom-reply-author {
+      color: rgba(255, 255, 255, 0.65) !important;
+      background: transparent !important;
+      background-color: transparent !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-me .wecom-msg-bubble .wecom-reply-preview,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-me .wecom-msg-bubble aside.quote blockquote,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-me .wecom-msg-bubble blockquote p,
+    html.wecom-dark .wecom-msg-me .wecom-msg-bubble .wecom-reply-preview,
+    html.wecom-dark .wecom-msg-me .wecom-msg-bubble aside.quote blockquote,
+    html.wecom-dark .wecom-msg-me .wecom-msg-bubble blockquote p {
+      color: rgba(255, 255, 255, 0.52) !important;
+      background: transparent !important;
+      background-color: transparent !important;
     }
 
     /* 气泡样式规范（圆角矩形，去除三角箭头，纯净优雅） */
@@ -6834,17 +6923,34 @@
     /* 引用块优化 */
     html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble .wecom-reply-reference,
     html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble aside.quote,
-    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble blockquote {
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble blockquote,
+    html.wecom-dark .wecom-msg-bubble .wecom-reply-reference,
+    html.wecom-dark .wecom-msg-bubble aside.quote,
+    html.wecom-dark .wecom-msg-bubble blockquote {
       border-left-color: rgba(255, 255, 255, 0.28) !important;
+      background: transparent !important;
+      background-color: transparent !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble .wecom-reply-author,
-    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble aside.quote .title {
-      color: #B4BAC5 !important;
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble aside.quote .title,
+    html.wecom-dark .wecom-msg-bubble .wecom-reply-author,
+    html.wecom-dark .wecom-msg-bubble aside.quote .title {
+      color: #929AA7 !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      border: none !important;
+      border-left: none !important;
+      box-shadow: none !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble .wecom-reply-preview,
     html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble aside.quote blockquote,
-    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble blockquote p {
-      color: #A2A9B6 !important;
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble blockquote p,
+    html.wecom-dark .wecom-msg-bubble .wecom-reply-preview,
+    html.wecom-dark .wecom-msg-bubble aside.quote blockquote,
+    html.wecom-dark .wecom-msg-bubble blockquote p {
+      color: #8E95A2 !important;
+      background: transparent !important;
+      background-color: transparent !important;
     }
 
     /* 表格 */
@@ -7968,7 +8074,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.17";
+  const SCRIPT_VERSION = "0.7.18";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
