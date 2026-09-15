@@ -2969,3 +2969,67 @@ test("Image viewer supports cursor-centered zooming, drag panning, and prev/next
   prev();
   assert.equal(activeIndex, 2, "prev() from 0 must cycle back to 2");
 });
+
+test("Images inside blockquote are auto-laid out into independent galleries without mixing with outer bubble layout", () => {
+  // 1. Verify CSS rules for blockquote images gallery
+  assert.ok(
+    scriptContent.includes("blockquote .wecom-msg-images"),
+    "RAW_CSS must style .wecom-msg-images inside blockquote"
+  );
+
+  // 2. Verify isNodeVisuallyEmpty preserves .wecom-msg-images and .wecom-msg-thumb
+  assert.ok(
+    scriptContent.includes(".wecom-msg-images, .wecom-msg-thumb"),
+    "isNodeVisuallyEmpty must treat galleries and thumbnails as meaningful content"
+  );
+
+  // 3. Verify applyImageAutoLayout scopes images by blockquote
+  assert.ok(
+    scriptContent.includes("const bq = img.closest(\"blockquote\");\n        const scope = bq || bubble;"),
+    "applyImageAutoLayout must group candidate images by blockquote scope"
+  );
+  assert.ok(
+    scriptContent.includes("if (scope === bubble) {\n          cleanMessageBodyWhitespace(bodyEl);\n          bubble.appendChild(gallery);\n        } else {\n          cleanMessageBodyWhitespace(scope);\n          scope.appendChild(gallery);\n        }"),
+    "applyImageAutoLayout must append blockquote gallery to scope and bubble gallery to bubble"
+  );
+
+  // 4. Verify querySelectorAll is used to remove all galleries on toggle
+  assert.ok(
+    scriptContent.includes("bubble.querySelectorAll(\".wecom-msg-images\").forEach((el) => el.remove());"),
+    "toggleMessageBubbleLayout must remove all galleries inside bubble including blockquote galleries"
+  );
+
+  // 5. Functional simulation of scoped grouping
+  const mockBubble = { id: "bubble", children: [] };
+  const mockBq = { id: "blockquote", children: [] };
+
+  const mockImgs = [
+    { src: "out1.png", closest(sel) { return sel === "blockquote" ? null : null; } },
+    { src: "quote1.png", closest(sel) { return sel === "blockquote" ? mockBq : null; } },
+    { src: "quote2.png", closest(sel) { return sel === "blockquote" ? mockBq : null; } },
+    { src: "out2.png", closest(sel) { return sel === "blockquote" ? null : null; } }
+  ];
+
+  const groups = new Map();
+  for (const img of mockImgs) {
+    const bq = img.closest("blockquote");
+    const scope = bq || mockBubble;
+    if (!groups.has(scope)) groups.set(scope, []);
+    groups.get(scope).push(img);
+  }
+
+  assert.equal(groups.size, 2, "must have exactly 2 distinct scopes (bubble and blockquote)");
+  assert.equal(groups.get(mockBubble).length, 2, "bubble scope must have 2 outer images");
+  assert.equal(groups.get(mockBq).length, 2, "blockquote scope must have 2 quoted images");
+
+  assert.deepEqual(
+    groups.get(mockBubble).map(i => i.src),
+    ["out1.png", "out2.png"],
+    "outer bubble gallery must only contain images from outside quotes"
+  );
+  assert.deepEqual(
+    groups.get(mockBq).map(i => i.src),
+    ["quote1.png", "quote2.png"],
+    "blockquote gallery must only contain images from inside quote"
+  );
+});

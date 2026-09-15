@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.16
+// @version      0.7.17
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -3519,6 +3519,10 @@
       margin-top: 8px !important;
       width: 100% !important;
       box-sizing: border-box !important;
+    }
+    blockquote .wecom-msg-images {
+      margin-top: 6px !important;
+      margin-bottom: 2px !important;
     }
     .wecom-msg-body.is-empty {
       display: none !important;
@@ -7964,7 +7968,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.16";
+  const SCRIPT_VERSION = "0.7.17";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -11259,7 +11263,7 @@
   function isNodeVisuallyEmpty(node) {
     if (!node) return true;
     if (node.textContent.replace(/[\s\u200B\u00A0]+/g, "").length > 0) return false;
-    const meaningful = node.querySelector("img, svg, iframe, video, audio, table, pre, code, input, hr, canvas, object, embed, aside.onebox, .onebox, .poll, details");
+    const meaningful = node.querySelector("img, svg, iframe, video, audio, table, pre, code, input, hr, canvas, object, embed, aside.onebox, .onebox, .poll, details, .wecom-msg-images, .wecom-msg-thumb");
     return !meaningful;
   }
 
@@ -11446,7 +11450,7 @@
         const rawContent = post?.cooked || bubble.dataset.rawCooked;
         if (rawContent) {
           bubble.removeAttribute("data-layout-mode");
-          bubble.querySelector(".wecom-msg-images")?.remove();
+          bubble.querySelectorAll(".wecom-msg-images").forEach((el) => el.remove());
           bubble.querySelector(".wecom-bubble-layout-toggle")?.remove();
           const bodyEl = bubble.querySelector(".wecom-msg-body");
           if (bodyEl) {
@@ -11486,7 +11490,7 @@
       const candidateImgs = allImgs.filter((img) => {
         if (!isPreviewableChatImage(img)) return false;
         if (img.matches(".onebox-avatar, .onebox-thumbnail, .site-icon, .badge-icon, .avatar")) return false;
-        if (img.closest("aside.onebox, .onebox, .onebox-body, [data-onebox-src], blockquote, aside.quote, .wecom-reply-reference, table, details, .poll, .poll-ui-container, .lazyYT, .video-container, .audio-container, .chat-transcript, pre, code")) return false;
+        if (img.closest("aside.onebox, .onebox, .onebox-body, [data-onebox-src], .wecom-reply-reference, table, details, .poll, .poll-ui-container, .lazyYT, .video-container, .audio-container, .chat-transcript, pre, code")) return false;
         const src = img.getAttribute("src") || img.getAttribute("data-orig-src") || img.getAttribute("data-large-src");
         if (!src || src.startsWith("data:image/svg+xml")) return false;
         if (isImageSmallerThanLayout(img, layoutSize)) return false;
@@ -11502,63 +11506,83 @@
         continue;
       }
 
-      const gallery = document.createElement("div");
-      gallery.className = "wecom-msg-images";
-      gallery.setAttribute("role", "group");
-      gallery.setAttribute("aria-label", "帖子图片");
-
+      // 按照所在作用域分组：每个 blockquote 各自形成独立画廊，引用框外的图片归入气泡主画廊
+      const groups = new Map();
       for (const img of candidateImgs) {
-        const lightboxWrapper = img.closest(".lightbox-wrapper");
-        const lightboxLink = img.closest("a.lightbox, .lightbox-wrapper a[href]");
-        const normalLink = img.closest("a");
-        const linkToMove = lightboxLink || (normalLink && normalLink.textContent.trim() === "" ? normalLink : null);
-        const targetToRemove = (lightboxWrapper && lightboxWrapper !== linkToMove) ? lightboxWrapper : null;
-        const originalParent = (lightboxWrapper || linkToMove || img).parentElement;
+        const bq = img.closest("blockquote");
+        const scope = bq || bubble;
+        if (!groups.has(scope)) {
+          groups.set(scope, []);
+        }
+        groups.get(scope).push(img);
+      }
 
-        if (lightboxWrapper) {
-          lightboxWrapper.querySelector(".meta")?.remove();
+      for (const [scope, imgs] of groups.entries()) {
+        const gallery = document.createElement("div");
+        gallery.className = "wecom-msg-images";
+        gallery.setAttribute("role", "group");
+        gallery.setAttribute("aria-label", scope === bubble ? "帖子图片" : "引用图片");
+
+        for (const img of imgs) {
+          const lightboxWrapper = img.closest(".lightbox-wrapper");
+          const lightboxLink = img.closest("a.lightbox, .lightbox-wrapper a[href]");
+          const normalLink = img.closest("a");
+          const linkToMove = lightboxLink || (normalLink && normalLink.textContent.trim() === "" ? normalLink : null);
+          const targetToRemove = (lightboxWrapper && lightboxWrapper !== linkToMove) ? lightboxWrapper : null;
+          const originalParent = (lightboxWrapper || linkToMove || img).parentElement;
+
+          if (lightboxWrapper) {
+            lightboxWrapper.querySelector(".meta")?.remove();
+          }
+
+          const thumb = document.createElement("div");
+          thumb.className = "wecom-msg-thumb";
+          thumb.setAttribute("role", "button");
+          thumb.tabIndex = 0;
+          const altText = img.getAttribute("alt")?.trim() || img.getAttribute("title")?.trim() || "查看大图";
+          thumb.title = altText;
+          thumb.setAttribute("aria-label", altText);
+
+          img.setAttribute("loading", "lazy");
+
+          if (linkToMove) {
+            thumb.appendChild(linkToMove);
+          } else {
+            thumb.appendChild(img);
+          }
+
+          const imgSrc = img.getAttribute("src") || img.getAttribute("data-orig-src") || "";
+          if (/\.gif(\?|$)/i.test(imgSrc)) {
+            const badge = document.createElement("span");
+            badge.className = "wecom-msg-thumb-badge";
+            badge.textContent = "GIF";
+            thumb.appendChild(badge);
+          }
+
+          gallery.appendChild(thumb);
+
+          if (targetToRemove) {
+            targetToRemove.remove();
+          }
+
+          let cur = originalParent;
+          while (cur && cur !== scope && cur !== bodyEl && isNodeVisuallyEmpty(cur)) {
+            const next = cur.parentElement;
+            cur.remove();
+            cur = next;
+          }
         }
 
-        const thumb = document.createElement("div");
-        thumb.className = "wecom-msg-thumb";
-        thumb.setAttribute("role", "button");
-        thumb.tabIndex = 0;
-        const altText = img.getAttribute("alt")?.trim() || img.getAttribute("title")?.trim() || "查看大图";
-        thumb.title = altText;
-        thumb.setAttribute("aria-label", altText);
-
-        img.setAttribute("loading", "lazy");
-
-        if (linkToMove) {
-          thumb.appendChild(linkToMove);
+        if (scope === bubble) {
+          cleanMessageBodyWhitespace(bodyEl);
+          bubble.appendChild(gallery);
         } else {
-          thumb.appendChild(img);
-        }
-
-        const imgSrc = img.getAttribute("src") || img.getAttribute("data-orig-src") || "";
-        if (/\.gif(\?|$)/i.test(imgSrc)) {
-          const badge = document.createElement("span");
-          badge.className = "wecom-msg-thumb-badge";
-          badge.textContent = "GIF";
-          thumb.appendChild(badge);
-        }
-
-        gallery.appendChild(thumb);
-
-        if (targetToRemove) {
-          targetToRemove.remove();
-        }
-
-        let cur = originalParent;
-        while (cur && cur !== bodyEl && isNodeVisuallyEmpty(cur)) {
-          const next = cur.parentElement;
-          cur.remove();
-          cur = next;
+          cleanMessageBodyWhitespace(scope);
+          scope.appendChild(gallery);
         }
       }
 
       cleanMessageBodyWhitespace(bodyEl);
-      bubble.appendChild(gallery);
       if (isNodeVisuallyEmpty(bodyEl)) {
         bodyEl.classList.add("is-empty");
       }
@@ -11596,7 +11620,7 @@
         bodyEl.innerHTML = rawContent;
         bodyEl.classList.remove("is-empty");
       }
-      bubble.querySelector(".wecom-msg-images")?.remove();
+      bubble.querySelectorAll(".wecom-msg-images").forEach((el) => el.remove());
       applyImageAutoLayout(msgEl);
       btn.title = "点击显示原排版";
       btn.innerHTML = `${ICONS.layoutOriginal}<span>原排版</span>`;
@@ -11604,7 +11628,7 @@
     } else {
       // 切换到原排版
       bubble.dataset.layoutMode = "raw";
-      bubble.querySelector(".wecom-msg-images")?.remove();
+      bubble.querySelectorAll(".wecom-msg-images").forEach((el) => el.remove());
       const bodyEl = bubble.querySelector(".wecom-msg-body");
       if (bodyEl) {
         bodyEl.innerHTML = rawContent;
@@ -11630,7 +11654,7 @@
       const rawContent = post?.cooked || bubble.dataset.rawCooked;
       if (rawContent === undefined || rawContent === null) continue;
       bubble.removeAttribute("data-layout-mode");
-      bubble.querySelector(".wecom-msg-images")?.remove();
+      bubble.querySelectorAll(".wecom-msg-images").forEach((el) => el.remove());
       bubble.querySelector(".wecom-bubble-layout-toggle")?.remove();
       const bodyEl = bubble.querySelector(".wecom-msg-body");
       if (bodyEl) {
