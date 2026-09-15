@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.20
+// @version      0.7.21
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -54,6 +54,7 @@
   const THEME_MODE_KEY = "linuxdo-wecom-theme-mode";
   const BOOST_ENABLED_KEY = "linuxdo-wecom-boost-enabled";
   const HIDE_CHAT_AVATAR_KEY = "linuxdo-wecom-hide-chat-avatar";
+  const BASE64_DECODE_KEY = "linuxdo-wecom-base64-decode";
   const IMAGE_AUTO_LAYOUT_KEY = "linuxdo-wecom-image-auto-layout";
   const IMAGE_AUTO_LAYOUT_SIZE_KEY = "linuxdo-wecom-image-layout-size";
   const DEFAULT_IMAGE_AUTO_LAYOUT_SIZE = 100;
@@ -193,7 +194,9 @@
     winClose: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M2.2 2.2l7.6 7.6m0-7.6l-7.6 7.6" /></svg>`,
     layoutOriginal: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><line x1="9" y1="9" x2="10" y2="9" /><line x1="9" y1="13" x2="15" y2="13" /><line x1="9" y1="17" x2="15" y2="17" /></svg>`,
     layoutAuto: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><rect x="4" y="4" width="6" height="6" rx="1" /><rect x="14" y="4" width="6" height="6" rx="1" /><rect x="4" y="14" width="6" height="6" rx="1" /><rect x="14" y="14" width="6" height="6" rx="1" /></svg>`,
-    userOff: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.18 4.171a4 4 0 0 1 5.649 5.66m-1.829 2.169a4 4 0 0 1 -3.82 -3.83" /><path d="M6 21v-2a4 4 0 0 1 4 -4h4c.412 0 .81 .062 1.183 .178m2.633 2.642c.12 .38 .184 .785 .184 1.18v2" /><path d="M3 3l18 18" /></svg>`
+    userOff: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.18 4.171a4 4 0 0 1 5.649 5.66m-1.829 2.169a4 4 0 0 1 -3.82 -3.83" /><path d="M6 21v-2a4 4 0 0 1 4 -4h4c.412 0 .81 .062 1.183 .178m2.633 2.642c.12 .38 .184 .785 .184 1.18v2" /><path d="M3 3l18 18" /></svg>`,
+    copy: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 8m0 2a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2z" /><path d="M16 8v-2a2 2 0 0 0 -2 -2h-8a2 2 0 0 0 -2 2v8a2 2 0 0 0 2 2h2" /></svg>`,
+    code: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8l-4 4l4 4" /><path d="M17 8l4 4l-4 4" /><path d="M14 4l-4 16" /></svg>`
   };
   ICONS.chat = ICONS.msg;
   ICONS.list = ICONS.msg;
@@ -2258,6 +2261,134 @@
     .wecom-chat-avatar-toggle[aria-pressed="true"] {
       color: var(--wc-accent) !important;
       background: var(--wc-accent-soft) !important;
+    }
+
+    /* Base64 自动解码悬浮卡片 */
+    .wecom-base64-popover {
+      position: fixed;
+      z-index: 10001;
+      width: 320px;
+      max-width: calc(100vw - 24px);
+      background: #FFFFFF;
+      border: 1px solid var(--wc-border);
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.14), 0 1px 4px rgba(0, 0, 0, 0.08);
+      padding: 10px 12px;
+      box-sizing: border-box;
+      animation: wecom-popover-in 0.12s ease-out;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--wc-text);
+    }
+    html.wecom-dark .wecom-base64-popover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-base64-popover {
+      background: #282C34;
+      border-color: var(--wc-border-strong);
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+      color: #ECEFF4;
+    }
+    .wecom-base64-popover-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .wecom-base64-popover-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--wc-accent, #267EF0);
+    }
+    .wecom-base64-popover-title svg {
+      width: 14px;
+      height: 14px;
+    }
+    .wecom-base64-popover-close {
+      width: 18px;
+      height: 18px;
+      border: none;
+      background: transparent;
+      color: var(--wc-text-3);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      line-height: 1;
+      border-radius: 3px;
+      padding: 0;
+    }
+    .wecom-base64-popover-close:hover {
+      background: var(--wc-hover);
+      color: var(--wc-text);
+    }
+    .wecom-base64-popover-body {
+      max-height: 160px;
+      overflow-y: auto;
+    }
+    .wecom-base64-decoded-text {
+      background: rgba(0, 0, 0, 0.04);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12.5px;
+      line-height: 1.5;
+      word-break: break-all;
+      white-space: pre-wrap;
+      user-select: text;
+      color: var(--wc-text);
+    }
+    html.wecom-dark .wecom-base64-decoded-text,
+    html.${ROOT_CLASS}.wecom-dark .wecom-base64-decoded-text {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.08);
+      color: #ECEFF4;
+    }
+    .wecom-base64-popover-foot {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 2px;
+    }
+    .wecom-base64-btn {
+      height: 26px;
+      padding: 0 10px;
+      border-radius: 5px;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      border: 1px solid var(--wc-border);
+      background: transparent;
+      color: var(--wc-text-2);
+      text-decoration: none !important;
+      transition: all 0.15s ease;
+      box-sizing: border-box;
+    }
+    .wecom-base64-btn:hover {
+      background: var(--wc-hover);
+      color: var(--wc-text);
+    }
+    .wecom-base64-btn.primary,
+    .wecom-base64-open-btn {
+      background: var(--wc-accent, #267EF0);
+      border-color: var(--wc-accent, #267EF0);
+      color: #FFFFFF !important;
+    }
+    .wecom-base64-btn.primary:hover,
+    .wecom-base64-open-btn:hover {
+      opacity: 0.9;
+    }
+    .wecom-base64-copy-btn.is-copied {
+      color: #07C160 !important;
+      border-color: #07C160 !important;
     }
 
     /* 保持消息浮动工具条在打开 Popover 时常驻 */
@@ -7683,6 +7814,227 @@
     syncThemeControls();
   }
 
+  /* ============================== Base64 自动解码 ============================== */
+
+  let activeBase64Popover = null;
+
+  function isBase64DecodeEnabled() {
+    try {
+      return localStorage.getItem(BASE64_DECODE_KEY) !== "0";
+    } catch {
+      return true;
+    }
+  }
+
+  function setBase64DecodeEnabled(on) {
+    try {
+      localStorage.setItem(BASE64_DECODE_KEY, on ? "1" : "0");
+    } catch { /* ignore */ }
+    syncThemeControls();
+    if (!on) closeBase64Popover();
+  }
+
+  function decodeBase64(raw) {
+    if (!raw || typeof raw !== "string") return null;
+    let str = raw.trim().replace(/^(?:base64|b64)[:：]\s*/i, "").replace(/^['"`“‘「\[]+|['"`”’」\]]+$/g, "").replace(/\s+/g, "");
+    if (str.length < 6 || str.length > 10000) return null;
+    if (!/^[A-Za-z0-9+/_-]+={0,2}$/.test(str)) return null;
+    let normalized = str.replace(/-/g, "+").replace(/_/g, "/");
+    while (normalized.length % 4 !== 0) normalized += "=";
+    try {
+      const binary = atob(normalized);
+      if (!binary || binary.length === 0) return null;
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+      if (!decoded || decoded === raw || !decoded.trim()) return null;
+      if (/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(decoded)) return null;
+      if (!/^[\u0020-\u007E\u00A0-\uFFFF\r\n\t]+$/.test(decoded)) return null;
+      if (!str.includes("=") && /^[a-zA-Z]+$/.test(str)) {
+        const looksLegit = /(https?:\/\/|[.:/?#=_\-@&%+\\]|[\u4e00-\u9fa5]|\s)/.test(decoded);
+        if (!looksLegit) return null;
+      }
+      return decoded;
+    } catch {
+      return null;
+    }
+  }
+
+  function fallbackCopyText(text) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    ta.style.pointerEvents = "none";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+    } catch { /* ignore */ }
+    ta.remove();
+  }
+
+  function copyTextToClipboard(text) {
+    if (!text) return Promise.resolve(false);
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+      return navigator.clipboard.writeText(text).then(() => true).catch(() => {
+        fallbackCopyText(text);
+        return true;
+      });
+    }
+    fallbackCopyText(text);
+    return Promise.resolve(true);
+  }
+
+  function closeBase64Popover() {
+    if (activeBase64Popover) {
+      activeBase64Popover.remove();
+      activeBase64Popover = null;
+    }
+  }
+
+  function showBase64Popover(decoded, selectedText, rect) {
+    closeBase64Popover();
+    if (!decoded || !rect) return;
+
+    const isUrl = /^https?:\/\//i.test(decoded.trim());
+    const isMagnet = /^magnet:\?xt=/i.test(decoded.trim());
+
+    const popover = document.createElement("div");
+    popover.className = "wecom-base64-popover";
+    popover.style.visibility = "hidden";
+
+    let footButtons = `
+      <button type="button" class="wecom-base64-btn wecom-base64-copy-btn">
+        ${ICONS.copy}
+        <span>复制</span>
+      </button>
+    `;
+
+    if (isUrl) {
+      footButtons += `
+        <a class="wecom-base64-btn primary wecom-base64-open-btn" href="${escapeHtml(decoded.trim())}" target="_blank" rel="noopener noreferrer">
+          打开链接
+        </a>
+      `;
+    } else if (isMagnet) {
+      footButtons += `
+        <a class="wecom-base64-btn primary wecom-base64-open-btn" href="${escapeHtml(decoded.trim())}">
+          打开磁力链
+        </a>
+      `;
+    }
+
+    popover.innerHTML = `
+      <div class="wecom-base64-popover-head">
+        <div class="wecom-base64-popover-title">
+          ${ICONS.code}
+          <span>Base64 已解码</span>
+        </div>
+        <button type="button" class="wecom-base64-popover-close" aria-label="关闭">&times;</button>
+      </div>
+      <div class="wecom-base64-popover-body">
+        <div class="wecom-base64-decoded-text">${escapeHtml(decoded)}</div>
+      </div>
+      <div class="wecom-base64-popover-foot">
+        ${footButtons}
+      </div>
+    `;
+
+    document.body.appendChild(popover);
+    activeBase64Popover = popover;
+
+    const popoverWidth = popover.offsetWidth || 320;
+    const popoverHeight = popover.offsetHeight || 120;
+    let left = Math.round(rect.left + rect.width / 2 - popoverWidth / 2);
+    if (left < 12) left = 12;
+    if (left + popoverWidth > window.innerWidth - 12) left = window.innerWidth - popoverWidth - 12;
+
+    let top = Math.round(rect.top - popoverHeight - 8);
+    if (top < 10) {
+      top = Math.round(rect.bottom + 8);
+    }
+    if (top + popoverHeight > window.innerHeight - 10) {
+      top = Math.max(10, window.innerHeight - popoverHeight - 10);
+    }
+
+    popover.style.left = `${left}px`;
+    popover.style.top = `${top}px`;
+    popover.style.visibility = "visible";
+
+    popover.querySelector(".wecom-base64-popover-close")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeBase64Popover();
+    });
+
+    const copyBtn = popover.querySelector(".wecom-base64-copy-btn");
+    if (copyBtn) {
+      copyBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        void copyTextToClipboard(decoded).then(() => {
+          const span = copyBtn.querySelector("span");
+          if (span) span.textContent = "已复制!";
+          copyBtn.classList.add("is-copied");
+          setTimeout(() => {
+            if (activeBase64Popover === popover) {
+              if (span) span.textContent = "复制";
+              copyBtn.classList.remove("is-copied");
+            }
+          }, 1500);
+        });
+      });
+    }
+
+    const openBtn = popover.querySelector(".wecom-base64-open-btn");
+    if (openBtn) {
+      openBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+      });
+    }
+  }
+
+  function handleBase64Selection(event) {
+    if (!isBase64DecodeEnabled()) return;
+    if (getViewMode() === "native" || otherThemeActive()) return;
+    if (event?.target?.closest?.(".wecom-base64-popover")) return;
+
+    setTimeout(() => {
+      const selection = window.getSelection ? window.getSelection() : null;
+      if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+        return;
+      }
+      const raw = selection.toString();
+      if (!raw || !raw.trim()) return;
+
+      const decoded = decodeBase64(raw);
+      if (!decoded) return;
+
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      if (!rect || (rect.width === 0 && rect.height === 0)) return;
+
+      showBase64Popover(decoded, raw, rect);
+    }, 10);
+  }
+
+  function bindBase64Selection() {
+    if (window.__wecomBase64SelectionBound) return;
+    window.__wecomBase64SelectionBound = true;
+
+    document.addEventListener("mouseup", handleBase64Selection);
+    document.addEventListener("keyup", (e) => {
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "Home" || e.key === "End") {
+        handleBase64Selection(e);
+      }
+    });
+
+    document.addEventListener("pointerdown", (e) => {
+      if (!activeBase64Popover) return;
+      if (e.target.closest && e.target.closest(".wecom-base64-popover")) return;
+      closeBase64Popover();
+    });
+  }
+
   function isImageAutoLayoutEnabled() {
     try {
       return localStorage.getItem(IMAGE_AUTO_LAYOUT_KEY) === "1";
@@ -7873,6 +8225,18 @@
       }
     }
 
+    const base64Btn = menu.querySelector(".wecom-menu-toggle-base64");
+    if (base64Btn) {
+      const on = isBase64DecodeEnabled();
+      base64Btn.classList.toggle("is-active", on);
+      base64Btn.setAttribute("aria-checked", on ? "true" : "false");
+      const badge = base64Btn.querySelector(".wecom-menu-state-badge");
+      if (badge) {
+        badge.textContent = on ? "已开启" : "已关闭";
+        badge.className = `wecom-menu-state-badge ${on ? "is-on" : "is-off"}`;
+      }
+    }
+
     const imageLayoutBtn = menu.querySelector(".wecom-menu-toggle-image-layout");
     if (imageLayoutBtn) {
       const on = isImageAutoLayoutEnabled();
@@ -7980,6 +8344,8 @@
       `<div class="wecom-theme-menu-title wecom-theme-menu-divider">消息功能</div>` +
       `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-boost" aria-checked="true">` +
       `${ICONS.boost}<span class="wecom-menu-label">显示消息 Boost</span><span class="wecom-menu-state-badge is-on">已开启</span></button>` +
+      `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-base64" aria-checked="true">` +
+      `${ICONS.code}<span class="wecom-menu-label">划词自动解码 Base64</span><span class="wecom-menu-state-badge is-on">已开启</span></button>` +
       `<div class="wecom-theme-menu-title wecom-theme-menu-divider">详情排版</div>` +
       `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-image-layout" aria-checked="false">` +
       `${ICONS.pic}<span class="wecom-menu-label">图片自动排版</span><span class="wecom-menu-state-badge is-off">已关闭</span></button>` +
@@ -8037,6 +8403,13 @@
         event.preventDefault();
         event.stopPropagation();
         setBoostEnabled(!isBoostEnabled());
+        return;
+      }
+      const base64Btn = event.target.closest(".wecom-menu-toggle-base64");
+      if (base64Btn) {
+        event.preventDefault();
+        event.stopPropagation();
+        setBase64DecodeEnabled(!isBase64DecodeEnabled());
         return;
       }
       const imageLayoutBtn = event.target.closest(".wecom-menu-toggle-image-layout");
@@ -8134,7 +8507,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.20";
+  const SCRIPT_VERSION = "0.7.21";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -16593,7 +16966,7 @@
   function isModalOrViewerOpen() {
     return Boolean(
       document.querySelector(
-        ".wecom-image-viewer:not([hidden]), .wecom-edit-dialog:not([hidden]), .wecom-watermark-dialog:not([hidden]), .wecom-boost-popover:not([hidden]), .dialog-holder, #discourse-modal-container .modal.show, #discourse-modal-container .modal.in, .d-modal"
+        ".wecom-image-viewer:not([hidden]), .wecom-edit-dialog:not([hidden]), .wecom-watermark-dialog:not([hidden]), .wecom-boost-popover:not([hidden]), .wecom-base64-popover:not([hidden]), .dialog-holder, #discourse-modal-container .modal.show, #discourse-modal-container .modal.in, .d-modal"
       )
     );
   }
@@ -16717,6 +17090,8 @@
       window.__wecomHomeKeyNavBound = true;
       window.addEventListener("keydown", handleChatNavigationKeydown, true);
     }
+    // 划词自动解码 Base64 字符串
+    bindBase64Selection();
     // 定时同步头像通知角标与新主题角标（3 秒轮询）
     if (!window.__wecomNotifBadgeTimer) {
       window.__wecomNotifBadgeTimer = setInterval(() => {

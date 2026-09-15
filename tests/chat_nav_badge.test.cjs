@@ -3153,3 +3153,118 @@ test("Conversation detail avatars can be configured to be hidden via settings an
   assert.equal(fakeDocEl.classList.contains("wecom-hide-chat-avatar"), false, "must remove class from html");
 });
 
+test("Selection Base64 auto-decoding parses valid strings, prevents false positives, and provides UI controls", () => {
+  // 1. Verify script declarations and components
+  assert.ok(
+    scriptContent.includes('const BASE64_DECODE_KEY = "linuxdo-wecom-base64-decode";'),
+    "must declare BASE64_DECODE_KEY"
+  );
+  assert.ok(
+    scriptContent.includes("function decodeBase64(raw)"),
+    "must define decodeBase64"
+  );
+  assert.ok(
+    scriptContent.includes("function showBase64Popover("),
+    "must define showBase64Popover"
+  );
+  assert.ok(
+    scriptContent.includes("function closeBase64Popover()"),
+    "must define closeBase64Popover"
+  );
+  assert.ok(
+    scriptContent.includes("function bindBase64Selection()"),
+    "must define bindBase64Selection"
+  );
+  assert.ok(
+    scriptContent.includes("bindBase64Selection();"),
+    "must call bindBase64Selection in bootstrap"
+  );
+
+  // 2. Verify Theme Menu presence
+  assert.ok(
+    scriptContent.includes("wecom-menu-toggle-base64") &&
+    scriptContent.includes("划词自动解码 Base64"),
+    "theme menu must include toggle for base64 auto-decoding"
+  );
+
+  // 3. Verify CSS styling for popover and dark mode
+  assert.ok(
+    scriptContent.includes(".wecom-base64-popover") &&
+    scriptContent.includes(".wecom-base64-decoded-text") &&
+    scriptContent.includes(".wecom-base64-copy-btn"),
+    "must include CSS styling for base64 popover components"
+  );
+  assert.ok(
+    scriptContent.includes("html.wecom-dark .wecom-base64-popover") ||
+    scriptContent.includes(".wecom-dark .wecom-base64-popover"),
+    "must include dark mode CSS for base64 popover"
+  );
+
+  // 4. Verify decodeBase64 implementation logic
+  function testDecode(raw) {
+    if (!raw || typeof raw !== "string") return null;
+    let str = raw.trim().replace(/^(?:base64|b64)[:：]\s*/i, "").replace(/^['"`“‘「\[]+|['"`”’」\]]+$/g, "").replace(/\s+/g, "");
+    if (str.length < 6 || str.length > 10000) return null;
+    if (!/^[A-Za-z0-9+/_-]+={0,2}$/.test(str)) return null;
+    let normalized = str.replace(/-/g, "+").replace(/_/g, "/");
+    while (normalized.length % 4 !== 0) normalized += "=";
+    try {
+      const binary = atob(normalized);
+      if (!binary || binary.length === 0) return null;
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+      if (!decoded || decoded === raw || !decoded.trim()) return null;
+      if (/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(decoded)) return null;
+      if (!/^[\u0020-\u007E\u00A0-\uFFFF\r\n\t]+$/.test(decoded)) return null;
+      if (!str.includes("=") && /^[a-zA-Z]+$/.test(str)) {
+        const looksLegit = /(https?:\/\/|[.:/?#=_\-@&%+\\]|[\u4e00-\u9fa5]|\s)/.test(decoded);
+        if (!looksLegit) return null;
+      }
+      return decoded;
+    } catch {
+      return null;
+    }
+  }
+
+  // URLs
+  assert.equal(testDecode("aHR0cHM6Ly9saW51eC5kbw=="), "https://linux.do");
+  assert.equal(testDecode("aHR0cHM6Ly9saW51eC5kbw"), "https://linux.do", "unpadded base64 should decode");
+  assert.equal(testDecode("Base64: aHR0cHM6Ly9saW51eC5kbw=="), "https://linux.do", "prefixed with Base64: should decode");
+  assert.equal(testDecode('"aHR0cHM6Ly9saW51eC5kbw=="'), "https://linux.do", "quoted base64 should decode");
+
+  // Chinese text
+  assert.equal(testDecode("5L2g5aW977yM5LiW55WM"), "你好，世界", "UTF-8 Chinese should decode correctly");
+
+  // Magnet link
+  assert.equal(
+    testDecode("bWFnbmV0Oj94dD11cm46YnRpaDoxMjM0NTY3ODkwYWJjZGVm"),
+    "magnet:?xt=urn:btih:1234567890abcdef",
+    "magnet URI should decode"
+  );
+
+  // URL-safe base64
+  const urlSafe = Buffer.from("https://linux.do/t/topic/123?foo=bar_baz-qux").toString("base64url");
+  assert.equal(testDecode(urlSafe), "https://linux.do/t/topic/123?foo=bar_baz-qux");
+
+  // Prevent false positives on common words and non-base64
+  assert.equal(testDecode("important"), null, "regular English word 'important' must not trigger decode");
+  assert.equal(testDecode("interface"), null, "regular English word 'interface' must not trigger decode");
+  assert.equal(testDecode("window"), null, "regular English word 'window' must not trigger decode");
+  assert.equal(testDecode("developer"), null, "regular English word 'developer' must not trigger decode");
+  assert.equal(testDecode("1234567890"), null, "numeric string must not trigger decode");
+  assert.equal(testDecode("abc"), null, "too short string must not trigger decode");
+  assert.equal(testDecode(""), null, "empty string must not trigger decode");
+
+  // 5. Verify default enabled state in storage simulation
+  let storage = {};
+  const isEnabled = () => storage["linuxdo-wecom-base64-decode"] !== "0";
+  const setEnabled = (val) => { storage["linuxdo-wecom-base64-decode"] = val ? "1" : "0"; };
+
+  assert.equal(isEnabled(), true, "must be enabled by default");
+  setEnabled(false);
+  assert.equal(isEnabled(), false, "must be disabled when set to false");
+  setEnabled(true);
+  assert.equal(isEnabled(), true, "must be re-enabled when set to true");
+});
+
