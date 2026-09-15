@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.23
+// @version      0.7.24
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -6467,6 +6467,96 @@
     html.${ROOT_CLASS}.wecom-dark .wecom-compose-status.error {
       color: #F85149 !important;
     }
+
+    /* V2EX 内置表情选择器 */
+    .wecom-v2ex-emoji-picker {
+      position: fixed;
+      z-index: 10002;
+      width: 340px;
+      max-width: calc(100vw - 24px);
+      background: #FFFFFF;
+      border: 1px solid var(--wc-border);
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15), 0 1px 4px rgba(0, 0, 0, 0.08);
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: wecom-popover-in 0.12s ease-out;
+      user-select: none;
+    }
+    html.wecom-dark .wecom-v2ex-emoji-picker,
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-emoji-picker {
+      background: #282C34;
+      border-color: var(--wc-border-strong);
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+    }
+    .wecom-emoji-picker-tabs {
+      display: flex;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.02);
+      border-bottom: 1px solid var(--wc-border);
+      padding: 4px 6px;
+      gap: 2px;
+    }
+    html.wecom-dark .wecom-emoji-picker-tabs,
+    html.${ROOT_CLASS}.wecom-dark .wecom-emoji-picker-tabs {
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom-color: var(--wc-border-strong);
+    }
+    .wecom-emoji-tab-btn {
+      flex: 1;
+      height: 28px;
+      padding: 0 4px;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--wc-text-2);
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      transition: all 0.12s ease;
+    }
+    .wecom-emoji-tab-btn:hover {
+      background: var(--wc-hover);
+      color: var(--wc-text);
+    }
+    .wecom-emoji-tab-btn.is-active {
+      background: var(--wc-accent-soft);
+      color: var(--wc-accent);
+      font-weight: 600;
+    }
+    .wecom-emoji-picker-body {
+      padding: 8px;
+      height: 220px;
+      overflow-y: auto;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 4px;
+      box-sizing: border-box;
+    }
+    .wecom-emoji-item-btn {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.1s ease, transform 0.1s ease;
+      padding: 0;
+    }
+    .wecom-emoji-item-btn:hover {
+      background: var(--wc-hover);
+      transform: scale(1.2);
+    }
     .wecom-send-btn {
       height: 26px !important;
       font-size: 12px !important;
@@ -8552,7 +8642,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.23";
+  const SCRIPT_VERSION = "0.7.24";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -12764,6 +12854,195 @@
     });
   }
 
+  const V2EX_EMOJI_CATEGORIES = Object.freeze([
+    {
+      id: "smileys",
+      name: "常用",
+      icon: "😀",
+      emojis: [
+        "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃",
+        "😉", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗", "😚", "😋",
+        "😛", "😜", "🤪", "😝", "🤑", "🤗", "🤭", "🤫", "🤔", "🤐",
+        "🤨", "😐", "😑", "😶", "😏", "😒", "🙄", "😬", "🤥", "😌",
+        "😔", "😪", "🤤", "😴", "😷", "🤒", "🤕", "🤢", "🤮", "🥵",
+        "🥶", "🥴", "😵", "🤯", "🤠", "🥳", "🥸", "😎", "🤓", "🧐",
+        "😕", "😟", "🙁", "😮", "😯", "😲", "😳", "🥺", "😦", "😧",
+        "😨", "😰", "😥", "😢", "😭", "😱", "😖", "😣", "😞", "😓",
+        "😩", "😫", "🥱", "😤", "😡", "😠", "🤬", "💀", "💩", "🤡",
+        "👻", "👽", "🤖", "🙈", "🙉", "🙊"
+      ]
+    },
+    {
+      id: "gestures",
+      name: "手势",
+      icon: "👍",
+      emojis: [
+        "👍", "👎", "👏", "🙌", "👐", "🤲", "🤝", "🙏", "✌️", "🤞",
+        "🤟", "🤘", "🤙", "👈", "👉", "👆", "🖕", "👇", "☝️", "👌",
+        "🤌", "🤏", "👋", "🤚", "🖐️", "✋", "🖖", "✊", "👊", "🤛",
+        "🤜", "✍️", "💅", "🤳", "💪", "🦾", "🦿", "🦵", "🦶", "👂",
+        "👃", "👀", "👁️", "👅", "👄", "👶", "👧", "🧒", "👦", "👩",
+        "🧑", "👨", "👵", "🧓", "👴"
+      ]
+    },
+    {
+      id: "symbols",
+      name: "符号",
+      icon: "❤️",
+      emojis: [
+        "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔",
+        "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟", "💯",
+        "💢", "💥", "💫", "💦", "💨", "🕳️", "💬", "💭", "💤", "⚡",
+        "🔥", "✨", "🌟", "⭐", "🎉", "🎊", "🎈", "🎁", "🏆", "🥇",
+        "🥈", "🥉", "🏅", "🎖️", "☀️", "🌤️", "⛅", "🌧️", "❄️", "⚠️",
+        "🚫", "❌", "⭕", "🛑", "✅", "✔️", "☑️", "❓", "❗", "‼️",
+        "⁉️", "➕", "➖", "✖️", "➗", "🔗"
+      ]
+    },
+    {
+      id: "animals",
+      name: "动物",
+      icon: "🐱",
+      emojis: [
+        "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯",
+        "🦁", "🐮", "🐷", "🐸", "🐵", "🐔", "🐧", "🐦", "🐤", "🦆",
+        "🦅", "🦉", "🦇", "🐺", "🐗", "🐴", "🦄", "🐝", "🐛", "🦋",
+        "🐌", "🐞", "🐜", "🐢", "🐍", "🐙", "🦑", "🦐", "🦀", "🐡",
+        "🐠", "🐟", "🐬", "🐳", "🦈", "🐊", "🐆", "🦓", "🦍", "🐘",
+        "🦛", "🐪", "🦒", "🐎", "🐖", "🐑", "🐐", "🦌"
+      ]
+    },
+    {
+      id: "food",
+      name: "食物",
+      icon: "🍔",
+      emojis: [
+        "🍏", "🍎", "🍐", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🫐",
+        "🍈", "🍒", "🍑", "🥭", "🍍", "🥥", "🥝", "🍅", "🥑", "🥦",
+        "🌽", "🥕", "🍞", "🥐", "🥖", "🧀", "🥚", "🍳", "🥞", "🧇",
+        "🥓", "🥩", "🍗", "🍖", "🌭", "🍔", "🍟", "🍕", "🥪", "🌮",
+        "🌯", "🥗", "🥘", "🍝", "🍜", "🍲", "🍛", "🍣", "🍱", "🥟",
+        "🍤", "🍙", "🍚", "🍦", "🍧", "🍨", "🍩", "🍪", "🎂", "🍰",
+        "🍫", "🍬", "🍭", "☕", "🍵", "🧋", "🥤", "🍺", "🍻", "🍷",
+        "🍸", "🍹"
+      ]
+    }
+  ]);
+
+  let activeV2exEmojiPicker = null;
+
+  function closeV2exEmojiPicker() {
+    if (activeV2exEmojiPicker) {
+      activeV2exEmojiPicker.remove();
+      activeV2exEmojiPicker = null;
+    }
+    const trigger = document.querySelector('[data-composer-action="emoji"]');
+    if (trigger) trigger.setAttribute("aria-expanded", "false");
+  }
+
+  function toggleV2exEmojiPicker(trigger) {
+    if (activeV2exEmojiPicker) {
+      closeV2exEmojiPicker();
+      return;
+    }
+    showV2exEmojiPicker(trigger);
+  }
+
+  function showV2exEmojiPicker(trigger) {
+    closeV2exEmojiPicker();
+    if (!(trigger instanceof Element)) return;
+
+    const picker = document.createElement("div");
+    picker.className = "wecom-v2ex-emoji-picker";
+    picker.setAttribute("role", "dialog");
+    picker.setAttribute("aria-label", "表情选择器");
+
+    let activeCatId = V2EX_EMOJI_CATEGORIES[0].id;
+
+    function renderPickerContent() {
+      const tabsHtml = V2EX_EMOJI_CATEGORIES.map((cat) => {
+        const isActive = cat.id === activeCatId;
+        return `<button type="button" class="wecom-emoji-tab-btn${isActive ? " is-active" : ""}" data-cat-id="${escapeHtml(cat.id)}"><span>${cat.icon}</span><span>${escapeHtml(cat.name)}</span></button>`;
+      }).join("");
+
+      const curCategory = V2EX_EMOJI_CATEGORIES.find((c) => c.id === activeCatId) || V2EX_EMOJI_CATEGORIES[0];
+      const emojisHtml = curCategory.emojis.map((emo) => {
+        return `<button type="button" class="wecom-emoji-item-btn" data-emoji="${escapeHtml(emo)}">${emo}</button>`;
+      }).join("");
+
+      picker.innerHTML = `
+        <div class="wecom-emoji-picker-tabs">
+          ${tabsHtml}
+        </div>
+        <div class="wecom-emoji-picker-body">
+          ${emojisHtml}
+        </div>
+      `;
+    }
+
+    renderPickerContent();
+    document.body.appendChild(picker);
+    activeV2exEmojiPicker = picker;
+    trigger.setAttribute("aria-expanded", "true");
+
+    const rect = trigger.getBoundingClientRect();
+    const pickerWidth = 340;
+    const pickerHeight = picker.offsetHeight || 260;
+    let left = Math.round(rect.left);
+    if (left + pickerWidth > window.innerWidth - 12) {
+      left = Math.max(12, window.innerWidth - pickerWidth - 12);
+    }
+    let top = Math.round(rect.top - pickerHeight - 6);
+    if (top < 10) {
+      top = Math.round(rect.bottom + 6);
+    }
+
+    picker.style.left = `${left}px`;
+    picker.style.top = `${top}px`;
+
+    picker.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const tabBtn = e.target.closest(".wecom-emoji-tab-btn");
+      if (tabBtn) {
+        const catId = tabBtn.dataset.catId;
+        if (catId && catId !== activeCatId) {
+          activeCatId = catId;
+          renderPickerContent();
+        }
+        return;
+      }
+      const emojiBtn = e.target.closest(".wecom-emoji-item-btn");
+      if (emojiBtn) {
+        const emo = emojiBtn.dataset.emoji;
+        if (emo) {
+          insertComposerInlineText(emo);
+        }
+      }
+    });
+
+    picker.addEventListener("pointerdown", (e) => {
+      e.stopPropagation();
+    });
+  }
+
+  function bindV2exEmojiPickerEvents() {
+    if (window.__wecomV2exEmojiPickerBound) return;
+    window.__wecomV2exEmojiPickerBound = true;
+
+    document.addEventListener("pointerdown", (e) => {
+      if (!activeV2exEmojiPicker) return;
+      if (e.target.closest(".wecom-v2ex-emoji-picker")) return;
+      if (e.target.closest('[data-composer-action="emoji"]')) return;
+      closeV2exEmojiPicker();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && activeV2exEmojiPicker) {
+        closeV2exEmojiPicker();
+      }
+    });
+  }
+
   function isPlainClick(event) {
     return !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && event.button === 0;
   }
@@ -14339,10 +14618,17 @@
     const panel = button?.closest(".wecom-chat-panel");
     const input = panel?.querySelector(".wecom-chat-compose");
     if (action === "emoji") {
-      showOfficialEmojiPicker(button).catch((error) => reportComposerError(error, "打开表情面板"));
+      if (IS_V2EX) {
+        toggleV2exEmojiPicker(button);
+        return;
+      }
+      showOfficialEmojiPicker(button).catch(() => {
+        toggleV2exEmojiPicker(button);
+      });
       return;
     }
     closeOfficialEmojiPicker();
+    closeV2exEmojiPicker();
     if (action === "pic" || action === "folder" || action === "doc") {
       panel?.querySelector(".wecom-image-input")?.click();
     } else if (action === "cut") {
@@ -14963,6 +15249,7 @@
 
   function switchComposerTopic(topicId) {
     closeOfficialEmojiPicker();
+    closeV2exEmojiPicker();
     const { input } = composeUi();
     const previousTopicId = composerBridgeState.topicId;
     if (input && previousTopicId) {
@@ -15149,6 +15436,7 @@
 
   function dismissNativeComposerPopups() {
     closeOfficialEmojiPicker();
+    closeV2exEmojiPicker();
     const selectors = [
       ".autocomplete", ".autocomplete-container", ".d-editor-popup", ".tag-chooser"
     ];
@@ -16899,6 +17187,7 @@
     closeImageViewer();
     closeEditDialog(true);
     closeOfficialEmojiPicker();
+    closeV2exEmojiPicker();
     document.documentElement.classList.remove("wecom-members-open", "wecom-composing-new", "wecom-mask-composing");
     document.querySelector(".wecom-list-panel")?.remove();
     document.querySelector(".wecom-chat-panel")?.remove();
@@ -17041,7 +17330,7 @@
   function isModalOrViewerOpen() {
     return Boolean(
       document.querySelector(
-        ".wecom-image-viewer:not([hidden]), .wecom-edit-dialog:not([hidden]), .wecom-watermark-dialog:not([hidden]), .wecom-boost-popover:not([hidden]), .wecom-base64-popover:not([hidden]), .dialog-holder, #discourse-modal-container .modal.show, #discourse-modal-container .modal.in, .d-modal"
+        ".wecom-image-viewer:not([hidden]), .wecom-edit-dialog:not([hidden]), .wecom-watermark-dialog:not([hidden]), .wecom-boost-popover:not([hidden]), .wecom-base64-popover:not([hidden]), .wecom-v2ex-emoji-picker:not([hidden]), .dialog-holder, #discourse-modal-container .modal.show, #discourse-modal-container .modal.in, .d-modal"
       )
     );
   }
@@ -17167,6 +17456,8 @@
     }
     // 划词自动解码 Base64 字符串
     bindBase64Selection();
+    // V2EX 内置表情选择器外部点击与快捷键监听
+    bindV2exEmojiPickerEvents();
     // 定时同步头像通知角标与新主题角标（3 秒轮询）
     if (!window.__wecomNotifBadgeTimer) {
       window.__wecomNotifBadgeTimer = setInterval(() => {

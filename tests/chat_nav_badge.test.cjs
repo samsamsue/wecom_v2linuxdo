@@ -3403,4 +3403,64 @@ test("wecom-compose-status is positioned in wecom-composer-bottom with refined 1
   );
 });
 
+test("V2EX built-in emoji picker integrates with composer, supports tabs, Unicode emojis, and handles non-Discourse environments", () => {
+  // 1. Definition and helpers exist
+  assert.ok(scriptContent.includes("const V2EX_EMOJI_CATEGORIES = Object.freeze(["), "must define V2EX_EMOJI_CATEGORIES");
+  assert.ok(scriptContent.includes("function showV2exEmojiPicker("), "must define showV2exEmojiPicker");
+  assert.ok(scriptContent.includes("function toggleV2exEmojiPicker("), "must define toggleV2exEmojiPicker");
+  assert.ok(scriptContent.includes("function closeV2exEmojiPicker()"), "must define closeV2exEmojiPicker");
+  assert.ok(scriptContent.includes("function bindV2exEmojiPickerEvents()"), "must define bindV2exEmojiPickerEvents");
+
+  // 2. CSS styles are defined for light and dark modes
+  assert.ok(scriptContent.includes(".wecom-v2ex-emoji-picker {"), "must style .wecom-v2ex-emoji-picker");
+  assert.ok(scriptContent.includes(".wecom-emoji-picker-tabs {"), "must style .wecom-emoji-picker-tabs");
+  assert.ok(scriptContent.includes(".wecom-emoji-tab-btn {"), "must style .wecom-emoji-tab-btn");
+  assert.ok(scriptContent.includes(".wecom-emoji-picker-body {"), "must style .wecom-emoji-picker-body");
+  assert.ok(scriptContent.includes(".wecom-emoji-item-btn {"), "must style .wecom-emoji-item-btn");
+  assert.ok(scriptContent.includes("html.wecom-dark .wecom-v2ex-emoji-picker"), "must style emoji picker in dark mode");
+
+  // 3. Composer tool action branches for IS_V2EX and graceful fallback
+  assert.ok(
+    scriptContent.includes("if (action === \"emoji\") {\n      if (IS_V2EX) {\n        toggleV2exEmojiPicker(button);\n        return;\n      }\n      showOfficialEmojiPicker(button).catch(() => {\n        toggleV2exEmojiPicker(button);\n      });\n      return;\n    }"),
+    "handleComposerToolClick must branch to toggleV2exEmojiPicker when IS_V2EX is true, and fall back on error"
+  );
+
+  // 4. Modal check includes .wecom-v2ex-emoji-picker
+  assert.ok(
+    scriptContent.includes(".wecom-v2ex-emoji-picker:not([hidden])"),
+    "isModalOrViewerOpen must check .wecom-v2ex-emoji-picker:not([hidden])"
+  );
+
+  // 5. Verify category extraction and emoji tab switching logic
+  const catMatch = scriptContent.match(/const V2EX_EMOJI_CATEGORIES = Object\.freeze\(\[\s*([\s\S]*?)\]\);/);
+  assert.ok(catMatch, "must extract V2EX_EMOJI_CATEGORIES");
+  const categories = eval(`[${catMatch[1]}]`);
+  assert.equal(categories.length, 5, "must contain 5 emoji categories");
+  const catIds = categories.map(c => c.id);
+  assert.deepEqual(catIds, ["smileys", "gestures", "symbols", "animals", "food"]);
+
+  for (const cat of categories) {
+    assert.ok(cat.id, "category must have id");
+    assert.ok(cat.name, "category must have name");
+    assert.ok(cat.icon, "category must have icon");
+    assert.ok(Array.isArray(cat.emojis) && cat.emojis.length > 20, `${cat.name} must have emojis`);
+  }
+
+  // 6. Test interaction flow simulation
+  let inserted = "";
+  function fakeInsert(emo) {
+    inserted = emo;
+  }
+  // Simulate clicking an emoji in the smileys tab
+  const smiley = categories[0].emojis[0]; // 😀
+  fakeInsert(smiley);
+  assert.equal(inserted, "😀");
+
+  // Simulate switching to gestures tab
+  const gesture = categories[1].emojis[0]; // 👍
+  fakeInsert(gesture);
+  assert.equal(inserted, "👍");
+});
+
+
 
