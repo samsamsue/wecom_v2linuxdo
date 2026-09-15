@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.25
+// @version      0.7.26
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -8650,7 +8650,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.25";
+  const SCRIPT_VERSION = "0.7.26";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -15517,7 +15517,7 @@
       const rawPost = submittedPost?.post || submittedPost;
       const post = withSubmittedReplyMetadata(rawPost, requestedReply);
       if (post && (post.id || post.post_number)) {
-        appendFreshPosts([post], document.querySelector(".wecom-chat-body"));
+        appendFreshPosts([post], document.querySelector(".wecom-chat-body"), { scroll: true });
       }
       syncNewPostsFromDom();
       scheduleSubmittedPostSync(topicId);
@@ -16884,9 +16884,17 @@
       syncRenderedWindow(body);
       return 0;
     }
+
+    const prevScrollTop = body.scrollTop;
+    const prevScrollHeight = body.scrollHeight;
+    // 判定用户此前是否已经在最底部附近（32px 以内），以此判断是否应该跟随最新回复
+    const wasNearBottom = body.clientHeight > 0 && (prevScrollHeight - (prevScrollTop + body.clientHeight) <= 32);
+
     body.querySelector(".wecom-chat-empty")?.remove();
     const currentMax = Math.max(...renderedNumbers, 0);
     const moreBar = body.querySelector(".wecom-v2ex-more-bar");
+    let insertedAbove = false;
+
     if (fresh.every((post) => postNumberOf(post) > currentMax)) {
       if (moreBar) {
         moreBar.insertAdjacentHTML("beforebegin", renderBubbles(fresh, getCurrentUsername()));
@@ -16898,14 +16906,32 @@
         const target = [...body.querySelectorAll(".wecom-msg[data-post-number]")]
           .find((node) => Number(node.dataset.postNumber) > postNumberOf(post));
         const html = bubbleHtml(post, getCurrentUsername());
-        if (target) target.insertAdjacentHTML("beforebegin", html);
-        else if (moreBar) moreBar.insertAdjacentHTML("beforebegin", html);
-        else body.insertAdjacentHTML("beforeend", html);
+        if (target) {
+          target.insertAdjacentHTML("beforebegin", html);
+          if (target.offsetTop <= prevScrollTop + body.clientHeight) {
+            insertedAbove = true;
+          }
+        } else if (moreBar) {
+          moreBar.insertAdjacentHTML("beforebegin", html);
+        } else {
+          body.insertAdjacentHTML("beforeend", html);
+        }
       }
     }
     hydrateChatImages(body);
     syncRenderedWindow(body);
-    if (options.scroll !== false) body.scrollTop = body.scrollHeight;
+
+    // 仅当用户主动发帖（options.scroll === true）或此前已在最底部跟随时滚动至底部；
+    // 用户在浏览上方历史楼层时，绝对禁止自动跳跃到底部，保护阅读进度与体验。
+    const shouldScroll = options.scroll === true || (options.scroll !== false && wasNearBottom);
+    if (shouldScroll) {
+      body.scrollTop = body.scrollHeight;
+    } else if (insertedAbove && !wasNearBottom) {
+      const heightDiff = body.scrollHeight - prevScrollHeight;
+      if (heightDiff > 0) {
+        body.scrollTop = prevScrollTop + heightDiff;
+      }
+    }
     return fresh.length;
   }
 

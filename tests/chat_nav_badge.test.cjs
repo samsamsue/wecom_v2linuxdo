@@ -3529,6 +3529,58 @@ test("Restore original style shortcut (Alt+W / Alt+O) toggles between WeCom IM t
   assert.equal(reloaded, true);
 });
 
+test("Topic reply polling and background post sync preserves user reading position and avoids jumping to bottom", () => {
+  // 1. appendFreshPosts inspects wasNearBottom before DOM insertions
+  assert.ok(
+    scriptContent.includes("const wasNearBottom = body.clientHeight > 0 && (prevScrollHeight - (prevScrollTop + body.clientHeight) <= 32);"),
+    "appendFreshPosts must calculate wasNearBottom before DOM mutations"
+  );
+
+  // 2. shouldScroll condition requires explicit true or wasNearBottom
+  assert.ok(
+    scriptContent.includes("const shouldScroll = options.scroll === true || (options.scroll !== false && wasNearBottom);"),
+    "must only auto-scroll if options.scroll === true or user was already at the bottom"
+  );
+
+  // 3. submitComposer explicitly specifies { scroll: true } on user submission
+  assert.ok(
+    scriptContent.includes("appendFreshPosts([post], document.querySelector(\".wecom-chat-body\"), { scroll: true });"),
+    "submitting post must pass { scroll: true } to follow user's own sent message"
+  );
+
+  // 4. Test scrolling calculation simulation
+  function simulateScrollDecision(scrollTop, scrollHeight, clientHeight, options) {
+    const wasNearBottom = clientHeight > 0 && (scrollHeight - (scrollTop + clientHeight) <= 32);
+    const shouldScroll = options.scroll === true || (options.scroll !== false && wasNearBottom);
+    return { wasNearBottom, shouldScroll };
+  }
+
+  // Scenario A: User is reading at top (e.g. floor 1, scrollTop = 0, scrollHeight = 3000, clientHeight = 600)
+  // Background polling arrives with empty options {}
+  const topRes = simulateScrollDecision(0, 3000, 600, {});
+  assert.equal(topRes.wasNearBottom, false, "user at top must not be near bottom");
+  assert.equal(topRes.shouldScroll, false, "polling must NOT scroll to bottom when user is reading at top");
+
+  // Scenario B: User is reading middle floors (e.g. scrollTop = 1200)
+  const midRes = simulateScrollDecision(1200, 3000, 600, {});
+  assert.equal(midRes.wasNearBottom, false, "user in middle must not be near bottom");
+  assert.equal(midRes.shouldScroll, false, "polling must NOT scroll to bottom when user is reading middle floors");
+
+  // Scenario C: User is actively at bottom (e.g. scrollTop = 2400, scrollHeight = 3000, clientHeight = 600)
+  const bottomRes = simulateScrollDecision(2400, 3000, 600, {});
+  assert.equal(bottomRes.wasNearBottom, true, "user at bottom must be detected as near bottom");
+  assert.equal(bottomRes.shouldScroll, true, "polling should keep view pinned to bottom if user was already at bottom");
+
+  // Scenario D: User explicitly sends a message with { scroll: true }, even if previously scrolled up
+  const submitRes = simulateScrollDecision(500, 3000, 600, { scroll: true });
+  assert.equal(submitRes.shouldScroll, true, "user message submission must always scroll to bottom");
+
+  // Scenario E: Loading older posts with { scroll: false }
+  const olderRes = simulateScrollDecision(2400, 3000, 600, { scroll: false });
+  assert.equal(olderRes.shouldScroll, false, "options.scroll: false must never scroll to bottom");
+});
+
+
 
 
 
