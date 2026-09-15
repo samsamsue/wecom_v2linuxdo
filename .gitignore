@@ -8,3 +8,4 @@ __pycache__/
 tests/*
 !tests/update_check.test.cjs
 !tests/chat_nav_badge.test.cjs
+!tests/topic_switch_isolation.test.cjs

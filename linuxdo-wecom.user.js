@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.12
+// @version      0.7.13
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -7792,7 +7792,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.12";
+  const SCRIPT_VERSION = "0.7.13";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -9563,7 +9563,12 @@
         ensureChatPanel();
         const body = document.querySelector(".wecom-chat-body");
         const isSame = Number(chatState.topicId) === topicId;
-        const hasRendered = isSame && Boolean(body && body.querySelector(".wecom-msg") && !body.querySelector(".wecom-chat-loading, .wecom-chat-error, .wecom-chat-empty"));
+        const hasRendered = isSame && Boolean(
+          body &&
+          Number(body.dataset.topicId) === topicId &&
+          body.querySelector(".wecom-msg") &&
+          !body.querySelector(".wecom-chat-loading, .wecom-chat-error, .wecom-chat-empty")
+        );
 
         const target = parseV2exReplyTarget(conv.dataset.targetAnchor || href || location.hash);
         if (conv.dataset.targetFloor) target.floor = Number(conv.dataset.targetFloor);
@@ -9595,6 +9600,7 @@
 
         if (!hasRendered) {
           if (body) {
+            body.dataset.topicId = String(topicId);
             delete body.dataset.state;
             body.innerHTML = `
               <div class="wecom-chat-loading">
@@ -9602,6 +9608,8 @@
                 <div>加载中…</div>
               </div>`;
           }
+          const chatPanel = document.querySelector(".wecom-chat-panel");
+          if (chatPanel) chatPanel.dataset.topicId = String(topicId);
           const convTitle = conv.querySelector(".wecom-conv-name")?.textContent || conv.getAttribute("title") || "";
           const titleEl = document.querySelector(".wecom-chat-title");
           const subEl = document.querySelector(".wecom-chat-sub");
@@ -11661,7 +11669,7 @@
     if (event.target.closest(".wecom-chat-refresh")) {
       if (chatState.topicId) {
         rateLimitCooldownUntil = 0;
-        topicDataCache.delete(Number(chatState.topicId));
+        deleteCachedTopic(chatState.topicId);
         loadTopic(chatState.topicId, true);
       }
       return true;
@@ -11685,7 +11693,7 @@
       const tid = chatState.topicId || topicIdFromPath(location.pathname);
       if (tid) {
         rateLimitCooldownUntil = 0;
-        topicDataCache.delete(Number(tid));
+        deleteCachedTopic(tid);
         loadTopic(tid, true);
       }
       return true;
@@ -11988,9 +11996,14 @@
     chatState.pinnedPost = 0;
     switchComposerTopic(null);
     const panel = document.querySelector(".wecom-chat-panel");
-    if (panel) panel.dataset.empty = "1";
+    if (panel) {
+      panel.dataset.empty = "1";
+      delete panel.dataset.topicId;
+    }
     const body = document.querySelector(".wecom-chat-body");
-    if (!body || body.dataset.state === "empty") return;
+    if (!body) return;
+    delete body.dataset.topicId;
+    if (body.dataset.state === "empty") return;
     body.dataset.state = "empty";
     const title = document.querySelector(".wecom-chat-title");
     const sub = document.querySelector(".wecom-chat-sub");
@@ -12057,7 +12070,7 @@
             const tid = chatState.topicId || topicIdFromPath(location.pathname);
             if (tid) {
               rateLimitCooldownUntil = 0;
-              topicDataCache.delete(Number(tid));
+              deleteCachedTopic(tid);
               loadTopic(tid, true);
             }
           }
@@ -12125,7 +12138,7 @@
         const tid = chatState.topicId || topicIdFromPath(location.pathname);
         if (tid) {
           rateLimitCooldownUntil = 0;
-          topicDataCache.delete(Number(tid));
+          deleteCachedTopic(tid);
           loadTopic(tid, true);
         }
       });
@@ -14095,11 +14108,18 @@
   const TOPIC_CACHE_TTL_MS = 3 * 60 * 1000;
   const topicDataCache = new Map();
 
+  function normalizeTopicCacheKey(topicId) {
+    if (topicId == null) return "";
+    return String(topicId).trim();
+  }
+
   function getCachedTopic(topicId) {
-    const entry = topicDataCache.get(Number(topicId));
+    const key = normalizeTopicCacheKey(topicId);
+    if (!key) return null;
+    const entry = topicDataCache.get(key);
     if (!entry) return null;
     if (Date.now() - entry.timestamp > TOPIC_CACHE_TTL_MS) {
-      topicDataCache.delete(Number(topicId));
+      topicDataCache.delete(key);
       return null;
     }
     return entry.data;
@@ -14107,13 +14127,25 @@
 
   function setCachedTopic(topicId, data) {
     if (!topicId || !data) return;
-    const id = Number(topicId);
-    topicDataCache.delete(id);
+    const key = normalizeTopicCacheKey(topicId);
+    if (!key) return;
+    topicDataCache.delete(key);
     if (topicDataCache.size >= TOPIC_CACHE_MAX) {
       const oldestKey = topicDataCache.keys().next().value;
       if (oldestKey) topicDataCache.delete(oldestKey);
     }
-    topicDataCache.set(id, { data, timestamp: Date.now() });
+    topicDataCache.set(key, { data, timestamp: Date.now() });
+  }
+
+  function deleteCachedTopic(topicId) {
+    const key = normalizeTopicCacheKey(topicId);
+    if (!key) return;
+    topicDataCache.delete(key);
+    for (const k of Array.from(topicDataCache.keys())) {
+      if (k === key || k.startsWith(`${key}_`)) {
+        topicDataCache.delete(k);
+      }
+    }
   }
 
   async function fetchPostsByIds(topicId, ids, signal) {
@@ -14523,8 +14555,10 @@
   }
 
   function openingPostNumber(topicId, topicData) {
-    const fromPath = postNumberFromPath(location.pathname);
-    if (fromPath > 0) return fromPath;
+    const route = topicRouteFromPath(location.pathname);
+    if (route.topicId && Number(route.topicId) === Number(topicId) && route.postNumber > 0) {
+      return route.postNumber;
+    }
     const remembered = getRememberedPost(topicId);
     if (remembered > 0) return remembered;
     const fromList = listState.topics.find((topic) => Number(topic.id) === Number(topicId));
@@ -14790,7 +14824,9 @@
   let topicAbortController = null;
 
   async function loadTopic(topicId, force = false, targetOption = null) {
-    if (!topicId) return;
+    const numericTopicId = Number(topicId);
+    if (!numericTopicId) return;
+    topicId = numericTopicId;
     let target = targetOption;
     if (!target && IS_V2EX) {
       target = parseV2exReplyTarget(location.href);
@@ -14809,9 +14845,14 @@
       }
     }
     const initialBody = document.querySelector(".wecom-chat-body");
-    const hasRenderedMsgs = Boolean(initialBody && initialBody.querySelector(".wecom-msg") && !initialBody.querySelector(".wecom-chat-loading, .wecom-chat-error, .wecom-chat-empty"));
-    if (!force && chatState.loading && Number(chatState.topicId) === Number(topicId)) return;
-    if (!force && Number(chatState.topicId) === Number(topicId) && chatState.renderedLastIdx >= 0 && hasRenderedMsgs) {
+    const hasRenderedMsgs = Boolean(
+      initialBody &&
+      Number(initialBody.dataset.topicId) === topicId &&
+      initialBody.querySelector(".wecom-msg") &&
+      !initialBody.querySelector(".wecom-chat-loading, .wecom-chat-error, .wecom-chat-empty")
+    );
+    if (!force && chatState.loading && Number(chatState.topicId) === topicId) return;
+    if (!force && Number(chatState.topicId) === topicId && chatState.renderedLastIdx >= 0 && hasRenderedMsgs) {
       syncListActive();
       return;
     }
@@ -14823,7 +14864,7 @@
     topicAbortController = controller;
     const signal = controller.signal;
 
-    const sameTopic = chatState.topicId === topicId;
+    const sameTopic = Number(chatState.topicId) === topicId;
     if (!sameTopic) {
       saveCurrentTopicReadingPosition();
       chatState.postsByNumber = new Map();
@@ -14842,6 +14883,7 @@
     if (!sameTopic) switchComposerTopic(topicId);
     const body = document.querySelector(".wecom-chat-body");
     if (body && (!sameTopic || force)) {
+      body.dataset.topicId = String(topicId);
       delete body.dataset.state;
       body.innerHTML = `
         <div class="wecom-chat-loading">
@@ -14849,12 +14891,14 @@
           <div>加载中…</div>
         </div>`;
     }
+    const chatPanel = document.querySelector(".wecom-chat-panel");
+    if (chatPanel) chatPanel.dataset.topicId = String(topicId);
     const subEl = document.querySelector(".wecom-chat-sub");
     if (subEl && !sameTopic) subEl.textContent = "加载中…";
     try {
       const targetPage = (IS_V2EX && target && target.page) ? target.page : 1;
       let data = await fetchTopicJson(topicId, requestedPost, force, signal, targetPage);
-      if (signal.aborted || chatState.topicId !== topicId) return; // 路由已切走或已取消
+      if (signal.aborted || Number(chatState.topicId) !== topicId) return; // 路由已切走或已取消
       let openPost = openingPostNumber(topicId, data);
       if (!openPost && target && target.floor) {
         openPost = target.floor + 1;
@@ -14867,7 +14911,7 @@
           if (err?.name === "AbortError") throw err;
           /* 保留首页 */
         }
-        if (signal.aborted || chatState.topicId !== topicId) return;
+        if (signal.aborted || Number(chatState.topicId) !== topicId) return;
       }
       const stream = (data.post_stream && data.post_stream.stream) || [];
       const posts = await postsForTopicOpening(
@@ -14877,7 +14921,7 @@
         openPost,
         signal
       );
-      if (signal.aborted || chatState.topicId !== topicId) return;
+      if (signal.aborted || Number(chatState.topicId) !== topicId) return;
       renderPinnedBanner(posts);
       renderMemberPanel(data, posts);
       chatState.stream = stream.length ? stream.slice() : posts.map((post) => post.id);
@@ -14905,7 +14949,10 @@
       }
 
       const panel = document.querySelector(".wecom-chat-panel");
-      if (panel) panel.dataset.empty = "0";
+      if (panel) {
+        panel.dataset.empty = "0";
+        panel.dataset.topicId = String(topicId);
+      }
       const title = document.querySelector(".wecom-chat-title");
       const sub = document.querySelector(".wecom-chat-sub");
       const maskDetail = isMaskTitleDetail();
@@ -14958,7 +15005,7 @@
         }
       }
       loadCategories().then(() => {
-        if (chatState.topicId !== topicId) return;
+        if (Number(chatState.topicId) !== topicId) return;
         const cat = data.category_id ? categoryById(data.category_id) : null;
         const chipsBox = document.querySelector(".wecom-chat-chips");
         const maskDetail = isMaskTitleDetail();
@@ -14983,7 +15030,8 @@
         }
       });
 
-      if (body) {
+      if (body && Number(chatState.topicId) === topicId) {
+        body.dataset.topicId = String(topicId);
         body.innerHTML = renderBubbles(posts, getCurrentUsername()) ||
           `<div class="wecom-chat-empty">${ICONS.msg}<div>暂无消息</div></div>`;
         hydrateChatImages(body);
@@ -15258,6 +15306,9 @@
 
   function appendFreshPosts(posts, body, options = {}) {
     if (!body || !Array.isArray(posts) || !posts.length) return 0;
+    if (body.dataset.topicId && chatState.topicId && Number(body.dataset.topicId) !== Number(chatState.topicId)) {
+      return 0;
+    }
     rememberChatPosts(posts);
     syncRenderedReplyReferences(posts, body);
     const renderedNumbers = new Set(
@@ -15350,13 +15401,46 @@
       normalizeUsername(author.username) === normalizeUsername(identity.username));
   }
 
+  function nativeDomTopicId(article) {
+    if (article) {
+      const postArticle = nativePostArticle(article);
+      const direct = Number(postArticle?.dataset?.topicId || article?.dataset?.topicId || 0);
+      if (direct > 0) return direct;
+      const closestContainer = article.closest("[data-topic-id]");
+      if (closestContainer?.dataset?.topicId) {
+        const fromClosest = Number(closestContainer.dataset.topicId);
+        if (fromClosest > 0) return fromClosest;
+      }
+    }
+    const topicContainer = document.querySelector("#topic[data-topic-id], .container.posts[data-topic-id]");
+    if (topicContainer?.dataset?.topicId) {
+      const fromContainer = Number(topicContainer.dataset.topicId);
+      if (fromContainer > 0) return fromContainer;
+    }
+    try {
+      const emberOwner = getEmberOwner();
+      const topicCtrl = emberOwner ? safeLookup(emberOwner, "controller:topic") : null;
+      const modelId = Number(topicCtrl?.get?.("model.id") || topicCtrl?.model?.id || 0);
+      if (modelId > 0) return modelId;
+    } catch { /* ignore */ }
+    return 0;
+  }
+
   /** 发帖后：原生隐藏流里出现的新帖 → 追加为气泡 */
   function syncNewPostsFromDom() {
     if (IS_V2EX || !chatState.topicId) return 0;
-    const articles = nativeTopicPostElements();
-    if (!articles.length) return 0;
     const body = document.querySelector(".wecom-chat-body");
     if (!body || body.querySelector(".wecom-chat-loading")) return 0;
+    if (body.dataset.topicId && Number(body.dataset.topicId) !== Number(chatState.topicId)) return 0;
+
+    const nativeTopicId = nativeDomTopicId(null);
+    if (nativeTopicId && nativeTopicId !== Number(chatState.topicId)) {
+      // 原生 DOM 容器当前属于其他话题，绝对不跨话题注入回复！
+      return 0;
+    }
+
+    const articles = nativeTopicPostElements();
+    if (!articles.length) return 0;
     const current = getCurrentUserIdentity();
     const posts = [];
     for (const article of articles) {
@@ -15365,8 +15449,8 @@
       );
       if (!number || number <= chatState.renderedLastNumber) continue;
       const postArticle = nativePostArticle(article);
-      const articleTopicId = Number(postArticle.dataset.topicId || article.dataset.topicId) || 0;
-      if (articleTopicId && articleTopicId !== Number(chatState.topicId)) continue;
+      const articleTopicId = nativeDomTopicId(article);
+      if (!articleTopicId || articleTopicId !== Number(chatState.topicId)) continue;
       const cooked = article.querySelector(".cooked");
       if (!cooked) continue;
       const author = nativePostIdentity(article);
@@ -15752,6 +15836,12 @@
     // 标签重新可见时再刷一次（部分浏览器未聚焦时会缓存旧 favicon 与 title）
     if (!window.__wecomFaviconVisibilityBound) {
       window.__wecomFaviconVisibilityBound = true;
+      window.addEventListener("focus", () => {
+        if (getViewMode() !== "native" && !otherThemeActive()) {
+          makeFavicon();
+          enforceBlankTitle();
+        }
+      });
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "visible" && getViewMode() !== "native" && !otherThemeActive()) {
           makeFavicon();
@@ -15773,8 +15863,10 @@
         if (el.id === "linuxdo-wecom-theme") return false;
         return true;
       });
-      if (external) scheduleApply();
-      scheduleSyncNewPosts();
+      if (external) {
+        scheduleApply();
+        scheduleSyncNewPosts();
+      }
       scheduleSyncChatBadge();
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
