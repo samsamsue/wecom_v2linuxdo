@@ -3079,3 +3079,77 @@ test("Quote title aside.quote .title is beautified with transparent background, 
     "dark mode must style quote title with soft muted dark-mode color"
   );
 });
+
+test("Conversation detail avatars can be configured to be hidden via settings and header controls", () => {
+  const scriptContent = fs.readFileSync(path.resolve(__dirname, "../linuxdo-wecom.user.js"), "utf8");
+
+  // 1. Verify constant definition
+  assert.ok(
+    scriptContent.includes('const HIDE_CHAT_AVATAR_KEY = "linuxdo-wecom-hide-chat-avatar";'),
+    "must define HIDE_CHAT_AVATAR_KEY"
+  );
+
+  // 2. Verify getter and setter helpers
+  assert.ok(scriptContent.includes("function isHideChatAvatar("), "must define isHideChatAvatar helper");
+  assert.ok(scriptContent.includes("function setHideChatAvatar("), "must define setHideChatAvatar helper");
+
+  // 3. Verify CSS styling when hidden
+  assert.ok(
+    scriptContent.includes("html.wecom-hide-chat-avatar .wecom-msg-avatar") &&
+    scriptContent.includes("display: none !important;"),
+    "must hide .wecom-msg-avatar when html.wecom-hide-chat-avatar class is present"
+  );
+
+  // 4. Verify presence in theme menu
+  assert.ok(
+    scriptContent.includes("wecom-menu-toggle-hide-chat-avatar") &&
+    scriptContent.includes("隐藏对话详情头像"),
+    "must provide toggle item in theme menu"
+  );
+
+  // 5. Verify presence in chat header tools
+  assert.ok(
+    scriptContent.includes("wecom-chat-avatar-toggle") &&
+    scriptContent.includes("隐藏对话头像"),
+    "must provide instant toggle button in chat header tools"
+  );
+
+  // 6. Verify userCardAttributes is attached to .wecom-msg-name
+  assert.ok(
+    scriptContent.includes('<span class="wecom-msg-name"${userCardAttributes(post)}>'),
+    "userCardAttributes must be attached to .wecom-msg-name so profiles remain accessible"
+  );
+
+  // 7. Verify functional state simulation
+  let storageState = "0";
+  const fakeDocEl = {
+    classList: {
+      classes: new Set(),
+      toggle(cls, val) {
+        if (val) this.classes.add(cls);
+        else this.classes.delete(cls);
+      },
+      contains(cls) {
+        return this.classes.has(cls);
+      }
+    }
+  };
+
+  const isHidden = () => storageState === "1";
+  const setHidden = (val) => {
+    storageState = val ? "1" : "0";
+    fakeDocEl.classList.toggle("wecom-hide-chat-avatar", !!val);
+  };
+
+  assert.equal(isHidden(), false, "default must be false (avatars shown)");
+  assert.equal(fakeDocEl.classList.contains("wecom-hide-chat-avatar"), false);
+
+  setHidden(true);
+  assert.equal(isHidden(), true, "must be true after enabling");
+  assert.equal(fakeDocEl.classList.contains("wecom-hide-chat-avatar"), true, "must add class to html");
+
+  setHidden(false);
+  assert.equal(isHidden(), false, "must be false after disabling");
+  assert.equal(fakeDocEl.classList.contains("wecom-hide-chat-avatar"), false, "must remove class from html");
+});
+

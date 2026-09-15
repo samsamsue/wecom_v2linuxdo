@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.19
+// @version      0.7.20
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -53,6 +53,7 @@
   const AVATAR_SOURCE_SIZE = 96;
   const THEME_MODE_KEY = "linuxdo-wecom-theme-mode";
   const BOOST_ENABLED_KEY = "linuxdo-wecom-boost-enabled";
+  const HIDE_CHAT_AVATAR_KEY = "linuxdo-wecom-hide-chat-avatar";
   const IMAGE_AUTO_LAYOUT_KEY = "linuxdo-wecom-image-auto-layout";
   const IMAGE_AUTO_LAYOUT_SIZE_KEY = "linuxdo-wecom-image-layout-size";
   const DEFAULT_IMAGE_AUTO_LAYOUT_SIZE = 100;
@@ -191,7 +192,8 @@
     winRestore: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="3.5" y="1.5" width="7" height="7" rx="1" /><path d="M1.5 4.5v6a1 1 0 0 0 1 1h6" /></svg>`,
     winClose: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M2.2 2.2l7.6 7.6m0-7.6l-7.6 7.6" /></svg>`,
     layoutOriginal: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><line x1="9" y1="9" x2="10" y2="9" /><line x1="9" y1="13" x2="15" y2="13" /><line x1="9" y1="17" x2="15" y2="17" /></svg>`,
-    layoutAuto: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><rect x="4" y="4" width="6" height="6" rx="1" /><rect x="14" y="4" width="6" height="6" rx="1" /><rect x="4" y="14" width="6" height="6" rx="1" /><rect x="14" y="14" width="6" height="6" rx="1" /></svg>`
+    layoutAuto: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><rect x="4" y="4" width="6" height="6" rx="1" /><rect x="14" y="4" width="6" height="6" rx="1" /><rect x="4" y="14" width="6" height="6" rx="1" /><rect x="14" y="14" width="6" height="6" rx="1" /></svg>`,
+    userOff: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.18 4.171a4 4 0 0 1 5.649 5.66m-1.829 2.169a4 4 0 0 1 -3.82 -3.83" /><path d="M6 21v-2a4 4 0 0 1 4 -4h4c.412 0 .81 .062 1.183 .178m2.633 2.642c.12 .38 .184 .785 .184 1.18v2" /><path d="M3 3l18 18" /></svg>`
   };
   ICONS.chat = ICONS.msg;
   ICONS.list = ICONS.msg;
@@ -2243,6 +2245,19 @@
     html.wecom-hide-boost .wecom-msg-boosts,
     html.wecom-hide-boost .wecom-msg-tool-btn[data-action="boost"] {
       display: none !important;
+    }
+
+    /* 允许通过设置隐藏对话详情头像 */
+    html.wecom-hide-chat-avatar .wecom-msg-avatar {
+      display: none !important;
+    }
+    html.wecom-hide-chat-avatar .wecom-msg {
+      gap: 0 !important;
+    }
+    .wecom-chat-avatar-toggle.is-active,
+    .wecom-chat-avatar-toggle[aria-pressed="true"] {
+      color: var(--wc-accent) !important;
+      background: var(--wc-accent-soft) !important;
     }
 
     /* 保持消息浮动工具条在打开 Popover 时常驻 */
@@ -7652,6 +7667,22 @@
     syncThemeControls();
   }
 
+  function isHideChatAvatar() {
+    try {
+      return localStorage.getItem(HIDE_CHAT_AVATAR_KEY) === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  function setHideChatAvatar(on) {
+    try {
+      localStorage.setItem(HIDE_CHAT_AVATAR_KEY, on ? "1" : "0");
+    } catch { /* ignore */ }
+    document.documentElement.classList.toggle("wecom-hide-chat-avatar", !!on);
+    syncThemeControls();
+  }
+
   function isImageAutoLayoutEnabled() {
     try {
       return localStorage.getItem(IMAGE_AUTO_LAYOUT_KEY) === "1";
@@ -7810,6 +7841,26 @@
       }
     }
 
+    const hideChatAvatarBtn = menu.querySelector(".wecom-menu-toggle-hide-chat-avatar");
+    if (hideChatAvatarBtn) {
+      const on = isHideChatAvatar();
+      hideChatAvatarBtn.classList.toggle("is-active", on);
+      hideChatAvatarBtn.setAttribute("aria-checked", on ? "true" : "false");
+      const badge = hideChatAvatarBtn.querySelector(".wecom-menu-state-badge");
+      if (badge) {
+        badge.textContent = on ? "已开启" : "已关闭";
+        badge.className = `wecom-menu-state-badge ${on ? "is-on" : "is-off"}`;
+      }
+    }
+
+    const chatAvatarToggleBtn = document.querySelector(".wecom-chat-avatar-toggle");
+    if (chatAvatarToggleBtn) {
+      const hidden = isHideChatAvatar();
+      chatAvatarToggleBtn.classList.toggle("is-active", hidden);
+      chatAvatarToggleBtn.setAttribute("aria-pressed", hidden ? "true" : "false");
+      chatAvatarToggleBtn.title = hidden ? "显示对话头像" : "隐藏对话头像";
+    }
+
     const boostBtn = menu.querySelector(".wecom-menu-toggle-boost");
     if (boostBtn) {
       const on = isBoostEnabled();
@@ -7924,6 +7975,8 @@
       `<div class="wecom-theme-menu-title wecom-theme-menu-divider">伪装头像</div>` +
       `<button type="button" role="menuitemcheckbox" class="wecom-menu-mask-avatar" aria-checked="false">` +
       `${ICONS.disguise}<span class="wecom-menu-label">百家姓/九宫格头像</span><span class="wecom-menu-state-badge is-off">已关闭</span></button>` +
+      `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-hide-chat-avatar" aria-checked="false">` +
+      `${ICONS.userOff}<span class="wecom-menu-label">隐藏对话详情头像</span><span class="wecom-menu-state-badge is-off">已关闭</span></button>` +
       `<div class="wecom-theme-menu-title wecom-theme-menu-divider">消息功能</div>` +
       `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-boost" aria-checked="true">` +
       `${ICONS.boost}<span class="wecom-menu-label">显示消息 Boost</span><span class="wecom-menu-state-badge is-on">已开启</span></button>` +
@@ -7970,6 +8023,13 @@
         event.preventDefault();
         event.stopPropagation();
         setMaskAvatar(!isMaskAvatar());
+        return;
+      }
+      const hideChatAvatarBtn = event.target.closest(".wecom-menu-toggle-hide-chat-avatar");
+      if (hideChatAvatarBtn) {
+        event.preventDefault();
+        event.stopPropagation();
+        setHideChatAvatar(!isHideChatAvatar());
         return;
       }
       const boostBtn = event.target.closest(".wecom-menu-toggle-boost");
@@ -8074,7 +8134,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.19";
+  const SCRIPT_VERSION = "0.7.20";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -11900,7 +11960,7 @@
       !panel.querySelector(".wecom-watermark-panel") || !panel.querySelector(".wecom-image-input") ||
       !panel.querySelector('[data-composer-action="emoji"]') || !panel.querySelector('[data-composer-action="pic"]') ||
       !panel.querySelector('[data-composer-action="doc"]') || !panel.querySelector('[data-composer-action="apps"]') ||
-      !panel.querySelector(".wecom-platform-switcher"))) {
+      !panel.querySelector(".wecom-platform-switcher") || !panel.querySelector(".wecom-chat-avatar-toggle"))) {
       panel.remove();
       panel = null;
     }
@@ -11952,6 +12012,7 @@
           </div>
         </div>
         <div class="wecom-chat-tools">
+          <button type="button" class="wecom-icon-btn wecom-chat-avatar-toggle${isHideChatAvatar() ? " is-active" : ""}" title="${isHideChatAvatar() ? "显示对话头像" : "隐藏对话头像"}" aria-label="隐藏对话头像" aria-pressed="${isHideChatAvatar() ? "true" : "false"}">${ICONS.userOff}</button>
           <button type="button" class="wecom-icon-btn wecom-chat-members-toggle" title="群成员与详情">${ICONS.users}</button>
           <button type="button" class="wecom-icon-btn wecom-topic-bookmark"${IS_V2EX ? ' style="display:none"' : ""} title="收藏话题" aria-label="收藏话题" aria-pressed="false">${ICONS.bookmark}</button>
           <button type="button" class="wecom-icon-btn wecom-watermark-settings" title="背景水印设置" aria-label="背景水印设置" aria-expanded="false" aria-pressed="false">${ICONS.watermark}</button>
@@ -12378,6 +12439,11 @@
           loadOlderPosts();
         }
       }
+      return true;
+    }
+    if (event.target.closest(".wecom-chat-avatar-toggle")) {
+      consumeClick(event);
+      setHideChatAvatar(!isHideChatAvatar());
       return true;
     }
     if (event.target.closest(".wecom-chat-members-toggle")) {
@@ -13342,7 +13408,7 @@
       <div class="wecom-msg wecom-msg-${side}" data-post-number="${post.post_number}"${post.id ? ` data-post-id="${post.id}"` : ""}${post.floor != null ? ` data-floor="${post.floor}"` : ""}${me ? ' data-mine="1"' : ""}>
         <span class="wecom-msg-avatar" style="background:${avatarBg}"${userCardAttributes(post)}>${avatar}</span>
         <div class="wecom-msg-content">
-          <span class="wecom-msg-name">${escapeHtml(displayName)}</span>
+          <span class="wecom-msg-name"${userCardAttributes(post)}>${escapeHtml(displayName)}</span>
           <div class="wecom-msg-bubble">
             ${replyReferenceHtml(post)}
             <div class="wecom-msg-body">${post.cooked || ""}</div>
@@ -16433,6 +16499,7 @@
     document.documentElement.classList.add(ROOT_CLASS);
     document.documentElement.classList.toggle("wecom-nav2-open", isNav2Open());
     document.documentElement.classList.toggle("wecom-hide-boost", !isBoostEnabled());
+    document.documentElement.classList.toggle("wecom-hide-chat-avatar", isHideChatAvatar());
     applyImageAutoLayoutSizeCss(getImageAutoLayoutSize());
     setupWindowControlsOverlay();
     disablePageLoadingIndicator();
@@ -16576,6 +16643,7 @@
     if (getViewMode() !== "native" && !otherThemeActive()) {
       document.documentElement.classList.add(ROOT_CLASS);
       document.documentElement.classList.toggle("wecom-hide-boost", !isBoostEnabled());
+      document.documentElement.classList.toggle("wecom-hide-chat-avatar", isHideChatAvatar());
       restyleSplash();
       makeFavicon(); // document-start 尽早换标，减少未聚焦标签仍显示原 icon
       setupTitleGuard(); // document-start 守护标题为空白，彻底隐藏详情页标题
