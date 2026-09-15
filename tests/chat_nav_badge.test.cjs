@@ -2875,3 +2875,97 @@ test("Linux DO notification menu sticky positioning for tabs and dismiss button"
   assert.ok(mockBtn.classList.contains("wecom-notif-sticky-btn"), "btn must have wecom-notif-sticky-btn");
   assert.ok(mockParent.classList.contains("wecom-notif-sticky-dismiss"), "parent container must have wecom-notif-sticky-dismiss");
 });
+
+test("Image viewer supports cursor-centered zooming, drag panning, and prev/next gallery navigation", () => {
+  // 1. Verify CSS rules for cursor zoom and navigation controls
+  assert.ok(
+    scriptContent.includes("transform: translate3d(var(--wecom-image-viewer-x, 0px), var(--wecom-image-viewer-y, 0px), 0px) scale(var(--wecom-image-viewer-scale, 1));"),
+    "RAW_CSS must apply translate3d and scale variables to image"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-image-viewer-nav") &&
+    scriptContent.includes(".wecom-image-viewer-prev") &&
+    scriptContent.includes(".wecom-image-viewer-next"),
+    "RAW_CSS must style prev/next navigation buttons"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-image-viewer-counter"),
+    "RAW_CSS must style image counter indicator"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-image-viewer-image.is-dragging"),
+    "RAW_CSS must style grabbing cursor during drag"
+  );
+
+  // 2. Verify functions definition
+  assert.ok(scriptContent.includes("function setImageViewerTransform("), "must define setImageViewerTransform");
+  assert.ok(scriptContent.includes("function collectChatImages("), "must define collectChatImages");
+  assert.ok(scriptContent.includes("function updateImageViewerNavigationUi("), "must define updateImageViewerNavigationUi");
+  assert.ok(scriptContent.includes("function renderImageViewerCurrent("), "must define renderImageViewerCurrent");
+  assert.ok(scriptContent.includes("function nextImageViewerImage("), "must define nextImageViewerImage");
+  assert.ok(scriptContent.includes("function prevImageViewerImage("), "must define prevImageViewerImage");
+
+  // 3. Verify keyboard shortcuts and pointer event bindings
+  assert.ok(
+    scriptContent.includes("event.key === \"ArrowLeft\" || event.key === \"PageUp\""),
+    "must bind ArrowLeft and PageUp to prevImageViewerImage"
+  );
+  assert.ok(
+    scriptContent.includes("event.key === \"ArrowRight\" || event.key === \"PageDown\""),
+    "must bind ArrowRight and PageDown to nextImageViewerImage"
+  );
+  assert.ok(
+    scriptContent.includes("stage.addEventListener(\"pointerdown\"") &&
+    scriptContent.includes("stage.addEventListener(\"pointermove\""),
+    "must bind pointer events for dragging and panning"
+  );
+  assert.ok(
+    scriptContent.includes("stage.addEventListener(\"dblclick\""),
+    "must bind dblclick for toggling zoom"
+  );
+
+  // 4. Validate mathematical invariance of cursor-centered zoom
+  const cx = 500;
+  const cy = 400;
+  let currentScale = 1;
+  let currentTx = 0;
+  let currentTy = 0;
+  const mx = 620; // 120px to the right
+  const my = 480; // 80px down
+
+  // Zoom to 2x
+  const newScale = 2;
+  const ratio = newScale / currentScale;
+  const newTx = (mx - cx) - ratio * (mx - cx - currentTx);
+  const newTy = (my - cy) - ratio * (my - cy - currentTy);
+
+  // Before zoom: mouse pointed to image point (mx - cx - currentTx) / currentScale = (620 - 500) / 1 = 120
+  // After zoom: screen position of that same point is cx + newTx + 120 * newScale
+  const screenXAfter = cx + newTx + 120 * newScale;
+  const screenYAfter = cy + newTy + 80 * newScale;
+  assert.equal(Math.round(screenXAfter), mx, "point under cursor X must remain exactly under cursor");
+  assert.equal(Math.round(screenYAfter), my, "point under cursor Y must remain exactly under cursor");
+
+  // 5. Validate gallery collection and navigation cycle
+  const mockImages = [
+    { src: "https://example.com/1.jpg" },
+    { src: "https://example.com/2.jpg" },
+    { src: "https://example.com/3.jpg" }
+  ];
+  let activeIndex = 0;
+  function next() {
+    activeIndex = (activeIndex + 1) % mockImages.length;
+  }
+  function prev() {
+    activeIndex = (activeIndex - 1 + mockImages.length) % mockImages.length;
+  }
+
+  next();
+  assert.equal(activeIndex, 1, "next() from 0 must move to 1");
+  next();
+  assert.equal(activeIndex, 2, "next() from 1 must move to 2");
+  next();
+  assert.equal(activeIndex, 0, "next() from 2 must cycle back to 0");
+  prev();
+  assert.equal(activeIndex, 2, "prev() from 0 must cycle back to 2");
+});

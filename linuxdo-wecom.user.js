@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.15
+// @version      0.7.16
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -3881,33 +3881,41 @@
       background: rgba(10, 18, 29, .88);
       backdrop-filter: blur(3px);
       font-family: var(--wc-font);
+      user-select: none;
     }
     .wecom-image-viewer-stage {
       position: absolute;
-      inset: 70px 32px 56px;
+      inset: 0;
       display: flex;
       align-items: center;
       justify-content: center;
+      overflow: hidden;
+      touch-action: none;
     }
     .wecom-image-viewer-image {
       display: block;
-      max-width: 100%;
-      max-height: 100%;
+      max-width: 90vw;
+      max-height: 85vh;
       border-radius: 6px;
       object-fit: contain;
       box-shadow: 0 18px 60px rgba(0, 0, 0, .42);
-      transform: scale(var(--wecom-image-viewer-scale, 1));
-      transform-origin: center;
-      transition: transform 80ms ease-out;
+      transform: translate3d(var(--wecom-image-viewer-x, 0px), var(--wecom-image-viewer-y, 0px), 0px) scale(var(--wecom-image-viewer-scale, 1));
+      transform-origin: center center;
+      transition: transform 100ms cubic-bezier(0.2, 0, 0.2, 1);
       user-select: none;
       -webkit-user-drag: none;
       will-change: transform;
+      cursor: zoom-in;
+    }
+    .wecom-image-viewer-image.is-dragging {
+      cursor: grabbing !important;
+      transition: none !important;
     }
     .wecom-image-viewer-close {
       position: fixed;
       top: 20px;
       right: 24px;
-      z-index: 2;
+      z-index: 20;
       height: 40px;
       display: inline-flex;
       align-items: center;
@@ -3919,6 +3927,8 @@
       color: #FFFFFF;
       font: 13px var(--wc-font);
       cursor: pointer;
+      backdrop-filter: blur(4px);
+      transition: all 120ms ease;
     }
     .wecom-image-viewer-close:hover,
     .wecom-image-viewer-close:focus-visible {
@@ -3930,7 +3940,7 @@
       position: fixed;
       top: 20px;
       left: 24px;
-      z-index: 2;
+      z-index: 20;
       height: 40px;
       display: inline-flex;
       align-items: center;
@@ -3942,6 +3952,7 @@
       color: rgba(255, 255, 255, .68);
       font-size: 12px;
       pointer-events: none;
+      backdrop-filter: blur(4px);
     }
     .wecom-image-viewer-zoom strong {
       min-width: 38px;
@@ -3950,11 +3961,79 @@
       font-variant-numeric: tabular-nums;
       text-align: right;
     }
+    .wecom-image-viewer-counter {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      height: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 16px;
+      border: 1px solid rgba(255, 255, 255, .18);
+      border-radius: 20px;
+      background: rgba(0, 0, 0, .38);
+      color: #FFFFFF;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      pointer-events: none;
+      backdrop-filter: blur(4px);
+    }
+    .wecom-image-viewer-counter[hidden] {
+      display: none !important;
+    }
+    .wecom-image-viewer-nav {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 20;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, .25);
+      background: rgba(0, 0, 0, .38);
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+      transition: all 180ms ease;
+      user-select: none;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, .3);
+    }
+    .wecom-image-viewer-prev {
+      left: 24px;
+    }
+    .wecom-image-viewer-next {
+      right: 24px;
+    }
+    .wecom-image-viewer-nav:hover {
+      background: rgba(255, 255, 255, .28);
+      border-color: rgba(255, 255, 255, .6);
+      transform: translateY(-50%) scale(1.1);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, .45);
+    }
+    .wecom-image-viewer-nav:active {
+      transform: translateY(-50%) scale(0.96);
+    }
+    .wecom-image-viewer-nav svg {
+      width: 24px;
+      height: 24px;
+      display: block;
+    }
+    .wecom-image-viewer-nav[hidden] {
+      display: none !important;
+    }
     .wecom-image-viewer-caption {
       position: fixed;
       left: 24px;
       right: 24px;
       bottom: 18px;
+      z-index: 20;
       overflow: hidden;
       color: rgba(255, 255, 255, .78);
       font-size: 12px;
@@ -3988,9 +4067,13 @@
       .${ROOT_CLASS}.${LOCK_CLASS}:not(.wecom-topic-open) .wecom-chat-panel { display: none; }
       .${ROOT_CLASS}.${LOCK_CLASS} .wecom-chat-panel { left: var(--wc-nav); }
       .${ROOT_CLASS}.${LOCK_CLASS}.wecom-composing-new #reply-control { left: var(--wc-nav) !important; }
-      .wecom-image-viewer-stage { inset: 68px 12px 44px; }
+      .wecom-image-viewer-stage { inset: 0; }
       .wecom-image-viewer-close { top: 14px; right: 14px; }
       .wecom-image-viewer-zoom { top: 14px; left: 14px; }
+      .wecom-image-viewer-counter { top: 14px; }
+      .wecom-image-viewer-nav { width: 40px; height: 40px; }
+      .wecom-image-viewer-prev { left: 12px; }
+      .wecom-image-viewer-next { right: 12px; }
     }
   `;
 
@@ -7881,7 +7964,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.15";
+  const SCRIPT_VERSION = "0.7.16";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -10751,6 +10834,14 @@
   }
 
   let imageViewerTrigger = null;
+  let imageViewerList = [];
+  let imageViewerIndex = 0;
+  let viewerIsDragging = false;
+  let viewerDragStartX = 0;
+  let viewerDragStartY = 0;
+  let viewerDragStartTx = 0;
+  let viewerDragStartTy = 0;
+  let viewerHasDragged = false;
 
   function isPreviewableChatImage(image) {
     if (!(image instanceof HTMLImageElement)) return false;
@@ -10805,13 +10896,43 @@
     return normalizeImageViewerScale(viewer?.dataset.zoomScale);
   }
 
+  function setImageViewerTransform(viewer, scaleValue, tx = 0, ty = 0, animate = false) {
+    const scale = normalizeImageViewerScale(scaleValue);
+    const image = viewer?.querySelector(".wecom-image-viewer-image");
+    const percentage = viewer?.querySelector(".wecom-image-viewer-zoom strong");
+
+    let finalTx = Number(tx) || 0;
+    let finalTy = Number(ty) || 0;
+    if (scale <= 1) {
+      finalTx = 0;
+      finalTy = 0;
+    }
+
+    if (viewer) {
+      viewer.dataset.zoomScale = String(scale);
+      viewer.dataset.translateX = String(finalTx);
+      viewer.dataset.translateY = String(finalTy);
+    }
+
+    if (image) {
+      if (animate) {
+        image.style.transition = "transform 100ms cubic-bezier(0.2, 0, 0.2, 1)";
+      } else {
+        image.style.transition = "none";
+      }
+      image.style.setProperty("--wecom-image-viewer-scale", String(scale));
+      image.style.setProperty("--wecom-image-viewer-x", `${Math.round(finalTx)}px`);
+      image.style.setProperty("--wecom-image-viewer-y", `${Math.round(finalTy)}px`);
+      image.style.cursor = scale > 1 ? "grab" : "zoom-in";
+    }
+
+    if (percentage) {
+      percentage.textContent = `${Math.round(scale * IMAGE_VIEWER_PERCENT_MULTIPLIER)}%`;
+    }
+  }
+
   function setImageViewerScale(viewer, value) {
-    const scale = normalizeImageViewerScale(value);
-    const image = viewer.querySelector(".wecom-image-viewer-image");
-    const percentage = viewer.querySelector(".wecom-image-viewer-zoom strong");
-    viewer.dataset.zoomScale = String(scale);
-    image.style.setProperty("--wecom-image-viewer-scale", String(scale));
-    if (percentage) percentage.textContent = `${Math.round(scale * IMAGE_VIEWER_PERCENT_MULTIPLIER)}%`;
+    setImageViewerTransform(viewer, value, 0, 0, false);
   }
 
   function normalizedImageViewerWheelDelta(event) {
@@ -10823,13 +10944,128 @@
   }
 
   function handleImageViewerWheel(viewer, event) {
-    if (viewer.hidden || event.target.closest(".wecom-image-viewer-close")) return;
+    if (viewer.hidden || event.target.closest(".wecom-image-viewer-close, .wecom-image-viewer-nav, .wecom-image-viewer-counter")) return;
     const delta = normalizedImageViewerWheelDelta(event);
     if (!delta) return;
     event.preventDefault();
     event.stopPropagation();
+
+    const currentScale = getImageViewerScale(viewer);
+    const currentTx = Number(viewer.dataset.translateX || 0);
+    const currentTy = Number(viewer.dataset.translateY || 0);
+
     const factor = Math.exp(-delta * IMAGE_VIEWER_WHEEL_SENSITIVITY);
-    setImageViewerScale(viewer, getImageViewerScale(viewer) * factor);
+    const newScale = normalizeImageViewerScale(currentScale * factor);
+    if (newScale === currentScale) return;
+
+    const stage = viewer.querySelector(".wecom-image-viewer-stage");
+    const stageRect = stage ? stage.getBoundingClientRect() : viewer.getBoundingClientRect();
+    const cx = stageRect.left + stageRect.width / 2;
+    const cy = stageRect.top + stageRect.height / 2;
+
+    const mx = event.clientX;
+    const my = event.clientY;
+
+    let newTx = 0;
+    let newTy = 0;
+    if (newScale > 1) {
+      const ratio = newScale / currentScale;
+      newTx = (mx - cx) - ratio * (mx - cx - currentTx);
+      newTy = (my - cy) - ratio * (my - cy - currentTy);
+    }
+
+    setImageViewerTransform(viewer, newScale, newTx, newTy, true);
+  }
+
+  /** 收集当前会话聊天面板中所有可预览的图片，保证自然顺序且按地址去重 */
+  function collectChatImages(sourceImage) {
+    const panel = document.querySelector(".wecom-chat-panel") || document.body;
+    const allImgs = Array.from(panel.querySelectorAll(".wecom-msg-bubble img, .wecom-msg-thumb img"))
+      .filter((img) => isPreviewableChatImage(img) && previewImageSource(img));
+
+    const list = [];
+    const seen = new Set();
+    for (const img of allImgs) {
+      const src = previewImageSource(img);
+      if (!seen.has(src)) {
+        seen.add(src);
+        list.push(img);
+      }
+    }
+
+    if (sourceImage && !list.includes(sourceImage)) {
+      const src = previewImageSource(sourceImage);
+      const idx = list.findIndex((img) => previewImageSource(img) === src);
+      if (idx === -1) {
+        list.push(sourceImage);
+      }
+    }
+    return list;
+  }
+
+  function updateImageViewerNavigationUi() {
+    const viewer = document.querySelector(".wecom-image-viewer");
+    if (!viewer) return;
+    const prevBtn = viewer.querySelector(".wecom-image-viewer-prev");
+    const nextBtn = viewer.querySelector(".wecom-image-viewer-next");
+    const counter = viewer.querySelector(".wecom-image-viewer-counter");
+
+    const total = imageViewerList.length;
+    const hasMultiple = total > 1;
+
+    if (prevBtn) prevBtn.hidden = !hasMultiple;
+    if (nextBtn) nextBtn.hidden = !hasMultiple;
+    if (counter) {
+      counter.hidden = !hasMultiple;
+      if (hasMultiple) {
+        counter.textContent = `${imageViewerIndex + 1} / ${total}`;
+      }
+    }
+  }
+
+  function renderImageViewerCurrent() {
+    const viewer = ensureImageViewer();
+    const sourceImage = imageViewerList[imageViewerIndex];
+    if (!sourceImage) return;
+
+    const src = previewImageSource(sourceImage);
+    if (!src) {
+      console.error("[Linux DO 企业微信] 无法预览图片：未找到有效图片地址", sourceImage);
+      return;
+    }
+
+    const image = viewer.querySelector(".wecom-image-viewer-image");
+    const caption = viewer.querySelector(".wecom-image-viewer-caption");
+    const label = sourceImage.alt?.trim() || "图片预览";
+    imageViewerTrigger = sourceImage;
+    image.alt = label;
+
+    setImageViewerTransform(viewer, IMAGE_VIEWER_DEFAULT_SCALE, 0, 0, false);
+
+    const total = imageViewerList.length;
+    const indexSuffix = total > 1 ? ` (${imageViewerIndex + 1} / ${total})` : "";
+    caption.textContent = `图片加载中…${indexSuffix}`;
+
+    image.onload = () => { caption.textContent = `${label}${indexSuffix}`; };
+    image.onerror = () => {
+      caption.textContent = `图片加载失败${indexSuffix}`;
+      console.error("[Linux DO 企业微信] 图片预览加载失败", src);
+    };
+
+    updateImageViewerNavigationUi();
+    image.src = src;
+  }
+
+  function nextImageViewerImage() {
+    if (!imageViewerList || imageViewerList.length <= 1) return;
+    imageViewerIndex = (imageViewerIndex + 1) % imageViewerList.length;
+    renderImageViewerCurrent();
+  }
+
+  function prevImageViewerImage() {
+    if (!imageViewerList || imageViewerList.length <= 1) return;
+    imageViewerIndex = (imageViewerIndex - 1 + imageViewerList.length) % imageViewerList.length;
+    renderImageViewerCurrent();
   }
 
   function ensureImageViewer() {
@@ -10846,45 +11082,145 @@
         <b aria-hidden="true">×</b><span>关闭</span>
       </button>
       <div class="wecom-image-viewer-zoom" aria-hidden="true"><strong>100%</strong><span>滚轮缩放</span></div>
+      <div class="wecom-image-viewer-counter" aria-live="polite"></div>
+      <button type="button" class="wecom-image-viewer-nav wecom-image-viewer-prev" aria-label="上一张 (←)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+      <button type="button" class="wecom-image-viewer-nav wecom-image-viewer-next" aria-label="下一张 (→)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
       <div class="wecom-image-viewer-stage"><img class="wecom-image-viewer-image" alt=""></div>
       <div class="wecom-image-viewer-caption" aria-live="polite"></div>`;
     document.body.appendChild(viewer);
+
+    const stage = viewer.querySelector(".wecom-image-viewer-stage");
+
     viewer.addEventListener("click", (event) => {
+      if (viewerHasDragged) {
+        viewerHasDragged = false;
+        return;
+      }
       const close = event.target.closest(".wecom-image-viewer-close");
-      if (close || event.target === viewer || event.target.classList.contains("wecom-image-viewer-stage")) {
+      const navPrev = event.target.closest(".wecom-image-viewer-prev");
+      const navNext = event.target.closest(".wecom-image-viewer-next");
+
+      if (navPrev) {
+        prevImageViewerImage();
+        return;
+      }
+      if (navNext) {
+        nextImageViewerImage();
+        return;
+      }
+      if (close || event.target === viewer || event.target === stage) {
         closeImageViewer();
       }
     });
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && !viewer.hidden) closeImageViewer();
+
+    stage.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      if (event.target.closest(".wecom-image-viewer-close, .wecom-image-viewer-nav")) return;
+
+      viewerIsDragging = true;
+      viewerHasDragged = false;
+      viewerDragStartX = event.clientX;
+      viewerDragStartY = event.clientY;
+      viewerDragStartTx = Number(viewer.dataset.translateX || 0);
+      viewerDragStartTy = Number(viewer.dataset.translateY || 0);
+
+      const scale = getImageViewerScale(viewer);
+      const image = viewer.querySelector(".wecom-image-viewer-image");
+      if (image && scale > 1) {
+        image.classList.add("is-dragging");
+      }
+      try { stage.setPointerCapture?.(event.pointerId); } catch { /* ignore */ }
     });
+
+    stage.addEventListener("pointermove", (event) => {
+      if (!viewerIsDragging) return;
+      const dx = event.clientX - viewerDragStartX;
+      const dy = event.clientY - viewerDragStartY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        viewerHasDragged = true;
+      }
+      const scale = getImageViewerScale(viewer);
+      if (scale > 1) {
+        const tx = viewerDragStartTx + dx;
+        const ty = viewerDragStartTy + dy;
+        setImageViewerTransform(viewer, scale, tx, ty, false);
+      }
+    });
+
+    const endDrag = (event) => {
+      if (!viewerIsDragging) return;
+      viewerIsDragging = false;
+      const image = viewer.querySelector(".wecom-image-viewer-image");
+      if (image) {
+        image.classList.remove("is-dragging");
+        const scale = getImageViewerScale(viewer);
+        image.style.cursor = scale > 1 ? "grab" : "zoom-in";
+      }
+      try { stage.releasePointerCapture?.(event.pointerId); } catch { /* ignore */ }
+    };
+
+    stage.addEventListener("pointerup", endDrag);
+    stage.addEventListener("pointercancel", endDrag);
+
+    stage.addEventListener("dblclick", (event) => {
+      if (event.target.closest(".wecom-image-viewer-close, .wecom-image-viewer-nav")) return;
+      const currentScale = getImageViewerScale(viewer);
+      const stageRect = stage.getBoundingClientRect();
+      const cx = stageRect.left + stageRect.width / 2;
+      const cy = stageRect.top + stageRect.height / 2;
+
+      if (currentScale > 1.1) {
+        setImageViewerTransform(viewer, 1, 0, 0, true);
+      } else {
+        const targetScale = 2.5;
+        const ratio = targetScale / currentScale;
+        const mx = event.clientX;
+        const my = event.clientY;
+        const tx = (mx - cx) - ratio * (mx - cx);
+        const ty = (my - cy) - ratio * (my - cy);
+        setImageViewerTransform(viewer, targetScale, tx, ty, true);
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (viewer.hidden) return;
+      if (event.key === "Escape") {
+        closeImageViewer();
+      } else if (event.key === "ArrowLeft" || event.key === "PageUp") {
+        event.preventDefault();
+        prevImageViewerImage();
+      } else if (event.key === "ArrowRight" || event.key === "PageDown") {
+        event.preventDefault();
+        nextImageViewerImage();
+      } else if (event.key === "0" || event.key === "r" || event.key === "R") {
+        setImageViewerTransform(viewer, 1, 0, 0, true);
+      }
+    });
+
     viewer.addEventListener("wheel", (event) => handleImageViewerWheel(viewer, event), { passive: false });
     return viewer;
   }
 
   function openImageViewer(sourceImage) {
-    const src = previewImageSource(sourceImage);
-    if (!src) {
-      console.error("[Linux DO 企业微信] 无法预览图片：未找到有效图片地址", sourceImage);
-      return;
-    }
+    if (!sourceImage) return;
+    imageViewerList = collectChatImages(sourceImage);
+    const currentSrc = previewImageSource(sourceImage);
+    const idx = imageViewerList.findIndex((img) => img === sourceImage || (currentSrc && previewImageSource(img) === currentSrc));
+    imageViewerIndex = idx >= 0 ? idx : 0;
+
     const viewer = ensureImageViewer();
-    const image = viewer.querySelector(".wecom-image-viewer-image");
-    const caption = viewer.querySelector(".wecom-image-viewer-caption");
-    const label = sourceImage.alt?.trim() || "图片预览";
-    imageViewerTrigger = sourceImage;
-    image.alt = label;
-    setImageViewerScale(viewer, IMAGE_VIEWER_DEFAULT_SCALE);
-    caption.textContent = "图片加载中…";
-    image.onload = () => { caption.textContent = label; };
-    image.onerror = () => {
-      caption.textContent = "图片加载失败";
-      console.error("[Linux DO 企业微信] 图片预览加载失败", src);
-    };
     viewer.hidden = false;
     document.documentElement.classList.add("wecom-image-viewer-open");
-    image.src = src;
-    viewer.querySelector(".wecom-image-viewer-close").focus({ preventScroll: true });
+    renderImageViewerCurrent();
+    viewer.querySelector(".wecom-image-viewer-close")?.focus({ preventScroll: true });
   }
 
   function closeImageViewer() {
@@ -10892,11 +11228,15 @@
     document.documentElement.classList.remove("wecom-image-viewer-open");
     if (!viewer) return;
     viewer.hidden = true;
-    setImageViewerScale(viewer, IMAGE_VIEWER_DEFAULT_SCALE);
+    setImageViewerTransform(viewer, IMAGE_VIEWER_DEFAULT_SCALE, 0, 0, false);
     const image = viewer.querySelector(".wecom-image-viewer-image");
-    image.onload = null;
-    image.onerror = null;
-    image.removeAttribute("src");
+    if (image) {
+      image.onload = null;
+      image.onerror = null;
+      image.removeAttribute("src");
+    }
+    imageViewerList = [];
+    imageViewerIndex = 0;
     if (imageViewerTrigger?.isConnected) imageViewerTrigger.focus({ preventScroll: true });
     imageViewerTrigger = null;
   }
