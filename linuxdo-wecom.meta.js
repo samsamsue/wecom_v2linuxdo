@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.34
+// @version      0.7.35
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -12,6 +12,7 @@
 // @match        https://v2ex.com/*
 // @connect      api.imgur.com
 // @connect      imgur.com
+// @connect      connect.linux.do
 // @icon         https://linux.do/favicon.ico
 // @homepageURL  https://github.com/samsamsue/wecom_v2linuxdo
 // @updateURL    https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js

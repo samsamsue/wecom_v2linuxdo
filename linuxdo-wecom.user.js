@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.34
+// @version      0.7.35
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -12,6 +12,7 @@
 // @match        https://v2ex.com/*
 // @connect      api.imgur.com
 // @connect      imgur.com
+// @connect      connect.linux.do
 // @icon         https://linux.do/favicon.ico
 // @homepageURL  https://github.com/samsamsue/wecom_v2linuxdo
 // @updateURL    https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js
@@ -122,6 +123,7 @@
     meet: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M20.117 7.625a1 1 0 0 0 -.564 .1l-4.553 2.275v4l4.553 2.275a1 1 0 0 0 1.447 -.892v-6.766a1 1 0 0 0 -.883 -.992z" /><path d="M5 5c-1.645 0 -3 1.355 -3 3v8c0 1.645 1.355 3 3 3h8c1.645 0 3 -1.355 3 -3v-8c0 -1.645 -1.355 -3 -3 -3z" /></svg>`,
     disk: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M10.04 4.305c2.195 -.667 4.615 -.224 6.36 1.176c1.386 1.108 2.188 2.686 2.252 4.34l.003 .212l.091 .003c2.3 .107 4.143 1.961 4.25 4.27l.004 .211c0 2.407 -1.885 4.372 -4.255 4.482l-.21 .005h-11.878l-.222 -.008c-2.94 -.11 -5.317 -2.399 -5.43 -5.263l-.005 -.216c0 -2.747 2.08 -5.01 4.784 -5.417l.114 -.016l.07 -.181c.663 -1.62 2.056 -2.906 3.829 -3.518l.244 -.08z" /></svg>`,
     cal: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M16 2a1 1 0 0 1 .993 .883l.007 .117v1h1a3 3 0 0 1 2.995 2.824l.005 .176v12a3 3 0 0 1 -2.824 2.995l-.176 .005h-12a3 3 0 0 1 -2.995 -2.824l-.005 -.176v-12a3 3 0 0 1 2.824 -2.995l.176 -.005h1v-1a1 1 0 0 1 1.993 -.117l.007 .117v1h6v-1a1 1 0 0 1 1 -1zm3 7h-14v9.625c0 .705 .386 1.286 .883 1.366l.117 .009h12c.513 0 .936 -.53 .993 -1.215l.007 -.16v-9.625z" /><path d="M12 12a1 1 0 0 1 .993 .883l.007 .117v3a1 1 0 0 1 -1.993 .117l-.007 -.117v-2a1 1 0 0 1 -.117 -1.993l.117 -.007h1z" /></svg>`,
+    connect: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M10.05 13.95a1 1 0 0 1 1.414 0l1.586 1.586a3 3 0 0 0 4.242 -4.242l-2.828 -2.829a3 3 0 0 0 -4.243 0a1 1 0 0 1 -1.414 -1.414a5 5 0 0 1 7.071 0l2.829 2.828a5 5 0 0 1 -7.071 7.072l-1.586 -1.586a1 1 0 0 1 0 -1.415z" /><path d="M13.95 10.05a1 1 0 0 1 -1.414 0l-1.586 -1.586a3 3 0 0 0 -4.242 4.242l2.828 2.829a3 3 0 0 0 4.243 0a1 1 0 0 1 1.414 1.414a5 5 0 0 1 -7.071 0l-2.829 -2.828a5 5 0 0 1 7.071 -7.072l1.586 1.586a1 1 0 0 1 0 1.415z" /></svg>`,
     todo: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M17 3.34a10 10 0 1 1 -14.995 8.984l-.005 -.324l.005 -.324a10 10 0 0 1 14.995 -8.336zm-1.293 5.953a1 1 0 0 0 -1.32 -.083l-.094 .083l-3.293 3.292l-1.293 -1.292l-.094 -.083a1 1 0 0 0 -1.403 1.403l.083 .094l2 2l.094 .083a1 1 0 0 0 1.226 0l.094 -.083l4 -4l.083 -.094a1 1 0 0 0 -.083 -1.32z" /></svg>`,
     smartdoc: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M9 3h-4a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2z" /><path d="M9 13h-4a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2z" /><path d="M19 13h-4a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2z" /><path d="M17 3a1 1 0 0 1 .993 .883l.007 .117v2h2a1 1 0 0 1 .117 1.993l-.117 .007h-2v2a1 1 0 0 1 -1.993 .117l-.007 -.117v-2h-2a1 1 0 0 1 -.117 -1.993l.117 -.007h2v-2a1 1 0 0 1 1 -1z" /></svg>`,
     summary: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M16 19a1 1 0 0 1 0 -2a1 1 0 0 0 1 -1c0 -1.333 2 -1.333 2 0a1 1 0 0 0 1 1c1.333 0 1.333 2 0 2a1 1 0 0 0 -1 1c0 1.333 -2 1.333 -2 0a1 1 0 0 0 -1 -1" /><path d="M3 11a5 5 0 0 0 5 -5c0 -1.333 2 -1.333 2 0a5 5 0 0 0 5 5c1.333 0 1.333 2 0 2a5 5 0 0 0 -5 5a1 1 0 0 1 -2 0a5 5 0 0 0 -5 -5c-1.333 0 -1.333 -2 0 -2" /><path d="M16 7a1 1 0 0 1 0 -2a1 1 0 0 0 1 -1c0 -1.333 2 -1.333 2 0a1 1 0 0 0 1 1c1.333 0 1.333 2 0 2a1 1 0 0 0 -1 1c0 1.333 -2 1.333 -2 0a1 1 0 0 0 -1 -1" /></svg>`,
@@ -1915,6 +1917,285 @@
       border: 1px solid #DEE0E3;
     }
     .wecom-member-btn.secondary:hover {
+      background: #F2F3F5;
+    }
+
+    /* ---------- LINUX DO Connect 认证与等级弹窗 (.wecom-connect-overlay) ---------- */
+    .wecom-connect-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100010;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(2px);
+      animation: wecomFadeIn 0.15s ease-out;
+    }
+    .wecom-connect-modal {
+      width: 460px;
+      max-width: calc(100vw - 32px);
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      background: #FFFFFF;
+      border-radius: 12px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      color: #1F2329;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+    .wecom-connect-header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid #EBEDF0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+    }
+    .wecom-connect-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .wecom-connect-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1F2329;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .wecom-connect-logo-badge {
+      background: #E8F3FF;
+      color: #1664FF;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+    .wecom-connect-subtitle {
+      font-size: 12px;
+      color: #8F959E;
+    }
+    .wecom-connect-subtitle a {
+      color: #1664FF;
+      text-decoration: none;
+    }
+    .wecom-connect-subtitle a:hover {
+      text-decoration: underline;
+    }
+    .wecom-connect-close {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: transparent;
+      color: #8F959E;
+      border: none;
+      cursor: pointer;
+      font-size: 20px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .wecom-connect-close:hover {
+      background: rgba(0, 0, 0, 0.06);
+      color: #1F2329;
+    }
+    .wecom-connect-body {
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .wecom-connect-loading {
+      padding: 40px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: #8F959E;
+      font-size: 13px;
+    }
+    .wecom-connect-user-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 14px;
+      background: #F7F8FA;
+      border: 1px solid #E5E6EB;
+      border-radius: 10px;
+    }
+    .wecom-connect-avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 10px;
+      background: #267EF0;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 700;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .wecom-connect-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .wecom-connect-user-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .wecom-connect-user-row1 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .wecom-connect-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1F2329;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .wecom-connect-handle {
+      font-size: 12px;
+      color: #8F959E;
+    }
+    .wecom-connect-user-row2 {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+    .wecom-connect-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 1px 7px;
+      border-radius: 4px;
+    }
+    .wecom-connect-badge.tl-0 { background: #F2F3F5; color: #4E5969; }
+    .wecom-connect-badge.tl-1 { background: #E8F3FF; color: #1664FF; }
+    .wecom-connect-badge.tl-2 { background: #E8FFEA; color: #00B42A; }
+    .wecom-connect-badge.tl-3 { background: #FFF7E8; color: #D46B08; border: 1px solid rgba(250, 140, 22, 0.2); }
+    .wecom-connect-badge.tl-4 { background: #F9F0FF; color: #722ED1; }
+    .wecom-connect-tag {
+      font-size: 11px;
+      color: #646A73;
+      background: #FFFFFF;
+      border: 1px solid #E5E6EB;
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+    .wecom-connect-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .wecom-connect-stat-item {
+      background: #F7F8FA;
+      border: 1px solid #EBEDF0;
+      border-radius: 8px;
+      padding: 10px 8px;
+      text-align: center;
+    }
+    .wecom-connect-stat-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1F2329;
+      line-height: 1.2;
+    }
+    .wecom-connect-stat-label {
+      font-size: 11px;
+      color: #8F959E;
+      margin-top: 4px;
+    }
+    .wecom-connect-progress-card {
+      background: #FAFAFB;
+      border: 1px solid #E5E6EB;
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .wecom-connect-progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .wecom-connect-progress-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #1F2329;
+    }
+    .wecom-connect-progress-percent {
+      font-size: 12px;
+      font-weight: 700;
+      color: #1664FF;
+    }
+    .wecom-connect-progress-bar {
+      height: 6px;
+      background: #E5E6EB;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .wecom-connect-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #1664FF, #00D4B2);
+      border-radius: 3px;
+      transition: width 0.3s;
+    }
+    .wecom-connect-footer {
+      padding: 12px 20px;
+      border-top: 1px solid #EBEDF0;
+      background: #FAFAFA;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-radius: 0 0 12px 12px;
+    }
+    .wecom-connect-btn {
+      height: 32px;
+      padding: 0 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      text-decoration: none;
+      transition: all 0.15s;
+      border: 1px solid transparent;
+      box-sizing: border-box;
+    }
+    .wecom-connect-btn.primary {
+      background: #1664FF;
+      color: #FFFFFF;
+    }
+    .wecom-connect-btn.primary:hover {
+      background: #0E4EDC;
+    }
+    .wecom-connect-btn.secondary {
+      background: #FFFFFF;
+      border-color: #DEE0E3;
+      color: #1F2329;
+    }
+    .wecom-connect-btn.secondary:hover {
       background: #F2F3F5;
     }
 
@@ -7962,6 +8243,63 @@
       background: #2D313A;
     }
 
+    /* LINUX DO Connect 弹窗深色模式 */
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-modal {
+      background: #1E222A;
+      border-color: #2C313A;
+      color: #D4D4D4;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-header,
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-footer {
+      border-color: #2C313A;
+      background: #181A1F;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-title {
+      color: #E6E8EB;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-close:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #FFFFFF;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-user-card {
+      background: #23272E;
+      border-color: #2C313A;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-name {
+      color: #E6E8EB;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-tag {
+      background: #181A1F;
+      border-color: #333842;
+      color: #8C8C8C;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-stat-item {
+      background: #23272E;
+      border-color: #2C313A;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-stat-value {
+      color: #E6E8EB;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-progress-card {
+      background: #23272E;
+      border-color: #2C313A;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-progress-title {
+      color: #E6E8EB;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-progress-bar {
+      background: #333842;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-btn.secondary {
+      background: #23272E;
+      border-color: #333842;
+      color: #C0C5CE;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-btn.secondary:hover {
+      background: #2C313A;
+    }
+
     /* 左侧头像通知浮层与用户菜单 */
     html.wecom-dark .user-menu.wecom-user-menu-float,
     html.${ROOT_CLASS}.wecom-dark .user-menu.wecom-user-menu-float,
@@ -9813,7 +10151,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.34";
+  const SCRIPT_VERSION = "0.7.35";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -9981,7 +10319,7 @@
   /** 企业微信工作台导航项（对齐官方截图：消息、历史、日程、待办、会议、智能文档、智能总结、工作台、通讯录、微盘、高级功能、分组） */
   const RAIL_DECO_ITEMS = [
     { key: "history", icon: "history", label: "历史" },
-    { key: "cal", icon: "cal", label: "日程" },
+    IS_V2EX ? { key: "cal", icon: "cal", label: "日程" } : { key: "connect", icon: "connect", label: "Connect" },
     { key: "todo", icon: "todo", label: "待办" },
     { key: "meet", icon: "meet", label: "会议" },
     { key: "smartdoc", icon: "smartdoc", label: "智能文档", dot: true },
@@ -10674,10 +11012,26 @@
     });
   }
 
+  function bindRailConnectClick(rail) {
+    const connectBtn = rail?.querySelector('[data-rail-key="connect"]');
+    if (!connectBtn || connectBtn.dataset.clickBound === "1") return;
+    connectBtn.dataset.clickBound = "1";
+    connectBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (isLinuxDoConnectModalOpen()) {
+        closeLinuxDoConnectModal();
+      } else {
+        openLinuxDoConnectModal();
+      }
+    });
+  }
+
   function bindRailNavClicks(rail) {
     bindRailChatClick(rail);
     bindRailHistoryClick(rail);
+    bindRailConnectClick(rail);
   }
+
 
   /* ============================== 左侧头像 hover → 原生通知菜单 ============================== */
 
@@ -12514,6 +12868,356 @@
   function openV2exMemberProfilePage(username) {
     window.open(`/member/${encodeURIComponent(username)}`, "_blank");
   }
+
+  /* ============================== LINUX DO Connect 弹窗 ============================== */
+
+  let linuxDoConnectDataCache = null;
+  let linuxDoConnectCacheTime = 0;
+  let connectKeydownHandler = null;
+
+  function isLinuxDoConnectModalOpen() {
+    return Boolean(document.querySelector(".wecom-connect-overlay, .wecom-connect-modal"));
+  }
+
+  function closeLinuxDoConnectModal() {
+    document.querySelector(".wecom-connect-overlay")?.remove();
+    document.querySelector(".wecom-connect-modal")?.remove();
+    if (connectKeydownHandler) {
+      document.removeEventListener("keydown", connectKeydownHandler);
+      connectKeydownHandler = null;
+    }
+  }
+
+  function getTrustLevelInfo(tl) {
+    const level = Number(tl) || 0;
+    switch (level) {
+      case 1:
+        return { level: 1, name: "基本用户", code: "TL1", color: "tl-1", badgeText: "🌱 基本用户 (TL1)" };
+      case 2:
+        return { level: 2, name: "中级成员", code: "TL2", color: "tl-2", badgeText: "🌿 中级成员 (TL2)" };
+      case 3:
+        return { level: 3, name: "活跃成员", code: "TL3", color: "tl-3", badgeText: "⭐ 活跃成员 (TL3)" };
+      case 4:
+        return { level: 4, name: "领袖管理", code: "TL4", color: "tl-4", badgeText: "👑 领袖管理 (TL4)" };
+      default:
+        return { level: 0, name: "见习用户", code: "TL0", color: "tl-0", badgeText: "🐣 见习用户 (TL0)" };
+    }
+  }
+
+  function formatConnectTime(seconds) {
+    if (!seconds || seconds <= 0) return "0 分钟";
+    const hours = Math.round(seconds / 3600);
+    if (hours < 1) {
+      const mins = Math.max(1, Math.round(seconds / 60));
+      return `${mins} 分钟`;
+    }
+    return `${hours} 小时`;
+  }
+
+  function formatConnectNumber(num) {
+    if (num === null || num === undefined) return "0";
+    const val = Number(num) || 0;
+    if (val >= 10000) {
+      return (val / 1000).toFixed(1).replace(/\.0$/, "") + "k";
+    }
+    return val.toLocaleString();
+  }
+
+  async function fetchLinuxDoConnectData(force = false) {
+    const now = Date.now();
+    if (!force && linuxDoConnectDataCache && (now - linuxDoConnectCacheTime < 60000)) {
+      return linuxDoConnectDataCache;
+    }
+
+    let username = getCurrentUsername();
+    let currentId = null;
+    let currentUserObj = null;
+
+    try {
+      const owner = getEmberOwner();
+      const user = safeLookup(owner, "service:current-user") || window.Discourse?.User?.current?.();
+      if (user) {
+        currentUserObj = user;
+        username = username || user.username || user.get?.("username");
+        currentId = user.id || user.get?.("id");
+      }
+    } catch { /* ignore */ }
+
+    if (!username) {
+      const idRecord = getCurrentUserIdentity();
+      username = idRecord?.username;
+      currentId = currentId || idRecord?.id;
+    }
+
+    // Try Connect API first (may succeed if CORS or direct access allowed)
+    let connectApiData = null;
+    try {
+      const cRes = await fetch("https://connect.linux.do/api/user", {
+        credentials: "include",
+        headers: { "Accept": "application/json" }
+      });
+      if (cRes.ok) {
+        connectApiData = await cRes.json();
+      }
+    } catch { /* CORS or offline fallback */ }
+
+    if (!username && connectApiData?.username) {
+      username = connectApiData.username;
+    }
+
+    if (!username) {
+      throw new Error("请先登录 Linux DO 账号后查看 Connect 认证信息");
+    }
+
+    // Fetch Discourse profile and summary
+    let summaryData = null;
+    let userData = null;
+
+    try {
+      const [sumRes, uRes] = await Promise.all([
+        fetch(`/u/${encodeURIComponent(username)}/summary.json`, {
+          headers: { "Accept": "application/json" }
+        }),
+        fetch(`/u/${encodeURIComponent(username)}.json`, {
+          headers: { "Accept": "application/json" }
+        })
+      ]);
+      if (sumRes.ok) summaryData = await sumRes.json();
+      if (uRes.ok) userData = await uRes.json();
+    } catch (err) {
+      console.warn("[linuxdo-wecom] Discourse user summary fetch error", err);
+    }
+
+    const u = userData?.user || currentUserObj || {};
+    const sum = summaryData?.user_summary || {};
+
+    const name = connectApiData?.name || u.name || username;
+    const uid = connectApiData?.id || u.id || currentId || "";
+    const trustLevel = (connectApiData?.trust_level !== undefined && connectApiData?.trust_level !== null)
+      ? connectApiData.trust_level
+      : (u.trust_level !== undefined ? u.trust_level : 0);
+
+    const tlInfo = getTrustLevelInfo(trustLevel);
+
+    let avatarUrl = "";
+    if (connectApiData?.avatar_url) {
+      avatarUrl = connectApiData.avatar_url;
+    } else if (u.avatar_template) {
+      avatarUrl = u.avatar_template.replace("{size}", "120");
+      if (avatarUrl.startsWith("/")) avatarUrl = `${location.origin}${avatarUrl}`;
+    }
+
+    // Stats
+    const daysVisited = sum.days_visited !== undefined ? sum.days_visited : 0;
+    const topicsEntered = sum.topics_entered !== undefined ? sum.topics_entered : 0;
+    const postsRead = sum.posts_read_count !== undefined ? sum.posts_read_count : 0;
+    const likesGiven = sum.likes_given !== undefined ? sum.likes_given : 0;
+    const likesReceived = sum.likes_received !== undefined ? sum.likes_received : 0;
+    const timeRead = sum.time_read !== undefined ? sum.time_read : 0;
+
+    // TL3 progress:
+    // Criteria: visited >= 50 days, topics >= 500, posts >= 20000, likes given >= 30, likes received >= 20
+    let tl3ProgressPercent = 100;
+    let tl3IsAchieved = trustLevel >= 3;
+    if (trustLevel < 3) {
+      const sVisited = Math.min(1, daysVisited / 50);
+      const sTopics = Math.min(1, topicsEntered / 500);
+      const sPosts = Math.min(1, postsRead / 20000);
+      const sGiven = Math.min(1, likesGiven / 30);
+      const sReceived = Math.min(1, likesReceived / 20);
+      tl3ProgressPercent = Math.min(99, Math.round(((sVisited + sTopics + sPosts + sGiven + sReceived) / 5) * 100));
+    }
+
+    const result = {
+      username,
+      name,
+      uid,
+      trustLevel,
+      trustLevelInfo: tlInfo,
+      avatarUrl,
+      status: connectApiData?.active !== false ? "正常活跃" : "状态受限",
+      stats: {
+        daysVisited,
+        topicsEntered,
+        postsRead,
+        likesGiven,
+        likesReceived,
+        timeReadFormatted: formatConnectTime(timeRead)
+      },
+      tl3Progress: {
+        percent: tl3ProgressPercent,
+        isAchieved: tl3IsAchieved
+      }
+    };
+
+    linuxDoConnectDataCache = result;
+    linuxDoConnectCacheTime = Date.now();
+    return result;
+  }
+
+  function renderConnectModalContent(modal, data, errorMsg = null) {
+    const body = modal?.querySelector(".wecom-connect-body");
+    if (!body) return;
+
+    if (errorMsg) {
+      body.innerHTML = `
+        <div class="wecom-connect-loading">
+          <div style="font-size: 28px; margin-bottom: 4px;">⚠️</div>
+          <div style="font-weight: 600; color: #1F2329;">数据加载失败</div>
+          <div>${escapeHtml(errorMsg)}</div>
+          <button type="button" class="wecom-connect-btn secondary wecom-connect-retry-btn" style="margin-top: 10px;">重新尝试</button>
+        </div>
+      `;
+      body.querySelector(".wecom-connect-retry-btn")?.addEventListener("click", () => {
+        body.innerHTML = `<div class="wecom-connect-loading"><span>正在获取 LINUX DO Connect 认证信息...</span></div>`;
+        fetchLinuxDoConnectData(true)
+          .then((d) => renderConnectModalContent(modal, d))
+          .catch((err) => renderConnectModalContent(modal, null, err.message || "请求失败"));
+      });
+      return;
+    }
+
+    const initial = (data.name || data.username || "U")[0].toUpperCase();
+    const avatarHtml = data.avatarUrl
+      ? `<img src="${escapeHtml(data.avatarUrl)}" alt="${escapeHtml(data.username)}" onerror="this.parentElement.textContent='${escapeHtml(initial)}'" />`
+      : escapeHtml(initial);
+
+    const percentText = data.tl3Progress.isAchieved ? "100% 已达成" : `${data.tl3Progress.percent}%`;
+
+    body.innerHTML = `
+      <div class="wecom-connect-user-card">
+        <div class="wecom-connect-avatar">${avatarHtml}</div>
+        <div class="wecom-connect-user-info">
+          <div class="wecom-connect-user-row1">
+            <span class="wecom-connect-name">${escapeHtml(data.name)}</span>
+            <span class="wecom-connect-handle">@${escapeHtml(data.username)}</span>
+          </div>
+          <div class="wecom-connect-user-row2">
+            <span class="wecom-connect-badge ${escapeHtml(data.trustLevelInfo.color)}">${escapeHtml(data.trustLevelInfo.badgeText)}</span>
+            ${data.uid ? `<span class="wecom-connect-tag">UID: #${escapeHtml(String(data.uid))}</span>` : ""}
+            <span class="wecom-connect-tag">状态: ${escapeHtml(data.status)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="wecom-connect-stats-grid">
+        <div class="wecom-connect-stat-item">
+          <div class="wecom-connect-stat-value">${formatConnectNumber(data.stats.daysVisited)} 天</div>
+          <div class="wecom-connect-stat-label">访问天数 (100天)</div>
+        </div>
+        <div class="wecom-connect-stat-item">
+          <div class="wecom-connect-stat-value">${formatConnectNumber(data.stats.topicsEntered)}</div>
+          <div class="wecom-connect-stat-label">浏览话题数</div>
+        </div>
+        <div class="wecom-connect-stat-item">
+          <div class="wecom-connect-stat-value">${formatConnectNumber(data.stats.postsRead)}</div>
+          <div class="wecom-connect-stat-label">阅读帖子数</div>
+        </div>
+        <div class="wecom-connect-stat-item">
+          <div class="wecom-connect-stat-value">${formatConnectNumber(data.stats.likesGiven)} 次</div>
+          <div class="wecom-connect-stat-label">送出点赞</div>
+        </div>
+        <div class="wecom-connect-stat-item">
+          <div class="wecom-connect-stat-value">${formatConnectNumber(data.stats.likesReceived)} 次</div>
+          <div class="wecom-connect-stat-label">收获点赞</div>
+        </div>
+        <div class="wecom-connect-stat-item">
+          <div class="wecom-connect-stat-value">${escapeHtml(data.stats.timeReadFormatted)}</div>
+          <div class="wecom-connect-stat-label">累计阅读时间</div>
+        </div>
+      </div>
+
+      <div class="wecom-connect-progress-card">
+        <div class="wecom-connect-progress-header">
+          <span class="wecom-connect-progress-title">TL3 (活跃成员) 达标进度</span>
+          <span class="wecom-connect-progress-percent">${escapeHtml(percentText)}</span>
+        </div>
+        <div class="wecom-connect-progress-bar">
+          <div class="wecom-connect-progress-fill" style="width: ${Math.min(100, Math.max(0, data.tl3Progress.percent))}%;"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  function openLinuxDoConnectModal() {
+    if (isLinuxDoConnectModalOpen()) {
+      return;
+    }
+
+    const overlay = document.createElement("div");
+    overlay.className = "wecom-connect-overlay";
+
+    const modal = document.createElement("div");
+    modal.className = "wecom-connect-modal";
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-label", "LINUX DO Connect");
+
+    modal.innerHTML = `
+      <div class="wecom-connect-header">
+        <div class="wecom-connect-title-group">
+          <div class="wecom-connect-title">
+            <span>LINUX DO Connect</span>
+            <span class="wecom-connect-logo-badge">OAuth 2.0</span>
+          </div>
+          <div class="wecom-connect-subtitle">
+            <a href="https://connect.linux.do/" target="_blank" rel="noopener noreferrer">https://connect.linux.do/</a> · 官方认证与信任级别
+          </div>
+        </div>
+        <button type="button" class="wecom-connect-close" title="关闭" aria-label="关闭">×</button>
+      </div>
+
+      <div class="wecom-connect-body">
+        <div class="wecom-connect-loading">
+          <span>正在获取 LINUX DO Connect 认证信息...</span>
+        </div>
+      </div>
+
+      <div class="wecom-connect-footer">
+        <button type="button" class="wecom-connect-btn secondary wecom-connect-refresh-btn">🔄 刷新数据</button>
+        <a class="wecom-connect-btn primary" href="https://connect.linux.do/" target="_blank" rel="noopener noreferrer">访问官方 Connect ↗</a>
+      </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Overlay click outside modal to close
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) {
+        closeLinuxDoConnectModal();
+      }
+    });
+
+    // Close button
+    modal.querySelector(".wecom-connect-close")?.addEventListener("click", () => {
+      closeLinuxDoConnectModal();
+    });
+
+    // Refresh button
+    modal.querySelector(".wecom-connect-refresh-btn")?.addEventListener("click", () => {
+      const body = modal.querySelector(".wecom-connect-body");
+      if (body) {
+        body.innerHTML = `<div class="wecom-connect-loading"><span>正在刷新数据...</span></div>`;
+      }
+      fetchLinuxDoConnectData(true)
+        .then((data) => renderConnectModalContent(modal, data))
+        .catch((err) => renderConnectModalContent(modal, null, err.message || "请求失败"));
+    });
+
+    // Escape key
+    connectKeydownHandler = (e) => {
+      if (e.key === "Escape") {
+        closeLinuxDoConnectModal();
+      }
+    };
+    document.addEventListener("keydown", connectKeydownHandler);
+
+    // Load data
+    fetchLinuxDoConnectData(false)
+      .then((data) => renderConnectModalContent(modal, data))
+      .catch((err) => renderConnectModalContent(modal, null, err.message || "请求失败"));
+  }
+
 
   function applyListNavDom() {
     const panel = document.querySelector(".wecom-list-panel");
@@ -19973,7 +20677,9 @@
     closeV2exUserPopover();
     closeV2exMemberCard();
     closeBase64InsertDialog();
+    closeLinuxDoConnectModal();
     document.querySelector(".wecom-toast-container")?.remove();
+    document.querySelector(".wecom-connect-overlay, .wecom-connect-modal")?.remove();
   }
 
   let initialNewTopicChecked = false;
@@ -20186,7 +20892,7 @@
       });
     }
 
-    const WECOM_UI_SEL = ".wecom-toast-container, .wecom-base64-insert-dialog, .wecom-v2ex-user-popover, .wecom-v2ex-member-card, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
+    const WECOM_UI_SEL = ".wecom-toast-container, .wecom-connect-overlay, .wecom-connect-modal, .wecom-base64-insert-dialog, .wecom-v2ex-user-popover, .wecom-v2ex-member-card, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
     const NATIVE_BRIDGE_SEL = "#reply-control, .dialog-holder, .dialog-container, #discourse-modal-container, .d-modal, .bootbox, .autocomplete, .autocomplete-container, .d-editor-popup, [data-identifier='emoji-picker'], .tag-chooser";
     const observer = new MutationObserver((mutations) => {
       // 忽略我们自己面板内部的 DOM 变动，否则点开筛选会立刻触发 applyTheme 回写/闪断

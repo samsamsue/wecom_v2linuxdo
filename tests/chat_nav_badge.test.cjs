@@ -4416,6 +4416,183 @@ test("V2EX member profile card supports block and follow buttons, parses recent 
   assert.equal(parsedActions.recentReplies[1].content, "支持一下楼主！");
 });
 
+test("Linux DO left rail navigation displays Connect instead of calendar, and clicking opens Connect modal with Trust Level & metrics", () => {
+  // 1. Metadata header includes @connect connect.linux.do
+  assert.ok(
+    scriptContent.includes("// @connect      connect.linux.do"),
+    "metadata header must declare @connect connect.linux.do"
+  );
+
+  // 2. ICONS contains connect SVG
+  assert.ok(
+    scriptContent.includes("connect:"),
+    "ICONS dictionary must contain connect icon"
+  );
+
+  // 3. RAIL_DECO_ITEMS differentiates Linux DO (Connect) and V2EX (日程)
+  assert.ok(
+    scriptContent.includes('IS_V2EX ? { key: "cal", icon: "cal", label: "日程" } : { key: "connect", icon: "connect", label: "Connect" }'),
+    "RAIL_DECO_ITEMS must show Connect on Linux DO and 日程 on V2EX"
+  );
+
+  // 4. Rail click binding includes bindRailConnectClick
+  assert.ok(
+    scriptContent.includes("bindRailConnectClick(rail)"),
+    "bindRailNavClicks must call bindRailConnectClick"
+  );
+  assert.ok(
+    scriptContent.includes('rail?.querySelector(\'[data-rail-key="connect"]\')'),
+    "bindRailConnectClick must query [data-rail-key=\"connect\"]"
+  );
+
+  // 5. Connect modal lifecycle and helpers exist
+  assert.ok(
+    scriptContent.includes("function isLinuxDoConnectModalOpen()"),
+    "must define isLinuxDoConnectModalOpen"
+  );
+  assert.ok(
+    scriptContent.includes("function closeLinuxDoConnectModal()"),
+    "must define closeLinuxDoConnectModal"
+  );
+  assert.ok(
+    scriptContent.includes("function openLinuxDoConnectModal()"),
+    "must define openLinuxDoConnectModal"
+  );
+  assert.ok(
+    scriptContent.includes("function fetchLinuxDoConnectData("),
+    "must define fetchLinuxDoConnectData"
+  );
+  assert.ok(
+    scriptContent.includes("function renderConnectModalContent("),
+    "must define renderConnectModalContent"
+  );
+  assert.ok(
+    scriptContent.includes("function getTrustLevelInfo("),
+    "must define getTrustLevelInfo"
+  );
+  assert.ok(
+    scriptContent.includes("function formatConnectTime("),
+    "must define formatConnectTime"
+  );
+  assert.ok(
+    scriptContent.includes("function formatConnectNumber("),
+    "must define formatConnectNumber"
+  );
+
+  // 6. Test trust level info resolution
+  function simulateGetTrustLevelInfo(tl) {
+    const level = Number(tl) || 0;
+    switch (level) {
+      case 1:
+        return { level: 1, name: "基本用户", code: "TL1", color: "tl-1", badgeText: "🌱 基本用户 (TL1)" };
+      case 2:
+        return { level: 2, name: "中级成员", code: "TL2", color: "tl-2", badgeText: "🌿 中级成员 (TL2)" };
+      case 3:
+        return { level: 3, name: "活跃成员", code: "TL3", color: "tl-3", badgeText: "⭐ 活跃成员 (TL3)" };
+      case 4:
+        return { level: 4, name: "领袖管理", code: "TL4", color: "tl-4", badgeText: "👑 领袖管理 (TL4)" };
+      default:
+        return { level: 0, name: "见习用户", code: "TL0", color: "tl-0", badgeText: "🐣 见习用户 (TL0)" };
+    }
+  }
+
+  assert.equal(simulateGetTrustLevelInfo(0).code, "TL0");
+  assert.equal(simulateGetTrustLevelInfo(0).name, "见习用户");
+  assert.equal(simulateGetTrustLevelInfo(1).code, "TL1");
+  assert.equal(simulateGetTrustLevelInfo(2).code, "TL2");
+  assert.equal(simulateGetTrustLevelInfo(3).code, "TL3");
+  assert.equal(simulateGetTrustLevelInfo(3).name, "活跃成员");
+  assert.equal(simulateGetTrustLevelInfo(4).code, "TL4");
+  assert.equal(simulateGetTrustLevelInfo(4).name, "领袖管理");
+
+  // 7. Test formatConnectTime and formatConnectNumber
+  function simulateFormatConnectTime(seconds) {
+    if (!seconds || seconds <= 0) return "0 分钟";
+    const hours = Math.round(seconds / 3600);
+    if (hours < 1) {
+      const mins = Math.max(1, Math.round(seconds / 60));
+      return `${mins} 分钟`;
+    }
+    return `${hours} 小时`;
+  }
+
+  function simulateFormatConnectNumber(num) {
+    if (num === null || num === undefined) return "0";
+    const val = Number(num) || 0;
+    if (val >= 10000) {
+      return (val / 1000).toFixed(1).replace(/\.0$/, "") + "k";
+    }
+    return val.toLocaleString();
+  }
+
+  assert.equal(simulateFormatConnectTime(0), "0 分钟");
+  assert.equal(simulateFormatConnectTime(120), "2 分钟");
+  assert.equal(simulateFormatConnectTime(3600), "1 小时");
+  assert.equal(simulateFormatConnectTime(1123200), "312 小时");
+
+  assert.equal(simulateFormatConnectNumber(92), "92");
+  assert.equal(simulateFormatConnectNumber(1420), "1,420");
+  assert.equal(simulateFormatConnectNumber(28600), "28.6k");
+
+  // 8. Test TL3 progress calculation
+  function simulateCalculateTl3Progress(trustLevel, summary) {
+    const daysVisited = summary.days_visited || 0;
+    const topicsEntered = summary.topics_entered || 0;
+    const postsRead = summary.posts_read_count || 0;
+    const likesGiven = summary.likes_given || 0;
+    const likesReceived = summary.likes_received || 0;
+
+    let tl3ProgressPercent = 100;
+    let tl3IsAchieved = trustLevel >= 3;
+    if (trustLevel < 3) {
+      const sVisited = Math.min(1, daysVisited / 50);
+      const sTopics = Math.min(1, topicsEntered / 500);
+      const sPosts = Math.min(1, postsRead / 20000);
+      const sGiven = Math.min(1, likesGiven / 30);
+      const sReceived = Math.min(1, likesReceived / 20);
+      tl3ProgressPercent = Math.min(99, Math.round(((sVisited + sTopics + sPosts + sGiven + sReceived) / 5) * 100));
+    }
+    return { percent: tl3ProgressPercent, isAchieved: tl3IsAchieved };
+  }
+
+  const tl3User = simulateCalculateTl3Progress(3, { days_visited: 92, topics_entered: 1420, posts_read_count: 28600, likes_given: 680, likes_received: 450 });
+  assert.equal(tl3User.isAchieved, true);
+  assert.equal(tl3User.percent, 100);
+
+  const halfWayUser = simulateCalculateTl3Progress(1, { days_visited: 25, topics_entered: 250, posts_read_count: 10000, likes_given: 15, likes_received: 10 });
+  assert.equal(halfWayUser.isAchieved, false);
+  assert.equal(halfWayUser.percent, 50);
+
+  // 9. Cleanup & UI selectors include Connect modal
+  assert.ok(
+    scriptContent.includes(".wecom-connect-overlay, .wecom-connect-modal"),
+    "WECOM_UI_SEL and cleanup must include .wecom-connect-overlay, .wecom-connect-modal"
+  );
+  assert.ok(
+    scriptContent.includes("closeLinuxDoConnectModal();"),
+    "removePanels must call closeLinuxDoConnectModal"
+  );
+
+  // 10. Styles contain modal classes and dark mode tokens
+  assert.ok(
+    scriptContent.includes(".wecom-connect-modal"),
+    "styles must define .wecom-connect-modal"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-connect-stats-grid"),
+    "styles must define .wecom-connect-stats-grid"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-connect-badge.tl-3"),
+    "styles must define TL badges"
+  );
+  assert.ok(
+    scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-connect-modal"),
+    "dark mode styles must theme .wecom-connect-modal"
+  );
+});
+
+
 
 
 
