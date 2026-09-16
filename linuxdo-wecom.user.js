@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.26
+// @version      0.7.27
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -374,6 +374,7 @@
     }
     refreshMaskedChatTitle();
     syncThemeControls();
+    if (IS_V2EX) syncV2exNav2();
   }
 
   function setMaskTitle(on) {
@@ -1020,7 +1021,7 @@
       if (query.includes("tab=all") || query.includes("tab=latest")) return "/?tab=all";
       if (query.includes("tab=")) return `/${query}`;
       if (/^\/go\//.test(pathname)) return pathname + query;
-      if (pathname === "/recent" || pathname === "/notifications" || pathname.includes("/replies")) return pathname + query;
+      if (pathname === "/recent" || pathname === "/notifications" || pathname === "/xna" || pathname.includes("/replies")) return pathname + query;
       return "/?tab=all";
     }
     const normalized = String(pathname || "/").replace(/\/+$/, "") || "/";
@@ -1211,6 +1212,90 @@
     .${ROOT_CLASS} [class*="sidebar-footer"],
     .${ROOT_CLASS} [id*="chat-drawer"] {
       display: none !important;
+    }
+
+    /* ---------- V2EX 专属分类侧栏 (nav2) ---------- */
+    html.${ROOT_CLASS} body .wecom-v2ex-nav2 {
+      display: flex !important;
+      flex-direction: column;
+      position: fixed;
+      left: var(--wc-nav); top: 0; bottom: 0;
+      width: ${NAV2_WIDTH}px !important;
+      background-color: var(--wc-bg, #FFFFFF) !important;
+      border-right: 1px solid var(--wc-border);
+      z-index: 600;
+      transform: translateX(-105%);
+      visibility: hidden;
+      transition: transform 0.18s ease, visibility 0.18s;
+      box-sizing: border-box;
+      user-select: none;
+    }
+    .${ROOT_CLASS}.wecom-nav2-open .wecom-v2ex-nav2 {
+      transform: none;
+      visibility: visible;
+    }
+    .wecom-v2ex-nav2-header {
+      height: 52px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--wc-border);
+    }
+    .wecom-v2ex-nav2-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--wc-text-3);
+      letter-spacing: 0.5px;
+    }
+    .wecom-v2ex-nav2-list {
+      flex: 1;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 8px 8px;
+    }
+    .wecom-v2ex-nav2-list::-webkit-scrollbar { width: 4px; }
+    .wecom-v2ex-nav2-list::-webkit-scrollbar-thumb { background: transparent; border-radius: 2px; }
+    .wecom-v2ex-nav2-list:hover::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.15); }
+    .wecom-v2ex-nav2-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 34px;
+      padding: 0 12px;
+      margin-bottom: 2px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--wc-text-2) !important;
+      text-decoration: none !important;
+      cursor: pointer;
+      transition: background-color 0.15s, color 0.15s;
+    }
+    .wecom-v2ex-nav2-item:hover {
+      background-color: var(--wc-hover) !important;
+      color: var(--wc-text) !important;
+    }
+    .wecom-v2ex-nav2-item.active {
+      background-color: var(--wc-active) !important;
+      color: var(--wc-accent) !important;
+      font-weight: 600;
+    }
+    .wecom-v2ex-nav2-item .wecom-nav2-cat-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: var(--wc-text-3);
+      opacity: 0.5;
+      margin: 0;
+      transition: background-color 0.15s, opacity 0.15s;
+    }
+    .wecom-v2ex-nav2-item:hover .wecom-nav2-cat-dot {
+      background-color: var(--wc-accent);
+      opacity: 0.8;
+    }
+    .wecom-v2ex-nav2-item.active .wecom-nav2-cat-dot {
+      background-color: var(--wc-accent);
+      opacity: 1;
     }
 
     /* ---------- 窄图标条：假 icon（纯装饰） ---------- */
@@ -6874,6 +6959,30 @@
       --d-hover: rgba(255, 255, 255, 0.06) !important;
     }
 
+    /* V2EX 侧栏原生展开抽屉 (nav2) */
+    html.${ROOT_CLASS}.wecom-dark body .wecom-v2ex-nav2 {
+      background-color: #1C1E22 !important;
+      border-right-color: #26292E !important;
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-nav2-header {
+      border-bottom-color: #26292E !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-nav2-list:hover::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-nav2-item {
+      color: #959CA6 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-nav2-item:hover {
+      background-color: rgba(255, 255, 255, 0.06) !important;
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-nav2-item.active {
+      background-color: rgba(26, 135, 255, 0.16) !important;
+      color: #1A87FF !important;
+    }
+
     /* 左侧头像通知浮层与用户菜单 */
     html.wecom-dark .user-menu.wecom-user-menu-float,
     html.${ROOT_CLASS}.wecom-dark .user-menu.wecom-user-menu-float,
@@ -7915,6 +8024,10 @@
       moreBtn.setAttribute("aria-expanded", open ? "true" : "false");
       moreBtn.title = open ? "收起话题导航" : "展开话题导航";
     }
+    if (IS_V2EX && open) {
+      ensureV2exNav2();
+      syncV2exNav2();
+    }
   }
 
   function isBoostEnabled() {
@@ -8650,7 +8763,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.26";
+  const SCRIPT_VERSION = "0.7.27";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -10122,8 +10235,6 @@
   ];
 
   const DEFAULT_V2EX_LIST_NAV = [
-    { href: "/?tab=hot", label: "最热" },
-    { href: "/?tab=all", label: "全部" },
     { href: "/?tab=tech", label: "技术" },
     { href: "/?tab=creative", label: "创意" },
     { href: "/?tab=play", label: "好玩" },
@@ -10132,8 +10243,94 @@
     { href: "/?tab=deals", label: "交易" },
     { href: "/?tab=city", label: "城市" },
     { href: "/?tab=qna", label: "问与答" },
-    { href: "/recent", label: "最新" }
+    { href: "/?tab=hot", label: "最热" },
+    { href: "/?tab=all", label: "全部" },
+    { href: "/?tab=r2", label: "R2" },
+    { href: "/?tab=nodes", label: "节点" },
+    { href: "/?tab=members", label: "特别关注" },
+    { href: "/xna", label: "VXNA" }
   ];
+
+  let cachedV2exTabs = null;
+
+  function extractV2exTabsFromDom(root = document) {
+    const tabsEl = root.querySelector("#Tabs");
+    if (!tabsEl) return null;
+    const links = [...tabsEl.querySelectorAll("a")].map((a) => ({
+      href: a.getAttribute("href") || "#",
+      label: (a.textContent || "").replace(/\s+/g, " ").trim(),
+      active: a.classList.contains("tab_current")
+    })).filter((it) => it.label && it.href && it.href !== "#" && !it.href.startsWith("javascript:"));
+    return links.length ? links : null;
+  }
+
+  function getV2exTabs() {
+    const fromDom = extractV2exTabsFromDom(document);
+    if (fromDom && fromDom.length) {
+      cachedV2exTabs = fromDom;
+      try { localStorage.setItem("linuxdo-wecom-v2ex-tabs", JSON.stringify(fromDom)); } catch {}
+      return fromDom;
+    }
+    if (cachedV2exTabs && cachedV2exTabs.length) return cachedV2exTabs;
+    try {
+      const stored = JSON.parse(localStorage.getItem("linuxdo-wecom-v2ex-tabs") || "null");
+      if (Array.isArray(stored) && stored.length) {
+        cachedV2exTabs = stored;
+        return stored;
+      }
+    } catch {}
+    return DEFAULT_V2EX_LIST_NAV;
+  }
+
+  function ensureV2exNav2() {
+    if (!IS_V2EX) return null;
+    let nav2 = document.querySelector(".wecom-v2ex-nav2");
+    if (nav2) return nav2;
+    nav2 = document.createElement("nav");
+    nav2.className = "wecom-v2ex-nav2";
+    nav2.setAttribute("role", "navigation");
+    nav2.setAttribute("aria-label", "话题分类导航");
+    nav2.innerHTML = `
+      <div class="wecom-v2ex-nav2-header">
+        <span class="wecom-v2ex-nav2-title">${isMaskTitleList() ? "部门架构" : "话题分类"}</span>
+      </div>
+      <div class="wecom-v2ex-nav2-list"></div>
+    `;
+    document.body.appendChild(nav2);
+    nav2.addEventListener("click", (e) => {
+      const link = e.target.closest("a.wecom-v2ex-nav2-item");
+      if (!link) return;
+      e.preventDefault();
+      const href = link.getAttribute("href");
+      if (!href) return;
+      navigateInApp(href);
+      syncV2exNav2();
+      syncListNav();
+    });
+    return nav2;
+  }
+
+  function syncV2exNav2() {
+    if (!IS_V2EX) return;
+    const nav2 = ensureV2exNav2();
+    if (!nav2) return;
+    const listEl = nav2.querySelector(".wecom-v2ex-nav2-list");
+    const titleEl = nav2.querySelector(".wecom-v2ex-nav2-title");
+    if (titleEl) {
+      titleEl.textContent = isMaskTitleList() ? "部门架构" : "话题分类";
+    }
+    if (!listEl) return;
+    const items = collectListNavItems();
+    const html = items.map((it) => `
+      <a href="${escapeHtml(it.href)}" class="wecom-v2ex-nav2-item${it.active ? " active" : ""}">
+        <span class="wecom-nav2-cat-dot"></span>
+        <span class="wecom-v2ex-nav2-name">${escapeHtml(it.label)}</span>
+      </a>
+    `).join("");
+    if (listEl.dataset.sig === html) return;
+    listEl.dataset.sig = html;
+    listEl.innerHTML = html;
+  }
 
   function applyListNavDom() {
     const panel = document.querySelector(".wecom-list-panel");
@@ -10161,19 +10358,27 @@
 
   function collectListNavItems() {
     if (IS_V2EX) {
-      const v2exTabs = document.querySelectorAll("#Tabs a, #Main .cell table a[href^='/?tab=']");
-      if (v2exTabs.length > 0) {
-        const items = [...v2exTabs].map((a) => ({
-          href: a.getAttribute("href") || "#",
-          label: (a.textContent || "").replace(/\s+/g, " ").trim(),
-          active: a.classList.contains("tab_current") || (location.search && location.search.includes(a.getAttribute("href") || ""))
-        })).filter((it) => it.label && it.href && it.href !== "#");
-        if (items.length) return items;
-      }
-      return DEFAULT_V2EX_LIST_NAV.map((it) => ({
-        ...it,
-        active: (location.search && location.search.includes(it.href)) || (it.href === "/?tab=all" && location.pathname === "/" && !location.search)
-      }));
+      const tabs = getV2exTabs();
+      const curSearch = (typeof location !== "undefined" && location.search) || "";
+      const curPath = (typeof location !== "undefined" && location.pathname) || "/";
+      const hasQuery = Boolean(curSearch && curSearch.includes("tab="));
+      const hasDomActive = tabs.some((t) => t.active);
+      return tabs.map((it) => {
+        let active = false;
+        if (hasQuery) {
+          active = it.href.includes("tab=") && curSearch.includes(it.href.split("?")[1]);
+        } else if (curPath === "/xna" && it.href === "/xna") {
+          active = true;
+        } else if (curPath === "/" && !curSearch) {
+          active = hasDomActive ? Boolean(it.active) : (it.href === "/?tab=all" || it.href === "/?tab=tech");
+        } else if (it.href === curPath) {
+          active = true;
+        }
+        return {
+          ...it,
+          active
+        };
+      });
     }
     const native = document.querySelector("#navigation-bar");
     if (native) {
@@ -17261,6 +17466,7 @@
     document.querySelector(".wecom-theme-menu")?.remove();
     document.querySelector(".wecom-update-notice")?.remove();
     document.querySelector(".wecom-edit-dialog")?.remove();
+    document.querySelector(".wecom-v2ex-nav2")?.remove();
   }
 
   let initialNewTopicChecked = false;
@@ -17328,6 +17534,10 @@
       document.querySelector(".wecom-member-panel")?.remove();
       document.querySelector(".wecom-list-resizer")?.remove();
       document.documentElement.classList.remove("wecom-members-open");
+      if (IS_V2EX) {
+        ensureV2exNav2();
+        syncV2exNav2();
+      }
       return;
     }
 
@@ -17336,6 +17546,10 @@
     ensureListResizer();
     applyListWidth(getListWidth());
     syncListNav();
+    if (IS_V2EX) {
+      ensureV2exNav2();
+      syncV2exNav2();
+    }
 
     if (isTopic) {
       // 进帖子：保留当前会话列表，只更新选中态 + 加载右栏
@@ -17465,7 +17679,7 @@
       });
     }
 
-    const WECOM_UI_SEL = ".wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
+    const WECOM_UI_SEL = ".wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
     const NATIVE_BRIDGE_SEL = "#reply-control, .dialog-holder, .dialog-container, #discourse-modal-container, .d-modal, .bootbox, .autocomplete, .autocomplete-container, .d-editor-popup, [data-identifier='emoji-picker'], .tag-chooser";
     const observer = new MutationObserver((mutations) => {
       // 忽略我们自己面板内部的 DOM 变动，否则点开筛选会立刻触发 applyTheme 回写/闪断

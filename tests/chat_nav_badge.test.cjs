@@ -3580,6 +3580,110 @@ test("Topic reply polling and background post sync preserves user reading positi
   assert.equal(olderRes.shouldScroll, false, "options.scroll: false must never scroll to bottom");
 });
 
+test("V2EX category navigation extracts #Tabs, provides persistent cache, and renders .wecom-v2ex-nav2 sidebar", () => {
+  // 1. Script definitions and CSS
+  assert.ok(
+    scriptContent.includes("function extractV2exTabsFromDom("),
+    "must define extractV2exTabsFromDom"
+  );
+  assert.ok(
+    scriptContent.includes("function getV2exTabs()"),
+    "must define getV2exTabs"
+  );
+  assert.ok(
+    scriptContent.includes("function ensureV2exNav2()"),
+    "must define ensureV2exNav2"
+  );
+  assert.ok(
+    scriptContent.includes("function syncV2exNav2()"),
+    "must define syncV2exNav2"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-v2ex-nav2"),
+    "must include .wecom-v2ex-nav2 in CSS"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-v2ex-nav2-item"),
+    "must include .wecom-v2ex-nav2-item in CSS"
+  );
+  assert.ok(
+    scriptContent.includes('localStorage.setItem("linuxdo-wecom-v2ex-tabs"'),
+    "must persist parsed #Tabs to localStorage"
+  );
+
+  // 2. DEFAULT_V2EX_LIST_NAV includes full standard categories from #Tabs
+  assert.ok(
+    scriptContent.includes('{ href: "/?tab=tech", label: "技术" }'),
+    "DEFAULT_V2EX_LIST_NAV must include 技术"
+  );
+  assert.ok(
+    scriptContent.includes('{ href: "/?tab=creative", label: "创意" }'),
+    "DEFAULT_V2EX_LIST_NAV must include 创意"
+  );
+  assert.ok(
+    scriptContent.includes('{ href: "/?tab=all", label: "全部" }'),
+    "DEFAULT_V2EX_LIST_NAV must include 全部"
+  );
+  assert.ok(
+    scriptContent.includes('{ href: "/?tab=hot", label: "最热" }'),
+    "DEFAULT_V2EX_LIST_NAV must include 最热"
+  );
+  assert.ok(
+    scriptContent.includes('{ href: "/?tab=r2", label: "R2" }'),
+    "DEFAULT_V2EX_LIST_NAV must include R2"
+  );
+  assert.ok(
+    scriptContent.includes('{ href: "/xna", label: "VXNA" }'),
+    "DEFAULT_V2EX_LIST_NAV must include VXNA"
+  );
+
+  // 3. Simulation test for extractV2exTabsFromDom
+  function simulateExtractV2exTabs(root) {
+    const tabsEl = root.querySelector("#Tabs");
+    if (!tabsEl) return null;
+    const links = [...tabsEl.querySelectorAll("a")].map((a) => ({
+      href: a.getAttribute("href") || "#",
+      label: (a.textContent || "").replace(/\s+/g, " ").trim(),
+      active: a.classList.contains("tab_current")
+    })).filter((it) => it.label && it.href && it.href !== "#" && !it.href.startsWith("javascript:"));
+    return links.length ? links : null;
+  }
+
+  const mockTabsEl = {
+    querySelectorAll: (sel) => {
+      if (sel === "a") {
+        return [
+          { getAttribute: () => "/?tab=tech", textContent: "技术", classList: { contains: (c) => c === "tab_current" } },
+          { getAttribute: () => "/?tab=creative", textContent: "创意", classList: { contains: () => false } },
+          { getAttribute: () => "/?tab=apple", textContent: "Apple", classList: { contains: () => false } },
+          { getAttribute: () => "/planet", textContent: "", classList: { contains: () => false } }, // empty label (image only)
+          { getAttribute: () => "#", textContent: "无效", classList: { contains: () => false } }
+        ];
+      }
+      return [];
+    }
+  };
+
+  const mockDoc = {
+    querySelector: (sel) => (sel === "#Tabs" ? mockTabsEl : null)
+  };
+
+  const extracted = simulateExtractV2exTabs(mockDoc);
+  assert.ok(extracted, "must extract tabs from #Tabs");
+  assert.equal(extracted.length, 3, "must filter out empty text and invalid # links");
+  assert.equal(extracted[0].label, "技术");
+  assert.equal(extracted[0].href, "/?tab=tech");
+  assert.equal(extracted[0].active, true);
+  assert.equal(extracted[1].label, "创意");
+  assert.equal(extracted[1].href, "/?tab=creative");
+  assert.equal(extracted[1].active, false);
+
+  // When #Tabs is absent (e.g. topic page)
+  const emptyDoc = { querySelector: () => null };
+  assert.equal(simulateExtractV2exTabs(emptyDoc), null);
+});
+
+
 
 
 
