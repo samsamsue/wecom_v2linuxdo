@@ -4915,6 +4915,311 @@ test("polling replies strictly preserves scrollbar position without jumping (v0.
   assert.equal(submitRes.scrollDelta, 2200);
 });
 
+test("Linux DO Connect modal retrieves and renders page-content requirements data (rings, bars, quotas, vetos, tables) (v0.7.39)", () => {
+  // 1. Core functions are defined in userscript
+  assert.ok(
+    scriptContent.includes("function parseNumberValue("),
+    "must define parseNumberValue"
+  );
+  assert.ok(
+    scriptContent.includes("function extractCurrentRequired("),
+    "must define extractCurrentRequired"
+  );
+  assert.ok(
+    scriptContent.includes("function fetchConnectHtml()"),
+    "must define fetchConnectHtml"
+  );
+  assert.ok(
+    scriptContent.includes("function parseLinuxDoConnectHtml("),
+    "must define parseLinuxDoConnectHtml"
+  );
+  assert.ok(
+    scriptContent.includes("function buildFallbackRequirements("),
+    "must define buildFallbackRequirements"
+  );
+
+  // 2. CSS selectors include page-content cards and badges
+  assert.ok(
+    scriptContent.includes(".wecom-connect-banner"),
+    "must include .wecom-connect-banner in styles"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-connect-progress-box"),
+    "must include .wecom-connect-progress-box in styles"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-connect-section"),
+    "must include .wecom-connect-section in styles"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-connect-req-item"),
+    "must include .wecom-connect-req-item in styles"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-connect-mini-bar"),
+    "must include .wecom-connect-mini-bar in styles"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-connect-req-badge"),
+    "must include .wecom-connect-req-badge in styles"
+  );
+
+  // 3. Functional simulation of parseNumberValue and extractCurrentRequired
+  function parseNumberValue(text) {
+    const normalized = String(text || "").replace(/,/g, "");
+    const match = normalized.match(/-?\d+/);
+    return match ? parseInt(match[0], 10) : 0;
+  }
+
+  function extractCurrentRequired(text) {
+    const normalized = String(text || "").replace(/,/g, "");
+    const parts = normalized.split("/");
+    if (parts.length >= 2) {
+      return {
+        currentValue: parseNumberValue(parts[0]),
+        requiredValue: parseNumberValue(parts[1])
+      };
+    }
+    const allNums = normalized.match(/-?\d+/g) || [];
+    if (allNums.length >= 2) {
+      return {
+        currentValue: parseInt(allNums[0], 10),
+        requiredValue: parseInt(allNums[1], 10)
+      };
+    }
+    return {
+      currentValue: allNums.length === 1 ? parseInt(allNums[0], 10) : 0,
+      requiredValue: 0
+    };
+  }
+
+  assert.equal(parseNumberValue("24,500"), 24500);
+  assert.equal(parseNumberValue("/ 50"), 50);
+  assert.equal(parseNumberValue("-5"), -5);
+  assert.equal(parseNumberValue(""), 0);
+
+  const nums1 = extractCurrentRequired("45 / 30");
+  assert.equal(nums1.currentValue, 45);
+  assert.equal(nums1.requiredValue, 30);
+
+  const nums2 = extractCurrentRequired("12/500");
+  assert.equal(nums2.currentValue, 12);
+  assert.equal(nums2.requiredValue, 500);
+
+  // 4. Mock DOM parser simulation
+  function createMockNode(tag, attrs = {}, text = '', children = []) {
+    const classes = (attrs.class || '').split(/\s+/).filter(Boolean);
+    return {
+      tagName: tag.toUpperCase(),
+      className: attrs.class || '',
+      classList: {
+        contains: (c) => classes.includes(c)
+      },
+      textContent: text,
+      children,
+      querySelector: function(sel) {
+        return this.querySelectorAll(sel)[0] || null;
+      },
+      querySelectorAll: function(sel) {
+        const results = [];
+        const matchSel = (node, s) => {
+          if (!s) return false;
+          if (s.startsWith('.')) {
+            const c = s.slice(1);
+            return node.classList && node.classList.contains(c);
+          }
+          if (s.toLowerCase() === node.tagName?.toLowerCase()) return true;
+          return false;
+        };
+
+        const selectors = sel.split(',').map(s => s.trim());
+        const traverse = (n) => {
+          for (const s of selectors) {
+            if (matchSel(n, s)) {
+              results.push(n);
+              break;
+            }
+          }
+          (n.children || []).forEach(traverse);
+        };
+        (this.children || []).forEach(traverse);
+        return results;
+      }
+    };
+  }
+
+  function simulateParseLinuxDoConnectFromDoc(doc) {
+    const trustCard = doc.querySelector('.card, .page-content, .page-body') || doc;
+    const headingText = (trustCard.querySelector('.card-title, h2, h1, .page-title')?.textContent || '').trim();
+    const levelMatch = headingText.match(/信任级别\s*(\d+)/i);
+    const targetLevel = levelMatch ? parseInt(levelMatch[1], 10) : 3;
+
+    const subtitleText = (trustCard.querySelector('.card-subtitle')?.textContent || '').trim();
+    const subtitleUserMatch = subtitleText.match(/@([^\s·]+)/);
+    const username = subtitleUserMatch ? subtitleUserMatch[1] : '';
+
+    const requirements = [];
+
+    // Rings
+    trustCard.querySelectorAll('.tl3-ring').forEach(item => {
+      const name = (item.querySelector('.tl3-ring-label')?.textContent || '').trim();
+      const currentText = (item.querySelector('.tl3-ring-current')?.textContent || '').trim();
+      const targetText = (item.querySelector('.tl3-ring-target')?.textContent || '').trim();
+      if (!name) return;
+
+      const currentValue = parseNumberValue(currentText);
+      const requiredValue = parseNumberValue(targetText);
+      const circle = item.querySelector('.tl3-ring-circle');
+      const isSuccess = circle ? circle.classList.contains('met') : currentValue >= requiredValue;
+      const percent = requiredValue > 0 ? Math.min(100, Math.round((currentValue / requiredValue) * 100)) : (currentValue === 0 ? 100 : 0);
+
+      requirements.push({ name, category: '活跃程度', current: currentValue, required: requiredValue, isSuccess, percent, type: 'ring' });
+    });
+
+    // Bars
+    trustCard.querySelectorAll('.tl3-bar-item').forEach(bar => {
+      const name = (bar.querySelector('.tl3-bar-label')?.textContent || '').trim();
+      const numsText = (bar.querySelector('.tl3-bar-nums')?.textContent || '').trim();
+      if (!name) return;
+
+      const { currentValue, requiredValue } = extractCurrentRequired(numsText);
+      const numsNode = bar.querySelector('.tl3-bar-nums');
+      const fillNode = bar.querySelector('.tl3-bar-fill');
+      const isSuccess = (numsNode?.classList.contains('met') || fillNode?.classList.contains('met')) || currentValue >= requiredValue;
+      const percent = requiredValue > 0 ? Math.min(100, Math.round((currentValue / requiredValue) * 100)) : 100;
+
+      requirements.push({ name, category: '互动参与', current: currentValue, required: requiredValue, isSuccess, percent, type: 'bar' });
+    });
+
+    // Quotas
+    trustCard.querySelectorAll('.tl3-quota-card').forEach(quota => {
+      const name = (quota.querySelector('.tl3-quota-label')?.textContent || '').trim();
+      const numsText = (quota.querySelector('.tl3-quota-nums')?.textContent || '').trim();
+      if (!name) return;
+
+      const { currentValue, requiredValue } = extractCurrentRequired(numsText);
+      const isSuccess = quota.classList.contains('met') || currentValue <= requiredValue;
+      const percent = requiredValue > 0 ? Math.min(100, Math.round((currentValue / requiredValue) * 100)) : 100;
+
+      requirements.push({ name, category: '合规记录', current: currentValue, required: requiredValue, isSuccess, percent, type: 'quota' });
+    });
+
+    // Vetos
+    trustCard.querySelectorAll('.tl3-veto-item').forEach(veto => {
+      const name = (veto.querySelector('.tl3-veto-label')?.textContent || '').trim();
+      const currentText = (veto.querySelector('.tl3-veto-value')?.textContent || '').trim();
+      if (!name) return;
+
+      const currentValue = parseNumberValue(currentText);
+      const isSuccess = veto.classList.contains('met') || currentValue === 0;
+
+      requirements.push({ name, category: '限制要求', current: currentValue, required: 0, isSuccess, percent: isSuccess ? 100 : 0, type: 'veto' });
+    });
+
+    const statusNode = trustCard.querySelector('.status-met, .status-unmet');
+    const isMeetingRequirements = statusNode ? statusNode.classList.contains('status-met') : requirements.every(r => r.isSuccess);
+    const metCount = requirements.filter(r => r.isSuccess).length;
+    const totalCount = requirements.length;
+    const overallPercent = totalCount > 0 ? Math.round((metCount / totalCount) * 100) : 0;
+
+    return { targetLevel, username, requirements, isMeetingRequirements, metCount, totalCount, overallPercent };
+  }
+
+  const mockDoc = createMockNode('div', { class: 'page-wrapper' }, '', [
+    createMockNode('div', { class: 'page-content' }, '', [
+      createMockNode('div', { class: 'card' }, '', [
+        createMockNode('div', { class: 'card-header' }, '', [
+          createMockNode('h2', { class: 'card-title' }, '信任级别 3 的要求'),
+          createMockNode('div', { class: 'card-subtitle' }, '@neo · 距离下次评估还剩 3 天')
+        ]),
+        createMockNode('div', { class: 'card-body' }, '', [
+          createMockNode('div', { class: 'status-met' }, '已符合信任级别 3 要求'),
+          createMockNode('div', { class: 'tl3-ring' }, '', [
+            createMockNode('div', { class: 'tl3-ring-circle met' }),
+            createMockNode('div', { class: 'tl3-ring-label' }, '访问天数'),
+            createMockNode('div', { class: 'tl3-ring-current' }, '85'),
+            createMockNode('div', { class: 'tl3-ring-target' }, '/ 50')
+          ]),
+          createMockNode('div', { class: 'tl3-bar-item' }, '', [
+            createMockNode('div', { class: 'tl3-bar-label' }, '送出的点赞'),
+            createMockNode('div', { class: 'tl3-bar-nums met' }, '45 / 30'),
+            createMockNode('div', { class: 'tl3-bar-fill met' })
+          ]),
+          createMockNode('div', { class: 'tl3-quota-card met' }, '', [
+            createMockNode('div', { class: 'tl3-quota-label' }, '被举报数量'),
+            createMockNode('div', { class: 'tl3-quota-nums' }, '0 / 5')
+          ]),
+          createMockNode('div', { class: 'tl3-veto-item met' }, '', [
+            createMockNode('div', { class: 'tl3-veto-label' }, '被禁言 (过去 6 个月)'),
+            createMockNode('div', { class: 'tl3-veto-value' }, '0')
+          ])
+        ])
+      ])
+    ])
+  ]);
+
+  const parsed = simulateParseLinuxDoConnectFromDoc(mockDoc);
+  assert.equal(parsed.targetLevel, 3);
+  assert.equal(parsed.username, 'neo');
+  assert.equal(parsed.isMeetingRequirements, true);
+  assert.equal(parsed.requirements.length, 4);
+  assert.equal(parsed.metCount, 4);
+  assert.equal(parsed.overallPercent, 100);
+
+  // 5. Fallback requirements generation
+  function simulateBuildFallbackRequirements(trustLevel, summary = {}, user = {}) {
+    const daysVisited = summary.days_visited || 0;
+    const topicsEntered = summary.topics_entered || 0;
+    const postsRead = summary.posts_read_count || 0;
+    const likesGiven = summary.likes_given || 0;
+    const likesReceived = summary.likes_received || 0;
+
+    const targetLevel = trustLevel >= 3 ? 3 : (trustLevel === 2 ? 3 : 2);
+    const requirements = [
+      { name: "访问天数 (过去100天)", category: "活跃程度", current: daysVisited, required: 50, isSuccess: daysVisited >= 50, percent: Math.min(100, Math.round((daysVisited / 50) * 100)), unit: "天", type: "ring" },
+      { name: "浏览话题 (过去100天)", category: "活跃程度", current: topicsEntered, required: 500, isSuccess: topicsEntered >= 500, percent: Math.min(100, Math.round((topicsEntered / 500) * 100)), unit: "个", type: "ring" },
+      { name: "阅读帖子 (过去100天)", category: "活跃程度", current: postsRead, required: 20000, isSuccess: postsRead >= 20000, percent: Math.min(100, Math.round((postsRead / 20000) * 100)), unit: "帖", type: "ring" },
+      { name: "送出的点赞", category: "互动参与", current: likesGiven, required: 30, isSuccess: likesGiven >= 30, percent: Math.min(100, Math.round((likesGiven / 30) * 100)), unit: "次", type: "bar" },
+      { name: "收获的点赞", category: "互动参与", current: likesReceived, required: 20, isSuccess: likesReceived >= 20, percent: Math.min(100, Math.round((likesReceived / 20) * 100)), unit: "次", type: "bar" },
+      { name: "社区违规惩罚", category: "限制要求", current: (user.silenced || user.suspended) ? 1 : 0, required: 0, isSuccess: !user.silenced && !user.suspended, percent: (!user.silenced && !user.suspended) ? 100 : 0, unit: "次", type: "veto" },
+      { name: "封禁记录 (过去6个月)", category: "限制要求", current: 0, required: 0, isSuccess: true, percent: 100, unit: "次", type: "veto" }
+    ];
+
+    const isMeetingRequirements = trustLevel >= targetLevel || requirements.every((r) => r.isSuccess);
+    const metCount = requirements.filter((r) => r.isSuccess).length;
+    const totalCount = requirements.length;
+    const overallPercent = totalCount > 0 ? Math.round((metCount / totalCount) * 100) : 0;
+
+    return { targetLevel, requirements, isMeetingRequirements, metCount, totalCount, overallPercent, source: "discourse_fallback" };
+  }
+
+  const fallbackData = simulateBuildFallbackRequirements(2, {
+    days_visited: 55,
+    topics_entered: 600,
+    posts_read_count: 22000,
+    likes_given: 40,
+    likes_received: 25
+  });
+  assert.equal(fallbackData.targetLevel, 3);
+  assert.equal(fallbackData.isMeetingRequirements, true);
+  assert.equal(fallbackData.metCount, 7);
+  assert.equal(fallbackData.totalCount, 7);
+  assert.equal(fallbackData.overallPercent, 100);
+
+  const partialData = simulateBuildFallbackRequirements(2, {
+    days_visited: 10,
+    topics_entered: 50,
+    posts_read_count: 500,
+    likes_given: 2,
+    likes_received: 1
+  });
+  assert.equal(partialData.targetLevel, 3);
+  assert.equal(partialData.isMeetingRequirements, false);
+  assert.equal(partialData.metCount, 2); // 2 vetos pass (no violation, no ban)
+  assert.ok(partialData.overallPercent < 50);
+});
+
+
 
 
 

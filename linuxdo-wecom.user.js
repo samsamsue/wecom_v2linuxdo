@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.38
+// @version      0.7.39
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -2006,7 +2006,7 @@
       animation: wecomFadeIn 0.15s ease-out;
     }
     .wecom-connect-modal {
-      width: 460px;
+      width: 500px;
       max-width: calc(100vw - 32px);
       max-height: calc(100vh - 40px);
       overflow-y: auto;
@@ -2174,6 +2174,195 @@
       padding: 1px 6px;
       border-radius: 4px;
     }
+    /* Target Level Status Banner */
+    .wecom-connect-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid;
+    }
+    .wecom-connect-banner.met {
+      background: #F6FFED;
+      border-color: #B7EB8F;
+      color: #389E0D;
+    }
+    .wecom-connect-banner.unmet {
+      background: #FFFBE6;
+      border-color: #FFE58F;
+      color: #D46B08;
+    }
+    .wecom-connect-banner-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .wecom-connect-banner-title {
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .wecom-connect-banner-sub {
+      font-size: 11px;
+      opacity: 0.85;
+    }
+    .wecom-connect-banner-badge {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 12px;
+    }
+    .wecom-connect-banner.met .wecom-connect-banner-badge {
+      background: #52C41A;
+      color: #FFFFFF;
+    }
+    .wecom-connect-banner.unmet .wecom-connect-banner-badge {
+      background: #FA8C16;
+      color: #FFFFFF;
+    }
+
+    /* Overall Progress Box */
+    .wecom-connect-progress-box {
+      background: #FAFAFB;
+      border: 1px solid #E5E6EB;
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .wecom-connect-progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .wecom-connect-progress-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #1F2329;
+    }
+    .wecom-connect-progress-ratio,
+    .wecom-connect-progress-percent {
+      font-size: 12px;
+      font-weight: 700;
+      color: #1664FF;
+    }
+    .wecom-connect-progress-bar {
+      height: 6px;
+      background: #E5E6EB;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .wecom-connect-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #1664FF, #00B42A);
+      border-radius: 3px;
+      transition: width 0.3s;
+    }
+
+    /* Requirement Sections */
+    .wecom-connect-section {
+      border: 1px solid #EBEDF0;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #FFFFFF;
+    }
+    .wecom-connect-section-title {
+      padding: 8px 12px;
+      background: #F7F8FA;
+      border-bottom: 1px solid #EBEDF0;
+      font-size: 12px;
+      font-weight: 700;
+      color: #4E5969;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .wecom-connect-req-list {
+      display: flex;
+      flex-direction: column;
+    }
+    .wecom-connect-req-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px;
+      border-bottom: 1px solid #F2F3F5;
+      gap: 10px;
+    }
+    .wecom-connect-req-item:last-child {
+      border-bottom: none;
+    }
+    .wecom-connect-req-left {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .wecom-connect-req-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: #1F2329;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .wecom-connect-mini-bar {
+      height: 4px;
+      background: #F0F1F3;
+      border-radius: 2px;
+      overflow: hidden;
+      width: 100%;
+      max-width: 220px;
+    }
+    .wecom-connect-mini-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: #1664FF;
+    }
+    .wecom-connect-mini-fill.met {
+      background: #00B42A;
+    }
+    .wecom-connect-req-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .wecom-connect-req-values {
+      font-size: 12px;
+      color: #646A73;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+    .wecom-connect-req-values .cur {
+      font-weight: 700;
+      color: #1F2329;
+    }
+    .wecom-connect-req-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 10px;
+      white-space: nowrap;
+    }
+    .wecom-connect-req-badge.met {
+      background: #E8FFEA;
+      color: #00B42A;
+    }
+    .wecom-connect-req-badge.unmet {
+      background: #FFF2F0;
+      color: #F53F3F;
+    }
+    .wecom-connect-source-note {
+      font-size: 11px;
+      color: #8F959E;
+      text-align: center;
+      padding-top: 2px;
+    }
+
     .wecom-connect-stats-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -2202,34 +2391,6 @@
       border: 1px solid #E5E6EB;
       border-radius: 8px;
       padding: 12px 14px;
-    }
-    .wecom-connect-progress-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
-    }
-    .wecom-connect-progress-title {
-      font-size: 12px;
-      font-weight: 600;
-      color: #1F2329;
-    }
-    .wecom-connect-progress-percent {
-      font-size: 12px;
-      font-weight: 700;
-      color: #1664FF;
-    }
-    .wecom-connect-progress-bar {
-      height: 6px;
-      background: #E5E6EB;
-      border-radius: 3px;
-      overflow: hidden;
-    }
-    .wecom-connect-progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #1664FF, #00D4B2);
-      border-radius: 3px;
-      transition: width 0.3s;
     }
     .wecom-connect-footer {
       padding: 12px 20px;
@@ -8373,6 +8534,55 @@
     html.${ROOT_CLASS}.wecom-dark .wecom-connect-btn.secondary:hover {
       background: #2C313A;
     }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-banner.met {
+      background: rgba(82, 196, 26, 0.12);
+      border-color: rgba(82, 196, 26, 0.3);
+      color: #73D13D;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-banner.unmet {
+      background: rgba(250, 140, 22, 0.12);
+      border-color: rgba(250, 140, 22, 0.3);
+      color: #FFA940;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-progress-box {
+      background: #23272E;
+      border-color: #2C313A;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-section {
+      background: #1E222A;
+      border-color: #2C313A;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-section-title {
+      background: #23272E;
+      border-color: #2C313A;
+      color: #98A2B3;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-req-item {
+      border-color: #2C313A;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-req-name {
+      color: #E6E8EB;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-req-values {
+      color: #8C92A4;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-req-values .cur {
+      color: #E6E8EB;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-mini-bar {
+      background: #2C313A;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-req-badge.met {
+      background: rgba(0, 180, 42, 0.15);
+      color: #27C346;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-req-badge.unmet {
+      background: rgba(245, 63, 63, 0.15);
+      color: #F76560;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-source-note {
+      color: #727988;
+    }
 
     /* 左侧头像通知浮层与用户菜单 */
     html.wecom-dark .user-menu.wecom-user-menu-float,
@@ -10225,7 +10435,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.38";
+  const SCRIPT_VERSION = "0.7.39";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -12997,6 +13207,329 @@
     return val.toLocaleString();
   }
 
+  function parseNumberValue(text) {
+    const normalized = String(text || "").replace(/,/g, "");
+    const match = normalized.match(/-?\d+/);
+    return match ? parseInt(match[0], 10) : 0;
+  }
+
+  function extractCurrentRequired(text) {
+    const normalized = String(text || "").replace(/,/g, "");
+    const parts = normalized.split("/");
+    if (parts.length >= 2) {
+      return {
+        currentValue: parseNumberValue(parts[0]),
+        requiredValue: parseNumberValue(parts[1])
+      };
+    }
+    const allNums = normalized.match(/-?\d+/g) || [];
+    if (allNums.length >= 2) {
+      return {
+        currentValue: parseInt(allNums[0], 10),
+        requiredValue: parseInt(allNums[1], 10)
+      };
+    }
+    return {
+      currentValue: allNums.length === 1 ? parseInt(allNums[0], 10) : 0,
+      requiredValue: 0
+    };
+  }
+
+  async function fetchConnectHtml() {
+    const tryGm = () => new Promise((resolve, reject) => {
+      const gmXhr = (typeof GM_xmlhttpRequest === "function" ? GM_xmlhttpRequest : null)
+        || (typeof GM !== "undefined" && typeof GM.xmlHttpRequest === "function" ? GM.xmlHttpRequest : null);
+      if (!gmXhr) return reject(new Error("GM unavailable"));
+      try {
+        gmXhr({
+          method: "GET",
+          url: "https://connect.linux.do",
+          onload: (res) => {
+            if (res.status === 200 && res.responseText) resolve(res.responseText);
+            else reject(new Error(`Connect status ${res.status}`));
+          },
+          onerror: (err) => reject(err),
+          ontimeout: () => reject(new Error("Connect timeout"))
+        });
+      } catch (e) {
+        reject(e);
+      }
+    });
+
+    try {
+      return await tryGm();
+    } catch {
+      const res = await fetch("https://connect.linux.do", {
+        credentials: "include",
+        headers: { "Accept": "text/html,application/xhtml+xml,application/xml" }
+      });
+      if (!res.ok) throw new Error(`Connect status ${res.status}`);
+      return await res.text();
+    }
+  }
+
+  function parseLinuxDoConnectHtml(html) {
+    if (!html || typeof html !== "string") return null;
+    try {
+      if (typeof DOMParser === "undefined") return null;
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+
+      const trustCard = Array.from(doc.querySelectorAll(".card, .page-content, .page-body")).find((c) => {
+        const heading = c.querySelector(".card-title, h2, h1, .page-title");
+        return heading && /信任级别\s*\d+/i.test(heading.textContent || "");
+      }) || doc.querySelector(".page-content .card") || doc.querySelector(".page-content") || doc.querySelector(".card") || doc.body;
+
+      if (!trustCard) return null;
+
+      const headingText = (trustCard.querySelector(".card-title, h2, h1, .page-title")?.textContent || "").trim();
+      const levelMatch = headingText.match(/信任级别\s*(\d+)/i);
+      const targetLevel = levelMatch ? parseInt(levelMatch[1], 10) : 3;
+
+      const subtitleText = (trustCard.querySelector(".card-subtitle")?.textContent || "").trim();
+      const subtitleUserMatch = subtitleText.match(/@([^\s·]+)/);
+      const userMenuText = (doc.querySelector(".user-menu-info")?.textContent || "").trim();
+      const userMenuMatch = userMenuText.match(/@([^\s·]+)/);
+      const username = subtitleUserMatch ? subtitleUserMatch[1] : (userMenuMatch ? userMenuMatch[1] : "");
+
+      const requirements = [];
+
+      // 1. Rings (活跃程度)
+      trustCard.querySelectorAll(".tl3-ring").forEach((item) => {
+        const name = (item.querySelector(".tl3-ring-label")?.textContent || "").trim();
+        const currentText = (item.querySelector(".tl3-ring-current")?.textContent || "").trim();
+        const targetText = (item.querySelector(".tl3-ring-target")?.textContent || "").replace(/^\//, "").trim();
+        if (!name) return;
+
+        const currentValue = parseNumberValue(currentText);
+        const requiredValue = parseNumberValue(targetText);
+        const circle = item.querySelector(".tl3-ring-circle");
+        const isSuccess = circle ? circle.classList.contains("met") : currentValue >= requiredValue;
+        const percent = requiredValue > 0 ? Math.min(100, Math.round((currentValue / requiredValue) * 100)) : (currentValue === 0 ? 100 : 0);
+
+        requirements.push({
+          name,
+          category: "活跃程度",
+          current: currentValue,
+          required: requiredValue,
+          isSuccess,
+          percent,
+          type: "ring"
+        });
+      });
+
+      // 2. Bars (互动参与)
+      trustCard.querySelectorAll(".tl3-bar-item").forEach((bar) => {
+        const name = (bar.querySelector(".tl3-bar-label")?.textContent || "").trim();
+        const numsText = (bar.querySelector(".tl3-bar-nums")?.textContent || "").trim();
+        if (!name) return;
+
+        const { currentValue, requiredValue } = extractCurrentRequired(numsText);
+        const numsNode = bar.querySelector(".tl3-bar-nums");
+        const fillNode = bar.querySelector(".tl3-bar-fill");
+        const isSuccess = (numsNode?.classList.contains("met") || fillNode?.classList.contains("met") || bar.classList.contains("met")) || currentValue >= requiredValue;
+        const percent = requiredValue > 0 ? Math.min(100, Math.round((currentValue / requiredValue) * 100)) : 100;
+
+        requirements.push({
+          name,
+          category: "互动参与",
+          current: currentValue,
+          required: requiredValue,
+          isSuccess,
+          percent,
+          type: "bar"
+        });
+      });
+
+      // 3. Quotas (合规记录)
+      trustCard.querySelectorAll(".tl3-quota-card").forEach((quota) => {
+        const name = (quota.querySelector(".tl3-quota-label")?.textContent || "").trim();
+        const numsText = (quota.querySelector(".tl3-quota-nums")?.textContent || "").trim();
+        if (!name) return;
+
+        const { currentValue, requiredValue } = extractCurrentRequired(numsText);
+        const isSuccess = quota.classList.contains("met") || currentValue <= requiredValue;
+        const percent = requiredValue > 0 ? Math.min(100, Math.round((currentValue / requiredValue) * 100)) : 100;
+
+        requirements.push({
+          name,
+          category: "合规记录",
+          current: currentValue,
+          required: requiredValue,
+          isSuccess,
+          percent,
+          type: "quota"
+        });
+      });
+
+      // 4. Vetos (限制要求)
+      trustCard.querySelectorAll(".tl3-veto-item").forEach((veto) => {
+        const name = (veto.querySelector(".tl3-veto-label")?.textContent || "").trim();
+        const currentText = (veto.querySelector(".tl3-veto-value")?.textContent || "").trim();
+        if (!name) return;
+
+        const currentValue = parseNumberValue(currentText);
+        const isSuccess = veto.classList.contains("met") || currentValue === 0;
+
+        requirements.push({
+          name,
+          category: "限制要求",
+          current: currentValue,
+          required: 0,
+          isSuccess,
+          percent: isSuccess ? 100 : 0,
+          type: "veto"
+        });
+      });
+
+      // 5. Fallback table rows
+      if (requirements.length === 0) {
+        trustCard.querySelectorAll("tr").forEach((row) => {
+          const cells = Array.from(row.querySelectorAll("td")).map((td) => td.textContent.trim());
+          if (cells.length >= 3) {
+            const name = cells[0];
+            const currentValue = parseNumberValue(cells[1]);
+            const requiredValue = parseNumberValue(cells[2]);
+            const isSuccess = /已达标|符合|met/i.test(row.className || "") || currentValue >= requiredValue;
+            const percent = requiredValue > 0 ? Math.min(100, Math.round((currentValue / requiredValue) * 100)) : 100;
+            requirements.push({
+              name,
+              category: "升级要求",
+              current: currentValue,
+              required: requiredValue,
+              isSuccess,
+              percent,
+              type: "table"
+            });
+          }
+        });
+      }
+
+      if (requirements.length === 0) return null;
+
+      const statusNode = trustCard.querySelector(".status-met, .status-unmet");
+      const badgeNode = trustCard.querySelector(".badge");
+      const isMeetingRequirements = statusNode
+        ? statusNode.classList.contains("status-met")
+        : (badgeNode ? !/未达到|未达|不符合/.test(badgeNode.textContent) : requirements.every((r) => r.isSuccess));
+
+      const metCount = requirements.filter((r) => r.isSuccess).length;
+      const totalCount = requirements.length;
+      const overallPercent = totalCount > 0 ? Math.round((metCount / totalCount) * 100) : 0;
+
+      return {
+        targetLevel,
+        username,
+        requirements,
+        isMeetingRequirements,
+        metCount,
+        totalCount,
+        overallPercent,
+        source: "connect_page"
+      };
+    } catch (e) {
+      console.warn("[linuxdo-wecom] Connect HTML parse error:", e);
+      return null;
+    }
+  }
+
+  function buildFallbackRequirements(trustLevel, summary = {}, user = {}) {
+    const daysVisited = summary.days_visited !== undefined ? summary.days_visited : 0;
+    const topicsEntered = summary.topics_entered !== undefined ? summary.topics_entered : 0;
+    const postsRead = summary.posts_read_count !== undefined ? summary.posts_read_count : 0;
+    const likesGiven = summary.likes_given !== undefined ? summary.likes_given : 0;
+    const likesReceived = summary.likes_received !== undefined ? summary.likes_received : 0;
+
+    const targetLevel = trustLevel >= 3 ? 3 : (trustLevel === 2 ? 3 : 2);
+    const requirements = [
+      {
+        name: "访问天数 (过去100天)",
+        category: "活跃程度",
+        current: daysVisited,
+        required: 50,
+        isSuccess: daysVisited >= 50,
+        percent: Math.min(100, Math.round((daysVisited / 50) * 100)),
+        unit: "天",
+        type: "ring"
+      },
+      {
+        name: "浏览话题 (过去100天)",
+        category: "活跃程度",
+        current: topicsEntered,
+        required: 500,
+        isSuccess: topicsEntered >= 500,
+        percent: Math.min(100, Math.round((topicsEntered / 500) * 100)),
+        unit: "个",
+        type: "ring"
+      },
+      {
+        name: "阅读帖子 (过去100天)",
+        category: "活跃程度",
+        current: postsRead,
+        required: 20000,
+        isSuccess: postsRead >= 20000,
+        percent: Math.min(100, Math.round((postsRead / 20000) * 100)),
+        unit: "帖",
+        type: "ring"
+      },
+      {
+        name: "送出的点赞",
+        category: "互动参与",
+        current: likesGiven,
+        required: 30,
+        isSuccess: likesGiven >= 30,
+        percent: Math.min(100, Math.round((likesGiven / 30) * 100)),
+        unit: "次",
+        type: "bar"
+      },
+      {
+        name: "收获的点赞",
+        category: "互动参与",
+        current: likesReceived,
+        required: 20,
+        isSuccess: likesReceived >= 20,
+        percent: Math.min(100, Math.round((likesReceived / 20) * 100)),
+        unit: "次",
+        type: "bar"
+      },
+      {
+        name: "社区违规惩罚",
+        category: "限制要求",
+        current: (user.silenced || user.suspended) ? 1 : 0,
+        required: 0,
+        isSuccess: !user.silenced && !user.suspended,
+        percent: (!user.silenced && !user.suspended) ? 100 : 0,
+        unit: "次",
+        type: "veto"
+      },
+      {
+        name: "封禁记录 (过去6个月)",
+        category: "限制要求",
+        current: 0,
+        required: 0,
+        isSuccess: true,
+        percent: 100,
+        unit: "次",
+        type: "veto"
+      }
+    ];
+
+    const isMeetingRequirements = trustLevel >= targetLevel || requirements.every((r) => r.isSuccess);
+    const metCount = requirements.filter((r) => r.isSuccess).length;
+    const totalCount = requirements.length;
+    const overallPercent = totalCount > 0 ? Math.round((metCount / totalCount) * 100) : 0;
+
+    return {
+      targetLevel,
+      requirements,
+      isMeetingRequirements,
+      metCount,
+      totalCount,
+      overallPercent,
+      source: "discourse_fallback"
+    };
+  }
+
   async function fetchLinuxDoConnectData(force = false) {
     const now = Date.now();
     if (!force && linuxDoConnectDataCache && (now - linuxDoConnectCacheTime < 60000)) {
@@ -13023,20 +13556,29 @@
       currentId = currentId || idRecord?.id;
     }
 
-    // Try Connect API first (may succeed if CORS or direct access allowed)
+    // Parallel fetch: Connect API, Connect HTML page
     let connectApiData = null;
-    try {
-      const cRes = await fetch("https://connect.linux.do/api/user", {
-        credentials: "include",
-        headers: { "Accept": "application/json" }
-      });
-      if (cRes.ok) {
-        connectApiData = await cRes.json();
-      }
-    } catch { /* CORS or offline fallback */ }
+    let connectPageData = null;
 
-    if (!username && connectApiData?.username) {
-      username = connectApiData.username;
+    try {
+      const [apiRes, pageHtml] = await Promise.allSettled([
+        fetch("https://connect.linux.do/api/user", {
+          credentials: "include",
+          headers: { "Accept": "application/json" }
+        }).then((r) => r.ok ? r.json() : null),
+        fetchConnectHtml()
+      ]);
+
+      if (apiRes.status === "fulfilled" && apiRes.value) {
+        connectApiData = apiRes.value;
+      }
+      if (pageHtml.status === "fulfilled" && pageHtml.value) {
+        connectPageData = parseLinuxDoConnectHtml(pageHtml.value);
+      }
+    } catch { /* ignore network errors */ }
+
+    if (!username && (connectPageData?.username || connectApiData?.username)) {
+      username = connectPageData?.username || connectApiData?.username;
     }
 
     if (!username) {
@@ -13089,18 +13631,17 @@
     const likesReceived = sum.likes_received !== undefined ? sum.likes_received : 0;
     const timeRead = sum.time_read !== undefined ? sum.time_read : 0;
 
-    // TL3 progress:
-    // Criteria: visited >= 50 days, topics >= 500, posts >= 20000, likes given >= 30, likes received >= 20
-    let tl3ProgressPercent = 100;
-    let tl3IsAchieved = trustLevel >= 3;
-    if (trustLevel < 3) {
-      const sVisited = Math.min(1, daysVisited / 50);
-      const sTopics = Math.min(1, topicsEntered / 500);
-      const sPosts = Math.min(1, postsRead / 20000);
-      const sGiven = Math.min(1, likesGiven / 30);
-      const sReceived = Math.min(1, likesReceived / 20);
-      tl3ProgressPercent = Math.min(99, Math.round(((sVisited + sTopics + sPosts + sGiven + sReceived) / 5) * 100));
+    // Use parsed page-content or fallback
+    let evalData = connectPageData;
+    if (!evalData || !evalData.requirements || evalData.requirements.length === 0) {
+      evalData = buildFallbackRequirements(trustLevel, sum, u);
     }
+
+    // Backwards-compatible tl3Progress
+    const tl3Progress = {
+      percent: evalData.overallPercent,
+      isAchieved: evalData.isMeetingRequirements
+    };
 
     const result = {
       username,
@@ -13110,6 +13651,13 @@
       trustLevelInfo: tlInfo,
       avatarUrl,
       status: connectApiData?.active !== false ? "正常活跃" : "状态受限",
+      targetLevel: evalData.targetLevel,
+      isMeetingRequirements: evalData.isMeetingRequirements,
+      metCount: evalData.metCount,
+      totalCount: evalData.totalCount,
+      overallPercent: evalData.overallPercent,
+      requirements: evalData.requirements,
+      source: evalData.source,
       stats: {
         daysVisited,
         topicsEntered,
@@ -13118,10 +13666,7 @@
         likesReceived,
         timeReadFormatted: formatConnectTime(timeRead)
       },
-      tl3Progress: {
-        percent: tl3ProgressPercent,
-        isAchieved: tl3IsAchieved
-      }
+      tl3Progress
     };
 
     linuxDoConnectDataCache = result;
@@ -13156,7 +13701,81 @@
       ? `<img src="${escapeHtml(data.avatarUrl)}" alt="${escapeHtml(data.username)}" onerror="this.parentElement.textContent='${escapeHtml(initial)}'" />`
       : escapeHtml(initial);
 
-    const percentText = data.tl3Progress.isAchieved ? "100% 已达成" : `${data.tl3Progress.percent}%`;
+    // Group requirements by category
+    const categoriesMap = new Map();
+    (data.requirements || []).forEach((req) => {
+      const cat = req.category || "升级要求";
+      if (!categoriesMap.has(cat)) categoriesMap.set(cat, []);
+      categoriesMap.get(cat).push(req);
+    });
+
+    const categoryIcons = {
+      "活跃程度": "📊",
+      "互动参与": "🤝",
+      "合规记录": "🛡️",
+      "限制要求": "🚫",
+      "升级要求": "⭐"
+    };
+
+    let groupsHtml = "";
+    categoriesMap.forEach((items, catName) => {
+      const icon = categoryIcons[catName] || "📌";
+      const itemsHtml = items.map((it) => {
+        const isVeto = it.type === "veto" || it.required === 0;
+        const curFormatted = formatConnectNumber(it.current);
+        const reqFormatted = formatConnectNumber(it.required);
+        const unit = it.unit ? ` ${it.unit}` : "";
+        const valuesText = isVeto
+          ? `<span class="cur">${escapeHtml(curFormatted)}</span>${escapeHtml(unit)}`
+          : `<span class="cur">${escapeHtml(curFormatted)}</span> / ${escapeHtml(reqFormatted)}${escapeHtml(unit)}`;
+
+        const miniBarHtml = !isVeto
+          ? `<div class="wecom-connect-mini-bar"><div class="wecom-connect-mini-fill ${it.isSuccess ? "met" : ""}" style="width: ${Math.min(100, Math.max(0, it.percent || 0))}%;"></div></div>`
+          : "";
+
+        const badgeClass = it.isSuccess ? "met" : "unmet";
+        const badgeText = it.isSuccess
+          ? (isVeto ? "✓ 无违规" : "✓ 达标")
+          : (isVeto ? "✕ 存在违规" : "✕ 未达标");
+
+        return `
+          <div class="wecom-connect-req-item">
+            <div class="wecom-connect-req-left">
+              <div class="wecom-connect-req-name">${escapeHtml(it.name)}</div>
+              ${miniBarHtml}
+            </div>
+            <div class="wecom-connect-req-right">
+              <div class="wecom-connect-req-values">${valuesText}</div>
+              <span class="wecom-connect-req-badge ${badgeClass}">${escapeHtml(badgeText)}</span>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      groupsHtml += `
+        <div class="wecom-connect-section">
+          <div class="wecom-connect-section-title">
+            <span>${icon}</span> ${escapeHtml(catName)}
+          </div>
+          <div class="wecom-connect-req-list">
+            ${itemsHtml}
+          </div>
+        </div>
+      `;
+    });
+
+    const isMet = Boolean(data.isMeetingRequirements);
+    const bannerClass = isMet ? "met" : "unmet";
+    const bannerBadgeText = isMet ? "已达标" : "尚未达标";
+    const bannerTitle = `信任级别 ${escapeHtml(String(data.targetLevel || 3))} 达标评估`;
+    const bannerSub = data.source === "connect_page"
+      ? "已从 connect.linux.do 实时抓取页面判定"
+      : "依据官方升级标准实时测算";
+
+    const ratioText = `${data.metCount || 0} / ${data.totalCount || 0} 项达标 (${data.overallPercent || 0}%)`;
+    const sourceNote = data.source === "connect_page"
+      ? "数据来源: connect.linux.do 页面认证 · 缓存 60 秒"
+      : "数据来源: Linux DO 官方标准评估 · 缓存 60 秒";
 
     body.innerHTML = `
       <div class="wecom-connect-user-card">
@@ -13174,42 +13793,27 @@
         </div>
       </div>
 
-      <div class="wecom-connect-stats-grid">
-        <div class="wecom-connect-stat-item">
-          <div class="wecom-connect-stat-value">${formatConnectNumber(data.stats.daysVisited)} 天</div>
-          <div class="wecom-connect-stat-label">访问天数 (100天)</div>
+      <div class="wecom-connect-banner ${bannerClass}">
+        <div class="wecom-connect-banner-left">
+          <div class="wecom-connect-banner-title">${bannerTitle}</div>
+          <div class="wecom-connect-banner-sub">${bannerSub}</div>
         </div>
-        <div class="wecom-connect-stat-item">
-          <div class="wecom-connect-stat-value">${formatConnectNumber(data.stats.topicsEntered)}</div>
-          <div class="wecom-connect-stat-label">浏览话题数</div>
+        <div class="wecom-connect-banner-badge">${bannerBadgeText}</div>
+      </div>
+
+      <div class="wecom-connect-progress-box">
+        <div class="wecom-connect-progress-header">
+          <span class="wecom-connect-progress-title">总体达标进度</span>
+          <span class="wecom-connect-progress-ratio">${escapeHtml(ratioText)}</span>
         </div>
-        <div class="wecom-connect-stat-item">
-          <div class="wecom-connect-stat-value">${formatConnectNumber(data.stats.postsRead)}</div>
-          <div class="wecom-connect-stat-label">阅读帖子数</div>
-        </div>
-        <div class="wecom-connect-stat-item">
-          <div class="wecom-connect-stat-value">${formatConnectNumber(data.stats.likesGiven)} 次</div>
-          <div class="wecom-connect-stat-label">送出点赞</div>
-        </div>
-        <div class="wecom-connect-stat-item">
-          <div class="wecom-connect-stat-value">${formatConnectNumber(data.stats.likesReceived)} 次</div>
-          <div class="wecom-connect-stat-label">收获点赞</div>
-        </div>
-        <div class="wecom-connect-stat-item">
-          <div class="wecom-connect-stat-value">${escapeHtml(data.stats.timeReadFormatted)}</div>
-          <div class="wecom-connect-stat-label">累计阅读时间</div>
+        <div class="wecom-connect-progress-bar">
+          <div class="wecom-connect-progress-fill" style="width: ${Math.min(100, Math.max(0, data.overallPercent || 0))}%;"></div>
         </div>
       </div>
 
-      <div class="wecom-connect-progress-card">
-        <div class="wecom-connect-progress-header">
-          <span class="wecom-connect-progress-title">TL3 (活跃成员) 达标进度</span>
-          <span class="wecom-connect-progress-percent">${escapeHtml(percentText)}</span>
-        </div>
-        <div class="wecom-connect-progress-bar">
-          <div class="wecom-connect-progress-fill" style="width: ${Math.min(100, Math.max(0, data.tl3Progress.percent))}%;"></div>
-        </div>
-      </div>
+      ${groupsHtml}
+
+      <div class="wecom-connect-source-note">${escapeHtml(sourceNote)}</div>
     `;
   }
 
