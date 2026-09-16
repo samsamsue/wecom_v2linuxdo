@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.37
+// @version      0.7.38
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -3018,6 +3018,7 @@
       padding: 20px 24px;
       display: flex; flex-direction: column; gap: 16px;
       overscroll-behavior: contain;
+      overflow-anchor: none;
     }
     .wecom-chat-body::-webkit-scrollbar { width: 6px; }
     .wecom-chat-body::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
@@ -10224,7 +10225,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.37";
+  const SCRIPT_VERSION = "0.7.38";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -20421,6 +20422,7 @@
     syncRenderedWindow(body);
 
     // 仅当用户主动发帖（options.scroll === true）或此前已在最底部跟随时滚动至底部；
+    // 轮询追加或明确禁止滚动的场景（options.isPolling 或 options.scroll === false）：严格锁定滚动条位置，绝不改变当前视口；
     // 用户在浏览上方历史楼层时，绝对禁止自动跳跃到底部，保护阅读进度与体验。
     const shouldScroll = options.scroll === true || (options.scroll !== false && wasNearBottom);
     if (shouldScroll) {
@@ -20430,6 +20432,14 @@
       if (heightDiff > 0) {
         body.scrollTop = prevScrollTop + heightDiff;
       }
+    } else {
+      // 轮询或保持视口场景：锁定当前滚动条位置不变，阅读体验不被打断
+      body.scrollTop = prevScrollTop;
+      requestAnimationFrame(() => {
+        if (body.scrollTop !== prevScrollTop) {
+          body.scrollTop = prevScrollTop;
+        }
+      });
     }
     if (chatState.topicId && fresh.length) {
       const conv = document.querySelector(`.wecom-conv[data-topic-id="${chatState.topicId}"]`);
@@ -20571,7 +20581,7 @@
       };
       posts.push(post);
     }
-    return appendFreshPosts(posts, body);
+    return appendFreshPosts(posts, body, { isPolling: true, scroll: false });
   }
 
   function scheduleSubmittedPostSync(topicId) {
@@ -20691,6 +20701,7 @@
 
       const currentBody = document.querySelector(".wecom-chat-body");
       if (!currentBody || Number(currentBody.dataset.topicId) !== topicId) return 0;
+      const prevScrollTop = currentBody.scrollTop;
 
       const renderedNumbers = new Set(
         [...currentBody.querySelectorAll(".wecom-msg[data-post-number]")]
@@ -20732,7 +20743,7 @@
             chatState.stream.push(post.id);
           }
         }
-        totalAppended = appendFreshPosts(freshPosts, currentBody);
+        totalAppended = appendFreshPosts(freshPosts, currentBody, { isPolling: true, scroll: false });
       }
 
       const latestData = nextPageData || parsed;
@@ -20765,6 +20776,9 @@
       }
       setCachedTopic(topicId, latestData);
       syncV2exPaginationFooter(currentBody, false);
+      if (currentBody.scrollTop !== prevScrollTop) {
+        currentBody.scrollTop = prevScrollTop;
+      }
 
       // 更新左侧列表会话摘要与时间
       if (totalAppended > 0) {

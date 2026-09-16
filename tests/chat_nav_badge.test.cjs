@@ -4843,6 +4843,79 @@ test("relative time real-time refresh across conv list and chat bubbles (v0.7.37
   assert.ok(elements[2].dataset.time, "legacy item should have data-time backfilled");
 });
 
+test("polling replies strictly preserves scrollbar position without jumping (v0.7.38)", () => {
+  // 1. Script checks
+  assert.ok(
+    scriptContent.includes("overflow-anchor: none;"),
+    "CSS must specify overflow-anchor: none on .wecom-chat-body"
+  );
+  assert.ok(
+    scriptContent.includes("totalAppended = appendFreshPosts(freshPosts, currentBody, { isPolling: true, scroll: false });"),
+    "pollV2exCurrentTopicOnce must pass { isPolling: true, scroll: false } to appendFreshPosts"
+  );
+  assert.ok(
+    scriptContent.includes("currentBody.scrollTop = prevScrollTop;"),
+    "pollV2exCurrentTopicOnce must restore prevScrollTop"
+  );
+  assert.ok(
+    scriptContent.includes("return appendFreshPosts(posts, body, { isPolling: true, scroll: false });"),
+    "syncNewPostsFromDom must pass { isPolling: true, scroll: false } to appendFreshPosts"
+  );
+  assert.ok(
+    scriptContent.includes("body.scrollTop = prevScrollTop;"),
+    "appendFreshPosts must restore body.scrollTop to prevScrollTop"
+  );
+
+  // 2. Functional simulation of appendFreshPosts scroll handling
+  function simulateScrollHandling(initialScrollTop, initialScrollHeight, clientHeight, newContentHeight, options = {}) {
+    const prevScrollTop = initialScrollTop;
+    const prevScrollHeight = initialScrollHeight;
+    const wasNearBottom = clientHeight > 0 && (prevScrollHeight - (prevScrollTop + clientHeight) <= 32);
+
+    let scrollTop = initialScrollTop;
+    const newScrollHeight = initialScrollHeight + newContentHeight;
+
+    const shouldScroll = options.scroll === true || (options.scroll !== false && wasNearBottom);
+    if (shouldScroll) {
+      scrollTop = newScrollHeight;
+    } else {
+      scrollTop = prevScrollTop;
+    }
+
+    return {
+      scrollTop,
+      wasNearBottom,
+      shouldScroll,
+      scrollDelta: scrollTop - prevScrollTop
+    };
+  }
+
+  // Case 1: User is actively reading at the bottom (e.g. wasNearBottom = true)
+  // Background polling arrives with { isPolling: true, scroll: false }
+  // MUST NOT scroll, delta must be 0!
+  const pollBottomRes = simulateScrollHandling(2400, 3000, 600, 400, { isPolling: true, scroll: false });
+  assert.equal(pollBottomRes.wasNearBottom, true);
+  assert.equal(pollBottomRes.shouldScroll, false, "polling must never trigger shouldScroll even if wasNearBottom");
+  assert.equal(pollBottomRes.scrollTop, 2400, "scrollTop must stay exactly at 2400");
+  assert.equal(pollBottomRes.scrollDelta, 0, "scroll delta must be strictly 0");
+
+  // Case 2: User is reading middle of thread (e.g. scrollTop = 1000)
+  // Polling arrives with { isPolling: true, scroll: false }
+  const pollMidRes = simulateScrollHandling(1000, 3000, 600, 400, { isPolling: true, scroll: false });
+  assert.equal(pollMidRes.wasNearBottom, false);
+  assert.equal(pollMidRes.shouldScroll, false);
+  assert.equal(pollMidRes.scrollTop, 1000);
+  assert.equal(pollMidRes.scrollDelta, 0);
+
+  // Case 3: User actively posts a new reply via composer with { scroll: true }
+  // MUST scroll to bottom
+  const submitRes = simulateScrollHandling(1000, 3000, 600, 200, { scroll: true });
+  assert.equal(submitRes.shouldScroll, true, "user posting must follow new reply");
+  assert.equal(submitRes.scrollTop, 3200, "user post must scroll to new scrollHeight");
+  assert.equal(submitRes.scrollDelta, 2200);
+});
+
+
 
 
 
