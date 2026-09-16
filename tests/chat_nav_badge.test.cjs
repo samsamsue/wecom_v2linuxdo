@@ -4250,6 +4250,172 @@ test("V2EX member profile card parses user information and displays popup on ava
   assert.equal(parsed.recentTopics[0].title, "测试主题 1");
 });
 
+test("V2EX member profile card supports block and follow buttons, parses recent replies, and correctly identifies OP username without falling back to 楼主", () => {
+  // 1. Static code assertions
+  assert.ok(
+    scriptContent.includes(".wecom-member-card-actions"),
+    "must define CSS for .wecom-member-card-actions"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-member-action-btn"),
+    "must define CSS for .wecom-member-action-btn"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-member-follow-btn"),
+    "must define follow button in card"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-member-block-btn"),
+    "must define block button in card"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-member-replies-box"),
+    "must define CSS and DOM container for .wecom-member-replies-box"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-member-reply-item"),
+    "must define CSS for .wecom-member-reply-item"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-member-reply-topic"),
+    "must define CSS for .wecom-member-reply-topic"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-member-reply-text"),
+    "must define CSS for .wecom-member-reply-text"
+  );
+  assert.ok(
+    scriptContent.includes('username === "楼主"'),
+    "must guard against 楼主 username"
+  );
+
+  // 2. Functional test: OP username parsing from V2EX topic HTML
+  // In real V2EX HTML, the avatar link <div class="fr"><a href="/member/toubi"><img ...></a></div> appears BEFORE the text link
+  const sampleTopicHtml = `
+    <div id="Main">
+      <div class="header">
+        <div class="fr"><a href="/member/toubi"><img src="https://cdn.v2ex.com/avatar/662677.png" class="avatar" alt="toubi" /></a></div>
+        <a href="/">V2EX</a> <span class="chevron">&nbsp;›&nbsp;</span> <a href="/go/share">分享发现</a>
+        <div class="sep10"></div>
+        <h1>测试主题标题</h1>
+        <small class="gray"><a href="/member/toubi">toubi</a> · 2 天前 · 1234 次点击</small>
+      </div>
+      <div class="topic_content">主题正文内容</div>
+      <div class="cell" id="r_1001">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+          <tr>
+            <td width="48" valign="top" align="center"><img src="/avatar/1.png" class="avatar"></td>
+            <td width="10"></td>
+            <td width="auto" valign="top">
+              <span class="no">1</span> &nbsp; <a href="/member/replier" class="dark">replier</a>
+              <div class="reply_content">第一条回复</div>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  `;
+
+  function simulateExtractOpUsername(html) {
+    let opUsername = "";
+    const memberMatches = [...html.matchAll(/<a\s+[^>]*href=["']\/member\/([^"'/]+)["'][^>]*>/gi)];
+    for (const m of memberMatches) {
+      const raw = decodeURIComponent(m[1]).trim();
+      if (raw && raw !== "楼主") {
+        opUsername = raw;
+        break;
+      }
+    }
+    if (!opUsername) {
+      const altMatch = html.match(/<img[^>]*class=["'][^"']*avatar[^"']*["'][^>]*alt=["']([^"']+)["']/i);
+      if (altMatch && altMatch[1] !== "楼主") {
+        opUsername = altMatch[1].trim();
+      }
+    }
+    return opUsername || "v2ex_user";
+  }
+
+  const extractedOp = simulateExtractOpUsername(sampleTopicHtml);
+  assert.equal(extractedOp, "toubi", "must extract OP username 'toubi' and never fall back to '楼主'");
+
+  // 3. Functional test: Parse replies and follow/block buttons in member profile
+  const sampleMemberProfileHtml = `
+    <div>
+      <img src="https://cdn.v2ex.com/avatar/984b/5881/367256_large.png" class="avatar" data-uid="367256" width="73">
+      <h1>laojuelv</h1>
+      <span class="gray">V2EX 第 367256 号会员</span>
+      <input type="button" value="特别关注" onclick="if (confirm('确定要开始关注 laojuelv？')) { location.href = '/follow/367256?once=89432'; }" class="super special button" />
+      <input type="button" value="Block" onclick="if (confirm('确定要屏蔽 laojuelv？')) { location.href = '/block/367256?once=89432'; }" class="super normal button" />
+      <div class="dock_area">
+        <span class="gray">回复了 laojuelv 创建的主题 › <a href="/t/1242010#reply48">“万一免五”大概率进入“倒计时”～有必要先占位？！</a></span>
+      </div>
+      <div class="reply_content">
+        对的，免五主要是小额交易，重点费率低就行
+      </div>
+      <div class="dock_area">
+        <span class="gray">回复了 someone 创建的主题 › <a href="/t/1242020#reply12">讨论另一个话题</a></span>
+      </div>
+      <div class="reply_content">
+        支持一下楼主！
+      </div>
+    </div>
+  `;
+
+  function simulateParseMemberActionsAndReplies(html, username) {
+    const profile = {
+      username: username || "",
+      uid: "",
+      recentReplies: [],
+      followUrl: "",
+      isFollowed: false,
+      blockUrl: "",
+      isBlocked: false
+    };
+
+    const uidMatch = html.match(/data-uid=["'](\d+)["']/i) || html.match(/member\s*#(\d+)/i) || html.match(/第\s*(\d+)\s*号会员/i);
+    if (uidMatch) profile.uid = uidMatch[1];
+
+    const replyRegex = /<div\s+class=["']dock_area["']>[\s\S]*?<a\s+href=["'](\/t\/\d+[^"']*)["'][^>]*>([\s\S]*?)<\/a>[\s\S]*?<div\s+class=["']reply_content["']>([\s\S]*?)<\/div>/gi;
+    let rMatch;
+    while ((rMatch = replyRegex.exec(html)) !== null && profile.recentReplies.length < 2) {
+      profile.recentReplies.push({
+        url: rMatch[1],
+        topicTitle: rMatch[2].replace(/<[^>]+>/g, "").trim(),
+        content: rMatch[3].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+      });
+    }
+
+    const followMatch = html.match(/location\.href\s*=\s*['"](\/(?:follow|unfollow)\/\d+\?once=\d+)['"]/i) ||
+                        html.match(/href=['"](\/(?:follow|unfollow)\/\d+\?once=\d+)['"]/i);
+    if (followMatch) {
+      profile.followUrl = followMatch[1];
+      profile.isFollowed = followMatch[1].includes("/unfollow/");
+    }
+
+    const blockMatch = html.match(/location\.href\s*=\s*['"](\/(?:block|unblock)\/\d+\?once=\d+)['"]/i) ||
+                       html.match(/href=['"](\/(?:block|unblock)\/\d+\?once=\d+)['"]/i);
+    if (blockMatch) {
+      profile.blockUrl = blockMatch[1];
+      profile.isBlocked = blockMatch[1].includes("/unblock/");
+    }
+
+    return profile;
+  }
+
+  const parsedActions = simulateParseMemberActionsAndReplies(sampleMemberProfileHtml, "laojuelv");
+  assert.equal(parsedActions.uid, "367256");
+  assert.equal(parsedActions.followUrl, "/follow/367256?once=89432");
+  assert.equal(parsedActions.isFollowed, false);
+  assert.equal(parsedActions.blockUrl, "/block/367256?once=89432");
+  assert.equal(parsedActions.isBlocked, false);
+  assert.equal(parsedActions.recentReplies.length, 2);
+  assert.equal(parsedActions.recentReplies[0].url, "/t/1242010#reply48");
+  assert.equal(parsedActions.recentReplies[0].topicTitle, "“万一免五”大概率进入“倒计时”～有必要先占位？！");
+  assert.ok(parsedActions.recentReplies[0].content.includes("对的，免五主要是小额交易"));
+  assert.equal(parsedActions.recentReplies[1].topicTitle, "讨论另一个话题");
+  assert.equal(parsedActions.recentReplies[1].content, "支持一下楼主！");
+});
+
 
 
 

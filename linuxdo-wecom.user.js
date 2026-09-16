@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.33
+// @version      0.7.34
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -257,7 +257,7 @@
 
   function userCardIdentity(user) {
     const username = String(user?.username || "").trim();
-    if (!username) return null;
+    if (!username || username === "楼主") return null;
     const label = `查看 ${userDisplayName(user, username)} 的资料`;
     return Object.freeze({ username, label });
   }
@@ -1747,6 +1747,40 @@
       margin: 0 1px !important;
       display: inline-block !important;
     }
+    .wecom-member-card-actions {
+      padding: 0 16px 10px;
+      display: flex;
+      gap: 8px;
+    }
+    .wecom-member-action-btn {
+      flex: 1;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid #DEE0E3;
+      background: #F7F8FA;
+      color: #1F2329;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+    .wecom-member-action-btn:hover {
+      background: #ECEEF2;
+    }
+    .wecom-member-action-btn.is-active {
+      background: #E8F3FF;
+      border-color: #1664FF;
+      color: #1664FF;
+    }
+    .wecom-member-action-btn.is-danger.is-active {
+      background: #FFE8E8;
+      border-color: #F53F3F;
+      color: #F53F3F;
+    }
     .wecom-member-intro {
       margin: 0 16px 10px;
       padding: 8px 12px;
@@ -1806,6 +1840,42 @@
     }
     .wecom-member-topic-item:hover {
       color: #1664FF;
+    }
+    .wecom-member-replies-box {
+      margin: 0 16px 10px;
+      border-top: 1px solid #EBEDF0;
+      padding-top: 8px;
+    }
+    .wecom-member-reply-item {
+      padding: 3px 0;
+    }
+    .wecom-member-reply-topic {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: #1F2329;
+      text-decoration: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.4;
+    }
+    .wecom-member-reply-topic:hover {
+      color: #1664FF;
+    }
+    .wecom-member-reply-text {
+      font-size: 11px;
+      color: #646A73;
+      margin-top: 2px;
+      line-height: 1.4;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      background: #F7F8FA;
+      padding: 4px 8px;
+      border-radius: 4px;
     }
     .wecom-member-card-footer {
       padding: 10px 16px;
@@ -7818,6 +7888,24 @@
       border-color: #333842;
       color: #C0C5CE;
     }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-action-btn {
+      background: #23272E;
+      border-color: #333842;
+      color: #C0C5CE;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-action-btn:hover {
+      background: #2C313A;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-action-btn.is-active {
+      background: #112A45;
+      border-color: #4096FF;
+      color: #4096FF;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-action-btn.is-danger.is-active {
+      background: #3B1C1C;
+      border-color: #F53F3F;
+      color: #F76560;
+    }
     html.${ROOT_CLASS}.wecom-dark .wecom-member-coins-pill img {
       display: inline-block !important;
       visibility: visible !important;
@@ -7847,6 +7935,19 @@
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-member-topic-item:hover {
       color: #4096FF;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-replies-box {
+      border-top-color: #2C313A;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-reply-topic {
+      color: #D4D4D4;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-reply-topic:hover {
+      color: #4096FF;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-reply-text {
+      background: #23272E;
+      color: #8C8C8C;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-member-card-footer {
       background: #181A1F;
@@ -9712,7 +9813,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.33";
+  const SCRIPT_VERSION = "0.7.34";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -11995,6 +12096,65 @@
       });
     }
 
+    // Recent replies (up to 2)
+    profile.recentReplies = [];
+    const replyRegex = /<div\s+class=["']dock_area["']>[\s\S]*?<a\s+href=["'](\/t\/\d+[^"']*)["'][^>]*>([\s\S]*?)<\/a>[\s\S]*?<div\s+class=["']reply_content["']>([\s\S]*?)<\/div>/gi;
+    let rMatch;
+    while ((rMatch = replyRegex.exec(html)) !== null && profile.recentReplies.length < 2) {
+      profile.recentReplies.push({
+        url: rMatch[1],
+        topicTitle: rMatch[2].replace(/<[^>]+>/g, "").trim(),
+        content: rMatch[3].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+      });
+    }
+
+    // Follow / Unfollow
+    const followMatch = html.match(/location\.href\s*=\s*['"](\/(?:follow|unfollow)\/\d+\?once=\d+)['"]/i) ||
+                        html.match(/href=['"](\/(?:follow|unfollow)\/\d+\?once=\d+)['"]/i);
+    if (followMatch) {
+      profile.followUrl = followMatch[1];
+      profile.isFollowed = followMatch[1].includes("/unfollow/");
+    } else {
+      profile.followUrl = "";
+      profile.isFollowed = false;
+    }
+
+    // Block / Unblock
+    const blockMatch = html.match(/location\.href\s*=\s*['"](\/(?:block|unblock)\/\d+\?once=\d+)['"]/i) ||
+                       html.match(/href=['"](\/(?:block|unblock)\/\d+\?once=\d+)['"]/i);
+    if (blockMatch) {
+      profile.blockUrl = blockMatch[1];
+      profile.isBlocked = blockMatch[1].includes("/unblock/");
+    } else {
+      profile.blockUrl = "";
+      profile.isBlocked = false;
+    }
+
+    let onceToken = "";
+    const onceMatch = html.match(/[?&]once=(\d+)/) || html.match(/name=['"]once['"][^>]*value=['"](\d+)['"]/);
+    if (onceMatch && onceMatch[1]) {
+      onceToken = onceMatch[1];
+    } else if (typeof document !== "undefined") {
+      const docOnce = document.querySelector("a[href*='once='], input[name='once']");
+      if (docOnce) {
+        const m = (docOnce.getAttribute("href") || docOnce.value || "").match(/once=(\d+)/);
+        if (m) onceToken = m[1];
+      }
+      if (!onceToken && typeof window !== "undefined" && window.once) {
+        onceToken = String(window.once);
+      }
+    }
+    if (profile.uid && onceToken) {
+      if (!profile.followUrl) {
+        profile.followUrl = `/follow/${profile.uid}?once=${onceToken}`;
+        profile.isFollowed = false;
+      }
+      if (!profile.blockUrl) {
+        profile.blockUrl = `/block/${profile.uid}?once=${onceToken}`;
+        profile.isBlocked = false;
+      }
+    }
+
     return profile;
   }
 
@@ -12031,7 +12191,10 @@
   }
 
   function openV2exMemberCard(username, triggerEl, event) {
-    if (!username) return;
+    if (!username || username === "楼主") {
+      showWecomToast("未能识别该用户的用户名", "warning");
+      return;
+    }
     closeV2exMemberCard();
 
     // Check if we have an image in triggerEl
@@ -12060,11 +12223,17 @@
         </div>
       </div>
 
+      <div class="wecom-member-card-actions" style="display:none">
+        <button type="button" class="wecom-member-action-btn wecom-member-follow-btn" title="特别关注">⭐ 特别关注</button>
+        <button type="button" class="wecom-member-action-btn wecom-member-block-btn" title="屏蔽此人">🚫 Block</button>
+      </div>
+
       <div class="wecom-member-meta-pills" style="display:none"></div>
       <div class="wecom-member-coins-row" style="display:none"></div>
       <div class="wecom-member-intro" style="display:none"></div>
       <div class="wecom-member-socials" style="display:none"></div>
       <div class="wecom-member-topics-box" style="display:none"></div>
+      <div class="wecom-member-replies-box" style="display:none"></div>
 
       <div class="wecom-member-card-footer">
         <a class="wecom-member-btn primary" href="/member/${encodeURIComponent(username)}" target="_blank">查看完整主页 ↗</a>
@@ -12169,6 +12338,109 @@
         tagline.textContent = profile.tagline || (profile.joinedDate ? `${profile.joinedDate} 加入` : "");
       }
 
+      // Actions: Block & Follow
+      const actionsContainer = card.querySelector(".wecom-member-card-actions");
+      const followBtn = card.querySelector(".wecom-member-follow-btn");
+      const blockBtn = card.querySelector(".wecom-member-block-btn");
+
+      const updateFollowBtnState = () => {
+        if (!followBtn) return;
+        if (profile.isFollowed) {
+          followBtn.classList.add("is-active");
+          followBtn.innerHTML = `✓ 已特别关注`;
+          followBtn.title = "点击取消特别关注";
+        } else {
+          followBtn.classList.remove("is-active");
+          followBtn.innerHTML = `⭐ 特别关注`;
+          followBtn.title = "特别关注此人";
+        }
+      };
+
+      const updateBlockBtnState = () => {
+        if (!blockBtn) return;
+        if (profile.isBlocked) {
+          blockBtn.classList.add("is-active", "is-danger");
+          blockBtn.innerHTML = `🚫 已屏蔽`;
+          blockBtn.title = "点击解除屏蔽";
+        } else {
+          blockBtn.classList.remove("is-active", "is-danger");
+          blockBtn.innerHTML = `🚫 Block`;
+          blockBtn.title = "屏蔽此人";
+        }
+      };
+
+      if (profile.followUrl || profile.blockUrl) {
+        if (actionsContainer) actionsContainer.style.display = "flex";
+        if (followBtn) {
+          if (!profile.followUrl) {
+            followBtn.style.display = "none";
+          } else {
+            updateFollowBtnState();
+            followBtn.addEventListener("click", async (e) => {
+              e.stopPropagation();
+              if (followBtn.disabled) return;
+              if (profile.isFollowed) {
+                if (!window.confirm(`确定要取消对 ${username} 的特别关注吗？`)) return;
+              }
+              followBtn.disabled = true;
+              try {
+                const resp = await fetch(profile.followUrl, { credentials: "same-origin" });
+                if (resp.ok) {
+                  profile.isFollowed = !profile.isFollowed;
+                  profile.followUrl = profile.isFollowed
+                    ? profile.followUrl.replace("/follow/", "/unfollow/")
+                    : profile.followUrl.replace("/unfollow/", "/follow/");
+                  updateFollowBtnState();
+                  v2exMemberProfileCache.delete(username);
+                  showWecomToast(profile.isFollowed ? `已特别关注 ${username}` : `已取消关注 ${username}`, "success");
+                } else {
+                  showWecomToast("操作失败，请稍后重试", "warning");
+                }
+              } catch (err) {
+                showWecomToast("操作异常", "error");
+              } finally {
+                followBtn.disabled = false;
+              }
+            });
+          }
+        }
+
+        if (blockBtn) {
+          if (!profile.blockUrl) {
+            blockBtn.style.display = "none";
+          } else {
+            updateBlockBtnState();
+            blockBtn.addEventListener("click", async (e) => {
+              e.stopPropagation();
+              if (blockBtn.disabled) return;
+              const actionText = profile.isBlocked ? "解除屏蔽" : "屏蔽";
+              if (!window.confirm(`确定要${actionText} ${username} 吗？${profile.isBlocked ? "" : "屏蔽后将不再看到该用户的任何内容。"}`)) {
+                return;
+              }
+              blockBtn.disabled = true;
+              try {
+                const resp = await fetch(profile.blockUrl, { credentials: "same-origin" });
+                if (resp.ok) {
+                  profile.isBlocked = !profile.isBlocked;
+                  profile.blockUrl = profile.isBlocked
+                    ? profile.blockUrl.replace("/block/", "/unblock/")
+                    : profile.blockUrl.replace("/unblock/", "/block/");
+                  updateBlockBtnState();
+                  v2exMemberProfileCache.delete(username);
+                  showWecomToast(profile.isBlocked ? `已屏蔽 ${username}` : `已解除屏蔽 ${username}`, "success");
+                } else {
+                  showWecomToast("操作失败，请稍后重试", "warning");
+                }
+              } catch (err) {
+                showWecomToast("操作异常", "error");
+              } finally {
+                blockBtn.disabled = false;
+              }
+            });
+          }
+        }
+      }
+
       const pillsContainer = card.querySelector(".wecom-member-meta-pills");
       if (pillsContainer) {
         const pills = [];
@@ -12211,6 +12483,27 @@
         ).join("");
         topicsBox.innerHTML = `<div class="wecom-member-topics-title">最近创建的主题</div>${listHtml}`;
         topicsBox.style.display = "block";
+      }
+
+      const repliesBox = card.querySelector(".wecom-member-replies-box");
+      if (repliesBox && profile.recentReplies && profile.recentReplies.length) {
+        const listHtml = profile.recentReplies.map((r) =>
+          `<div class="wecom-member-reply-item">
+            <a class="wecom-member-reply-topic" href="${escapeHtml(r.url)}" target="_blank">· ${escapeHtml(r.topicTitle)}</a>
+            <div class="wecom-member-reply-text">${escapeHtml(r.content)}</div>
+          </div>`
+        ).join("");
+        repliesBox.innerHTML = `<div class="wecom-member-topics-title">最近回复</div>${listHtml}`;
+        repliesBox.style.display = "block";
+      }
+
+      // Re-check card position to ensure it fits in the viewport
+      if (triggerEl && typeof triggerEl.getBoundingClientRect === "function") {
+        const rect = card.getBoundingClientRect();
+        if (rect.bottom > window.innerHeight - 10) {
+          const newTop = Math.max(10, window.innerHeight - rect.height - 10);
+          card.style.top = `${Math.round(newTop)}px`;
+        }
       }
     }).catch(() => {
       const tagline = card.querySelector(".wecom-member-tagline");
@@ -12931,7 +13224,8 @@
       const d = disguiseAvatarForTopic(topic);
       return `<span class="wecom-conv-avatar${d.className ? " " + d.className : ""}" style="background:${d.bg};${d.styleExtra}">${d.html}</span>`;
     }
-    const v2exAuthor = topic.v2ex_author || (IS_V2EX ? topic.last_poster_username : "");
+    let v2exAuthor = topic.v2ex_author || (IS_V2EX ? topic.last_poster_username : "");
+    if (v2exAuthor === "楼主") v2exAuthor = "";
     const authorAttr = v2exAuthor ? ` data-user-card="${escapeHtml(v2exAuthor)}" role="button" tabindex="0" title="查看 ${escapeHtml(v2exAuthor)} 的资料"` : "";
     if (topic.v2ex_avatar) {
       return `<span class="wecom-conv-avatar"${authorAttr}><img src="${escapeHtml(fullAvatarUrl(topic.v2ex_avatar))}" alt="" loading="lazy"></span>`;
@@ -17188,7 +17482,13 @@
 
   function openOriginalUserCard(trigger, event) {
     const username = String(trigger?.dataset?.userCard || "").trim();
-    if (!username) throw new Error("用户头像缺少 data-user-card");
+    if (!username || username === "楼主") {
+      if (IS_V2EX) {
+        showWecomToast("未能识别该用户的用户名", "warning");
+        return;
+      }
+      throw new Error("用户头像缺少 data-user-card");
+    }
     if (IS_V2EX) {
       openV2exMemberCard(username, trigger, event);
       return;
@@ -18260,7 +18560,34 @@
   function parseV2exTopicDoc(topicId, doc, page = 1) {
     if (!doc) return null;
     const title = doc.querySelector("#Main .header h1, #Main h1")?.textContent?.trim() || `主题 #${topicId}`;
-    const opUsername = doc.querySelector("#Main .header .gray a, #Main .header a[href^='/member/']")?.textContent?.trim() || "楼主";
+    let opUsername = "";
+    const headerMemberLinks = doc.querySelectorAll("#Main .header a[href^='/member/']");
+    for (const link of headerMemberLinks) {
+      const href = link.getAttribute("href") || "";
+      const match = href.match(/\/member\/([^/?#]+)/);
+      if (match && match[1]) {
+        const raw = decodeURIComponent(match[1]).trim();
+        if (raw && raw !== "楼主") {
+          opUsername = raw;
+          break;
+        }
+      }
+    }
+    if (!opUsername) {
+      const avatarAlt = doc.querySelector("#Main .header img.avatar")?.getAttribute("alt")?.trim();
+      if (avatarAlt && avatarAlt !== "楼主") {
+        opUsername = avatarAlt;
+      }
+    }
+    if (!opUsername) {
+      const text = doc.querySelector("#Main .header .gray a")?.textContent?.trim();
+      if (text && text !== "楼主") {
+        opUsername = text;
+      }
+    }
+    if (!opUsername) {
+      opUsername = "v2ex_user";
+    }
     const opAvatar = doc.querySelector("#Main .header img.avatar")?.getAttribute("src") || "";
     const opContent = doc.querySelector("#Main .topic_content, #Main .entry-content")?.innerHTML || "<p>（无正文）</p>";
     const opCreated = doc.querySelector("#Main .header .gray")?.textContent?.trim() || "";
@@ -18379,7 +18706,7 @@
 
   function mapV2exTopicApiResponse(topicObj, replies = []) {
     if (!topicObj) return null;
-    const opUsername = topicObj.member?.username || "楼主";
+    const opUsername = (topicObj.member?.username && topicObj.member.username !== "楼主") ? topicObj.member.username : "v2ex_user";
     const opAvatar = topicObj.member?.avatar_normal || topicObj.member?.avatar_large || "";
     const opContent = topicObj.content_rendered || (topicObj.content ? `<p>${escapeHtml(topicObj.content)}</p>` : "<p>（无正文）</p>");
     const opCreated = topicObj.created ? new Date(topicObj.created * 1000).toISOString() : "";
