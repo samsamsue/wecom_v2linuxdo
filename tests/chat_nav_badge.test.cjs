@@ -4680,6 +4680,169 @@ test("V2EX topic detail conversation background polling and seamless fresh reply
   assert.equal(simulateSubtitleUpdate(7, "程序员", true), "企业内部群 · 7 条消息");
 });
 
+test("relative time real-time refresh across conv list and chat bubbles (v0.7.37)", () => {
+  // 1. Script checks
+  assert.ok(
+    scriptContent.includes("function parseTimestamp("),
+    "must define parseTimestamp"
+  );
+  assert.ok(
+    scriptContent.includes("function refreshRelativeTimes("),
+    "must define refreshRelativeTimes"
+  );
+  assert.ok(
+    scriptContent.includes("function startRelativeTimeRefresh("),
+    "must define startRelativeTimeRefresh"
+  );
+  assert.ok(
+    scriptContent.includes("function stopRelativeTimeRefresh("),
+    "must define stopRelativeTimeRefresh"
+  );
+  assert.ok(
+    scriptContent.includes("RELATIVE_TIME_REFRESH_INTERVAL_MS = 30000"),
+    "must use 30s refresh interval"
+  );
+  assert.ok(
+    scriptContent.includes('const timeMs = parseTimestamp(rawTime);') &&
+    scriptContent.includes('data-time="${timeMs}"'),
+    "convRowHtml must render data-time attribute"
+  );
+  assert.ok(
+    scriptContent.includes('const postTimeMs = parseTimestamp(post.created_at);') &&
+    scriptContent.includes('wecom-msg-time"${timeAttr}'),
+    "bubbleHtml must render .wecom-msg-time with data-time"
+  );
+  assert.ok(
+    scriptContent.includes("stopRelativeTimeRefresh();"),
+    "removePanels must call stopRelativeTimeRefresh"
+  );
+  assert.ok(
+    scriptContent.includes("startRelativeTimeRefresh();"),
+    "bootstrap and applyTheme must start relative time refresh"
+  );
+
+  // 2. Functional test of parseTimestamp
+  function simParseTimestamp(val) {
+    if (!val) return 0;
+    if (typeof val === "number") {
+      return val < 1e11 ? val * 1000 : val;
+    }
+    const str = String(val).trim();
+    if (!str) return 0;
+    if (/^\d+$/.test(str)) {
+      const n = Number(str);
+      return n < 1e11 ? n * 1000 : n;
+    }
+    const isoMs = Date.parse(str.replace(/-/g, "/"));
+    if (!Number.isNaN(isoMs) && isoMs > 0) return isoMs;
+
+    const directMs = Date.parse(str);
+    if (!Number.isNaN(directMs) && directMs > 0) return directMs;
+
+    const now = Date.now();
+    if (/刚刚|just\s*now|moments?\s*ago/i.test(str)) {
+      return now;
+    }
+    let m = str.match(/(\d+)\s*(?:分钟前|分前|min(?:ute)?s?\s*ago)/i);
+    if (m) return now - parseInt(m[1], 10) * 60 * 1000;
+    m = str.match(/(\d+)\s*(?:小时前|hr?s?\s*ago)/i);
+    if (m) return now - parseInt(m[1], 10) * 3600 * 1000;
+    m = str.match(/(\d+)\s*(?:天前|days?\s*ago)/i);
+    if (m) return now - parseInt(m[1], 10) * 86400 * 1000;
+    if (/昨天|yesterday/i.test(str)) {
+      return now - 86400 * 1000;
+    }
+    return 0;
+  }
+
+  const now = Date.now();
+  assert.equal(simParseTimestamp(now), now);
+  assert.equal(simParseTimestamp(Math.floor(now / 1000)), Math.floor(now / 1000) * 1000);
+  assert.ok(Math.abs(simParseTimestamp("刚刚") - now) < 50);
+  assert.ok(Math.abs(simParseTimestamp("5 分钟前") - (now - 5 * 60 * 1000)) < 50);
+  assert.ok(Math.abs(simParseTimestamp("2 小时前") - (now - 2 * 3600 * 1000)) < 50);
+  assert.ok(Math.abs(simParseTimestamp("3 天前") - (now - 3 * 86400 * 1000)) < 50);
+
+  // 3. Functional test of formatTime dynamic transition
+  function simFormatTime(iso, baseNow) {
+    if (!iso) return "";
+    const timeMs = simParseTimestamp(iso);
+    if (!timeMs) return String(iso);
+    const date = new Date(timeMs);
+    const current = baseNow ? new Date(baseNow) : new Date();
+    const diffMs = Math.max(0, current.getTime() - date.getTime());
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+
+    if (diffMin < 1) {
+      return "刚刚";
+    }
+    if (diffMin < 60) {
+      return `${diffMin} 分钟前`;
+    }
+
+    const today = new Date(current.getFullYear(), current.getMonth(), current.getDate());
+    const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+    if (targetDate.getTime() === today.getTime()) {
+      return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+    }
+
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (targetDate.getTime() === yesterday.getTime()) {
+      return "昨天";
+    }
+
+    if (date.getFullYear() === current.getFullYear()) {
+      return `${date.getMonth() + 1}-${String(date.getDate()).padStart(2, "0")}`;
+    }
+    return `${date.getFullYear()}-${date.getMonth() + 1}-${String(date.getDate()).padStart(2, "0")}`;
+  }
+
+  const baseTime = new Date(2026, 8, 16, 14, 0, 0).getTime();
+  // +30 seconds later -> "刚刚"
+  assert.equal(simFormatTime(baseTime, baseTime + 30 * 1000), "刚刚");
+  // +15 minutes later -> "15 分钟前"
+  assert.equal(simFormatTime(baseTime, baseTime + 15 * 60 * 1000), "15 分钟前");
+  // +1.5 hours later same day -> "14:00"
+  assert.equal(simFormatTime(baseTime, baseTime + 90 * 60 * 1000), "14:00");
+  // +24 hours later next day -> "昨天"
+  assert.equal(simFormatTime(baseTime, baseTime + 24 * 3600 * 1000), "昨天");
+  // +5 days later same year -> "9-16"
+  assert.equal(simFormatTime(baseTime, baseTime + 5 * 86400 * 1000), "9-16");
+
+  // 4. Test DOM refresh simulation
+  const elements = [
+    { textContent: "刚刚", dataset: { time: String(baseTime) } },
+    { textContent: "5 分钟前", dataset: { time: String(baseTime) } },
+    { textContent: "刚刚", dataset: {} } // legacy item without data-time
+  ];
+
+  function simRefreshTimes(els, simNow) {
+    for (const el of els) {
+      let timeMs = Number(el.dataset.time);
+      if (!timeMs) {
+        timeMs = simParseTimestamp(el.textContent);
+        if (timeMs) el.dataset.time = String(timeMs);
+      }
+      if (timeMs) {
+        const formatted = simFormatTime(timeMs, simNow);
+        if (formatted && el.textContent !== formatted) {
+          el.textContent = formatted;
+        }
+      }
+    }
+  }
+
+  // At +2 hours later:
+  const twoHoursLater = baseTime + 2 * 3600 * 1000;
+  simRefreshTimes(elements, twoHoursLater);
+  assert.equal(elements[0].textContent, "14:00");
+  assert.equal(elements[1].textContent, "14:00");
+  assert.ok(elements[2].dataset.time, "legacy item should have data-time backfilled");
+});
+
 
 
 

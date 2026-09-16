@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.36
+// @version      0.7.37
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -606,24 +606,97 @@
     return new URL(url, location.origin).href;
   }
 
+  function parseTimestamp(val) {
+    if (!val) return null;
+    if (typeof val === "number" && !Number.isNaN(val)) {
+      return val < 1e11 ? val * 1000 : val;
+    }
+    const str = String(val).trim();
+    if (!str) return null;
+
+    if (/^\d{10,13}$/.test(str)) {
+      const num = Number(str);
+      return num < 1e11 ? num * 1000 : num;
+    }
+
+    const directDate = new Date(str);
+    const directTime = directDate.getTime();
+    if (!Number.isNaN(directTime) && directTime > 0) {
+      return directTime;
+    }
+
+    const now = Date.now();
+    if (str === "刚刚" || str === "just now" || str === "几秒前") {
+      return now;
+    }
+
+    const secMatch = str.match(/(\d+)\s*(?:秒前|secs?\s*ago|seconds?\s*ago)/i);
+    if (secMatch) {
+      return now - parseInt(secMatch[1], 10) * 1000;
+    }
+
+    const minMatch = str.match(/(\d+)\s*(?:分钟前|分前|mins?\s*ago|minutes?\s*ago)/i);
+    if (minMatch) {
+      return now - parseInt(minMatch[1], 10) * 60 * 1000;
+    }
+
+    const hrMinMatch = str.match(/(\d+)\s*小时(?:\s*(\d+)\s*分钟)?前/i) ||
+      str.match(/(\d+)\s*(?:hours?|hrs?)\s*ago/i);
+    if (hrMinMatch) {
+      const hours = parseInt(hrMinMatch[1], 10) || 0;
+      const mins = parseInt(hrMinMatch[2], 10) || 0;
+      return now - (hours * 3600 + mins * 60) * 1000;
+    }
+
+    const dayMatch = str.match(/(\d+)\s*(?:天前|days?\s*ago)/i);
+    if (dayMatch) {
+      return now - parseInt(dayMatch[1], 10) * 86400 * 1000;
+    }
+
+    const yestMatch = str.match(/(昨天|前天)\s*(\d{1,2}):(\d{2})/i);
+    if (yestMatch) {
+      const isDayBefore = yestMatch[1] === "前天";
+      const targetDate = new Date(now - (isDayBefore ? 2 : 1) * 86400 * 1000);
+      targetDate.setHours(parseInt(yestMatch[2], 10), parseInt(yestMatch[3], 10), 0, 0);
+      return targetDate.getTime();
+    }
+
+    return null;
+  }
+
   function formatTime(iso) {
     if (!iso) return "";
-    if (typeof iso === "string" && (iso.includes("前") || iso.includes("刚刚") || iso.includes("昨天") || iso.includes("小时") || iso.includes("天"))) {
-      return iso;
+    const timeMs = parseTimestamp(iso);
+    if (!timeMs) {
+      return String(iso);
     }
-    const date = new Date(iso);
-    if (Number.isNaN(date.getTime())) return String(iso);
     const now = Date.now();
-    const diff = now - date.getTime();
+    const diff = now - timeMs;
     const minute = 60e3, hour = 3600e3, day = 86400e3;
     if (diff < minute) return "刚刚";
-    if (diff < hour) return `${Math.floor(diff / minute)} 分钟前`;
-    if (diff < day && date.getDate() === new Date().getDate()) {
+    if (diff < hour) return `${Math.max(1, Math.floor(diff / minute))} 分钟前`;
+
+    const date = new Date(timeMs);
+    const today = new Date();
+    const isToday = date.getFullYear() === today.getFullYear() &&
+                    date.getMonth() === today.getMonth() &&
+                    date.getDate() === today.getDate();
+    if (isToday) {
       return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
     }
-    if (diff < 2 * day) return "昨天";
-    if (diff < 365 * day) return `${date.getMonth() + 1}-${String(date.getDate()).padStart(2, "0")}`;
-    return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+
+    const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+    const isYesterday = date.getFullYear() === yesterday.getFullYear() &&
+                        date.getMonth() === yesterday.getMonth() &&
+                        date.getDate() === yesterday.getDate();
+    if (isYesterday) {
+      return "昨天";
+    }
+
+    if (date.getFullYear() === today.getFullYear()) {
+      return `${date.getMonth() + 1}-${String(date.getDate()).padStart(2, "0")}`;
+    }
+    return `${date.getFullYear()}-${date.getMonth() + 1}-${String(date.getDate()).padStart(2, "0")}`;
   }
 
   function formatClock(iso) {
@@ -10151,7 +10224,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.36";
+  const SCRIPT_VERSION = "0.7.37";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -13992,6 +14065,9 @@
       targetAnchor ? `data-target-anchor="${escapeHtml(targetAnchor)}"` : "",
       targetPage ? `data-target-page="${targetPage}"` : ""
     ].filter(Boolean).join(" ");
+    const rawTime = topic.bumped_at || topic.last_activity_at || topic.created_at;
+    const timeMs = parseTimestamp(rawTime);
+    const timeAttr = timeMs ? ` data-time="${timeMs}"` : "";
     return `
       <a class="wecom-conv${isPinned ? " is-pinned" : ""}" href="${escapeHtml(topicHref(topic))}" data-topic-id="${topic.id}" ${targetAttrs} title="${escapeHtml(String(topic.title || title || ""))}">
         ${convAvatarHtml(topic, usersById)}
@@ -14001,7 +14077,7 @@
               <span class="wecom-conv-name">${escapeHtml(title)}</span>
               ${tag}
             </span>
-            <span class="wecom-conv-time">${escapeHtml(formatTime(topic.bumped_at || topic.last_activity_at || topic.created_at))}</span>
+            <span class="wecom-conv-time"${timeAttr}>${escapeHtml(formatTime(rawTime))}</span>
           </span>
           <span class="wecom-conv-bottom">
             <span class="wecom-conv-msg">${escapeHtml(summary)}</span>
@@ -17468,6 +17544,8 @@
     const likesBadgeHtml = likeCount > 0
       ? `<span class="wecom-msg-likes" title="${likeLabel}：${likeCount}"><span class="wecom-msg-like-icon">${ICONS.heart}</span><span class="wecom-msg-like-num">${likeCount}</span></span>`
       : "";
+    const postTimeMs = parseTimestamp(post.created_at);
+    const timeAttr = postTimeMs ? ` data-time="${postTimeMs}"` : "";
     return `
       <div class="wecom-msg wecom-msg-${side}" data-post-number="${post.post_number}"${post.id ? ` data-post-id="${post.id}"` : ""}${post.floor != null ? ` data-floor="${post.floor}"` : ""}${me ? ' data-mine="1"' : ""}>
         <span class="wecom-msg-avatar" style="background:${avatarBg}"${userCardAttributes(post)}>${avatar}</span>
@@ -17480,7 +17558,7 @@
           ${boostsHtml(post)}
           <span class="wecom-msg-meta">
             <span>#${IS_V2EX && post.floor != null && post.floor > 0 ? post.floor : post.post_number}</span>
-            <span>${escapeHtml(formatTime(post.created_at))}</span>
+            <span class="wecom-msg-time"${timeAttr}>${escapeHtml(formatTime(post.created_at))}</span>
             ${likesBadgeHtml}
           </span>
           <div class="wecom-msg-tools">
@@ -19301,7 +19379,8 @@
     }
     const opAvatar = doc.querySelector("#Main .header img.avatar")?.getAttribute("src") || "";
     const opContent = doc.querySelector("#Main .topic_content, #Main .entry-content")?.innerHTML || "<p>（无正文）</p>";
-    const opCreated = doc.querySelector("#Main .header .gray")?.textContent?.trim() || "";
+    const opTimeEl = doc.querySelector("#Main .header .gray span[title], #Main .header span[title]");
+    const opCreated = opTimeEl?.getAttribute("title") || doc.querySelector("#Main .header .gray")?.textContent?.trim() || "";
     const opNode = doc.querySelector("#Main .header a[href^='/go/']")?.textContent?.trim() || "";
 
     const opLikesEl = doc.querySelector("#Main .topic_thank, #Main .votes, #Main .header .fade, #Main .topic_buttons .fade");
@@ -19330,7 +19409,8 @@
       const username = cell.querySelector("a.dark, a[href^='/member/']")?.textContent?.trim() || `用户_${idx + 2}`;
       const avatar = cell.querySelector("img.avatar")?.getAttribute("src") || "";
       const content = cell.querySelector(".reply_content")?.innerHTML || "";
-      const timeText = cell.querySelector(".ago, .fade")?.textContent?.trim() || "";
+      const timeNode = cell.querySelector(".ago, .fade");
+      const timeText = timeNode?.getAttribute("title") || timeNode?.textContent?.trim() || "";
       const likesEl = cell.querySelector(".small.fade") || cell.querySelector("img[alt='❤️']")?.closest(".small, .fade, span");
       const likesCount = likesEl ? parseInt(likesEl.textContent.trim().replace(/\D/g, ""), 10) || 0 : 0;
       const floorEl = cell.querySelector(".no");
@@ -20351,6 +20431,24 @@
         body.scrollTop = prevScrollTop + heightDiff;
       }
     }
+    if (chatState.topicId && fresh.length) {
+      const conv = document.querySelector(`.wecom-conv[data-topic-id="${chatState.topicId}"]`);
+      if (conv) {
+        const lastPost = fresh[fresh.length - 1];
+        const msgEl = conv.querySelector(".wecom-conv-msg");
+        if (msgEl && lastPost) {
+          const author = lastPost.name || lastPost.username || "";
+          const snippet = (lastPost.cooked || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+          msgEl.textContent = author ? `${author}: ${snippet.slice(0, 50)}` : snippet.slice(0, 50);
+        }
+        const timeEl = conv.querySelector(".wecom-conv-time");
+        if (timeEl) {
+          const postTimeMs = parseTimestamp(lastPost?.created_at) || Date.now();
+          timeEl.dataset.time = String(postTimeMs);
+          timeEl.textContent = formatTime(postTimeMs);
+        }
+      }
+    }
     return fresh.length;
   }
 
@@ -20680,7 +20778,9 @@
           }
           const timeEl = conv.querySelector(".wecom-conv-time");
           if (timeEl) {
-            timeEl.textContent = "刚刚";
+            const postTimeMs = parseTimestamp(lastPost?.created_at) || Date.now();
+            timeEl.dataset.time = String(postTimeMs);
+            timeEl.textContent = formatTime(postTimeMs);
           }
         }
       }
@@ -20706,6 +20806,69 @@
     if (v2exTopicPollTimer) {
       clearInterval(v2exTopicPollTimer);
       v2exTopicPollTimer = null;
+    }
+  }
+
+  /* ============================== 列表与对话相对时间实时刷新 ============================== */
+
+  let relativeTimeRefreshTimer = null;
+  const RELATIVE_TIME_REFRESH_INTERVAL_MS = 30000;
+
+  function refreshRelativeTimes() {
+    if (typeof document === "undefined") return;
+    if (document.visibilityState !== "visible") return;
+    if (getViewMode() === "native" || otherThemeActive()) return;
+
+    // 1. 刷新左侧会话列表时间
+    const convTimes = document.querySelectorAll(".wecom-conv-time");
+    for (const el of convTimes) {
+      let timeMs = Number(el.dataset.time);
+      if (!timeMs || Number.isNaN(timeMs)) {
+        const parsed = parseTimestamp(el.textContent);
+        if (parsed) {
+          timeMs = parsed;
+          el.dataset.time = String(parsed);
+        }
+      }
+      if (timeMs) {
+        const formatted = formatTime(timeMs);
+        if (formatted && el.textContent !== formatted) {
+          el.textContent = formatted;
+        }
+      }
+    }
+
+    // 2. 刷新对话详情气泡时间
+    const msgTimes = document.querySelectorAll(".wecom-msg-time, .wecom-msg-meta span[data-time]");
+    for (const el of msgTimes) {
+      let timeMs = Number(el.dataset.time);
+      if (!timeMs || Number.isNaN(timeMs)) {
+        const parsed = parseTimestamp(el.textContent);
+        if (parsed) {
+          timeMs = parsed;
+          el.dataset.time = String(parsed);
+        }
+      }
+      if (timeMs) {
+        const formatted = formatTime(timeMs);
+        if (formatted && el.textContent !== formatted) {
+          el.textContent = formatted;
+        }
+      }
+    }
+  }
+
+  function startRelativeTimeRefresh() {
+    if (relativeTimeRefreshTimer) return;
+    relativeTimeRefreshTimer = setInterval(() => {
+      refreshRelativeTimes();
+    }, RELATIVE_TIME_REFRESH_INTERVAL_MS);
+  }
+
+  function stopRelativeTimeRefresh() {
+    if (relativeTimeRefreshTimer) {
+      clearInterval(relativeTimeRefreshTimer);
+      relativeTimeRefreshTimer = null;
     }
   }
 
@@ -20841,6 +21004,7 @@
     closeBase64InsertDialog();
     closeLinuxDoConnectModal();
     stopV2exTopicPolling();
+    stopRelativeTimeRefresh();
     document.querySelector(".wecom-toast-container")?.remove();
     document.querySelector(".wecom-connect-overlay, .wecom-connect-modal")?.remove();
   }
@@ -20922,6 +21086,7 @@
     ensureListResizer();
     applyListWidth(getListWidth());
     syncListNav();
+    startRelativeTimeRefresh();
     if (IS_V2EX) {
       ensureV2exNav2();
       syncV2exNav2();
@@ -21038,19 +21203,21 @@
       setupWindowControlsOverlay();
     }
 
-    // 标签重新可见时再刷一次（部分浏览器未聚焦时会缓存旧 favicon 与 title）
+    // 标签重新可见时再刷一次（部分浏览器未聚焦时会缓存旧 favicon 与 title，并实时刷新相对时间）
     if (!window.__wecomFaviconVisibilityBound) {
       window.__wecomFaviconVisibilityBound = true;
       window.addEventListener("focus", () => {
         if (getViewMode() !== "native" && !otherThemeActive()) {
           makeFavicon();
           enforceBlankTitle();
+          refreshRelativeTimes();
         }
       });
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "visible" && getViewMode() !== "native" && !otherThemeActive()) {
           makeFavicon();
           enforceBlankTitle();
+          refreshRelativeTimes();
           if (IS_V2EX && chatState.topicId && Date.now() - v2exLastPollTime >= 5000) {
             pollV2exCurrentTopicOnce();
           }
@@ -21122,6 +21289,8 @@
         syncRail();
       }, 3000);
     }
+    // 列表与对话相对时间实时刷新（30 秒轮询）
+    startRelativeTimeRefresh();
 
     // V2EX 进入网站自动签到、用户数据静默同步与话题详情后台无感轮询
     if (IS_V2EX) {
