@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.35
+// @version      0.7.36
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -10151,7 +10151,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.35";
+  const SCRIPT_VERSION = "0.7.36";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -18962,8 +18962,15 @@
       if (IS_V2EX) {
         await submitV2exReply(chatState.topicId, raw);
         completeComposerSubmission(input);
-        await loadTopic(chatState.topicId, true);
         const chatBody = document.querySelector(".wecom-chat-body");
+        let appended = await pollV2exCurrentTopicOnce();
+        if (!appended) {
+          await delay(600);
+          appended = await pollV2exCurrentTopicOnce();
+        }
+        if (!appended) {
+          await loadTopic(chatState.topicId, true);
+        }
         if (chatBody) {
           setTimeout(() => {
             chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: "smooth" });
@@ -20547,6 +20554,161 @@
     if (lastError) throw lastError;
   }
 
+  /* ============================== V2EX 话题详情轮询与无感追加 ============================== */
+
+  let v2exTopicPollTimer = null;
+  let v2exTopicPollInFlight = false;
+  let v2exLastPollTime = 0;
+  const V2EX_TOPIC_POLL_INTERVAL_MS = 10000;
+
+  async function pollV2exCurrentTopicOnce() {
+    if (!IS_V2EX) return 0;
+    const topicId = Number(chatState.topicId);
+    if (!topicId || chatState.loading) return 0;
+    if (v2exTopicPollInFlight) return 0;
+    if (document.visibilityState !== "visible") return 0;
+    if (getViewMode() === "native" || otherThemeActive()) return 0;
+    const body = document.querySelector(".wecom-chat-body");
+    if (!body || body.querySelector(".wecom-chat-loading, .wecom-chat-error")) return 0;
+    if (body.dataset.topicId && Number(body.dataset.topicId) !== topicId) return 0;
+
+    v2exTopicPollInFlight = true;
+    v2exLastPollTime = Date.now();
+
+    try {
+      const currentPage = Number(chatState.v2exPage) || 1;
+      const res = await fetch(`/t/${topicId}?p=${currentPage}`, {
+        credentials: "same-origin",
+        cache: "no-cache"
+      });
+      if (!res.ok) return 0;
+      if (Number(chatState.topicId) !== topicId) return 0;
+
+      const html = await res.text();
+      if (Number(chatState.topicId) !== topicId) return 0;
+
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const parsed = parseV2exTopicDoc(topicId, doc, currentPage);
+      if (!parsed || Number(chatState.topicId) !== topicId) return 0;
+
+      const currentBody = document.querySelector(".wecom-chat-body");
+      if (!currentBody || Number(currentBody.dataset.topicId) !== topicId) return 0;
+
+      const renderedNumbers = new Set(
+        [...currentBody.querySelectorAll(".wecom-msg[data-post-number]")]
+          .map((node) => Number(node.dataset.postNumber))
+          .filter((number) => number > 0)
+      );
+
+      const postsOnPage = (parsed.post_stream?.posts || []).filter((p) => postNumberOf(p) > 1);
+      let freshPosts = postsOnPage.filter((p) => !renderedNumbers.has(postNumberOf(p)));
+
+      // 当用户已经浏览至最后一页（!chatState.v2exHasMore），且新回复催生了下一页时，连续抓取下一页新回复
+      let nextPageData = null;
+      if (!chatState.v2exHasMore && (parsed.v2ex_has_more || parsed.total_pages > currentPage)) {
+        const nextPage = currentPage + 1;
+        try {
+          const nextRes = await fetch(`/t/${topicId}?p=${nextPage}`, {
+            credentials: "same-origin",
+            cache: "no-cache"
+          });
+          if (nextRes.ok && Number(chatState.topicId) === topicId) {
+            const nextHtml = await nextRes.text();
+            const nextDoc = new DOMParser().parseFromString(nextHtml, "text/html");
+            nextPageData = parseV2exTopicDoc(topicId, nextDoc, nextPage);
+            if (nextPageData && Number(chatState.topicId) === topicId) {
+              const nextPosts = (nextPageData.post_stream?.posts || []).filter((p) => postNumberOf(p) > 1);
+              const freshNext = nextPosts.filter((p) => !renderedNumbers.has(postNumberOf(p)));
+              freshPosts = freshPosts.concat(freshNext);
+            }
+          }
+        } catch { /* 忽略下一页请求异常 */ }
+      }
+
+      if (Number(chatState.topicId) !== topicId) return 0;
+
+      let totalAppended = 0;
+      if (freshPosts.length > 0) {
+        for (const post of freshPosts) {
+          if (!chatState.stream.includes(post.id)) {
+            chatState.stream.push(post.id);
+          }
+        }
+        totalAppended = appendFreshPosts(freshPosts, currentBody);
+      }
+
+      const latestData = nextPageData || parsed;
+      const totalReplies = latestData.total_replies || (latestData.posts_count ? latestData.posts_count - 1 : 0);
+      if (totalReplies > (chatState.replyTotal || 0)) {
+        chatState.replyTotal = totalReplies;
+        const sub = document.querySelector(".wecom-chat-sub");
+        if (sub) {
+          const maskDetail = isMaskTitleDetail();
+          if (maskDetail) {
+            sub.textContent = `企业内部群 · ${totalReplies} 条消息`;
+          } else {
+            const nodePart = (latestData.node_title || latestData.node_name)
+              ? `归属于 ${latestData.node_title || latestData.node_name} · `
+              : "归属于 v2ex.com · ";
+            sub.textContent = `${nodePart}${totalReplies} 条回复`;
+          }
+        }
+      }
+
+      if (nextPageData) {
+        chatState.v2exPage = nextPageData.v2ex_page;
+        chatState.v2exHasMore = Boolean(nextPageData.v2ex_has_more);
+        chatState.hasNewer = chatState.v2exHasMore;
+        setCachedTopic(`${topicId}_p${nextPageData.v2ex_page}`, nextPageData);
+      } else {
+        chatState.v2exHasMore = Boolean(parsed.v2ex_has_more);
+        chatState.hasNewer = chatState.v2exHasMore;
+        setCachedTopic(`${topicId}_p${currentPage}`, parsed);
+      }
+      setCachedTopic(topicId, latestData);
+      syncV2exPaginationFooter(currentBody, false);
+
+      // 更新左侧列表会话摘要与时间
+      if (totalAppended > 0) {
+        const conv = document.querySelector(`.wecom-conv[data-topic-id="${topicId}"]`);
+        if (conv) {
+          const lastPost = freshPosts[freshPosts.length - 1];
+          const msgEl = conv.querySelector(".wecom-conv-msg");
+          if (msgEl && lastPost) {
+            const snippet = (lastPost.cooked || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+            msgEl.textContent = `${lastPost.username}: ${snippet.slice(0, 50)}`;
+          }
+          const timeEl = conv.querySelector(".wecom-conv-time");
+          if (timeEl) {
+            timeEl.textContent = "刚刚";
+          }
+        }
+      }
+
+      return totalAppended;
+    } catch {
+      return 0;
+    } finally {
+      v2exTopicPollInFlight = false;
+    }
+  }
+
+  function startV2exTopicPolling() {
+    if (v2exTopicPollTimer) clearInterval(v2exTopicPollTimer);
+    v2exTopicPollTimer = setInterval(() => {
+      if (IS_V2EX && chatState.topicId && document.visibilityState === "visible") {
+        pollV2exCurrentTopicOnce();
+      }
+    }, V2EX_TOPIC_POLL_INTERVAL_MS);
+  }
+
+  function stopV2exTopicPolling() {
+    if (v2exTopicPollTimer) {
+      clearInterval(v2exTopicPollTimer);
+      v2exTopicPollTimer = null;
+    }
+  }
+
   /* ============================== 原生视图切换 ============================== */
 
   function toggleViewModeByShortcut() {
@@ -20678,6 +20840,7 @@
     closeV2exMemberCard();
     closeBase64InsertDialog();
     closeLinuxDoConnectModal();
+    stopV2exTopicPolling();
     document.querySelector(".wecom-toast-container")?.remove();
     document.querySelector(".wecom-connect-overlay, .wecom-connect-modal")?.remove();
   }
@@ -20888,6 +21051,9 @@
         if (document.visibilityState === "visible" && getViewMode() !== "native" && !otherThemeActive()) {
           makeFavicon();
           enforceBlankTitle();
+          if (IS_V2EX && chatState.topicId && Date.now() - v2exLastPollTime >= 5000) {
+            pollV2exCurrentTopicOnce();
+          }
         }
       });
     }
@@ -20957,12 +21123,13 @@
       }, 3000);
     }
 
-    // V2EX 进入网站自动签到与用户数据静默同步
+    // V2EX 进入网站自动签到、用户数据静默同步与话题详情后台无感轮询
     if (IS_V2EX) {
       setTimeout(() => {
         checkinV2exDaily(false);
         syncV2exUserStats();
       }, 800);
+      startV2exTopicPolling();
     }
 
     // ⌘/Ctrl+K → 会话栏搜索（并同步原生 welcome-banner）

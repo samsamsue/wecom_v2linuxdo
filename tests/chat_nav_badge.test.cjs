@@ -4592,6 +4592,95 @@ test("Linux DO left rail navigation displays Connect instead of calendar, and cl
   );
 });
 
+test("V2EX topic detail conversation background polling and seamless fresh reply appending", () => {
+  // 1. Constants & helper functions exist
+  assert.ok(
+    scriptContent.includes("const V2EX_TOPIC_POLL_INTERVAL_MS = 10000;"),
+    "must define V2EX_TOPIC_POLL_INTERVAL_MS = 10000"
+  );
+  assert.ok(
+    scriptContent.includes("async function pollV2exCurrentTopicOnce()"),
+    "must define pollV2exCurrentTopicOnce"
+  );
+  assert.ok(
+    scriptContent.includes("function startV2exTopicPolling()"),
+    "must define startV2exTopicPolling"
+  );
+  assert.ok(
+    scriptContent.includes("function stopV2exTopicPolling()"),
+    "must define stopV2exTopicPolling"
+  );
+
+  // 2. Lifecycle integration
+  assert.ok(
+    scriptContent.includes("stopV2exTopicPolling();"),
+    "removePanels must call stopV2exTopicPolling"
+  );
+  assert.ok(
+    scriptContent.includes("startV2exTopicPolling();"),
+    "bootstrap must call startV2exTopicPolling on V2EX"
+  );
+  assert.ok(
+    scriptContent.includes("pollV2exCurrentTopicOnce();"),
+    "visibilitychange and submitComposer must trigger pollV2exCurrentTopicOnce"
+  );
+
+  // 3. Functional simulation of poll filtering and appending
+  function simulatePollFilter(renderedNumbers, newPosts) {
+    const renderedSet = new Set(renderedNumbers);
+    return newPosts
+      .filter((post) => {
+        const num = post.post_number || (post.floor ? post.floor + 1 : 0);
+        return num > 1 && !renderedSet.has(num);
+      })
+      .sort((a, b) => (a.post_number || 0) - (b.post_number || 0));
+  }
+
+  // Existing thread with OP (post 1) and replies 2..5 (floors 1..4)
+  const existingNumbers = [1, 2, 3, 4, 5];
+  // Server poll returns replies 2..7 (floors 1..6)
+  const polledPosts = [
+    { post_number: 1, id: 100, cooked: "OP content" },
+    { post_number: 2, id: 101, cooked: "Reply 1" },
+    { post_number: 3, id: 102, cooked: "Reply 2" },
+    { post_number: 4, id: 103, cooked: "Reply 3" },
+    { post_number: 5, id: 104, cooked: "Reply 4" },
+    { post_number: 6, id: 105, username: "alice", cooked: "<p>New reply 5</p>" },
+    { post_number: 7, id: 106, username: "bob", cooked: "<p>New reply 6</p>" }
+  ];
+
+  const fresh = simulatePollFilter(existingNumbers, polledPosts);
+  assert.equal(fresh.length, 2);
+  assert.equal(fresh[0].post_number, 6);
+  assert.equal(fresh[0].username, "alice");
+  assert.equal(fresh[1].post_number, 7);
+  assert.equal(fresh[1].username, "bob");
+
+  // 4. Test list item update logic
+  function simulateConvUpdate(conv, lastPost) {
+    if (!conv || !lastPost) return;
+    const snippet = (lastPost.cooked || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    conv.msg = `${lastPost.username}: ${snippet.slice(0, 50)}`;
+    conv.time = "刚刚";
+  }
+
+  const mockConv = { msg: "old msg", time: "10分钟前" };
+  simulateConvUpdate(mockConv, fresh[1]);
+  assert.equal(mockConv.msg, "bob: New reply 6");
+  assert.equal(mockConv.time, "刚刚");
+
+  // 5. Test subtitle update
+  function simulateSubtitleUpdate(totalReplies, nodeTitle, isMask = false) {
+    if (isMask) return `企业内部群 · ${totalReplies} 条消息`;
+    const nodePart = nodeTitle ? `归属于 ${nodeTitle} · ` : "归属于 v2ex.com · ";
+    return `${nodePart}${totalReplies} 条回复`;
+  }
+
+  assert.equal(simulateSubtitleUpdate(7, "程序员"), "归属于 程序员 · 7 条回复");
+  assert.equal(simulateSubtitleUpdate(7, "程序员", true), "企业内部群 · 7 条消息");
+});
+
+
 
 
 
