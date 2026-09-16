@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.30
+// @version      0.7.31
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -1526,7 +1526,7 @@
       font-size: 12px;
       font-weight: 500;
       color: #4E5969;
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: 4px;
       text-decoration: none;
@@ -1537,10 +1537,15 @@
       background: #E5E6EB;
     }
     .wecom-v2ex-footer-coins img {
-      width: 14px;
-      height: 14px;
-      vertical-align: -2px;
-      margin: 0 1px;
+      width: 14px !important;
+      height: 14px !important;
+      max-width: 14px !important;
+      max-height: 14px !important;
+      vertical-align: -2px !important;
+      margin: 0 1px !important;
+      display: inline-block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
     }
     .wecom-v2ex-help-btn {
       color: #8F959E;
@@ -7501,6 +7506,11 @@
     html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-footer-coins:hover {
       background: #3B4252 !important;
     }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-footer-coins img {
+      display: inline-block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
     html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-checkin-row {
       background: #1C1E22 !important;
       color: #8C8C8C !important;
@@ -9357,7 +9367,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.30";
+  const SCRIPT_VERSION = "0.7.31";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -10992,34 +11002,79 @@
   let isCheckingV2exDaily = false;
   let isFetchingV2exStats = false;
 
+  function hasV2exCoins(html) {
+    if (!html || typeof html !== "string") return false;
+    return /<img[^>]+(?:gold|silver|bronze|static\/img\/)/i.test(html) ||
+           /(?:🟡|⚪|🟤)/.test(html);
+  }
+
   function extractV2exMoneyFromDom(root = document) {
     if (!root || typeof root.querySelector !== "function") return null;
-    const el = root.querySelector("#money, .balance_area, a[href^='/balance'], #Rightbar a[href^='/balance'], #Top a[href^='/balance']");
-    if (!el) return null;
-    let html = el.innerHTML || "";
-    const aMatch = html.match(/<a\s+[^>]*href=["']?\/balance["']?[^>]*>([\s\S]*?)<\/a>/i);
-    if (aMatch) {
-      html = aMatch[1];
+    const candidates = (typeof root.querySelectorAll === "function") ?
+      root.querySelectorAll("#money, .balance_area, #Rightbar a[href*='/balance'], #Top a[href*='/balance'], a[href*='/balance']") :
+      [];
+    for (const el of candidates) {
+      let html = el.innerHTML || "";
+      const aMatch = html.match(/<a\s+[^>]*href=["']?[^"'>]*\/balance[^"'>]*["']?[^>]*>([\s\S]*?)<\/a>/i);
+      if (aMatch) html = aMatch[1];
+      html = html.replace(/src=["']\/static\//gi, 'src="https://www.v2ex.com/static/').trim();
+      if (hasV2exCoins(html)) {
+        cachedV2exMoneyHtml = html;
+        try { localStorage.setItem(V2EX_MONEY_KEY, html); } catch {}
+        return html;
+      }
     }
-    html = html.replace(/src=["']\/static\//gi, 'src="https://www.v2ex.com/static/').trim();
-    if (html) {
-      cachedV2exMoneyHtml = html;
-      try { localStorage.setItem(V2EX_MONEY_KEY, html); } catch {}
+    const single = (typeof root.querySelector === "function") ?
+      root.querySelector("#money, .balance_area, a[href^='/balance'], #Rightbar a[href^='/balance'], #Top a[href^='/balance']") :
+      null;
+    if (single) {
+      let html = single.innerHTML || "";
+      const aMatch = html.match(/<a\s+[^>]*href=["']?[^"'>]*\/balance[^"'>]*["']?[^>]*>([\s\S]*?)<\/a>/i);
+      if (aMatch) html = aMatch[1];
+      html = html.replace(/src=["']\/static\//gi, 'src="https://www.v2ex.com/static/').trim();
+      if (hasV2exCoins(html)) {
+        cachedV2exMoneyHtml = html;
+        try { localStorage.setItem(V2EX_MONEY_KEY, html); } catch {}
+        return html;
+      }
     }
-    return html || null;
+    return null;
   }
 
   function getV2exMoneyHtml() {
     const fromDom = extractV2exMoneyFromDom(document);
-    if (fromDom) return fromDom;
-    if (cachedV2exMoneyHtml) return cachedV2exMoneyHtml;
+    if (fromDom && hasV2exCoins(fromDom)) return fromDom;
+    if (cachedV2exMoneyHtml && hasV2exCoins(cachedV2exMoneyHtml)) return cachedV2exMoneyHtml;
     try {
       const stored = localStorage.getItem(V2EX_MONEY_KEY);
-      if (stored && stored.trim()) {
+      if (stored && hasV2exCoins(stored)) {
         cachedV2exMoneyHtml = stored.trim();
         return cachedV2exMoneyHtml;
       }
     } catch {}
+    return "";
+  }
+
+  function extractV2exMoneyFromHtml(html) {
+    if (!html || typeof html !== "string") return "";
+    const areaMatch = html.match(/<(?:a|div|span)\s+[^>]*(?:class=["'][^"']*balance_area[^"']*["']|id=["']money["'])[^>]*>([\s\S]*?)<\/(?:a|div|span)>/i);
+    if (areaMatch) {
+      let bHtml = areaMatch[1];
+      const innerA = bHtml.match(/<a\s+[^>]*>([\s\S]*?)<\/a>/i);
+      if (innerA) bHtml = innerA[1];
+      bHtml = bHtml.replace(/src=["']\/static\//gi, 'src="https://www.v2ex.com/static/').trim();
+      if (hasV2exCoins(bHtml)) return bHtml;
+    }
+    const aMatch = html.match(/<a\s+[^>]*href=["'][^"']*\/balance[^"']*["'][^>]*>([\s\S]*?)<\/a>/i);
+    if (aMatch) {
+      const bHtml = aMatch[1].replace(/src=["']\/static\//gi, 'src="https://www.v2ex.com/static/').trim();
+      if (hasV2exCoins(bHtml)) return bHtml;
+    }
+    const snippetMatch = html.match(/(\d+\s*<img[^>]+(?:gold|silver|bronze)[^>]*>[\s\S]*?(?:<img[^>]+(?:gold|silver|bronze)[^>]*>|\d+))/i);
+    if (snippetMatch) {
+      const bHtml = snippetMatch[1].replace(/src=["']\/static\//gi, 'src="https://www.v2ex.com/static/').trim();
+      if (hasV2exCoins(bHtml)) return bHtml;
+    }
     return "";
   }
 
@@ -11062,14 +11117,9 @@
     if (notifMatch) stats.unreadNotifs = parseInt(notifMatch[1], 10);
 
     // Balance
-    const balanceMatch = html.match(/<a\s+[^>]*href=["']\/balance["'][^>]*class=["']balance_area["'][^>]*>([\s\S]*?)<\/a>/i) ||
-                         html.match(/<a\s+[^>]*href=["']\/balance["'][^>]*>([\s\S]*?)<\/a>/i) ||
-                         html.match(/<div\s+[^>]*id=["']money["'][^>]*>([\s\S]*?)<\/div>/i);
-    if (balanceMatch) {
-      let bHtml = balanceMatch[1];
-      const innerA = bHtml.match(/<a\s+[^>]*>([\s\S]*?)<\/a>/i);
-      if (innerA) bHtml = innerA[1];
-      stats.moneyHtml = bHtml.replace(/src=["']\/static\//gi, 'src="https://www.v2ex.com/static/').trim();
+    const money = extractV2exMoneyFromHtml(html);
+    if (money) {
+      stats.moneyHtml = money;
     }
 
     // Daily Mission
@@ -11080,7 +11130,7 @@
     if (daysMatch) stats.checkinDays = parseInt(daysMatch[1], 10);
 
     // Save and cache
-    if (stats.moneyHtml) {
+    if (stats.moneyHtml && hasV2exCoins(stats.moneyHtml)) {
       cachedV2exMoneyHtml = stats.moneyHtml;
       try { localStorage.setItem(V2EX_MONEY_KEY, stats.moneyHtml); } catch {}
     }
@@ -11125,7 +11175,14 @@
     }
 
     const moneyHtml = extractV2exMoneyFromDom(root);
-    if (moneyHtml) stats.moneyHtml = moneyHtml;
+    if (moneyHtml && hasV2exCoins(moneyHtml)) {
+      stats.moneyHtml = moneyHtml;
+    } else {
+      const fallbackMoney = getV2exMoneyHtml();
+      if (fallbackMoney && hasV2exCoins(fallbackMoney)) {
+        stats.moneyHtml = fallbackMoney;
+      }
+    }
 
     const missionEl = root.querySelector("a[href='/mission/daily']");
     if (missionEl && (missionEl.textContent || "").includes("已领取")) {
@@ -11137,7 +11194,9 @@
     if (daysMatch) stats.checkinDays = parseInt(daysMatch[1], 10);
 
     // Merge with cached stats if some fields are missing
-    if (!stats.moneyHtml && cachedV2exUserStats?.moneyHtml) stats.moneyHtml = cachedV2exUserStats.moneyHtml;
+    if (!hasV2exCoins(stats.moneyHtml) && hasV2exCoins(cachedV2exUserStats?.moneyHtml)) {
+      stats.moneyHtml = cachedV2exUserStats.moneyHtml;
+    }
     if (stats.nodesCount === 0 && cachedV2exUserStats?.nodesCount) stats.nodesCount = cachedV2exUserStats.nodesCount;
     if (stats.topicsCount === 0 && cachedV2exUserStats?.topicsCount) stats.topicsCount = cachedV2exUserStats.topicsCount;
     if (stats.followingCount === 0 && cachedV2exUserStats?.followingCount) stats.followingCount = cachedV2exUserStats.followingCount;
@@ -11164,7 +11223,7 @@
     if (!IS_V2EX || isFetchingV2exStats) return null;
     // Try live DOM first
     const fromDom = extractV2exUserStatsFromDom(document);
-    if (fromDom && fromDom.moneyHtml && fromDom.topicsCount > 0) {
+    if (fromDom && hasV2exCoins(fromDom.moneyHtml) && fromDom.topicsCount > 0) {
       updateOpenV2exUserPopover(fromDom);
       return fromDom;
     }
@@ -11174,8 +11233,29 @@
       const resp = await fetch("/", { credentials: "include" });
       if (!resp.ok) return null;
       const html = await resp.text();
-      const stats = extractV2exUserStatsFromHtml(html);
-      if (stats) updateOpenV2exUserPopover(stats);
+      let stats = extractV2exUserStatsFromHtml(html);
+      if (stats && hasV2exCoins(stats.moneyHtml)) {
+        updateOpenV2exUserPopover(stats);
+        return stats;
+      }
+      // If / did not include coins (e.g. topic page layout), fetch /balance directly
+      if (!stats || !hasV2exCoins(stats.moneyHtml)) {
+        try {
+          const balResp = await fetch("/balance", { credentials: "include" });
+          if (balResp.ok) {
+            const balHtml = await balResp.text();
+            const money = extractV2exMoneyFromHtml(balHtml);
+            if (money && hasV2exCoins(money)) {
+              if (!stats) stats = getV2exUserStats() || {};
+              stats.moneyHtml = money;
+              cachedV2exMoneyHtml = money;
+              try { localStorage.setItem(V2EX_MONEY_KEY, money); } catch {}
+              try { localStorage.setItem(V2EX_USER_STATS_KEY, JSON.stringify(stats)); } catch {}
+              updateOpenV2exUserPopover(stats);
+            }
+          }
+        } catch {}
+      }
       return stats;
     } catch {
       return null;
@@ -11287,7 +11367,7 @@
       const el = popover.querySelector("[data-act='following'] .wecom-v2ex-stat-num");
       if (el) el.textContent = String(stats.followingCount);
     }
-    if (stats.moneyHtml) {
+    if (stats.moneyHtml && hasV2exCoins(stats.moneyHtml)) {
       const el = popover.querySelector(".wecom-v2ex-footer-coins");
       if (el) el.innerHTML = stats.moneyHtml;
     }
@@ -11304,35 +11384,40 @@
     closeV2exUserPopover();
     if (!IS_V2EX) return;
 
-    const disguised = isMaskAvatar() || isMaskTitleList();
-    const disguisePreset = getRailDisguiseAvatarId() ? RAIL_DISGUISE_AVATARS.find((a) => a.id === getRailDisguiseAvatarId()) : null;
-    const username = getCurrentUsername() || "";
-    const displayName = (disguised || disguisePreset) ? "企业员工" : (username || "未登录");
+    const stats = getV2exUserStats() || {};
+    const username = getCurrentUsername() || stats.username || "";
+    const displayName = username || "V2EX 用户";
 
-    // 头像
-    const railAvatar = document.querySelector(".wecom-rail-avatar");
+    // 头像：优先取原站真实头像
     let avatarContent = "";
-    if (railAvatar && railAvatar.innerHTML.trim()) {
-      avatarContent = railAvatar.innerHTML;
+    const realImg = document.querySelector("#Rightbar .avatar, #Top .avatar, #current-user img");
+    if (realImg && realImg.src) {
+      avatarContent = `<img src="${escapeHtml(realImg.src)}" alt="">`;
     } else {
-      avatarContent = avatarLetter(displayName);
+      const railAvatar = document.querySelector(".wecom-rail-avatar");
+      if (railAvatar && railAvatar.innerHTML.trim()) {
+        avatarContent = railAvatar.innerHTML;
+      } else {
+        avatarContent = avatarLetter(displayName);
+      }
     }
 
-    // 用户统计与财产
-    const stats = getV2exUserStats() || {};
-    const nodesCount = disguised ? 0 : (stats.nodesCount ?? 0);
-    const topicsCount = disguised ? 12 : (stats.topicsCount ?? 0);
-    const followingCount = disguised ? 0 : (stats.followingCount ?? 0);
+    // 用户统计与财产：始终直接展示真实收藏数和金银铜币
+    const nodesCount = stats.nodesCount ?? 0;
+    const topicsCount = stats.topicsCount ?? 0;
+    const followingCount = stats.followingCount ?? 0;
     const unreadNotifs = stats.unreadNotifs ?? getUnreadNotificationCount();
 
     let moneyHtml = "";
-    if (disguised) {
-      moneyHtml = "<span>100.0 分 (正常)</span>";
-    } else if (stats.moneyHtml) {
+    if (stats.moneyHtml && hasV2exCoins(stats.moneyHtml)) {
       moneyHtml = stats.moneyHtml;
     } else {
       const rawMoney = getV2exMoneyHtml();
-      moneyHtml = rawMoney || "<span style='font-size:12px;color:var(--wc-text-3, #999);'>查看余额</span>";
+      if (rawMoney && hasV2exCoins(rawMoney)) {
+        moneyHtml = rawMoney;
+      } else {
+        moneyHtml = `<span class="wecom-v2ex-coins-loading" style="font-size:12px;color:var(--wc-text-3, #999);">加载余额…</span>`;
+      }
     }
 
     // 签到状态
@@ -11342,7 +11427,7 @@
     const checkinDays = stats.checkinDays || 0;
 
     const isDark = isDarkMode();
-    const profileUrl = (!disguised && username) ? `/member/${encodeURIComponent(username)}` : "javascript:void(0)";
+    const profileUrl = username ? `/member/${encodeURIComponent(username)}` : "javascript:void(0)";
 
     const popover = document.createElement("div");
     popover.className = "wecom-v2ex-user-popover";
@@ -11364,15 +11449,15 @@
       <div class="wecom-v2ex-popover-stats">
         <a class="wecom-v2ex-stat-col" data-act="nodes" href="/my/nodes" title="节点收藏">
           <span class="wecom-v2ex-stat-num">${nodesCount}</span>
-          <span class="wecom-v2ex-stat-label">${disguised ? "项目收藏" : "节点收藏"}</span>
+          <span class="wecom-v2ex-stat-label">节点收藏</span>
         </a>
         <a class="wecom-v2ex-stat-col" data-act="topics" href="/my/topics" title="主题收藏">
           <span class="wecom-v2ex-stat-num">${topicsCount}</span>
-          <span class="wecom-v2ex-stat-label">${disguised ? "任务收藏" : "主题收藏"}</span>
+          <span class="wecom-v2ex-stat-label">主题收藏</span>
         </a>
         <a class="wecom-v2ex-stat-col" data-act="following" href="/my/following" title="特别关注">
           <span class="wecom-v2ex-stat-num">${followingCount}</span>
-          <span class="wecom-v2ex-stat-label">${disguised ? "团队关注" : "特别关注"}</span>
+          <span class="wecom-v2ex-stat-label">特别关注</span>
         </a>
       </div>
 
@@ -11382,7 +11467,7 @@
 
       <div class="wecom-v2ex-popover-footer">
         <a class="wecom-v2ex-footer-notifs" data-act="notifications" href="/notifications" title="查看提醒">
-          ${unreadNotifs} ${disguised ? "未读工作提醒" : "未读提醒"}
+          ${unreadNotifs} 未读提醒
         </a>
         <div class="wecom-v2ex-footer-coins-group">
           <a class="wecom-v2ex-footer-coins" data-act="balance" href="/balance" title="查看账户余额与账单明细">
@@ -11449,7 +11534,7 @@
     document.body.appendChild(popover);
 
     // If moneyHtml or topicsCount is empty, fetch in background and update live
-    if (!disguised && (!stats.moneyHtml || !stats.topicsCount)) {
+    if (!hasV2exCoins(stats.moneyHtml) || !stats.topicsCount) {
       syncV2exUserStats();
     }
   }

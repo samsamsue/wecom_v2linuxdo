@@ -4039,6 +4039,26 @@ test("V2EX user popover displays nodes, topics, following, coins pill, theme tog
   assert.equal(res.unreadNotifs, 2);
   assert.ok(res.moneyHtml.includes("https://www.v2ex.com/static/img/gold@2x.png"));
   assert.equal(res.checkinDays, 15);
+
+  // 7. hasV2exCoins validator and real coins guarantee in popover
+  assert.ok(
+    scriptContent.includes("function hasV2exCoins("),
+    "must define hasV2exCoins validation helper"
+  );
+  assert.ok(
+    !scriptContent.includes('moneyHtml = "<span>100.0 分 (正常)</span>";'),
+    "popover must not replace real coins with mock score in disguise mode"
+  );
+  assert.ok(
+    scriptContent.includes('fetch("/balance", { credentials: "include" })'),
+    "syncV2exUserStats must fall back to fetching /balance if coins are missing"
+  );
+  assert.ok(
+    scriptContent.includes("<span class=\"wecom-v2ex-stat-label\">节点收藏</span>") &&
+    scriptContent.includes("<span class=\"wecom-v2ex-stat-label\">主题收藏</span>") &&
+    scriptContent.includes("<span class=\"wecom-v2ex-stat-label\">特别关注</span>"),
+    "popover stat labels must show 节点收藏, 主题收藏, 特别关注"
+  );
 });
 
 
