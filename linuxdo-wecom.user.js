@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.31
+// @version      0.7.32
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -1592,6 +1592,265 @@
       cursor: default;
     }
 
+    /* ---------- V2EX 用户资料卡弹窗 (.wecom-v2ex-member-card) ---------- */
+    .wecom-v2ex-member-card {
+      width: 320px;
+      max-height: calc(100vh - 30px);
+      overflow-y: auto;
+      background: #FFFFFF;
+      border-radius: 12px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      color: #1F2329;
+      box-sizing: border-box;
+      animation: wecomFadeIn 0.15s ease-out;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+    .wecom-member-card-banner {
+      height: 52px;
+      background: linear-gradient(135deg, #1A87FF 0%, #0066E0 100%);
+      position: relative;
+    }
+    .wecom-member-card-close {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.22);
+      color: #FFFFFF;
+      border: none;
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+    .wecom-member-card-close:hover {
+      background: rgba(0, 0, 0, 0.45);
+    }
+    .wecom-member-card-header {
+      padding: 0 16px 10px;
+      position: relative;
+      margin-top: -26px;
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+    }
+    .wecom-member-avatar-box {
+      position: relative;
+      width: 56px;
+      height: 56px;
+      flex-shrink: 0;
+    }
+    .wecom-member-avatar-img {
+      width: 100%;
+      height: 100%;
+      border-radius: 10px;
+      object-fit: cover;
+      display: block;
+      background: #267EF0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      border: 2px solid #FFFFFF;
+      box-sizing: border-box;
+    }
+    .wecom-member-online-dot {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      width: 12px;
+      height: 12px;
+      background: #00B42A;
+      border-radius: 50%;
+      border: 2px solid #FFFFFF;
+      box-sizing: border-box;
+    }
+    .wecom-member-title-box {
+      flex: 1;
+      min-width: 0;
+      padding-bottom: 2px;
+    }
+    .wecom-member-name-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .wecom-member-username {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1F2329;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .wecom-member-badge {
+      background: #E8F3FF;
+      color: #1664FF;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .wecom-member-tagline {
+      font-size: 12px;
+      color: #8F959E;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .wecom-member-meta-pills {
+      padding: 0 16px 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .wecom-member-pill {
+      font-size: 11px;
+      color: #646A73;
+      background: #F2F3F5;
+      padding: 2px 7px;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .wecom-member-pill.highlight {
+      background: #FFF7E8;
+      color: #B25900;
+      font-weight: 500;
+    }
+    .wecom-member-coins-row {
+      padding: 0 16px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .wecom-member-coins-pill {
+      background: #F7F8FA;
+      border: 1px solid #E5E6EB;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #4E5969;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .wecom-member-coins-pill img {
+      width: 14px !important;
+      height: 14px !important;
+      vertical-align: -2px !important;
+      margin: 0 1px !important;
+      display: inline-block !important;
+    }
+    .wecom-member-intro {
+      margin: 0 16px 10px;
+      padding: 8px 12px;
+      background: #F7F8FA;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #4E5969;
+      line-height: 1.5;
+      word-break: break-word;
+      border-left: 3px solid #1664FF;
+    }
+    .wecom-member-socials {
+      padding: 0 16px 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .wecom-member-social-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 7px;
+      background: #FFFFFF;
+      border: 1px solid #DEE0E3;
+      border-radius: 6px;
+      color: #3370FF;
+      text-decoration: none;
+      font-size: 11px;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .wecom-member-social-link:hover {
+      background: #F0F4FF;
+      border-color: #3370FF;
+    }
+    .wecom-member-topics-box {
+      margin: 0 16px 10px;
+      border-top: 1px solid #EBEDF0;
+      padding-top: 8px;
+    }
+    .wecom-member-topics-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: #8F959E;
+      margin-bottom: 5px;
+    }
+    .wecom-member-topic-item {
+      display: block;
+      font-size: 12px;
+      color: #1F2329;
+      text-decoration: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: 2px 0;
+      line-height: 1.4;
+    }
+    .wecom-member-topic-item:hover {
+      color: #1664FF;
+    }
+    .wecom-member-card-footer {
+      padding: 10px 16px;
+      background: #FAFAFA;
+      border-top: 1px solid #EBEDF0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .wecom-member-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      height: 30px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      box-sizing: border-box;
+      transition: all 0.15s;
+    }
+    .wecom-member-btn.primary {
+      background: #1664FF;
+      color: #FFFFFF;
+      border: none;
+    }
+    .wecom-member-btn.primary:hover {
+      background: #0E53E0;
+    }
+    .wecom-member-btn.secondary {
+      background: #FFFFFF;
+      color: #1F2329;
+      border: 1px solid #DEE0E3;
+    }
+    .wecom-member-btn.secondary:hover {
+      background: #F2F3F5;
+    }
+
     /* ---------- 窄图标条：假 icon（纯装饰） ---------- */
     .wecom-strip {
       display: none !important;
@@ -2352,8 +2611,10 @@
       color: #fff; font-size: 14px; font-weight: 600;
     }
     .wecom-msg-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .wecom-list-panel [data-user-card],
     .wecom-chat-panel [data-user-card],
     .wecom-member-panel [data-user-card] { cursor: pointer; }
+    .wecom-list-panel [data-user-card]:focus-visible,
     .wecom-chat-panel [data-user-card]:focus-visible,
     .wecom-member-panel [data-user-card]:focus-visible {
       outline: 2px solid var(--wc-accent);
@@ -7516,6 +7777,88 @@
       color: #8C8C8C !important;
     }
 
+    /* 深色模式：V2EX 用户资料卡 */
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-member-card {
+      background: #1E2127;
+      border-color: #2D3139;
+      color: #D4D4D4;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-card-banner {
+      background: linear-gradient(135deg, #0F4C81 0%, #082E54 100%);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-avatar-img {
+      border-color: #1E2127;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-online-dot {
+      border-color: #1E2127;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-username {
+      color: #F0F0F0;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-badge {
+      background: #112A45;
+      color: #4096FF;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-tagline {
+      color: #8C8C8C;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-pill {
+      background: #23272E;
+      color: #A6ADB6;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-pill.highlight {
+      background: #332615;
+      color: #E69D3B;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-coins-pill {
+      background: #23272E;
+      border-color: #333842;
+      color: #C0C5CE;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-coins-pill img {
+      display: inline-block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-intro {
+      background: #23272E;
+      color: #A6ADB6;
+      border-left-color: #1664FF;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-social-link {
+      background: #23272E;
+      border-color: #333842;
+      color: #4096FF;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-social-link:hover {
+      background: #2C313A;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-topics-box {
+      border-top-color: #2C313A;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-topics-title {
+      color: #727A86;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-topic-item {
+      color: #D4D4D4;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-topic-item:hover {
+      color: #4096FF;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-card-footer {
+      background: #181A1F;
+      border-top-color: #2C313A;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-btn.secondary {
+      background: #23272E;
+      border-color: #383F4C;
+      color: #D4D4D4;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-btn.secondary:hover {
+      background: #2D313A;
+    }
+
     /* 左侧头像通知浮层与用户菜单 */
     html.wecom-dark .user-menu.wecom-user-menu-float,
     html.${ROOT_CLASS}.wecom-dark .user-menu.wecom-user-menu-float,
@@ -9367,7 +9710,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.31";
+  const SCRIPT_VERSION = "0.7.32";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -10674,6 +11017,7 @@
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
         if (isV2exUserPopoverOpen()) closeV2exUserPopover();
+        if (isV2exMemberCardOpen()) closeV2exMemberCard();
         if (isNotifMenuOpen()) closeNotifMenu();
       }
     });
@@ -11539,6 +11883,345 @@
     }
   }
 
+  /* ============================== V2EX 成员资料卡弹窗 (/member/:username) ============================== */
+
+  const v2exMemberProfileCache = new Map();
+  const V2EX_MEMBER_CACHE_TTL = 5 * 60 * 1000;
+
+  function parseV2exMemberProfile(html, username) {
+    if (!html || typeof html !== "string") return null;
+
+    const profile = {
+      username: username || "",
+      avatarUrl: "",
+      uid: "",
+      isOnline: false,
+      tagline: "",
+      memberNum: "",
+      joinedDate: "",
+      activityRank: "",
+      isPro: false,
+      badgeText: "",
+      balanceHtml: "",
+      socials: [],
+      intro: "",
+      recentTopics: []
+    };
+
+    // Username
+    const userMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+    if (userMatch) profile.username = userMatch[1].trim();
+
+    // Avatar
+    const avatarMatch = html.match(/<img\s+[^>]*src=["']([^"']+)["'][^>]*class=["'][^"']*avatar/i) ||
+                        html.match(/<img\s+[^>]*class=["'][^"']*avatar[^"']*["'][^>]*src=["']([^"']+)["']/i);
+    if (avatarMatch) {
+      let src = avatarMatch[1];
+      if (src.startsWith("//")) src = "https:" + src;
+      profile.avatarUrl = src;
+    }
+
+    // UID / Member #
+    const uidMatch = html.match(/data-uid=["'](\d+)["']/i) || html.match(/member\s*#(\d+)/i) || html.match(/第\s*(\d+)\s*号会员/i);
+    if (uidMatch) {
+      profile.uid = uidMatch[1];
+      profile.memberNum = uidMatch[1];
+    }
+
+    // Online status
+    if (html.includes('class="online"') || html.includes("class='online'") || html.includes(">ONLINE<")) {
+      profile.isOnline = true;
+    }
+
+    // Tagline / Headline (span.bigger right under h1)
+    const taglineMatch = html.match(/<h1[\s\S]*?<\/h1>[\s\r\n]*<span\s+class=["']bigger["']>([\s\S]*?)<\/span>/i);
+    if (taglineMatch) {
+      profile.tagline = taglineMatch[1].replace(/<[^>]+>/g, "").trim();
+    }
+
+    // Joined date
+    const joinedMatch = html.match(/(?:joined on|加入于)\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/i);
+    if (joinedMatch) profile.joinedDate = joinedMatch[1];
+
+    // Activity rank
+    const rankMatch = html.match(/(?:activity rank|今日活跃度排名)[\s\S]*?<a[^>]*>(\d+)<\/a>/i);
+    if (rankMatch) profile.activityRank = rankMatch[1];
+
+    // Badges (e.g. PRO)
+    const badgeMatch = html.match(/<div\s+class=["']badge\s+([^"']+)["']>([^<]+)<\/div>/i);
+    if (badgeMatch) {
+      profile.isPro = badgeMatch[1].includes("pro");
+      profile.badgeText = badgeMatch[2].trim();
+    }
+
+    // Balance
+    const balMatch = html.match(/<div\s+class=["']balance_area["'][^>]*>([\s\S]*?)<\/div>/i);
+    if (balMatch) {
+      profile.balanceHtml = balMatch[1].replace(/src=["']\/static\//gi, 'src="https://www.v2ex.com/static/').trim();
+    }
+
+    // Socials
+    const socialRegex = /<a\s+[^>]*href=["']([^"']+)["'][^>]*class=["']social_label["'][^>]*>([\s\S]*?)<\/a>/gi;
+    let sMatch;
+    while ((sMatch = socialRegex.exec(html)) !== null) {
+      const url = sMatch[1];
+      const text = sMatch[2].replace(/<[^>]+>/g, "").replace(/&nbsp;/g, "").trim();
+      let type = "link";
+      if (url.includes("twitter.com") || url.includes("x.com")) type = "twitter";
+      else if (url.includes("github.com")) type = "github";
+      else if (url.includes("weibo.com")) type = "weibo";
+      profile.socials.push({ url, text, type });
+    }
+
+    // Intro (the cell below widgets)
+    const widgetsIdx = html.indexOf('class="widgets"');
+    if (widgetsIdx !== -1) {
+      const afterWidgets = html.slice(widgetsIdx);
+      const cellMatch = afterWidgets.match(/<div\s+class=["']cell["']>([\s\S]*?)<\/div>/i);
+      if (cellMatch && !cellMatch[1].includes("<table") && !cellMatch[1].includes("cell_tabs")) {
+        profile.intro = cellMatch[1].replace(/<[^>]+>/g, " ").trim();
+      }
+    }
+
+    // Recent topics (up to 2)
+    const topicRegex = /<span\s+class=["']item_title["']>\s*<a\s+href=["'](\/t\/\d+[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    let tMatch;
+    while ((tMatch = topicRegex.exec(html)) !== null && profile.recentTopics.length < 2) {
+      profile.recentTopics.push({
+        url: tMatch[1],
+        title: tMatch[2].replace(/<[^>]+>/g, "").trim()
+      });
+    }
+
+    return profile;
+  }
+
+  async function fetchV2exMemberProfile(username) {
+    if (!username) return null;
+    const now = Date.now();
+    const cached = v2exMemberProfileCache.get(username);
+    if (cached && (now - cached.time < V2EX_MEMBER_CACHE_TTL)) {
+      return cached.data;
+    }
+
+    try {
+      const resp = await fetch(`/member/${encodeURIComponent(username)}`, { credentials: "include" });
+      if (!resp.ok) return null;
+      const html = await resp.text();
+      const profile = parseV2exMemberProfile(html, username);
+      if (profile) {
+        v2exMemberProfileCache.set(username, { time: now, data: profile });
+      }
+      return profile;
+    } catch (err) {
+      console.warn("[linuxdo-wecom] Failed to fetch member profile:", username, err);
+      return null;
+    }
+  }
+
+  function isV2exMemberCardOpen() {
+    return Boolean(document.querySelector(".wecom-v2ex-member-card"));
+  }
+
+  function closeV2exMemberCard() {
+    const card = document.querySelector(".wecom-v2ex-member-card");
+    if (card) card.remove();
+  }
+
+  function openV2exMemberCard(username, triggerEl, event) {
+    if (!username) return;
+    closeV2exMemberCard();
+
+    // Check if we have an image in triggerEl
+    const triggerImg = triggerEl?.querySelector?.("img") || (triggerEl?.tagName === "IMG" ? triggerEl : null);
+    const initialAvatarSrc = triggerImg?.src || "";
+
+    const card = document.createElement("div");
+    card.className = "wecom-v2ex-member-card";
+    card.setAttribute("role", "dialog");
+    card.setAttribute("aria-label", `${username} 的个人资料`);
+
+    card.innerHTML = `
+      <div class="wecom-member-card-banner">
+        <button type="button" class="wecom-member-card-close" title="关闭" aria-label="关闭">×</button>
+      </div>
+
+      <div class="wecom-member-card-header">
+        <div class="wecom-member-avatar-box">
+          ${initialAvatarSrc ? `<img class="wecom-member-avatar-img" src="${escapeHtml(initialAvatarSrc)}" alt="${escapeHtml(username)}">` : `<div class="wecom-member-avatar-img" style="display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:700;">${escapeHtml(avatarLetter(username))}</div>`}
+          <span class="wecom-member-online-dot" style="display:none"></span>
+        </div>
+        <div class="wecom-member-title-box">
+          <div class="wecom-member-name-row">
+            <span class="wecom-member-username">${escapeHtml(username)}</span>
+            <span class="wecom-member-badge" style="display:none">PRO</span>
+          </div>
+          <div class="wecom-member-tagline"><span class="wecom-member-loading-text">正在获取资料…</span></div>
+        </div>
+      </div>
+
+      <div class="wecom-member-meta-pills" style="display:none"></div>
+      <div class="wecom-member-coins-row" style="display:none"></div>
+      <div class="wecom-member-intro" style="display:none"></div>
+      <div class="wecom-member-socials" style="display:none"></div>
+      <div class="wecom-member-topics-box" style="display:none"></div>
+
+      <div class="wecom-member-card-footer">
+        <a class="wecom-member-btn primary" href="/member/${encodeURIComponent(username)}" target="_blank">查看完整主页 ↗</a>
+        <button type="button" class="wecom-member-btn secondary wecom-copy-username-btn">复制用户名</button>
+      </div>
+    `;
+
+    document.body.appendChild(card);
+
+    if (triggerEl && typeof triggerEl.getBoundingClientRect === "function") {
+      const rect = triggerEl.getBoundingClientRect();
+      const cardWidth = 320;
+      const cardHeight = card.offsetHeight || 300;
+      const margin = 10;
+
+      let left = rect.right + margin;
+      let top = rect.top;
+
+      if (left + cardWidth > window.innerWidth - margin) {
+        left = rect.left - cardWidth - margin;
+        if (left < margin) {
+          left = Math.max(margin, (window.innerWidth - cardWidth) / 2);
+          top = rect.bottom + margin;
+        }
+      }
+
+      if (top + cardHeight > window.innerHeight - margin) {
+        top = Math.max(margin, window.innerHeight - cardHeight - margin);
+      }
+      if (top < margin) top = margin;
+
+      card.style.position = "fixed";
+      card.style.left = `${Math.round(left)}px`;
+      card.style.top = `${Math.round(top)}px`;
+      card.style.zIndex = "100005";
+    } else {
+      card.style.position = "fixed";
+      card.style.left = "50%";
+      card.style.top = "50%";
+      card.style.transform = "translate(-50%, -50%)";
+      card.style.zIndex = "100005";
+    }
+
+    card.querySelector(".wecom-member-card-close")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeV2exMemberCard();
+    });
+
+    card.querySelector(".wecom-copy-username-btn")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      try {
+        navigator.clipboard.writeText(username);
+        showWecomToast(`已复制用户名：${username}`, "success");
+      } catch {
+        showWecomToast(username, "info");
+      }
+    });
+
+    const onOutsideClick = (e) => {
+      if (!card.contains(e.target) && (!triggerEl || !triggerEl.contains(e.target))) {
+        closeV2exMemberCard();
+        document.removeEventListener("click", onOutsideClick, true);
+      }
+    };
+    setTimeout(() => {
+      document.addEventListener("click", onOutsideClick, true);
+    }, 10);
+
+    fetchV2exMemberProfile(username).then((profile) => {
+      if (!profile || !card.isConnected) return;
+
+      if (profile.avatarUrl) {
+        const avatarImg = card.querySelector(".wecom-member-avatar-img");
+        if (avatarImg && avatarImg.tagName === "IMG") {
+          avatarImg.src = profile.avatarUrl;
+        } else {
+          const avatarBox = card.querySelector(".wecom-member-avatar-box");
+          if (avatarBox) {
+            avatarBox.innerHTML = `
+              <img class="wecom-member-avatar-img" src="${escapeHtml(profile.avatarUrl)}" alt="${escapeHtml(profile.username)}">
+              <span class="wecom-member-online-dot" style="${profile.isOnline ? '' : 'display:none'}"></span>
+            `;
+          }
+        }
+      }
+
+      const dot = card.querySelector(".wecom-member-online-dot");
+      if (dot) dot.style.display = profile.isOnline ? "" : "none";
+
+      const badge = card.querySelector(".wecom-member-badge");
+      if (badge) {
+        if (profile.isPro || profile.badgeText) {
+          badge.textContent = profile.badgeText || "PRO";
+          badge.style.display = "";
+        } else {
+          badge.style.display = "none";
+        }
+      }
+
+      const tagline = card.querySelector(".wecom-member-tagline");
+      if (tagline) {
+        tagline.textContent = profile.tagline || (profile.joinedDate ? `${profile.joinedDate} 加入` : "");
+      }
+
+      const pillsContainer = card.querySelector(".wecom-member-meta-pills");
+      if (pillsContainer) {
+        const pills = [];
+        if (profile.memberNum) pills.push(`<span class="wecom-member-pill">#${profile.memberNum} 号会员</span>`);
+        if (profile.joinedDate) pills.push(`<span class="wecom-member-pill">${profile.joinedDate} 加入</span>`);
+        if (profile.activityRank) pills.push(`<span class="wecom-member-pill highlight">🔥 活跃度 #${profile.activityRank}</span>`);
+        if (pills.length) {
+          pillsContainer.innerHTML = pills.join("");
+          pillsContainer.style.display = "flex";
+        }
+      }
+
+      const coinsRow = card.querySelector(".wecom-member-coins-row");
+      if (coinsRow && profile.balanceHtml) {
+        coinsRow.innerHTML = `<div class="wecom-member-coins-pill">${profile.balanceHtml}</div>`;
+        coinsRow.style.display = "flex";
+      }
+
+      const introBox = card.querySelector(".wecom-member-intro");
+      if (introBox && profile.intro) {
+        introBox.textContent = profile.intro;
+        introBox.style.display = "block";
+      }
+
+      const socialsBox = card.querySelector(".wecom-member-socials");
+      if (socialsBox && profile.socials && profile.socials.length) {
+        socialsBox.innerHTML = profile.socials.map((s) => {
+          let icon = "🌐";
+          if (s.type === "twitter") icon = "𝕏";
+          else if (s.type === "github") icon = "🐙";
+          return `<a class="wecom-member-social-link" href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${icon} ${escapeHtml(s.text)}</a>`;
+        }).join("");
+        socialsBox.style.display = "flex";
+      }
+
+      const topicsBox = card.querySelector(".wecom-member-topics-box");
+      if (topicsBox && profile.recentTopics && profile.recentTopics.length) {
+        const listHtml = profile.recentTopics.map((t) =>
+          `<a class="wecom-member-topic-item" href="${escapeHtml(t.url)}" target="_blank">· ${escapeHtml(t.title)}</a>`
+        ).join("");
+        topicsBox.innerHTML = `<div class="wecom-member-topics-title">最近创建的主题</div>${listHtml}`;
+        topicsBox.style.display = "block";
+      }
+    }).catch(() => {
+      const tagline = card.querySelector(".wecom-member-tagline");
+      if (tagline) tagline.textContent = "资料获取异常";
+    });
+  }
+
+  function openV2exMemberProfilePage(username) {
+    window.open(`/member/${encodeURIComponent(username)}`, "_blank");
+  }
+
   function applyListNavDom() {
     const panel = document.querySelector(".wecom-list-panel");
     const nav = document.querySelector(".wecom-list-nav");
@@ -11977,6 +12660,15 @@
         return;
       }
 
+      // 点击会话项头像：弹出用户资料卡
+      const userCardTrigger = e.target.closest("[data-user-card]");
+      if (userCardTrigger && panel.contains(userCardTrigger)) {
+        e.preventDefault();
+        e.stopPropagation();
+        openOriginalUserCard(userCardTrigger, e);
+        return;
+      }
+
       // 会话/置顶：拦截默认跳转，走即时渲染或 Discourse SPA / pushState
       const link = e.target.closest("a.wecom-conv, .wecom-list-nav a");
       if (!link || !panel.contains(link)) return;
@@ -12094,6 +12786,15 @@
       e.stopPropagation();
       try { link.blur(); } catch { /* ignore */ }
       navigateInApp(href);
+    });
+    panel.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      const trigger = e.target.closest("[data-user-card]");
+      if (trigger && panel.contains(trigger)) {
+        e.preventDefault();
+        e.stopPropagation();
+        openOriginalUserCard(trigger, e);
+      }
     });
   }
 
@@ -12230,11 +12931,13 @@
       const d = disguiseAvatarForTopic(topic);
       return `<span class="wecom-conv-avatar${d.className ? " " + d.className : ""}" style="background:${d.bg};${d.styleExtra}">${d.html}</span>`;
     }
+    const v2exAuthor = topic.v2ex_author || (IS_V2EX ? topic.last_poster_username : "");
+    const authorAttr = v2exAuthor ? ` data-user-card="${escapeHtml(v2exAuthor)}" role="button" tabindex="0" title="查看 ${escapeHtml(v2exAuthor)} 的资料"` : "";
     if (topic.v2ex_avatar) {
-      return `<span class="wecom-conv-avatar"><img src="${escapeHtml(fullAvatarUrl(topic.v2ex_avatar))}" alt="" loading="lazy"></span>`;
+      return `<span class="wecom-conv-avatar"${authorAttr}><img src="${escapeHtml(fullAvatarUrl(topic.v2ex_avatar))}" alt="" loading="lazy"></span>`;
     }
     if (topic.avatar_template) {
-      return `<span class="wecom-conv-avatar"><img src="${escapeHtml(fullAvatarUrl(topic.avatar_template))}" alt="" loading="lazy"></span>`;
+      return `<span class="wecom-conv-avatar"${authorAttr}><img src="${escapeHtml(fullAvatarUrl(topic.avatar_template))}" alt="" loading="lazy"></span>`;
     }
     if (isGroupConversation(topic)) {
       return groupAvatarHtml(topic, usersById || {});
@@ -12243,9 +12946,9 @@
     const user = poster && usersById ? usersById[poster.user_id] : null;
     const displayName = userDisplayName(user, topic.last_poster_username || "?");
     if (user && user.avatar_template) {
-      return `<span class="wecom-conv-avatar"><img src="${escapeHtml(fullAvatarUrl(user.avatar_template))}" alt="" loading="lazy"></span>`;
+      return `<span class="wecom-conv-avatar"${authorAttr}><img src="${escapeHtml(fullAvatarUrl(user.avatar_template))}" alt="" loading="lazy"></span>`;
     }
-    return `<span class="wecom-conv-avatar is-text-avatar is-solid" style="background:${avatarColor(displayName)}">${escapeHtml(avatarLetter(displayName))}</span>`;
+    return `<span class="wecom-conv-avatar is-text-avatar is-solid"${authorAttr} style="background:${avatarColor(displayName)}">${escapeHtml(avatarLetter(displayName))}</span>`;
   }
 
   function convCategoryTag(topic) {
@@ -16487,7 +17190,7 @@
     const username = String(trigger?.dataset?.userCard || "").trim();
     if (!username) throw new Error("用户头像缺少 data-user-card");
     if (IS_V2EX) {
-      window.open(`/member/${encodeURIComponent(username)}`, "_blank");
+      openV2exMemberCard(username, trigger, event);
       return;
     }
     const appEvents = safeLookup(getEmberOwner(), "service:app-events");
@@ -17484,6 +18187,7 @@
         created_at: infoText,
         bumped_at: infoText,
         last_poster_username: author,
+        v2ex_author: author,
         node_name: nodeName,
         v2ex_avatar: avatar,
         posters: [{ user_id: id, description: "Original Poster" }]
@@ -17501,6 +18205,7 @@
       created_at: t.created ? new Date(t.created * 1000).toISOString() : "",
       bumped_at: t.created ? new Date(t.created * 1000).toISOString() : "",
       last_poster_username: t.member?.username || "",
+      v2ex_author: t.member?.username || "",
       node_name: t.node?.title || t.node?.name || "",
       v2ex_avatar: t.member?.avatar_normal || t.member?.avatar_large || "",
       posters: [{ user_id: t.id, description: "Original Poster" }]
@@ -17542,6 +18247,7 @@
         created_at: timeEl?.getAttribute("title") || timeEl?.textContent?.trim() || "",
         bumped_at: timeEl?.getAttribute("title") || timeEl?.textContent?.trim() || "",
         last_poster_username: memberLink?.textContent?.trim() || "",
+        v2ex_author: memberLink?.textContent?.trim() || "",
         node_name: "通知",
         v2ex_avatar: avatar,
         notification_text: text,
@@ -18938,6 +19644,7 @@
     document.querySelector(".wecom-edit-dialog")?.remove();
     document.querySelector(".wecom-v2ex-nav2")?.remove();
     closeV2exUserPopover();
+    closeV2exMemberCard();
     closeBase64InsertDialog();
     document.querySelector(".wecom-toast-container")?.remove();
   }
@@ -19152,7 +19859,7 @@
       });
     }
 
-    const WECOM_UI_SEL = ".wecom-toast-container, .wecom-base64-insert-dialog, .wecom-v2ex-user-popover, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
+    const WECOM_UI_SEL = ".wecom-toast-container, .wecom-base64-insert-dialog, .wecom-v2ex-user-popover, .wecom-v2ex-member-card, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
     const NATIVE_BRIDGE_SEL = "#reply-control, .dialog-holder, .dialog-container, #discourse-modal-container, .d-modal, .bootbox, .autocomplete, .autocomplete-container, .d-editor-popup, [data-identifier='emoji-picker'], .tag-chooser";
     const observer = new MutationObserver((mutations) => {
       // 忽略我们自己面板内部的 DOM 变动，否则点开筛选会立刻触发 applyTheme 回写/闪断

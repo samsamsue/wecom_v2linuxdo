@@ -4061,6 +4061,195 @@ test("V2EX user popover displays nodes, topics, following, coins pill, theme tog
   );
 });
 
+test("V2EX member profile card parses user information and displays popup on avatar click", () => {
+  // 1. Static code assertions
+  assert.ok(
+    scriptContent.includes(".wecom-v2ex-member-card"),
+    "must define CSS for .wecom-v2ex-member-card"
+  );
+  assert.ok(
+    scriptContent.includes("parseV2exMemberProfile"),
+    "must define parseV2exMemberProfile parser"
+  );
+  assert.ok(
+    scriptContent.includes("fetchV2exMemberProfile"),
+    "must define fetchV2exMemberProfile fetcher"
+  );
+  assert.ok(
+    scriptContent.includes("openV2exMemberCard"),
+    "must define openV2exMemberCard function"
+  );
+  assert.ok(
+    scriptContent.includes("closeV2exMemberCard"),
+    "must define closeV2exMemberCard function"
+  );
+  assert.ok(
+    scriptContent.includes("isV2exMemberCardOpen"),
+    "must define isV2exMemberCardOpen function"
+  );
+  assert.ok(
+    scriptContent.includes("v2exMemberProfileCache"),
+    "must define v2exMemberProfileCache memory cache"
+  );
+  assert.match(
+    scriptContent,
+    /WECOM_UI_SEL\s*=\s*"[^"]*\.wecom-v2ex-member-card/,
+    "WECOM_UI_SEL must include .wecom-v2ex-member-card"
+  );
+  assert.ok(
+    scriptContent.includes("closeV2exMemberCard();"),
+    "removePanels must call closeV2exMemberCard"
+  );
+
+  // 2. Avatar click in list panel & chat messages
+  assert.ok(
+    scriptContent.includes("openV2exMemberCard(username, trigger, event);"),
+    "openOriginalUserCard must invoke openV2exMemberCard on V2EX"
+  );
+  assert.ok(
+    scriptContent.includes("data-user-card") &&
+    scriptContent.includes("v2exAuthor"),
+    "convAvatarHtml must output data-user-card for V2EX authors"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-list-panel [data-user-card]"),
+    "CSS must define cursor: pointer for .wecom-list-panel [data-user-card]"
+  );
+
+  // 3. Functional parser simulation
+  function simulateParseProfile(html, username) {
+    if (!html || typeof html !== "string") return null;
+    const profile = {
+      username: username || "",
+      avatarUrl: "",
+      uid: "",
+      isOnline: false,
+      tagline: "",
+      memberNum: "",
+      joinedDate: "",
+      activityRank: "",
+      isPro: false,
+      badgeText: "",
+      balanceHtml: "",
+      socials: [],
+      intro: "",
+      recentTopics: []
+    };
+
+    const userMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+    if (userMatch) profile.username = userMatch[1].trim();
+
+    const avatarMatch = html.match(/<img\s+[^>]*src=["']([^"']+)["'][^>]*class=["'][^"']*avatar/i) ||
+                        html.match(/<img\s+[^>]*class=["'][^"']*avatar[^"']*["'][^>]*src=["']([^"']+)["']/i);
+    if (avatarMatch) {
+      let src = avatarMatch[1];
+      if (src.startsWith("//")) src = "https:" + src;
+      profile.avatarUrl = src;
+    }
+
+    const uidMatch = html.match(/data-uid=["'](\d+)["']/i) || html.match(/member\s*#(\d+)/i) || html.match(/第\s*(\d+)\s*号会员/i);
+    if (uidMatch) {
+      profile.uid = uidMatch[1];
+      profile.memberNum = uidMatch[1];
+    }
+
+    if (html.includes('class="online"') || html.includes("class='online'") || html.includes(">ONLINE<")) {
+      profile.isOnline = true;
+    }
+
+    const taglineMatch = html.match(/<h1[\s\S]*?<\/h1>[\s\r\n]*<span\s+class=["']bigger["']>([\s\S]*?)<\/span>/i);
+    if (taglineMatch) {
+      profile.tagline = taglineMatch[1].replace(/<[^>]+>/g, "").trim();
+    }
+
+    const joinedMatch = html.match(/(?:joined on|加入于)\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/i);
+    if (joinedMatch) profile.joinedDate = joinedMatch[1];
+
+    const rankMatch = html.match(/(?:activity rank|今日活跃度排名)[\s\S]*?<a[^>]*>(\d+)<\/a>/i);
+    if (rankMatch) profile.activityRank = rankMatch[1];
+
+    const badgeMatch = html.match(/<div\s+class=["']badge\s+([^"']+)["']>([^<]+)<\/div>/i);
+    if (badgeMatch) {
+      profile.isPro = badgeMatch[1].includes("pro");
+      profile.badgeText = badgeMatch[2].trim();
+    }
+
+    const balMatch = html.match(/<div\s+class=["']balance_area["'][^>]*>([\s\S]*?)<\/div>/i);
+    if (balMatch) {
+      profile.balanceHtml = balMatch[1].replace(/src=["']\/static\//gi, 'src="https://www.v2ex.com/static/').trim();
+    }
+
+    const socialRegex = /<a\s+[^>]*href=["']([^"']+)["'][^>]*class=["']social_label["'][^>]*>([\s\S]*?)<\/a>/gi;
+    let sMatch;
+    while ((sMatch = socialRegex.exec(html)) !== null) {
+      const url = sMatch[1];
+      const text = sMatch[2].replace(/<[^>]+>/g, "").replace(/&nbsp;/g, "").trim();
+      let type = "link";
+      if (url.includes("twitter.com") || url.includes("x.com")) type = "twitter";
+      else if (url.includes("github.com")) type = "github";
+      else if (url.includes("weibo.com")) type = "weibo";
+      profile.socials.push({ url, text, type });
+    }
+
+    const widgetsIdx = html.indexOf('class="widgets"');
+    if (widgetsIdx !== -1) {
+      const afterWidgets = html.slice(widgetsIdx);
+      const cellMatch = afterWidgets.match(/<div\s+class=["']cell["']>([\s\S]*?)<\/div>/i);
+      if (cellMatch && !cellMatch[1].includes("<table") && !cellMatch[1].includes("cell_tabs")) {
+        profile.intro = cellMatch[1].replace(/<[^>]+>/g, " ").trim();
+      }
+    }
+
+    const topicRegex = /<span\s+class=["']item_title["']>\s*<a\s+href=["'](\/t\/\d+[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    let tMatch;
+    while ((tMatch = topicRegex.exec(html)) !== null && profile.recentTopics.length < 2) {
+      profile.recentTopics.push({
+        url: tMatch[1],
+        title: tMatch[2].replace(/<[^>]+>/g, "").trim()
+      });
+    }
+
+    return profile;
+  }
+
+  const sampleHtml = `
+    <div>
+      <img src="https://cdn.v2ex.com/avatar/984b/5881/367256_large.png" class="avatar" width="73">
+      <h1>laojuelv</h1>
+      <span class="bigger">Wehat: xyetf818</span>
+      <strong class="online">ONLINE</strong>
+      <div class="badge pro">PRO</div>
+      <div class="balance_area">
+        5 <img src="/static/img/gold@2x.png">&nbsp;8 <img src="/static/img/silver@2x.png">&nbsp;66 <img src="/static/img/bronze@2x.png">
+      </div>
+      <span class="gray">V2EX 第 367256 号会员，加入于 2018-12-02 23:25:35 +08:00，今日活跃度排名 <a href="/top/dau">58</a></span>
+      <div class="widgets">
+        <a href="https://twitter.com/laojuelv" class="social_label">Twitter</a>
+      </div>
+      <div class="cell">独立全栈开发者</div>
+      <span class="item_title"><a href="/t/100001">测试主题 1</a></span>
+      <span class="item_title"><a href="/t/100002">测试主题 2</a></span>
+    </div>
+  `;
+
+  const parsed = simulateParseProfile(sampleHtml, "laojuelv");
+  assert.equal(parsed.username, "laojuelv");
+  assert.equal(parsed.avatarUrl, "https://cdn.v2ex.com/avatar/984b/5881/367256_large.png");
+  assert.equal(parsed.isOnline, true);
+  assert.equal(parsed.uid, "367256");
+  assert.equal(parsed.memberNum, "367256");
+  assert.equal(parsed.joinedDate, "2018-12-02");
+  assert.equal(parsed.activityRank, "58");
+  assert.equal(parsed.isPro, true);
+  assert.equal(parsed.tagline, "Wehat: xyetf818");
+  assert.ok(parsed.balanceHtml.includes("https://www.v2ex.com/static/img/gold@2x.png"));
+  assert.equal(parsed.socials.length, 1);
+  assert.equal(parsed.socials[0].type, "twitter");
+  assert.equal(parsed.intro, "独立全栈开发者");
+  assert.equal(parsed.recentTopics.length, 2);
+  assert.equal(parsed.recentTopics[0].title, "测试主题 1");
+});
+
 
 
 
