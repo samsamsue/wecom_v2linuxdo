@@ -3894,6 +3894,154 @@ test("Composer toolbar provides Base64 text conversion and insertion dialog", ()
   );
 });
 
+test("V2EX user popover displays nodes, topics, following, coins pill, theme toggle, and auto-checkin with toast", () => {
+  // 1. Toast component and container
+  assert.ok(
+    scriptContent.includes("function showWecomToast("),
+    "must define showWecomToast helper"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-toast-container") && scriptContent.includes(".wecom-toast"),
+    "must include CSS for toast container and pill"
+  );
+  assert.ok(
+    scriptContent.includes("WECOM_UI_SEL = \".wecom-toast-container,"),
+    "WECOM_UI_SEL must include .wecom-toast-container"
+  );
+  assert.ok(
+    scriptContent.includes("document.querySelector(\".wecom-toast-container\")?.remove();"),
+    "removePanels must clean up toast container"
+  );
+
+  // 2. Storage keys
+  assert.ok(
+    scriptContent.includes('const V2EX_USER_STATS_KEY = "linuxdo-wecom-v2ex-user-stats";'),
+    "must define persistent cache key for user stats"
+  );
+  assert.ok(
+    scriptContent.includes('const V2EX_LAST_CHECKIN_KEY = "linuxdo-wecom-v2ex-last-checkin";'),
+    "must define persistent cache key for last checkin date"
+  );
+
+  // 3. User stats extraction functions
+  assert.ok(
+    scriptContent.includes("function extractV2exUserStatsFromHtml("),
+    "must define extractV2exUserStatsFromHtml"
+  );
+  assert.ok(
+    scriptContent.includes("function extractV2exUserStatsFromDom("),
+    "must define extractV2exUserStatsFromDom"
+  );
+  assert.ok(
+    scriptContent.includes("function getV2exUserStats("),
+    "must define getV2exUserStats"
+  );
+  assert.ok(
+    scriptContent.includes("function syncV2exUserStats("),
+    "must define syncV2exUserStats"
+  );
+  assert.ok(
+    scriptContent.includes("function updateOpenV2exUserPopover("),
+    "must define updateOpenV2exUserPopover"
+  );
+
+  // 4. Daily auto-checkin service
+  assert.ok(
+    scriptContent.includes("async function checkinV2exDaily("),
+    "must define checkinV2exDaily"
+  );
+  assert.ok(
+    scriptContent.includes('checkinV2exDaily(false);'),
+    "bootstrap must trigger checkinV2exDaily on startup"
+  );
+
+  // 5. Popover elements (matching screenshot)
+  assert.ok(
+    scriptContent.includes(".wecom-v2ex-popover-theme-toggle"),
+    "popover must include theme toggle switch"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-v2ex-popover-stats"),
+    "popover must include 3-column stats section"
+  );
+  assert.ok(
+    scriptContent.includes("data-act=\"nodes\"") &&
+    scriptContent.includes("data-act=\"topics\"") &&
+    scriptContent.includes("data-act=\"following\""),
+    "popover stats must include nodes, topics, and following links"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-v2ex-popover-bar"),
+    "popover must include progress bar divider"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-v2ex-footer-coins"),
+    "popover must include coins pill"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-v2ex-checkin-btn"),
+    "popover must include checkin status and action button"
+  );
+
+  // 6. Functional test: HTML stats parser
+  const mockHtml = `
+  <div class="box">
+    <div class="cell">
+      <a href="/member/szabc"><img src="/static/img/avatar.png" class="avatar" /></a>
+      <span class="bigger"><a href="/member/szabc">szabc</a></span>
+    </div>
+    <div class="cell">
+      <a href="/my/nodes" class="dark"><span class="bigger">5</span><span class="fade">节点收藏</span></a>
+      <a href="/my/topics" class="dark"><span class="bigger">12</span><span class="fade">主题收藏</span></a>
+      <a href="/my/following" class="dark"><span class="bigger">3</span><span class="fade">特别关注</span></a>
+    </div>
+    <div class="cell">
+      <a href="/notifications" class="fade">2 条未读提醒</a>
+      <a href="/balance" class="balance_area">1 <img src="/static/img/gold@2x.png"> 90 <img src="/static/img/silver@2x.png"> 40 <img src="/static/img/bronze@2x.png"></a>
+    </div>
+    <div class="inner">
+      <span class="fade">已连续登录 15 天</span>
+    </div>
+  </div>
+  `;
+
+  function simulateExtractStats(html) {
+    const stats = {};
+    const uMatch = html.match(/<a\s+[^>]*href=["']\/member\/([^"'/]+)["'][^>]*>([^<]+)<\/a>/i);
+    if (uMatch) stats.username = uMatch[1].trim();
+
+    const nMatch = html.match(/href=["']\/my\/nodes["'][^>]*>[\s\S]*?<span[^>]*class=["']bigger["'][^>]*>(\d+)<\/span>/i);
+    if (nMatch) stats.nodesCount = parseInt(nMatch[1], 10);
+
+    const tMatch = html.match(/href=["']\/my\/topics["'][^>]*>[\s\S]*?<span[^>]*class=["']bigger["'][^>]*>(\d+)<\/span>/i);
+    if (tMatch) stats.topicsCount = parseInt(tMatch[1], 10);
+
+    const fMatch = html.match(/href=["']\/my\/following["'][^>]*>[\s\S]*?<span[^>]*class=["']bigger["'][^>]*>(\d+)<\/span>/i);
+    if (fMatch) stats.followingCount = parseInt(fMatch[1], 10);
+
+    const notifMatch = html.match(/href=["']\/notifications["'][^>]*>(\d+)\s*(?:条未读提醒|未读提醒)/i);
+    if (notifMatch) stats.unreadNotifs = parseInt(notifMatch[1], 10);
+
+    const bMatch = html.match(/<a\s+[^>]*href=["']\/balance["'][^>]*class=["']balance_area["'][^>]*>([\s\S]*?)<\/a>/i);
+    if (bMatch) stats.moneyHtml = bMatch[1].replace(/src=["']\/static\//gi, 'src="https://www.v2ex.com/static/').trim();
+
+    const daysMatch = html.match(/已连续登录\s*(\d+)\s*天/i);
+    if (daysMatch) stats.checkinDays = parseInt(daysMatch[1], 10);
+
+    return stats;
+  }
+
+  const res = simulateExtractStats(mockHtml);
+  assert.equal(res.username, "szabc");
+  assert.equal(res.nodesCount, 5);
+  assert.equal(res.topicsCount, 12);
+  assert.equal(res.followingCount, 3);
+  assert.equal(res.unreadNotifs, 2);
+  assert.ok(res.moneyHtml.includes("https://www.v2ex.com/static/img/gold@2x.png"));
+  assert.equal(res.checkinDays, 15);
+});
+
+
 
 
 

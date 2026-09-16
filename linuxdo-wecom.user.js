@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.29
+// @version      0.7.30
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -1299,44 +1299,92 @@
       opacity: 1;
     }
 
+    /* ---------- 企业微信全局轻量 Toast 提示 ---------- */
+    .wecom-toast-container {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .wecom-toast {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px;
+      border-radius: 20px;
+      background: rgba(30, 35, 45, 0.92);
+      color: #FFFFFF;
+      font-size: 13px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+      backdrop-filter: blur(8px);
+      pointer-events: auto;
+      animation: wecomToastIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: opacity 0.2s, transform 0.2s;
+      user-select: none;
+    }
+    .wecom-toast.hiding {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    @keyframes wecomToastIn {
+      from { opacity: 0; transform: translateY(-12px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
     /* V2EX 头像点击用户资料与财产卡片浮层 */
     .wecom-v2ex-user-popover {
       position: fixed;
       left: 64px;
       top: 14px;
-      width: 260px;
+      width: 280px;
       background: #FFFFFF;
       border: 1px solid rgba(0, 0, 0, 0.08);
       border-radius: 10px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.05);
       z-index: 99999;
-      padding: 14px 14px 10px;
+      padding: 14px 16px 12px;
       box-sizing: border-box;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
       display: flex;
       flex-direction: column;
       gap: 12px;
       user-select: none;
+      color: #1F2329;
       animation: wecomFadeIn 0.15s ease-out;
     }
-    .wecom-v2ex-popover-header {
+    .wecom-v2ex-popover-top {
       display: flex;
       align-items: center;
-      gap: 12px;
+      justify-content: space-between;
+    }
+    .wecom-v2ex-popover-user {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      text-decoration: none;
+      cursor: pointer;
     }
     .wecom-v2ex-popover-avatar {
-      width: 44px;
-      height: 44px;
+      width: 38px;
+      height: 38px;
       border-radius: 8px;
       overflow: hidden;
       flex-shrink: 0;
       background: #267EF0;
       color: #FFFFFF;
-      font-size: 18px;
-      font-weight: 600;
       display: flex;
       align-items: center;
       justify-content: center;
+      font-size: 16px;
+      font-weight: 600;
     }
     .wecom-v2ex-popover-avatar img,
     .wecom-v2ex-popover-avatar svg {
@@ -1345,13 +1393,6 @@
       object-fit: cover;
       display: block;
     }
-    .wecom-v2ex-popover-userinfo {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
     .wecom-v2ex-popover-name {
       font-size: 15px;
       font-weight: 600;
@@ -1359,101 +1400,191 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      line-height: 1.3;
     }
-    .wecom-v2ex-popover-dept {
+    .wecom-v2ex-popover-theme-toggle {
+      display: flex;
+      align-items: center;
+      gap: 4px;
       font-size: 12px;
       color: #8F959E;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      line-height: 1.3;
-    }
-    .wecom-v2ex-popover-money {
-      background: #F7F8FA;
-      border: 1px solid rgba(0, 0, 0, 0.04);
-      border-radius: 8px;
-      padding: 9px 12px;
       cursor: pointer;
+      padding: 3px 6px;
+      border-radius: 12px;
+      background: #F2F3F5;
+      transition: background 0.2s;
+    }
+    .wecom-v2ex-popover-theme-toggle:hover {
+      background: #E4E6EB;
+    }
+    .wecom-v2ex-theme-icon {
+      font-size: 12px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+    }
+    .wecom-v2ex-theme-switch-pill {
+      width: 24px;
+      height: 12px;
+      border-radius: 6px;
+      background: #C9CDD4;
+      position: relative;
+      transition: background 0.2s;
+    }
+    .wecom-v2ex-theme-switch-pill::after {
+      content: "";
+      position: absolute;
+      left: 2px;
+      top: 2px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      transition: transform 0.2s;
+    }
+    .wecom-v2ex-theme-switch-pill.active {
+      background: #1A87FF;
+    }
+    .wecom-v2ex-theme-switch-pill.active::after {
+      transform: translateX(12px);
+    }
+    .wecom-v2ex-popover-stats {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 4px 0 6px;
+    }
+    .wecom-v2ex-stat-col {
+      flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 6px;
-      transition: background-color 0.15s, border-color 0.15s;
+      align-items: center;
+      gap: 2px;
+      text-decoration: none;
+      cursor: pointer;
+      padding: 4px 0;
+      border-radius: 6px;
+      transition: background 0.15s;
     }
-    .wecom-v2ex-popover-money:hover {
-      background: #EEF1F5;
-      border-color: rgba(26, 135, 255, 0.2);
+    .wecom-v2ex-stat-col:hover {
+      background: rgba(0, 0, 0, 0.04);
     }
-    .wecom-v2ex-money-top {
+    .wecom-v2ex-stat-col:not(:first-child) {
+      border-left: 1px solid #EBEDF0;
+    }
+    .wecom-v2ex-stat-num {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1A87FF;
+      line-height: 1.2;
+    }
+    .wecom-v2ex-stat-label {
+      font-size: 12px;
+      color: #8F959E;
+      line-height: 1.2;
+    }
+    .wecom-v2ex-popover-bar {
+      height: 3px;
+      background: #F2F3F5;
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+    }
+    .wecom-v2ex-popover-bar-fill {
+      height: 100%;
+      width: 40%;
+      background: #C9CDD4;
+      border-radius: 2px;
+    }
+    .wecom-v2ex-popover-footer {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      padding-top: 2px;
     }
-    .wecom-v2ex-money-title {
-      font-size: 12px;
-      color: #646A73;
-      font-weight: 500;
-    }
-    .wecom-v2ex-money-link {
-      font-size: 11px;
-      color: #1A87FF;
-      text-decoration: none;
-      display: flex;
-      align-items: center;
-      gap: 2px;
-    }
-    .wecom-v2ex-money-val {
+    .wecom-v2ex-footer-notifs {
       font-size: 13px;
-      font-weight: 600;
-      color: #1F2329;
+      color: #4E5969;
+      text-decoration: none;
+      cursor: pointer;
       display: flex;
       align-items: center;
-      flex-wrap: wrap;
       gap: 4px;
-      line-height: 1.4;
+      transition: color 0.15s;
     }
-    .wecom-v2ex-money-val img {
+    .wecom-v2ex-footer-notifs:hover {
+      color: #1A87FF;
+    }
+    .wecom-v2ex-footer-coins-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .wecom-v2ex-footer-coins {
+      background: #F2F3F5;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #4E5969;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .wecom-v2ex-footer-coins:hover {
+      background: #E5E6EB;
+    }
+    .wecom-v2ex-footer-coins img {
       width: 14px;
       height: 14px;
       vertical-align: -2px;
-      margin: 0 1px 0 2px;
+      margin: 0 1px;
     }
-    .wecom-v2ex-popover-actions {
+    .wecom-v2ex-help-btn {
+      color: #8F959E;
+      text-decoration: none;
+      font-size: 13px;
+      line-height: 1;
       display: flex;
-      flex-direction: column;
-      border-top: 1px solid rgba(0, 0, 0, 0.06);
-      padding-top: 6px;
-      gap: 2px;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: color 0.15s;
     }
-    .wecom-v2ex-popover-action {
+    .wecom-v2ex-help-btn:hover {
+      color: #1A87FF;
+    }
+    .wecom-v2ex-checkin-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 7px 8px;
+      background: #F7F8FA;
       border-radius: 6px;
-      font-size: 13px;
-      color: #1F2329;
+      padding: 6px 10px;
+      font-size: 12px;
+      color: #4E5969;
+      margin-top: -2px;
+    }
+    .wecom-v2ex-checkin-btn {
+      color: #1A87FF;
+      background: rgba(26, 135, 255, 0.08);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
       text-decoration: none;
       cursor: pointer;
-      transition: background-color 0.15s;
-    }
-    .wecom-v2ex-popover-action:hover {
-      background: #F2F3F5;
-    }
-    .wecom-v2ex-action-label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .wecom-v2ex-action-badge {
-      font-size: 11px;
-      color: #FFFFFF;
-      background: #FA5151;
-      padding: 0 6px;
-      height: 16px;
-      line-height: 16px;
-      border-radius: 8px;
       font-weight: 500;
+      transition: background 0.15s, color 0.15s;
+    }
+    .wecom-v2ex-checkin-btn:hover {
+      background: rgba(26, 135, 255, 0.16);
+    }
+    .wecom-v2ex-checkin-btn.checked {
+      color: #52C41A;
+      background: rgba(82, 196, 26, 0.08);
+      cursor: default;
     }
 
     /* ---------- 窄图标条：假 icon（纯装饰） ---------- */
@@ -7320,11 +7451,17 @@
       color: #1A87FF !important;
     }
 
-    /* V2EX 用户资料卡浮层深色适配 */
+    /* V2EX 用户资料卡浮层深色适配 & Toast 深色适配 */
+    html.${ROOT_CLASS}.wecom-dark .wecom-toast {
+      background: rgba(20, 24, 30, 0.95) !important;
+      box-shadow: 0 6px 22px rgba(0, 0, 0, 0.5) !important;
+      color: #ECEFF4 !important;
+    }
     html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-user-popover {
       background: #23272E !important;
       border-color: rgba(255, 255, 255, 0.1) !important;
-      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55) !important;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
+      color: #ECEFF4 !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-popover-avatar {
       background: #2E3440 !important;
@@ -7332,34 +7469,41 @@
     html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-popover-name {
       color: #ECEFF4 !important;
     }
-    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-popover-dept {
-      color: #8F959E !important;
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-popover-theme-toggle {
+      background: #2D3139 !important;
+      color: #A0A0A0 !important;
     }
-    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-popover-money {
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-popover-theme-toggle:hover {
+      background: #3B4252 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-stat-col:not(:first-child) {
+      border-left-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-stat-col:hover {
+      background: rgba(255, 255, 255, 0.04) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-stat-label {
+      color: #8C8C8C !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-popover-bar {
+      background: #2D3139 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-popover-bar-fill {
+      background: #4C566A !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-footer-notifs {
+      color: #A0A0A0 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-footer-coins {
+      background: #2D3139 !important;
+      color: #D4D4D4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-footer-coins:hover {
+      background: #3B4252 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-checkin-row {
       background: #1C1E22 !important;
-      border-color: rgba(255, 255, 255, 0.06) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-popover-money:hover {
-      background: #282C34 !important;
-      border-color: rgba(26, 135, 255, 0.3) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-money-title {
-      color: #959CA6 !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-money-link {
-      color: #4C84FF !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-money-val {
-      color: #ECEFF4 !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-popover-actions {
-      border-top-color: rgba(255, 255, 255, 0.08) !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-popover-action {
-      color: #ECEFF4 !important;
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-popover-action:hover {
-      background: rgba(255, 255, 255, 0.08) !important;
+      color: #8C8C8C !important;
     }
 
     /* 左侧头像通知浮层与用户菜单 */
@@ -9213,7 +9357,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.29";
+  const SCRIPT_VERSION = "0.7.30";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -10805,10 +10949,48 @@
     listEl.innerHTML = html;
   }
 
+  /* ============================== 全局轻量 Toast 提示 ============================== */
+
+  function showWecomToast(message, type = "info", durationMs = 3200) {
+    if (!message) return null;
+    let container = document.querySelector(".wecom-toast-container");
+    if (!container) {
+      container = document.createElement("div");
+      container.className = "wecom-toast-container";
+      document.body.appendChild(container);
+    }
+    const toast = document.createElement("div");
+    toast.className = `wecom-toast wecom-toast-${type}`;
+    toast.setAttribute("role", "status");
+    toast.innerHTML = `<span class="wecom-toast-text">${escapeHtml(message)}</span>`;
+    container.appendChild(toast);
+
+    const removeToast = () => {
+      if (toast.classList.contains("hiding")) return;
+      toast.classList.add("hiding");
+      setTimeout(() => {
+        toast.remove();
+        if (!container.children.length) container.remove();
+      }, 220);
+    };
+
+    const timer = setTimeout(removeToast, Math.max(1500, durationMs));
+    toast.addEventListener("click", () => {
+      clearTimeout(timer);
+      removeToast();
+    });
+    return toast;
+  }
+
   /* ============================== V2EX 用户资料卡与财产浮层 (#money) ============================== */
 
   const V2EX_MONEY_KEY = "linuxdo-wecom-v2ex-money";
+  const V2EX_USER_STATS_KEY = "linuxdo-wecom-v2ex-user-stats";
+  const V2EX_LAST_CHECKIN_KEY = "linuxdo-wecom-v2ex-last-checkin";
   let cachedV2exMoneyHtml = null;
+  let cachedV2exUserStats = null;
+  let isCheckingV2exDaily = false;
+  let isFetchingV2exStats = false;
 
   function extractV2exMoneyFromDom(root = document) {
     if (!root || typeof root.querySelector !== "function") return null;
@@ -10841,6 +11023,245 @@
     return "";
   }
 
+  function extractV2exUserStatsFromHtml(html) {
+    if (!html || typeof html !== "string") return null;
+    const stats = {
+      username: "",
+      nodesCount: 0,
+      topicsCount: 0,
+      followingCount: 0,
+      unreadNotifs: 0,
+      moneyHtml: "",
+      checkedIn: false,
+      checkinDays: 0,
+      updatedAt: Date.now()
+    };
+
+    // Username
+    const userMatch = html.match(/<a\s+[^>]*href=["']\/member\/([^"'/]+)["'][^>]*>([^<]+)<\/a>/i);
+    if (userMatch) stats.username = userMatch[1].trim();
+
+    // Nodes
+    const nodesMatch = html.match(/href=["']\/my\/nodes["'][^>]*>[\s\S]*?<span[^>]*class=["']bigger["'][^>]*>(\d+)<\/span>/i) ||
+                       html.match(/<span[^>]*class=["']bigger["'][^>]*>(\d+)<\/span>[\s\S]*?节点收藏/i);
+    if (nodesMatch) stats.nodesCount = parseInt(nodesMatch[1], 10);
+
+    // Topics
+    const topicsMatch = html.match(/href=["']\/my\/topics["'][^>]*>[\s\S]*?<span[^>]*class=["']bigger["'][^>]*>(\d+)<\/span>/i) ||
+                        html.match(/<span[^>]*class=["']bigger["'][^>]*>(\d+)<\/span>[\s\S]*?主题收藏/i);
+    if (topicsMatch) stats.topicsCount = parseInt(topicsMatch[1], 10);
+
+    // Following
+    const followingMatch = html.match(/href=["']\/my\/following["'][^>]*>[\s\S]*?<span[^>]*class=["']bigger["'][^>]*>(\d+)<\/span>/i) ||
+                          html.match(/<span[^>]*class=["']bigger["'][^>]*>(\d+)<\/span>[\s\S]*?特别关注/i);
+    if (followingMatch) stats.followingCount = parseInt(followingMatch[1], 10);
+
+    // Unread Notifications
+    const notifMatch = html.match(/href=["']\/notifications["'][^>]*>(\d+)\s*(?:条未读提醒|未读提醒)/i) ||
+                       html.match(/(\d+)\s*(?:条未读提醒|未读提醒)/i);
+    if (notifMatch) stats.unreadNotifs = parseInt(notifMatch[1], 10);
+
+    // Balance
+    const balanceMatch = html.match(/<a\s+[^>]*href=["']\/balance["'][^>]*class=["']balance_area["'][^>]*>([\s\S]*?)<\/a>/i) ||
+                         html.match(/<a\s+[^>]*href=["']\/balance["'][^>]*>([\s\S]*?)<\/a>/i) ||
+                         html.match(/<div\s+[^>]*id=["']money["'][^>]*>([\s\S]*?)<\/div>/i);
+    if (balanceMatch) {
+      let bHtml = balanceMatch[1];
+      const innerA = bHtml.match(/<a\s+[^>]*>([\s\S]*?)<\/a>/i);
+      if (innerA) bHtml = innerA[1];
+      stats.moneyHtml = bHtml.replace(/src=["']\/static\//gi, 'src="https://www.v2ex.com/static/').trim();
+    }
+
+    // Daily Mission
+    if (html.includes("每日登录奖励已领取") || html.includes("已成功领取每日登录奖励")) {
+      stats.checkedIn = true;
+    }
+    const daysMatch = html.match(/已连续登录\s*(\d+)\s*天/i) || html.match(/连续登录\s*(\d+)\s*天/i);
+    if (daysMatch) stats.checkinDays = parseInt(daysMatch[1], 10);
+
+    // Save and cache
+    if (stats.moneyHtml) {
+      cachedV2exMoneyHtml = stats.moneyHtml;
+      try { localStorage.setItem(V2EX_MONEY_KEY, stats.moneyHtml); } catch {}
+    }
+    cachedV2exUserStats = stats;
+    try { localStorage.setItem(V2EX_USER_STATS_KEY, JSON.stringify(stats)); } catch {}
+    return stats;
+  }
+
+  function extractV2exUserStatsFromDom(root = document) {
+    if (!root || typeof root.querySelector !== "function") return null;
+    const stats = {
+      username: getCurrentUsername() || "",
+      nodesCount: 0,
+      topicsCount: 0,
+      followingCount: 0,
+      unreadNotifs: getUnreadNotificationCount(),
+      moneyHtml: "",
+      checkedIn: false,
+      checkinDays: 0,
+      updatedAt: Date.now()
+    };
+
+    const nodesEl = root.querySelector("a[href='/my/nodes'] .bigger, a[href='/my/nodes']");
+    if (nodesEl) {
+      const num = (nodesEl.textContent || "").match(/\d+/);
+      if (num) stats.nodesCount = parseInt(num[0], 10);
+    }
+    const topicsEl = root.querySelector("a[href='/my/topics'] .bigger, a[href='/my/topics']");
+    if (topicsEl) {
+      const num = (topicsEl.textContent || "").match(/\d+/);
+      if (num) stats.topicsCount = parseInt(num[0], 10);
+    }
+    const followingEl = root.querySelector("a[href='/my/following'] .bigger, a[href='/my/following']");
+    if (followingEl) {
+      const num = (followingEl.textContent || "").match(/\d+/);
+      if (num) stats.followingCount = parseInt(num[0], 10);
+    }
+    const notifEl = root.querySelector("a[href='/notifications']");
+    if (notifEl) {
+      const num = (notifEl.textContent || "").match(/\d+/);
+      if (num) stats.unreadNotifs = parseInt(num[0], 10);
+    }
+
+    const moneyHtml = extractV2exMoneyFromDom(root);
+    if (moneyHtml) stats.moneyHtml = moneyHtml;
+
+    const missionEl = root.querySelector("a[href='/mission/daily']");
+    if (missionEl && (missionEl.textContent || "").includes("已领取")) {
+      stats.checkedIn = true;
+    }
+
+    const rightbarHtml = root.querySelector("#Rightbar")?.innerHTML || "";
+    const daysMatch = rightbarHtml.match(/已连续登录\s*(\d+)\s*天/i) || rightbarHtml.match(/连续登录\s*(\d+)\s*天/i);
+    if (daysMatch) stats.checkinDays = parseInt(daysMatch[1], 10);
+
+    // Merge with cached stats if some fields are missing
+    if (!stats.moneyHtml && cachedV2exUserStats?.moneyHtml) stats.moneyHtml = cachedV2exUserStats.moneyHtml;
+    if (stats.nodesCount === 0 && cachedV2exUserStats?.nodesCount) stats.nodesCount = cachedV2exUserStats.nodesCount;
+    if (stats.topicsCount === 0 && cachedV2exUserStats?.topicsCount) stats.topicsCount = cachedV2exUserStats.topicsCount;
+    if (stats.followingCount === 0 && cachedV2exUserStats?.followingCount) stats.followingCount = cachedV2exUserStats.followingCount;
+    if (!stats.checkinDays && cachedV2exUserStats?.checkinDays) stats.checkinDays = cachedV2exUserStats.checkinDays;
+
+    cachedV2exUserStats = stats;
+    try { localStorage.setItem(V2EX_USER_STATS_KEY, JSON.stringify(stats)); } catch {}
+    return stats;
+  }
+
+  function getV2exUserStats() {
+    if (cachedV2exUserStats) return cachedV2exUserStats;
+    try {
+      const raw = localStorage.getItem(V2EX_USER_STATS_KEY);
+      if (raw) {
+        cachedV2exUserStats = JSON.parse(raw);
+        if (cachedV2exUserStats) return cachedV2exUserStats;
+      }
+    } catch {}
+    return extractV2exUserStatsFromDom(document);
+  }
+
+  async function syncV2exUserStats() {
+    if (!IS_V2EX || isFetchingV2exStats) return null;
+    // Try live DOM first
+    const fromDom = extractV2exUserStatsFromDom(document);
+    if (fromDom && fromDom.moneyHtml && fromDom.topicsCount > 0) {
+      updateOpenV2exUserPopover(fromDom);
+      return fromDom;
+    }
+    // Background fetch if missing or empty
+    isFetchingV2exStats = true;
+    try {
+      const resp = await fetch("/", { credentials: "include" });
+      if (!resp.ok) return null;
+      const html = await resp.text();
+      const stats = extractV2exUserStatsFromHtml(html);
+      if (stats) updateOpenV2exUserPopover(stats);
+      return stats;
+    } catch {
+      return null;
+    } finally {
+      isFetchingV2exStats = false;
+    }
+  }
+
+  /* 自动每日签到 */
+  async function checkinV2exDaily(manual = false) {
+    if (!IS_V2EX || isCheckingV2exDaily) return;
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const lastCheckin = localStorage.getItem(V2EX_LAST_CHECKIN_KEY);
+
+    if (lastCheckin === todayStr && !manual) {
+      if (sessionStorage.getItem("linuxdo-wecom-v2ex-checkin-notified") !== todayStr) {
+        sessionStorage.setItem("linuxdo-wecom-v2ex-checkin-notified", todayStr);
+        showWecomToast("📅 V2EX 今日已完成签到", "info");
+      }
+      return;
+    }
+
+    isCheckingV2exDaily = true;
+    try {
+      const resp = await fetch("/mission/daily", { credentials: "include" });
+      if (!resp.ok) {
+        if (manual) showWecomToast("签到请求失败 (" + resp.status + ")", "error");
+        return;
+      }
+      const html = await resp.text();
+
+      if (html.includes("每日登录奖励已领取") || html.includes("已成功领取每日登录奖励")) {
+        localStorage.setItem(V2EX_LAST_CHECKIN_KEY, todayStr);
+        sessionStorage.setItem("linuxdo-wecom-v2ex-checkin-notified", todayStr);
+        const daysMatch = html.match(/已连续登录\s*(\d+)\s*天/i) || html.match(/连续登录\s*(\d+)\s*天/i);
+        const days = daysMatch ? daysMatch[1] : "";
+        showWecomToast(days ? `📅 V2EX 今日已完成签到 (已连续 ${days} 天)` : "📅 V2EX 今日已完成签到", "info");
+        const stats = extractV2exUserStatsFromHtml(html);
+        if (stats) {
+          stats.checkedIn = true;
+          if (days) stats.checkinDays = parseInt(days, 10);
+          updateOpenV2exUserPopover(stats);
+        }
+        return;
+      }
+
+      const redeemMatch = html.match(/href=["'](\/mission\/daily\/redeem\?once=\d+)["']/i) ||
+                          html.match(/location\.href\s*=\s*['"](\/mission\/daily\/redeem\?once=\d+)['"]/i) ||
+                          html.match(/(\/mission\/daily\/redeem\?once=\d+)/i);
+
+      if (!redeemMatch) {
+        if (manual) showWecomToast("未找到可领取的签到任务", "warn");
+        return;
+      }
+
+      const redeemUrl = redeemMatch[1];
+      const redeemResp = await fetch(redeemUrl, { credentials: "include" });
+      if (!redeemResp.ok) {
+        if (manual) showWecomToast("领取奖励请求失败 (" + redeemResp.status + ")", "error");
+        return;
+      }
+      const redeemHtml = await redeemResp.text();
+
+      localStorage.setItem(V2EX_LAST_CHECKIN_KEY, todayStr);
+      sessionStorage.setItem("linuxdo-wecom-v2ex-checkin-notified", todayStr);
+
+      const daysMatch = redeemHtml.match(/已连续登录\s*(\d+)\s*天/i) || redeemHtml.match(/连续登录\s*(\d+)\s*天/i);
+      const days = daysMatch ? daysMatch[1] : "";
+
+      showWecomToast(days ? `🎉 V2EX 自动签到成功！已连续登录 ${days} 天` : "🎉 V2EX 自动签到成功！", "success");
+
+      const stats = extractV2exUserStatsFromHtml(redeemHtml);
+      if (stats) {
+        stats.checkedIn = true;
+        if (days) stats.checkinDays = parseInt(days, 10);
+        updateOpenV2exUserPopover(stats);
+      }
+    } catch (err) {
+      console.warn("[linuxdo-wecom] V2EX daily checkin error:", err);
+      if (manual) showWecomToast("签到异常：" + (err.message || "网络异常"), "error");
+    } finally {
+      isCheckingV2exDaily = false;
+    }
+  }
+
   function isV2exUserPopoverOpen() {
     return Boolean(document.querySelector(".wecom-v2ex-user-popover"));
   }
@@ -10848,6 +11269,35 @@
   function closeV2exUserPopover() {
     const el = document.querySelector(".wecom-v2ex-user-popover");
     if (el) el.remove();
+  }
+
+  function updateOpenV2exUserPopover(stats) {
+    const popover = document.querySelector(".wecom-v2ex-user-popover");
+    if (!popover || !stats) return;
+
+    if (stats.nodesCount !== undefined) {
+      const el = popover.querySelector("[data-act='nodes'] .wecom-v2ex-stat-num");
+      if (el) el.textContent = String(stats.nodesCount);
+    }
+    if (stats.topicsCount !== undefined) {
+      const el = popover.querySelector("[data-act='topics'] .wecom-v2ex-stat-num");
+      if (el) el.textContent = String(stats.topicsCount);
+    }
+    if (stats.followingCount !== undefined) {
+      const el = popover.querySelector("[data-act='following'] .wecom-v2ex-stat-num");
+      if (el) el.textContent = String(stats.followingCount);
+    }
+    if (stats.moneyHtml) {
+      const el = popover.querySelector(".wecom-v2ex-footer-coins");
+      if (el) el.innerHTML = stats.moneyHtml;
+    }
+    if (stats.checkedIn) {
+      const checkinBtn = popover.querySelector(".wecom-v2ex-checkin-btn");
+      if (checkinBtn) {
+        checkinBtn.classList.add("checked");
+        checkinBtn.textContent = stats.checkinDays ? `已领取 (连续 ${stats.checkinDays} 天)` : "今日已领取";
+      }
+    }
   }
 
   function openV2exUserPopover() {
@@ -10858,7 +11308,6 @@
     const disguisePreset = getRailDisguiseAvatarId() ? RAIL_DISGUISE_AVATARS.find((a) => a.id === getRailDisguiseAvatarId()) : null;
     const username = getCurrentUsername() || "";
     const displayName = (disguised || disguisePreset) ? "企业员工" : (username || "未登录");
-    const deptText = disguised ? "技术研发部 · 在线" : (disguisePreset ? "技术研发部 · 在线" : (username ? "V2EX 会员 · 在线" : "未登录"));
 
     // 头像
     const railAvatar = document.querySelector(".wecom-rail-avatar");
@@ -10869,91 +11318,140 @@
       avatarContent = avatarLetter(displayName);
     }
 
-    // 财产余额
-    const moneyTitle = disguised ? "个人工时 / 绩效" : "账户余额";
-    const rawMoney = getV2exMoneyHtml();
+    // 用户统计与财产
+    const stats = getV2exUserStats() || {};
+    const nodesCount = disguised ? 0 : (stats.nodesCount ?? 0);
+    const topicsCount = disguised ? 12 : (stats.topicsCount ?? 0);
+    const followingCount = disguised ? 0 : (stats.followingCount ?? 0);
+    const unreadNotifs = stats.unreadNotifs ?? getUnreadNotificationCount();
+
     let moneyHtml = "";
     if (disguised) {
       moneyHtml = "<span>100.0 分 (正常)</span>";
-    } else if (rawMoney) {
-      moneyHtml = rawMoney;
+    } else if (stats.moneyHtml) {
+      moneyHtml = stats.moneyHtml;
     } else {
-      moneyHtml = "<span style='font-size:12px;color:var(--wc-text-3, #999);'>点击查看余额</span>";
+      const rawMoney = getV2exMoneyHtml();
+      moneyHtml = rawMoney || "<span style='font-size:12px;color:var(--wc-text-3, #999);'>查看余额</span>";
     }
 
-    // 未读通知数量
-    const notifCount = getUnreadNotificationCount();
+    // 签到状态
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const isCheckedIn = (localStorage.getItem(V2EX_LAST_CHECKIN_KEY) === todayStr) || Boolean(stats.checkedIn);
+    const checkinDays = stats.checkinDays || 0;
+
+    const isDark = isDarkMode();
+    const profileUrl = (!disguised && username) ? `/member/${encodeURIComponent(username)}` : "javascript:void(0)";
 
     const popover = document.createElement("div");
     popover.className = "wecom-v2ex-user-popover";
     popover.setAttribute("role", "dialog");
     popover.setAttribute("aria-label", "用户资料与财产");
     popover.innerHTML = `
-      <div class="wecom-v2ex-popover-header">
-        <div class="wecom-v2ex-popover-avatar">${avatarContent}</div>
-        <div class="wecom-v2ex-popover-userinfo">
-          <div class="wecom-v2ex-popover-name" title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</div>
-          <div class="wecom-v2ex-popover-dept">${escapeHtml(deptText)}</div>
+      <div class="wecom-v2ex-popover-top">
+        <a class="wecom-v2ex-popover-user" href="${profileUrl}" target="_blank" title="查看个人主页">
+          <div class="wecom-v2ex-popover-avatar">${avatarContent}</div>
+          <span class="wecom-v2ex-popover-name" title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</span>
+        </a>
+        <div class="wecom-v2ex-popover-theme-toggle" role="button" tabindex="0" title="切换深色/浅色模式">
+          <span class="wecom-v2ex-theme-icon">☀️</span>
+          <div class="wecom-v2ex-theme-switch-pill ${isDark ? 'active' : ''}"></div>
+          <span class="wecom-v2ex-theme-icon">🌙</span>
         </div>
       </div>
-      <div class="wecom-v2ex-popover-money" role="button" tabindex="0" title="查看账户余额与明细">
-        <div class="wecom-v2ex-money-top">
-          <span class="wecom-v2ex-money-title">${escapeHtml(moneyTitle)}</span>
-          <span class="wecom-v2ex-money-link">明细 &gt;</span>
-        </div>
-        <div class="wecom-v2ex-money-val">${moneyHtml}</div>
+
+      <div class="wecom-v2ex-popover-stats">
+        <a class="wecom-v2ex-stat-col" data-act="nodes" href="/my/nodes" title="节点收藏">
+          <span class="wecom-v2ex-stat-num">${nodesCount}</span>
+          <span class="wecom-v2ex-stat-label">${disguised ? "项目收藏" : "节点收藏"}</span>
+        </a>
+        <a class="wecom-v2ex-stat-col" data-act="topics" href="/my/topics" title="主题收藏">
+          <span class="wecom-v2ex-stat-num">${topicsCount}</span>
+          <span class="wecom-v2ex-stat-label">${disguised ? "任务收藏" : "主题收藏"}</span>
+        </a>
+        <a class="wecom-v2ex-stat-col" data-act="following" href="/my/following" title="特别关注">
+          <span class="wecom-v2ex-stat-num">${followingCount}</span>
+          <span class="wecom-v2ex-stat-label">${disguised ? "团队关注" : "特别关注"}</span>
+        </a>
       </div>
-      <div class="wecom-v2ex-popover-actions">
-        <a class="wecom-v2ex-popover-action" data-act="profile">
-          <span class="wecom-v2ex-action-label">${disguised ? "工作台" : (username ? "个人主页" : "去登录")}</span>
+
+      <div class="wecom-v2ex-popover-bar">
+        <div class="wecom-v2ex-popover-bar-fill"></div>
+      </div>
+
+      <div class="wecom-v2ex-popover-footer">
+        <a class="wecom-v2ex-footer-notifs" data-act="notifications" href="/notifications" title="查看提醒">
+          ${unreadNotifs} ${disguised ? "未读工作提醒" : "未读提醒"}
         </a>
-        <a class="wecom-v2ex-popover-action" data-act="notifications">
-          <span class="wecom-v2ex-action-label">${disguised ? "待办通知" : "未读通知"}</span>
-          ${notifCount > 0 ? `<span class="wecom-v2ex-action-badge">${notifCount > 99 ? "99+" : notifCount}</span>` : ""}
-        </a>
-        <a class="wecom-v2ex-popover-action" data-act="nodes">
-          <span class="wecom-v2ex-action-label">${disguised ? "项目收藏" : "节点收藏"}</span>
-        </a>
-        <a class="wecom-v2ex-popover-action" data-act="following">
-          <span class="wecom-v2ex-action-label">${disguised ? "关注团队" : "特别关注"}</span>
-        </a>
-        <a class="wecom-v2ex-popover-action" data-act="daily">
-          <span class="wecom-v2ex-action-label">${disguised ? "每日打卡" : "每日签到"}</span>
-        </a>
+        <div class="wecom-v2ex-footer-coins-group">
+          <a class="wecom-v2ex-footer-coins" data-act="balance" href="/balance" title="查看账户余额与账单明细">
+            ${moneyHtml}
+          </a>
+          <a class="wecom-v2ex-help-btn" href="/help/currency" title="虚拟货币常见问题" target="_blank">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <div class="wecom-v2ex-checkin-row">
+        <span>每日登录奖励</span>
+        <span class="wecom-v2ex-checkin-btn ${isCheckedIn ? 'checked' : ''}" role="button" tabindex="0">
+          ${isCheckedIn ? (checkinDays ? `已领取 (连续 ${checkinDays} 天)` : "今日已领取") : "领取今日奖励"}
+        </span>
       </div>
     `;
 
-    popover.querySelector(".wecom-v2ex-popover-money")?.addEventListener("click", () => {
-      closeV2exUserPopover();
-      window.open("/balance", "_blank");
+    // 日夜模式切换
+    popover.querySelector(".wecom-v2ex-popover-theme-toggle")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const next = isDarkMode() ? "light" : "dark";
+      setThemeMode(next);
+      applyTheme();
+      const pill = popover.querySelector(".wecom-v2ex-theme-switch-pill");
+      if (pill) pill.classList.toggle("active", isDarkMode());
     });
 
+    // 签到按钮点击
+    const checkinBtn = popover.querySelector(".wecom-v2ex-checkin-btn");
+    checkinBtn?.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (checkinBtn.classList.contains("checked")) return;
+      checkinBtn.textContent = "领取中…";
+      await checkinV2exDaily(true);
+    });
+
+    // 快捷跳转
     popover.addEventListener("click", (e) => {
-      const act = e.target.closest(".wecom-v2ex-popover-action")?.dataset.act;
+      const col = e.target.closest("[data-act]");
+      if (!col) return;
+      const act = col.dataset.act;
       if (!act) return;
       e.preventDefault();
       closeV2exUserPopover();
-      if (act === "profile") {
-        if (!username && !disguised) {
-          window.open("/signin", "_blank");
-        } else if (!disguised && username) {
-          window.open(`/member/${encodeURIComponent(username)}`, "_blank");
-        }
-      } else if (act === "notifications") {
+
+      if (act === "notifications") {
         clearNotificationBadge();
         const body = document.querySelector(".wecom-list-body");
         if (body) body.innerHTML = `<div class="wecom-list-status">正在加载通知…</div>`;
         loadList("/notifications", true);
       } else if (act === "nodes") {
         window.open("/my/nodes", "_blank");
+      } else if (act === "topics") {
+        window.open("/my/topics", "_blank");
       } else if (act === "following") {
         window.open("/my/following", "_blank");
-      } else if (act === "daily") {
-        window.open("/mission/daily", "_blank");
+      } else if (act === "balance") {
+        window.open("/balance", "_blank");
       }
     });
 
     document.body.appendChild(popover);
+
+    // If moneyHtml or topicsCount is empty, fetch in background and update live
+    if (!disguised && (!stats.moneyHtml || !stats.topicsCount)) {
+      syncV2exUserStats();
+    }
   }
 
   function applyListNavDom() {
@@ -18356,6 +18854,7 @@
     document.querySelector(".wecom-v2ex-nav2")?.remove();
     closeV2exUserPopover();
     closeBase64InsertDialog();
+    document.querySelector(".wecom-toast-container")?.remove();
   }
 
   let initialNewTopicChecked = false;
@@ -18568,7 +19067,7 @@
       });
     }
 
-    const WECOM_UI_SEL = ".wecom-base64-insert-dialog, .wecom-v2ex-user-popover, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
+    const WECOM_UI_SEL = ".wecom-toast-container, .wecom-base64-insert-dialog, .wecom-v2ex-user-popover, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
     const NATIVE_BRIDGE_SEL = "#reply-control, .dialog-holder, .dialog-container, #discourse-modal-container, .d-modal, .bootbox, .autocomplete, .autocomplete-container, .d-editor-popup, [data-identifier='emoji-picker'], .tag-chooser";
     const observer = new MutationObserver((mutations) => {
       // 忽略我们自己面板内部的 DOM 变动，否则点开筛选会立刻触发 applyTheme 回写/闪断
@@ -18631,6 +19130,14 @@
         if (!document.querySelector(".wecom-rail")) return;
         syncRail();
       }, 3000);
+    }
+
+    // V2EX 进入网站自动签到与用户数据静默同步
+    if (IS_V2EX) {
+      setTimeout(() => {
+        checkinV2exDaily(false);
+        syncV2exUserStats();
+      }, 800);
     }
 
     // ⌘/Ctrl+K → 会话栏搜索（并同步原生 welcome-banner）
