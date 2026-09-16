@@ -1,9 +1,9 @@
-# Linux DO · 企业微信 IM 外观
+# Linux.do & V2EX 企业微信主题
 
-把 [Linux DO](https://linux.do/) 的网页布局换成企业微信 5.x 桌面端风格，同时继续使用原站真实数据、路由、通知与回复能力。
+把 [Linux DO](https://linux.do/) 与 [V2EX](https://v2ex.com/) 的网页布局换成企业微信 5.x 桌面端风格，同时继续使用原站真实数据、路由、通知与回复能力。
 
 - 作者：**Richy**
-- 当前版本：**0.7.40**
+- 当前版本：**0.7.41**
 - 用户脚本：[`linuxdo-wecom.user.js`](linuxdo-wecom.user.js)
 - 许可证：MIT
 

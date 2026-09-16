@@ -78,7 +78,7 @@ test('metadata validates identity and numeric versions without executing payload
   const { context } = harness();
   assert.equal(context.parseUpdateMetadata(metadata.replace(/\n/g, '\r\n')), publishedVersion);
   assert.equal(context.parseUpdateMetadata(metadata + '\nthrow Error("never execute")'), publishedVersion);
-  for (const invalid of ['<html>503</html>', metadata.replace('Linux DO · 企业微信 IM 外观', 'Other script'), metadata.replace('https://linux.do/', 'https://example.com/'), metadataFor('1.0-beta'), metadataFor('<script>'), metadataFor('999999999999999999.1'), metadata.replace('// ==/UserScript==', '')]) {
+  for (const invalid of ['<html>503</html>', metadata.replace('Linux.do & V2EX 企业微信主题', 'Other script'), metadata.replace('https://linux.do/', 'https://example.com/'), metadataFor('1.0-beta'), metadataFor('<script>'), metadataFor('999999999999999999.1'), metadata.replace('// ==/UserScript==', '')]) {
     assert.throws(() => context.parseUpdateMetadata(invalid));
   }
 });

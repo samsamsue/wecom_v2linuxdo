@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Linux DO · 企业微信 IM 外观
+// @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.40
-// @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
+// @version      0.7.41
+// @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
 // @match        https://linux.do/*
@@ -10443,7 +10443,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.40";
+  const SCRIPT_VERSION = "0.7.41";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -10494,7 +10494,7 @@
     if (!header) throw new Error("无效的脚本元数据");
     const field = (name) => header.match(new RegExp(`^// @${name}\\s+(.+)$`, "m"))?.[1].trim();
     const version = field("version");
-    if (field("name") !== "Linux DO · 企业微信 IM 外观" || field("namespace") !== "https://linux.do/" || !validScriptVersion(version)) {
+    if (field("name") !== "Linux.do & V2EX 企业微信主题" || field("namespace") !== "https://linux.do/" || !validScriptVersion(version)) {
       throw new Error("脚本标识或版本号不匹配");
     }
     return version;
