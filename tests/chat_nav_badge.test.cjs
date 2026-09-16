@@ -3713,12 +3713,13 @@ test("V2EX avatar click opens user popover card with #money balance and quick ac
     scriptContent.includes('const V2EX_MONEY_KEY = "linuxdo-wecom-v2ex-money";'),
     "must define persistent cache key for V2EX money"
   );
-  assert.ok(
-    scriptContent.includes("WECOM_UI_SEL = \".wecom-v2ex-user-popover,"),
+  assert.match(
+    scriptContent,
+    /WECOM_UI_SEL\s*=\s*"[^"]*\.wecom-v2ex-user-popover/,
     "WECOM_UI_SEL must include .wecom-v2ex-user-popover"
   );
   assert.ok(
-    scriptContent.includes("closeV2exUserPopover();\n  }"),
+    scriptContent.includes("closeV2exUserPopover();"),
     "removePanels must call closeV2exUserPopover"
   );
 
@@ -3768,6 +3769,131 @@ test("V2EX avatar click opens user popover card with #money balance and quick ac
   const mockDocC = { querySelector: () => null };
   assert.equal(simulateExtractV2exMoney(mockDocC), null);
 });
+
+test("Composer toolbar provides Base64 text conversion and insertion dialog", () => {
+  // 1. Check ICONS.base64
+  assert.ok(
+    scriptContent.includes('base64: `<svg width="18" height="18" viewBox="0 0 24 24"'),
+    "ICONS must define base64 icon"
+  );
+
+  // 2. Toolbar integration
+  assert.ok(
+    scriptContent.includes('{ key: "base64", label: "插入字符转 Base64 (Alt+B)", icon: ICONS.base64, arrow: false }'),
+    "toolKeys must include base64 action button"
+  );
+  assert.ok(
+    scriptContent.includes('!panel.querySelector(\'[data-composer-action="base64"]\')'),
+    "ensureChatPanel must verify base64 button existence"
+  );
+
+  // 3. Alt+B shortcut in composer
+  assert.ok(
+    scriptContent.includes('if (event.altKey && !event.ctrlKey && !event.metaKey && (event.key === "b" || event.key === "B")) {') &&
+    scriptContent.includes('openBase64InsertDialog();'),
+    "guardComposerShortcut must handle Alt+B to open base64 dialog"
+  );
+
+  // 4. Alt+click in-place conversion
+  assert.ok(
+    scriptContent.includes('} else if (action === "base64") {') &&
+    scriptContent.includes('if (event.altKey) {') &&
+    scriptContent.includes('encodeUtf8Base64(') &&
+    scriptContent.includes('insertComposerInlineText('),
+    "Alt+click on base64 toolbar button must directly convert selection"
+  );
+
+  // 5. Codec functions
+  assert.ok(
+    scriptContent.includes('function encodeUtf8Base64('),
+    "must define encodeUtf8Base64"
+  );
+  assert.ok(
+    scriptContent.includes('function decodeUtf8Base64('),
+    "must define decodeUtf8Base64"
+  );
+
+  // Functional test for UTF-8 Base64 codec
+  function encodeUtf8Base64(str) {
+    if (!str) return "";
+    try {
+      const bytes = new TextEncoder().encode(str);
+      let binary = "";
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary);
+    } catch {
+      return "";
+    }
+  }
+
+  function decodeUtf8Base64(b64) {
+    if (!b64) return "";
+    const clean = b64.replace(/^base64:/i, "").trim();
+    try {
+      const binary = atob(clean);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return new TextDecoder().decode(bytes);
+    } catch {
+      return "";
+    }
+  }
+
+  assert.equal(encodeUtf8Base64("Hello World"), "SGVsbG8gV29ybGQ=");
+  assert.equal(decodeUtf8Base64("SGVsbG8gV29ybGQ="), "Hello World");
+  assert.equal(decodeUtf8Base64("base64:SGVsbG8gV29ybGQ="), "Hello World");
+
+  const chineseText = "你好，Linux DO & V2EX！🎉";
+  const encodedChinese = encodeUtf8Base64(chineseText);
+  assert.ok(encodedChinese.length > 0);
+  assert.equal(decodeUtf8Base64(encodedChinese), chineseText);
+
+  // 6. Dialog UI functions & selectors
+  assert.ok(
+    scriptContent.includes('function ensureBase64InsertDialog()'),
+    "must define ensureBase64InsertDialog"
+  );
+  assert.ok(
+    scriptContent.includes('function openBase64InsertDialog()'),
+    "must define openBase64InsertDialog"
+  );
+  assert.ok(
+    scriptContent.includes('function closeBase64InsertDialog()'),
+    "must define closeBase64InsertDialog"
+  );
+  assert.ok(
+    scriptContent.includes('function insertBase64ToComposer(text, selection)'),
+    "must define insertBase64ToComposer"
+  );
+
+  // 7. Modal management and WECOM_UI_SEL
+  assert.ok(
+    scriptContent.includes(".wecom-base64-insert-dialog:not([hidden])"),
+    "isModalOrViewerOpen must include .wecom-base64-insert-dialog"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-base64-insert-dialog") && scriptContent.includes("WECOM_UI_SEL = "),
+    "WECOM_UI_SEL must include .wecom-base64-insert-dialog"
+  );
+  assert.ok(
+    scriptContent.includes("closeBase64InsertDialog();"),
+    "removePanels must call closeBase64InsertDialog"
+  );
+
+  // 8. CSS styling exists
+  assert.ok(
+    scriptContent.includes(".wecom-base64-insert-dialog {") &&
+    scriptContent.includes(".wecom-base64-insert-card {") &&
+    scriptContent.includes(".wecom-base64-insert-tabs {") &&
+    scriptContent.includes(".wecom-base64-insert-result {"),
+    "must include base64 insert dialog CSS styles"
+  );
+});
+
 
 
 

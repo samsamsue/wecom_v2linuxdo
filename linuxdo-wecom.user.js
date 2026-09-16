@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.28
+// @version      0.7.29
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -200,7 +200,8 @@
     layoutAuto: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><rect x="4" y="4" width="6" height="6" rx="1" /><rect x="14" y="4" width="6" height="6" rx="1" /><rect x="4" y="14" width="6" height="6" rx="1" /><rect x="14" y="14" width="6" height="6" rx="1" /></svg>`,
     userOff: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.18 4.171a4 4 0 0 1 5.649 5.66m-1.829 2.169a4 4 0 0 1 -3.82 -3.83" /><path d="M6 21v-2a4 4 0 0 1 4 -4h4c.412 0 .81 .062 1.183 .178m2.633 2.642c.12 .38 .184 .785 .184 1.18v2" /><path d="M3 3l18 18" /></svg>`,
     copy: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 8m0 2a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2z" /><path d="M16 8v-2a2 2 0 0 0 -2 -2h-8a2 2 0 0 0 -2 2v8a2 2 0 0 0 2 2h2" /></svg>`,
-    code: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8l-4 4l4 4" /><path d="M17 8l4 4l-4 4" /><path d="M14 4l-4 16" /></svg>`
+    code: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8l-4 4l4 4" /><path d="M17 8l4 4l-4 4" /><path d="M14 4l-4 16" /></svg>`,
+    base64: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z" /><path d="M7 8h2.5a1.5 1.5 0 0 1 1.5 1.5v0a1.5 1.5 0 0 1 -1.5 1.5h-2.5h2.5a1.5 1.5 0 0 1 1.5 1.5v0a1.5 1.5 0 0 1 -1.5 1.5h-2.5v-6" /><path d="M14 8h2a1.5 1.5 0 0 1 1.5 1.5v5a1.5 1.5 0 0 1 -1.5 1.5h-2a1.5 1.5 0 0 1 -1.5 -1.5v-2a1.5 1.5 0 0 1 1.5 -1.5h3.5" /></svg>`
   };
   ICONS.chat = ICONS.msg;
   ICONS.list = ICONS.msg;
@@ -3892,6 +3893,185 @@
       color: #FFFFFF;
     }
     .wecom-edit-dialog-actions .wecom-edit-save:disabled { opacity: .5; cursor: default; }
+
+    /* ---------- 插入字符转 Base64 弹窗 ---------- */
+    .wecom-base64-insert-dialog,
+    .wecom-base64-insert-dialog * { box-sizing: border-box; }
+    .wecom-base64-insert-dialog[hidden] { display: none !important; }
+    .wecom-base64-insert-dialog {
+      position: fixed;
+      inset: 0;
+      z-index: 12000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(24, 35, 49, .42);
+      font-family: var(--wc-font);
+      animation: wecomFadeIn 0.15s ease-out;
+    }
+    .wecom-base64-insert-card {
+      width: min(440px, calc(100vw - 32px));
+      max-height: calc(100vh - 40px);
+      display: flex;
+      flex-direction: column;
+      padding: 16px 18px;
+      border: 1px solid #D6DEE8;
+      border-radius: 10px;
+      background: #FFFFFF;
+      box-shadow: 0 18px 50px rgba(30, 48, 71, .24);
+      color: #172033;
+      user-select: none;
+      gap: 12px;
+    }
+    .wecom-base64-insert-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .wecom-base64-insert-title {
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .wecom-base64-insert-close {
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      border: 0;
+      border-radius: 4px;
+      background: transparent;
+      color: #7D8B9D;
+      font-size: 20px;
+      line-height: 24px;
+      cursor: pointer;
+    }
+    .wecom-base64-insert-close:hover { background: #EEF3F8; }
+    .wecom-base64-insert-tabs {
+      display: flex;
+      background: #F2F4F7;
+      border-radius: 6px;
+      padding: 2px;
+      gap: 2px;
+    }
+    .wecom-base64-insert-tab {
+      flex: 1;
+      height: 28px;
+      border: none;
+      background: transparent;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #646A73;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .wecom-base64-insert-tab.active {
+      background: #FFFFFF;
+      color: #267EF0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+    .wecom-base64-insert-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .wecom-base64-insert-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #646A73;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .wecom-base64-copy-action {
+      font-size: 11px;
+      color: #267EF0;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+    }
+    .wecom-base64-copy-action:hover { text-decoration: underline; }
+    .wecom-base64-insert-input {
+      width: 100%;
+      height: 64px;
+      border: 1px solid #C9D3DF;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 13px;
+      line-height: 1.4;
+      color: #172033;
+      resize: none;
+      outline: 0;
+      background: #FFFFFF;
+      font-family: inherit;
+    }
+    .wecom-base64-insert-input:focus {
+      border-color: #267EF0;
+      box-shadow: 0 0 0 2px rgba(38,126,240,.15);
+    }
+    .wecom-base64-insert-result {
+      min-height: 44px;
+      max-height: 76px;
+      overflow-y: auto;
+      background: #F7F8FA;
+      border: 1px solid #E5E8EC;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 12px;
+      font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+      line-height: 1.4;
+      color: #172033;
+      word-break: break-all;
+    }
+    .wecom-base64-insert-result.empty {
+      color: #8F959E;
+      font-family: inherit;
+      font-style: italic;
+    }
+    .wecom-base64-insert-opts {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .wecom-base64-insert-prefix {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #646A73;
+      cursor: pointer;
+    }
+    .wecom-base64-insert-prefix input { cursor: pointer; margin: 0; }
+    .wecom-base64-insert-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .wecom-base64-insert-actions button {
+      min-width: 68px;
+      height: 32px;
+      border: 1px solid #CCD6E2;
+      border-radius: 6px;
+      background: #FFFFFF;
+      color: #526175;
+      font: 13px var(--wc-font);
+      cursor: pointer;
+    }
+    .wecom-base64-insert-actions .wecom-base64-submit-btn {
+      border-color: #267EF0;
+      background: #267EF0;
+      color: #FFFFFF;
+    }
+    .wecom-base64-insert-actions .wecom-base64-submit-btn:disabled {
+      opacity: .5;
+      cursor: default;
+    }
 
     /* ---------- native 模式悬浮恢复钮 ---------- */
     .wecom-mode-fab {
@@ -7752,6 +7932,77 @@
       color: #FFFFFF !important;
     }
 
+    /* ---------- 插入字符转 Base64 弹窗深色模式 ---------- */
+    html.wecom-dark .wecom-base64-insert-card,
+    html.${ROOT_CLASS}.wecom-dark .wecom-base64-insert-card {
+      background: #23272E !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6) !important;
+      color: #ECEFF4 !important;
+    }
+    html.wecom-dark .wecom-base64-insert-title,
+    html.${ROOT_CLASS}.wecom-dark .wecom-base64-insert-title {
+      color: #ECEFF4 !important;
+    }
+    html.wecom-dark .wecom-base64-insert-close,
+    html.${ROOT_CLASS}.wecom-dark .wecom-base64-insert-close {
+      color: #8F959E !important;
+    }
+    html.wecom-dark .wecom-base64-insert-close:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-base64-insert-close:hover {
+      background: rgba(255, 255, 255, 0.08) !important;
+      color: #ECEFF4 !important;
+    }
+    html.wecom-dark .wecom-base64-insert-tabs,
+    html.${ROOT_CLASS}.wecom-dark .wecom-base64-insert-tabs {
+      background: #1C1E22 !important;
+    }
+    html.wecom-dark .wecom-base64-insert-tab,
+    html.${ROOT_CLASS}.wecom-dark .wecom-base64-insert-tab {
+      color: #8F959E !important;
+    }
+    html.wecom-dark .wecom-base64-insert-tab.active,
+    html.${ROOT_CLASS}.wecom-dark .wecom-base64-insert-tab.active {
+      background: #2E3440 !important;
+      color: #388BFD !important;
+    }
+    html.wecom-dark .wecom-base64-insert-label,
+    html.${ROOT_CLASS}.wecom-dark .wecom-base64-insert-label {
+      color: #8F959E !important;
+    }
+    html.wecom-dark .wecom-base64-insert-input,
+    html.${ROOT_CLASS}.wecom-dark .wecom-base64-insert-input {
+      background: #1C1E22 !important;
+      border-color: #3B4252 !important;
+      color: #ECEFF4 !important;
+    }
+    html.wecom-dark .wecom-base64-insert-result,
+    html.${ROOT_CLASS}.wecom-dark .wecom-base64-insert-result {
+      background: #1C1E22 !important;
+      border-color: #3B4252 !important;
+      color: #ECEFF4 !important;
+    }
+    html.wecom-dark .wecom-base64-insert-prefix,
+    html.${ROOT_CLASS}.wecom-dark .wecom-base64-insert-prefix {
+      color: #8F959E !important;
+    }
+    html.wecom-dark .wecom-base64-insert-actions button:not(.wecom-base64-submit-btn),
+    html.${ROOT_CLASS}.wecom-dark .wecom-base64-insert-actions button:not(.wecom-base64-submit-btn) {
+      background: #2E3440 !important;
+      border-color: #3B4252 !important;
+      color: #ECEFF4 !important;
+    }
+    html.wecom-dark .wecom-base64-insert-actions button:not(.wecom-base64-submit-btn):hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-base64-insert-actions button:not(.wecom-base64-submit-btn):hover {
+      background: #3B4252 !important;
+    }
+    html.wecom-dark .wecom-base64-insert-actions .wecom-base64-submit-btn,
+    html.${ROOT_CLASS}.wecom-dark .wecom-base64-insert-actions .wecom-base64-submit-btn {
+      background: #267EF0 !important;
+      border-color: #267EF0 !important;
+      color: #FFFFFF !important;
+    }
+
     /* 暗色模式滚动条自适应 */
     html.${ROOT_CLASS}.wecom-dark .wecom-list-panel:hover .wecom-list-body::-webkit-scrollbar-thumb,
     html.${ROOT_CLASS}.wecom-dark .wecom-list-body:hover::-webkit-scrollbar-thumb,
@@ -8962,7 +9213,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.28";
+  const SCRIPT_VERSION = "0.7.29";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -13048,11 +13299,252 @@
     return dialog;
   }
 
+  /* ============================== 编辑框插入字符转 Base64 ============================== */
+
+  let savedComposerSelection = null;
+  let base64DialogMode = "encode"; // "encode" | "decode"
+
+  function encodeUtf8Base64(str) {
+    if (!str) return "";
+    const bytes = new TextEncoder().encode(str);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
+  function decodeUtf8Base64(str) {
+    if (!str) return "";
+    const cleaned = str.trim().replace(/^(?:base64|b64)[:：]\s*/i, "").replace(/\s+/g, "");
+    let normalized = cleaned.replace(/-/g, "+").replace(/_/g, "/");
+    while (normalized.length % 4 !== 0) normalized += "=";
+    try {
+      const binary = atob(normalized);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    } catch {
+      return "";
+    }
+  }
+
+  function ensureBase64InsertDialog() {
+    let dialog = document.querySelector(".wecom-base64-insert-dialog");
+    if (dialog) return dialog;
+    dialog = document.createElement("div");
+    dialog.className = "wecom-base64-insert-dialog";
+    dialog.hidden = true;
+    dialog.setAttribute("role", "dialog");
+    dialog.setAttribute("aria-modal", "true");
+    dialog.setAttribute("aria-label", "插入字符转 Base64");
+    dialog.innerHTML = `
+      <div class="wecom-base64-insert-card">
+        <div class="wecom-base64-insert-head">
+          <strong class="wecom-base64-insert-title">${ICONS.base64 || ""}<span>插入字符转 Base64</span></strong>
+          <button type="button" class="wecom-base64-insert-close" aria-label="关闭">×</button>
+        </div>
+        <div class="wecom-base64-insert-tabs">
+          <button type="button" class="wecom-base64-insert-tab active" data-mode="encode">转 Base64 编码</button>
+          <button type="button" class="wecom-base64-insert-tab" data-mode="decode">Base64 解码</button>
+        </div>
+        <div class="wecom-base64-insert-field">
+          <div class="wecom-base64-insert-label">
+            <span class="wecom-base64-input-title">原始字符</span>
+          </div>
+          <textarea class="wecom-base64-insert-input" placeholder="输入微信号、群号、邮箱、链接等原始文本"></textarea>
+        </div>
+        <div class="wecom-base64-insert-field">
+          <div class="wecom-base64-insert-label">
+            <span class="wecom-base64-result-title">Base64 结果预览</span>
+            <button type="button" class="wecom-base64-copy-action">复制</button>
+          </div>
+          <div class="wecom-base64-insert-result empty">等待输入…</div>
+        </div>
+        <div class="wecom-base64-insert-opts">
+          <label class="wecom-base64-insert-prefix">
+            <input type="checkbox" class="wecom-base64-prefix-check"> 添加 base64: 前缀
+          </label>
+        </div>
+        <div class="wecom-base64-insert-actions">
+          <button type="button" class="wecom-base64-cancel-btn">取消</button>
+          <button type="button" class="wecom-base64-submit-btn" disabled>插入到编辑框</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(dialog);
+
+    const input = dialog.querySelector(".wecom-base64-insert-input");
+    const resultBox = dialog.querySelector(".wecom-base64-insert-result");
+    const prefixCheck = dialog.querySelector(".wecom-base64-prefix-check");
+    const submitBtn = dialog.querySelector(".wecom-base64-submit-btn");
+    const copyBtn = dialog.querySelector(".wecom-base64-copy-action");
+    const tabs = dialog.querySelectorAll(".wecom-base64-insert-tab");
+    const inputTitle = dialog.querySelector(".wecom-base64-input-title");
+    const resultTitle = dialog.querySelector(".wecom-base64-result-title");
+    const prefixOpts = dialog.querySelector(".wecom-base64-insert-opts");
+
+    function updateConversion() {
+      const val = input.value;
+      if (!val || !val.trim()) {
+        resultBox.textContent = "等待输入…";
+        resultBox.classList.add("empty");
+        submitBtn.disabled = true;
+        return;
+      }
+      if (base64DialogMode === "encode") {
+        let res = encodeUtf8Base64(val);
+        if (prefixCheck.checked && res) {
+          res = "base64: " + res;
+        }
+        resultBox.textContent = res;
+        resultBox.classList.remove("empty");
+        submitBtn.disabled = !res;
+      } else {
+        const res = decodeUtf8Base64(val);
+        if (res) {
+          resultBox.textContent = res;
+          resultBox.classList.remove("empty");
+          submitBtn.disabled = false;
+        } else {
+          resultBox.textContent = "（无法解析为有效 Base64 文本）";
+          resultBox.classList.add("empty");
+          submitBtn.disabled = true;
+        }
+      }
+    }
+
+    input.addEventListener("input", updateConversion);
+    prefixCheck.addEventListener("change", updateConversion);
+
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        tabs.forEach((t) => t.classList.remove("active"));
+        tab.classList.add("active");
+        base64DialogMode = tab.dataset.mode || "encode";
+        if (base64DialogMode === "encode") {
+          inputTitle.textContent = "原始字符";
+          resultTitle.textContent = "Base64 结果预览";
+          input.placeholder = "输入微信号、群号、邮箱、链接等原始文本";
+          prefixOpts.style.display = "";
+        } else {
+          inputTitle.textContent = "Base64 密文";
+          resultTitle.textContent = "解码明文预览";
+          input.placeholder = "粘贴或输入需要解码的 Base64 字符串";
+          prefixOpts.style.display = "none";
+        }
+        updateConversion();
+      });
+    });
+
+    copyBtn.addEventListener("click", () => {
+      const txt = resultBox.classList.contains("empty") ? "" : resultBox.textContent;
+      if (!txt) return;
+      copyTextToClipboard(txt).then(() => {
+        const orig = copyBtn.textContent;
+        copyBtn.textContent = "已复制!";
+        setTimeout(() => { copyBtn.textContent = orig; }, 1500);
+      });
+    });
+
+    function doInsert() {
+      const txt = resultBox.classList.contains("empty") ? "" : resultBox.textContent;
+      if (!txt) return;
+      insertBase64ToComposer(txt, savedComposerSelection);
+      closeBase64InsertDialog();
+      flashComposeHint(`已插入 Base64 ${base64DialogMode === "encode" ? "编码" : "解码"}字符`, "info");
+    }
+
+    submitBtn.addEventListener("click", doInsert);
+
+    dialog.querySelector(".wecom-base64-insert-close")?.addEventListener("click", closeBase64InsertDialog);
+    dialog.querySelector(".wecom-base64-cancel-btn")?.addEventListener("click", closeBase64InsertDialog);
+
+    dialog.addEventListener("click", (e) => {
+      if (e.target === dialog) closeBase64InsertDialog();
+    });
+
+    dialog.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        closeBase64InsertDialog();
+      } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey || !e.shiftKey)) {
+        if (!submitBtn.disabled) {
+          e.preventDefault();
+          e.stopPropagation();
+          doInsert();
+        }
+      }
+    });
+
+    return dialog;
+  }
+
+  function insertBase64ToComposer(text, selection) {
+    const input = composeUi().input;
+    if (!input || !text) return;
+    const limit = input.value.length;
+    const start = selection && Number.isInteger(selection.start) ? Math.max(0, Math.min(selection.start, limit)) : (input.selectionStart ?? limit);
+    const end = selection && Number.isInteger(selection.end) ? Math.max(start, Math.min(selection.end, limit)) : (input.selectionEnd ?? start);
+    input.setRangeText(text, start, end, "end");
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.focus({ preventScroll: true });
+  }
+
+  function isBase64InsertDialogOpen() {
+    const dialog = document.querySelector(".wecom-base64-insert-dialog");
+    return Boolean(dialog && !dialog.hidden);
+  }
+
+  function closeBase64InsertDialog() {
+    const dialog = document.querySelector(".wecom-base64-insert-dialog");
+    if (dialog) {
+      dialog.hidden = true;
+      const input = composeUi().input;
+      if (input) input.focus({ preventScroll: true });
+    }
+  }
+
+  function openBase64InsertDialog() {
+    const compInput = composeUi().input;
+    let prefill = "";
+    if (compInput) {
+      const start = compInput.selectionStart ?? 0;
+      const end = compInput.selectionEnd ?? 0;
+      savedComposerSelection = { start, end };
+      prefill = compInput.value.slice(start, end).trim();
+    } else {
+      savedComposerSelection = null;
+    }
+
+    const dialog = ensureBase64InsertDialog();
+    dialog.hidden = false;
+
+    const input = dialog.querySelector(".wecom-base64-insert-input");
+    const tabs = dialog.querySelectorAll(".wecom-base64-insert-tab");
+    tabs.forEach((t) => t.classList.toggle("active", t.dataset.mode === "encode"));
+    base64DialogMode = "encode";
+    dialog.querySelector(".wecom-base64-input-title").textContent = "原始字符";
+    dialog.querySelector(".wecom-base64-result-title").textContent = "Base64 结果预览";
+    dialog.querySelector(".wecom-base64-insert-opts").style.display = "";
+
+    if (input) {
+      input.value = prefill;
+      input.dispatchEvent(new Event("input"));
+      setTimeout(() => {
+        input.focus();
+        if (prefill) input.select();
+      }, 30);
+    }
+  }
+
   function ensureChatPanel() {
     let panel = document.querySelector(".wecom-chat-panel");
     if (panel && (!panel.querySelector(".wecom-chat-compose") || !panel.querySelector(".wecom-pinned-banner") ||
       !panel.querySelector(".wecom-watermark-panel") || !panel.querySelector(".wecom-image-input") ||
       !panel.querySelector('[data-composer-action="emoji"]') || !panel.querySelector('[data-composer-action="pic"]') ||
+      !panel.querySelector('[data-composer-action="base64"]') ||
       !panel.querySelector('[data-composer-action="doc"]') || !panel.querySelector('[data-composer-action="apps"]') ||
       !panel.querySelector(".wecom-platform-switcher") || !panel.querySelector(".wecom-chat-avatar-toggle") ||
       !panel.querySelector(".wecom-composer-bottom .wecom-compose-status"))) {
@@ -13070,6 +13562,7 @@
       wireComposeButton(panel);
       bindUserCardEvents(panel);
       ensureEditDialog();
+      ensureBase64InsertDialog();
       return panel;
     }
     panel = document.createElement("div");
@@ -13080,6 +13573,7 @@
       { key: "emoji", label: "表情", icon: ICONS.emoji, arrow: false },
       { key: "cut", label: "截图", icon: ICONS.cut, arrow: true },
       { key: "pic", label: "发送图片", icon: ICONS.pic, arrow: true },
+      { key: "base64", label: "插入字符转 Base64 (Alt+B)", icon: ICONS.base64, arrow: false },
       { key: "doc", label: "微文档", icon: ICONS.docLine, arrow: false },
       { key: "todo", label: "日程与待办", icon: ICONS.todoLine, arrow: true },
       { key: "folder", label: "发送文件", icon: ICONS.folder, arrow: true },
@@ -13191,6 +13685,7 @@
     bindWatermarkSettings(panel);
     renderWatermark(getWatermarkSettings());
     ensureEditDialog();
+    ensureBase64InsertDialog();
     panel.querySelector(".wecom-pinned-close")?.addEventListener("click", () => {
       const banner = panel.querySelector(".wecom-pinned-banner");
       if (banner) banner.style.display = "none";
@@ -15218,6 +15713,19 @@
     closeV2exEmojiPicker();
     if (action === "pic" || action === "folder" || action === "doc") {
       panel?.querySelector(".wecom-image-input")?.click();
+    } else if (action === "base64") {
+      if (event.altKey) {
+        const selStart = input?.selectionStart ?? 0;
+        const selEnd = input?.selectionEnd ?? 0;
+        const selText = input ? input.value.slice(selStart, selEnd) : "";
+        if (selText && selText.trim()) {
+          const encoded = encodeUtf8Base64(selText.trim());
+          insertComposerInlineText(encoded);
+          flashComposeHint("已将所选文本转换为 Base64 编码", "info");
+          return;
+        }
+      }
+      openBase64InsertDialog();
     } else if (action === "cut") {
       flashComposeHint("提示：直接按 Ctrl+V 即可粘贴剪贴板截图", "info");
       if (input) input.focus({ preventScroll: true });
@@ -15795,6 +16303,12 @@
     if (!(target instanceof Element) || !target.closest("textarea.wecom-chat-compose")) return;
     event.__wecomComposerGuarded = true;
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") event.preventDefault();
+    if (event.altKey && !event.ctrlKey && !event.metaKey && (event.key === "b" || event.key === "B")) {
+      event.preventDefault();
+      openBase64InsertDialog();
+      event.stopImmediatePropagation();
+      return;
+    }
     if (event.key === "Enter" && !event.shiftKey && !event.isComposing && event.keyCode !== 229) {
       event.preventDefault();
       submitComposerFromUi(event);
@@ -17841,6 +18355,7 @@
     document.querySelector(".wecom-edit-dialog")?.remove();
     document.querySelector(".wecom-v2ex-nav2")?.remove();
     closeV2exUserPopover();
+    closeBase64InsertDialog();
   }
 
   let initialNewTopicChecked = false;
@@ -17979,7 +18494,7 @@
   function isModalOrViewerOpen() {
     return Boolean(
       document.querySelector(
-        ".wecom-image-viewer:not([hidden]), .wecom-edit-dialog:not([hidden]), .wecom-watermark-dialog:not([hidden]), .wecom-boost-popover:not([hidden]), .wecom-base64-popover:not([hidden]), .wecom-v2ex-emoji-picker:not([hidden]), .dialog-holder, #discourse-modal-container .modal.show, #discourse-modal-container .modal.in, .d-modal"
+        ".wecom-base64-insert-dialog:not([hidden]), .wecom-image-viewer:not([hidden]), .wecom-edit-dialog:not([hidden]), .wecom-watermark-dialog:not([hidden]), .wecom-boost-popover:not([hidden]), .wecom-base64-popover:not([hidden]), .wecom-v2ex-emoji-picker:not([hidden]), .dialog-holder, #discourse-modal-container .modal.show, #discourse-modal-container .modal.in, .d-modal"
       )
     );
   }
@@ -18053,7 +18568,7 @@
       });
     }
 
-    const WECOM_UI_SEL = ".wecom-v2ex-user-popover, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
+    const WECOM_UI_SEL = ".wecom-base64-insert-dialog, .wecom-v2ex-user-popover, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
     const NATIVE_BRIDGE_SEL = "#reply-control, .dialog-holder, .dialog-container, #discourse-modal-container, .d-modal, .bootbox, .autocomplete, .autocomplete-container, .d-editor-popup, [data-identifier='emoji-picker'], .tag-chooser";
     const observer = new MutationObserver((mutations) => {
       // 忽略我们自己面板内部的 DOM 变动，否则点开筛选会立刻触发 applyTheme 回写/闪断
