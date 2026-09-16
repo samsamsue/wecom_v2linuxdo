@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.39
+// @version      0.7.40
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -3328,6 +3328,14 @@
     .wecom-msg-tool:hover { background: var(--wc-hover); color: var(--wc-accent); }
     .wecom-msg-tool.liked,
     .wecom-msg-tool.bookmarked { color: var(--wc-accent); }
+    .wecom-msg-tool.liked svg {
+      transform: scale(1.15);
+      transition: transform 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .wecom-msg-tool.liked svg path {
+      stroke-width: 1.5;
+      fill: currentColor;
+    }
     .wecom-msg-tool.bookmarked svg path { fill: currentColor; }
 
     /* Boost 气泡与列表 */
@@ -10435,7 +10443,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.39";
+  const SCRIPT_VERSION = "0.7.40";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -17271,9 +17279,9 @@
     if (!button || !panel.contains(button)) return;
     const message = button.closest(".wecom-msg");
     if (!message) return;
-    const action = button.dataset.action;
-    if (action === "like") return toggleLike(Number(message.dataset.postId), button);
     consumeClick(event);
+    const action = button.dataset.action;
+    if (action === "like") return toggleLike(Number(message.dataset.postId), button, message);
     if (action === "reply") return replyToPost(Number(message.dataset.postNumber));
     if (action === "boost") return openBoostPopover(message, button);
     if (action === "bookmark") return openOriginalPostBookmark(message).catch(reportPostBookmarkError);
@@ -18704,83 +18712,217 @@
     }
   }
 
-  async function toggleLike(postId, btn) {
+  const activeLikingPosts = new Set();
+
+  async function toggleLike(postId, btn, msgEl) {
+    const msg = msgEl || btn?.closest?.(".wecom-msg");
+    if (!postId && msg) {
+      postId = Number(msg.dataset?.postId);
+      if (!postId) {
+        const postNumber = Number(msg.dataset?.postNumber);
+        const post = chatState.postsByNumber?.get(postNumber);
+        if (post?.id) postId = Number(post.id);
+      }
+    }
     if (!postId) return;
-    if (IS_V2EX) {
+
+    if (msg?.dataset?.mine === "1") {
+      showWecomToast(IS_V2EX ? "不能感谢自己的回复" : "不能给自己的帖子点赞", "info", 2000);
+      return;
+    }
+
+    if (activeLikingPosts.has(postId)) return;
+    activeLikingPosts.add(postId);
+
+    try {
+      if (IS_V2EX) {
+        const wasLiked = likedPosts.has(postId);
+        if (wasLiked) {
+          showWecomToast("已经感谢过该回复了", "info", 1800);
+          return;
+        }
+        btn.classList.add("liked");
+        likedPosts.add(postId);
+        let likeNumEl = msg?.querySelector(".wecom-msg-like-num");
+        let addedBadge = false;
+        if (likeNumEl) {
+          const next = (parseInt(likeNumEl.textContent.trim(), 10) || 0) + 1;
+          likeNumEl.textContent = String(next);
+          const badge = msg?.querySelector(".wecom-msg-likes");
+          if (badge) badge.title = `感谢回复：${next}`;
+        } else if (msg) {
+          const meta = msg.querySelector(".wecom-msg-meta");
+          if (meta) {
+            const badge = document.createElement("span");
+            badge.className = "wecom-msg-likes";
+            badge.title = "感谢回复：1";
+            badge.innerHTML = `<span class="wecom-msg-like-icon">${ICONS.heart}</span><span class="wecom-msg-like-num">1</span>`;
+            meta.appendChild(badge);
+            addedBadge = true;
+          }
+        }
+        showWecomToast("已感谢回复", "success", 1800);
+        try {
+          let once = document.querySelector("#Main form input[name='once'], input[name='once']")?.value;
+          if (!once) {
+            const res = await fetch(location.pathname, { credentials: "same-origin" });
+            const html = await res.text();
+            const doc = new DOMParser().parseFromString(html, "text/html");
+            once = doc.querySelector("input[name='once']")?.value;
+          }
+          if (!once) throw new Error("请先登录 V2EX");
+          const resp = await fetch(`/thank/reply/${postId}?once=${once}`, {
+            method: "POST",
+            credentials: "same-origin"
+          });
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        } catch (err) {
+          likedPosts.delete(postId);
+          btn.classList.remove("liked");
+          if (likeNumEl) {
+            likeNumEl.textContent = String(Math.max(0, (parseInt(likeNumEl.textContent.trim(), 10) || 1) - 1));
+          } else if (addedBadge) {
+            msg?.querySelector(".wecom-msg-likes")?.remove();
+          }
+          showWecomToast("感谢回复失败：" + (err.message || "网络异常"), "error", 2500);
+          console.warn("[v2ex] thank reply failed", err);
+        }
+        return;
+      }
+
+      if (!getCurrentUsername()) {
+        showWecomToast("请先登录 Linux DO", "warning", 2000);
+        return;
+      }
+
       const wasLiked = likedPosts.has(postId);
-      if (wasLiked) return;
-      btn.classList.add("liked");
-      likedPosts.add(postId);
-      const msg = btn.closest(".wecom-msg");
+      const likeLabel = "点赞";
+      const postNumber = Number(msg?.dataset?.postNumber);
+      const postModel = postNumber ? chatState.postsByNumber?.get(postNumber) : null;
+
+      // 乐观更新
+      if (wasLiked) {
+        likedPosts.delete(postId);
+        btn.classList.remove("liked");
+        if (postModel) postModel.like_count = Math.max(0, (Number(postModel.like_count) || 1) - 1);
+      } else {
+        likedPosts.add(postId);
+        btn.classList.add("liked");
+        if (postModel) postModel.like_count = (Number(postModel.like_count) || 0) + 1;
+      }
+
       let likeNumEl = msg?.querySelector(".wecom-msg-like-num");
       let addedBadge = false;
+      let removedBadge = false;
+      let prevCount = 0;
+
       if (likeNumEl) {
-        likeNumEl.textContent = String((parseInt(likeNumEl.textContent.trim(), 10) || 0) + 1);
-      } else if (msg) {
+        prevCount = parseInt(likeNumEl.textContent.trim(), 10) || 0;
+        if (!wasLiked) {
+          const next = prevCount + 1;
+          likeNumEl.textContent = String(next);
+          const badge = msg?.querySelector(".wecom-msg-likes");
+          if (badge) badge.title = `${likeLabel}：${next}`;
+        } else {
+          const next = Math.max(0, prevCount - 1);
+          if (next === 0) {
+            msg?.querySelector(".wecom-msg-likes")?.remove();
+            removedBadge = true;
+          } else {
+            likeNumEl.textContent = String(next);
+            const badge = msg?.querySelector(".wecom-msg-likes");
+            if (badge) badge.title = `${likeLabel}：${next}`;
+          }
+        }
+      } else if (!wasLiked && msg) {
         const meta = msg.querySelector(".wecom-msg-meta");
         if (meta) {
           const badge = document.createElement("span");
           badge.className = "wecom-msg-likes";
-          badge.title = "感谢回复：1";
+          badge.title = `${likeLabel}：1`;
           badge.innerHTML = `<span class="wecom-msg-like-icon">${ICONS.heart}</span><span class="wecom-msg-like-num">1</span>`;
           meta.appendChild(badge);
           addedBadge = true;
         }
       }
+
+      showWecomToast(wasLiked ? "已取消点赞" : "已点赞", wasLiked ? "info" : "success", 1800);
+
       try {
-        let once = document.querySelector("#Main form input[name='once'], input[name='once']")?.value;
-        if (!once) {
-          const res = await fetch(location.pathname, { credentials: "same-origin" });
-          const html = await res.text();
-          const doc = new DOMParser().parseFromString(html, "text/html");
-          once = doc.querySelector("input[name='once']")?.value;
-        }
-        if (!once) throw new Error("请先登录 V2EX");
-        const resp = await fetch(`/thank/reply/${postId}?once=${once}`, {
+        let resp = await fetch(`/discourse-reactions/posts/${postId}/custom-reactions/heart/toggle`, {
           method: "POST",
-          credentials: "same-origin"
+          credentials: "same-origin",
+          headers: bridgeHeaders("application/json"),
+          body: "{}"
         });
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      } catch (err) {
-        likedPosts.delete(postId);
-        btn.classList.remove("liked");
-        if (likeNumEl) {
-          likeNumEl.textContent = String(Math.max(0, (parseInt(likeNumEl.textContent.trim(), 10) || 1) - 1));
-        } else if (addedBadge) {
-          msg?.querySelector(".wecom-msg-likes")?.remove();
+        if (resp.status === 404) {
+          resp = await fetch(
+            wasLiked ? `/post_actions/${postId}?post_action_type_id=2` : "/post_actions",
+            wasLiked
+              ? {
+                  method: "DELETE",
+                  credentials: "same-origin",
+                  headers: bridgeHeaders("application/json")
+                }
+              : {
+                  method: "POST",
+                  credentials: "same-origin",
+                  headers: bridgeHeaders("application/json"),
+                  body: JSON.stringify({ id: postId, post_action_type_id: 2 })
+                }
+          );
         }
-        console.warn("[v2ex] thank reply failed", err);
+        if (!resp.ok) {
+          let errMessage = "";
+          try {
+            const errData = await resp.json();
+            if (Array.isArray(errData?.errors) && errData.errors.length) {
+              errMessage = errData.errors.join(", ");
+            } else if (errData?.error) {
+              errMessage = String(errData.error);
+            } else if (errData?.message) {
+              errMessage = String(errData.message);
+            }
+          } catch {}
+          if (!errMessage) {
+            if (resp.status === 403) errMessage = "没有权限或操作受限";
+            else if (resp.status === 429) errMessage = "操作过于频繁，请稍后再试";
+            else errMessage = `HTTP ${resp.status}`;
+          }
+          throw new Error(errMessage);
+        }
+      } catch (err) {
+        // 失败回滚
+        if (wasLiked) {
+          likedPosts.add(postId);
+          btn.classList.add("liked");
+          if (postModel) postModel.like_count = (Number(postModel.like_count) || 0) + 1;
+        } else {
+          likedPosts.delete(postId);
+          btn.classList.remove("liked");
+          if (postModel) postModel.like_count = Math.max(0, (Number(postModel.like_count) || 1) - 1);
+        }
+        if (addedBadge) {
+          msg?.querySelector(".wecom-msg-likes")?.remove();
+        } else if (removedBadge && msg) {
+          const meta = msg.querySelector(".wecom-msg-meta");
+          if (meta) {
+            const badge = document.createElement("span");
+            badge.className = "wecom-msg-likes";
+            badge.title = `${likeLabel}：${prevCount}`;
+            badge.innerHTML = `<span class="wecom-msg-like-icon">${ICONS.heart}</span><span class="wecom-msg-like-num">${prevCount}</span>`;
+            meta.appendChild(badge);
+          }
+        } else if (likeNumEl) {
+          likeNumEl.textContent = String(prevCount);
+          const badge = msg?.querySelector(".wecom-msg-likes");
+          if (badge) badge.title = `${likeLabel}：${prevCount}`;
+        }
+        showWecomToast("点赞操作失败：" + (err.message || "网络异常"), "error", 2500);
+        console.warn("[linuxdo] toggle like failed", err);
       }
-      return;
-    }
-    const wasLiked = likedPosts.has(postId);
-    // 乐观更新，失败回滚
-    if (wasLiked) likedPosts.delete(postId); else likedPosts.add(postId);
-    btn.classList.toggle("liked", !wasLiked);
-    try {
-      const resp = await fetch(
-        wasLiked ? `/post_actions/${postId}?post_action_type_id=2` : "/post_actions",
-        wasLiked
-          ? {
-              method: "DELETE",
-              credentials: "same-origin",
-              headers: { "X-CSRF-Token": csrfToken(), "X-Requested-With": "XMLHttpRequest" }
-            }
-          : {
-              method: "POST",
-              credentials: "same-origin",
-              headers: {
-                "X-CSRF-Token": csrfToken(),
-                "X-Requested-With": "XMLHttpRequest",
-                "Content-Type": "application/x-www-form-urlencoded"
-              },
-              body: `id=${postId}&post_action_type_id=2`
-            }
-      );
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    } catch {
-      if (wasLiked) likedPosts.add(postId); else likedPosts.delete(postId);
-      btn.classList.toggle("liked", wasLiked);
+    } finally {
+      activeLikingPosts.delete(postId);
     }
   }
 
@@ -19720,7 +19862,11 @@
     const frag = [];
     let lastTime = 0;
     for (const post of posts) {
-      if (post.id && (post.actions_summary || []).some((a) => a.id === 2 && a.acted)) {
+      const hasLiked = (post.actions_summary || []).some((a) => a.id === 2 && a.acted) ||
+        post.current_user_reaction?.id === "heart" ||
+        post.current_user_used_main_reaction ||
+        Boolean(post.current_user_reaction);
+      if (post.id && hasLiked) {
         likedPosts.add(post.id);
       }
       const t = new Date(post.created_at).getTime();

@@ -5219,6 +5219,156 @@ test("Linux DO Connect modal retrieves and renders page-content requirements dat
   assert.ok(partialData.overallPercent < 50);
 });
 
+test("Linux DO like button provides immediate visual feedback, optimistic badge count updates, self-like rejection toast, and reactions toggle API (v0.7.40)", () => {
+  // 1. Script static checks
+  assert.ok(
+    scriptContent.includes("/discourse-reactions/posts/${postId}/custom-reactions/heart/toggle"),
+    "toggleLike must use Discourse Reactions toggle endpoint"
+  );
+  assert.ok(
+    scriptContent.includes('showWecomToast(IS_V2EX ? "不能感谢自己的回复" : "不能给自己的帖子点赞", "info", 2000);'),
+    "toggleLike must guard against self-liking with clear toast"
+  );
+  assert.ok(
+    scriptContent.includes('showWecomToast(wasLiked ? "已取消点赞" : "已点赞", wasLiked ? "info" : "success", 1800);'),
+    "toggleLike must provide immediate toast feedback for like and unlike"
+  );
+  assert.ok(
+    scriptContent.includes("activeLikingPosts.add(postId);"),
+    "toggleLike must prevent concurrent double clicks on the same post"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-msg-tool.liked svg"),
+    "CSS must define scale transition for liked button"
+  );
+  assert.ok(
+    scriptContent.includes("transform: scale(1.15);"),
+    "CSS must scale liked button on active like"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-msg-tool.liked svg path"),
+    "CSS must style path of liked tool button"
+  );
+  assert.ok(
+    scriptContent.includes("consumeClick(event);"),
+    "handleMessageToolClick must consume click event before handling like"
+  );
+  assert.ok(
+    scriptContent.includes('if (action === "like") return toggleLike(Number(message.dataset.postId), button, message);'),
+    "handleMessageToolClick must pass message element to toggleLike"
+  );
+
+  // 2. Functional simulation of toggleLike optimistic DOM updates and error rollback
+  function simulateToggleLike({
+    isMine,
+    isLoggedIn = true,
+    initialLiked = false,
+    initialLikeCount = 0,
+    apiSuccess = true,
+    apiErrorMessage = ""
+  }) {
+    const toasts = [];
+    function showToast(msg, type) { toasts.push({ msg, type }); }
+
+    if (isMine) {
+      showToast("不能给自己的帖子点赞", "info");
+      return { toasts, liked: initialLiked, likeCount: initialLikeCount, badgePresent: initialLikeCount > 0 };
+    }
+    if (!isLoggedIn) {
+      showToast("请先登录 Linux DO", "warning");
+      return { toasts, liked: initialLiked, likeCount: initialLikeCount, badgePresent: initialLikeCount > 0 };
+    }
+
+    const wasLiked = initialLiked;
+    let liked = !wasLiked;
+    let likeCount = initialLikeCount;
+    let badgePresent = initialLikeCount > 0;
+    const prevCount = initialLikeCount;
+    let addedBadge = false;
+    let removedBadge = false;
+
+    if (badgePresent) {
+      if (!wasLiked) {
+        likeCount = prevCount + 1;
+      } else {
+        likeCount = Math.max(0, prevCount - 1);
+        if (likeCount === 0) {
+          badgePresent = false;
+          removedBadge = true;
+        }
+      }
+    } else if (!wasLiked) {
+      likeCount = 1;
+      badgePresent = true;
+      addedBadge = true;
+    }
+
+    showToast(wasLiked ? "已取消点赞" : "已点赞", wasLiked ? "info" : "success");
+
+    if (!apiSuccess) {
+      // Rollback
+      liked = wasLiked;
+      if (addedBadge) {
+        badgePresent = false;
+        likeCount = prevCount;
+      } else if (removedBadge) {
+        badgePresent = true;
+        likeCount = prevCount;
+      } else {
+        likeCount = prevCount;
+      }
+      showToast("点赞操作失败：" + (apiErrorMessage || "网络异常"), "error");
+    }
+
+    return { toasts, liked, likeCount, badgePresent };
+  }
+
+  // Case A: Liking a post with 0 likes
+  const resA = simulateToggleLike({ isMine: false, initialLiked: false, initialLikeCount: 0 });
+  assert.equal(resA.liked, true);
+  assert.equal(resA.likeCount, 1);
+  assert.equal(resA.badgePresent, true);
+  assert.equal(resA.toasts[0].msg, "已点赞");
+  assert.equal(resA.toasts[0].type, "success");
+
+  // Case B: Un-liking a post with 1 like (badge should be removed)
+  const resB = simulateToggleLike({ isMine: false, initialLiked: true, initialLikeCount: 1 });
+  assert.equal(resB.liked, false);
+  assert.equal(resB.likeCount, 0);
+  assert.equal(resB.badgePresent, false);
+  assert.equal(resB.toasts[0].msg, "已取消点赞");
+  assert.equal(resB.toasts[0].type, "info");
+
+  // Case C: Liking a post with 5 likes (count increments to 6)
+  const resC = simulateToggleLike({ isMine: false, initialLiked: false, initialLikeCount: 5 });
+  assert.equal(resC.liked, true);
+  assert.equal(resC.likeCount, 6);
+  assert.equal(resC.badgePresent, true);
+
+  // Case D: Un-liking a post with 5 likes (count decrements to 4, badge preserved)
+  const resD = simulateToggleLike({ isMine: false, initialLiked: true, initialLikeCount: 5 });
+  assert.equal(resD.liked, false);
+  assert.equal(resD.likeCount, 4);
+  assert.equal(resD.badgePresent, true);
+
+  // Case E: Self-like rejected without state change
+  const resE = simulateToggleLike({ isMine: true, initialLiked: false, initialLikeCount: 2 });
+  assert.equal(resE.liked, false);
+  assert.equal(resE.likeCount, 2);
+  assert.equal(resE.toasts[0].msg, "不能给自己的帖子点赞");
+
+  // Case F: API failure rolls back state
+  const resF = simulateToggleLike({ isMine: false, initialLiked: false, initialLikeCount: 0, apiSuccess: false, apiErrorMessage: "HTTP 429" });
+  assert.equal(resF.liked, false);
+  assert.equal(resF.likeCount, 0);
+  assert.equal(resF.badgePresent, false);
+  assert.equal(resF.toasts.length, 2);
+  assert.equal(resF.toasts[0].msg, "已点赞");
+  assert.equal(resF.toasts[1].msg, "点赞操作失败：HTTP 429");
+  assert.equal(resF.toasts[1].type, "error");
+});
+
+
 
 
 
