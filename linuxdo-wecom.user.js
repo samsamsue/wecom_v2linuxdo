@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.32
+// @version      0.7.33
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -1603,41 +1603,38 @@
       border: 1px solid rgba(0, 0, 0, 0.08);
       color: #1F2329;
       box-sizing: border-box;
+      position: relative;
       animation: wecomFadeIn 0.15s ease-out;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
     }
-    .wecom-member-card-banner {
-      height: 52px;
-      background: linear-gradient(135deg, #1A87FF 0%, #0066E0 100%);
-      position: relative;
-    }
     .wecom-member-card-close {
       position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 22px;
-      height: 22px;
+      top: 10px;
+      right: 10px;
+      width: 24px;
+      height: 24px;
       border-radius: 50%;
-      background: rgba(0, 0, 0, 0.22);
-      color: #FFFFFF;
+      background: transparent;
+      color: #8F959E;
       border: none;
       cursor: pointer;
-      font-size: 15px;
+      font-size: 18px;
       line-height: 1;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.15s;
+      transition: all 0.15s;
+      z-index: 2;
     }
     .wecom-member-card-close:hover {
-      background: rgba(0, 0, 0, 0.45);
+      background: rgba(0, 0, 0, 0.06);
+      color: #1F2329;
     }
     .wecom-member-card-header {
-      padding: 0 16px 10px;
+      padding: 16px 16px 12px;
       position: relative;
-      margin-top: -26px;
       display: flex;
-      align-items: flex-end;
+      align-items: center;
       gap: 12px;
     }
     .wecom-member-avatar-box {
@@ -1653,8 +1650,8 @@
       object-fit: cover;
       display: block;
       background: #267EF0;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      border: 2px solid #FFFFFF;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      border: 1px solid rgba(0, 0, 0, 0.06);
       box-sizing: border-box;
     }
     .wecom-member-online-dot {
@@ -1671,7 +1668,7 @@
     .wecom-member-title-box {
       flex: 1;
       min-width: 0;
-      padding-bottom: 2px;
+      padding-right: 20px;
     }
     .wecom-member-name-row {
       display: flex;
@@ -7784,11 +7781,16 @@
       color: #D4D4D4;
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
     }
-    html.${ROOT_CLASS}.wecom-dark .wecom-member-card-banner {
-      background: linear-gradient(135deg, #0F4C81 0%, #082E54 100%);
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-card-close {
+      color: #8C8C8C;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-card-close:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #F0F0F0;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-member-avatar-img {
-      border-color: #1E2127;
+      border-color: #2D3139;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-member-online-dot {
       border-color: #1E2127;
@@ -9710,7 +9712,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.32";
+  const SCRIPT_VERSION = "0.7.33";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -12042,9 +12044,7 @@
     card.setAttribute("aria-label", `${username} 的个人资料`);
 
     card.innerHTML = `
-      <div class="wecom-member-card-banner">
-        <button type="button" class="wecom-member-card-close" title="关闭" aria-label="关闭">×</button>
-      </div>
+      <button type="button" class="wecom-member-card-close" title="关闭" aria-label="关闭">×</button>
 
       <div class="wecom-member-card-header">
         <div class="wecom-member-avatar-box">
