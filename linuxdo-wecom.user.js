@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux DO · 企业微信 IM 外观
 // @namespace    https://linux.do/
-// @version      0.7.27
+// @version      0.7.28
 // @description  将 Linux DO 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -1296,6 +1296,163 @@
     .wecom-v2ex-nav2-item.active .wecom-nav2-cat-dot {
       background-color: var(--wc-accent);
       opacity: 1;
+    }
+
+    /* V2EX 头像点击用户资料与财产卡片浮层 */
+    .wecom-v2ex-user-popover {
+      position: fixed;
+      left: 64px;
+      top: 14px;
+      width: 260px;
+      background: #FFFFFF;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04);
+      z-index: 99999;
+      padding: 14px 14px 10px;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      user-select: none;
+      animation: wecomFadeIn 0.15s ease-out;
+    }
+    .wecom-v2ex-popover-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .wecom-v2ex-popover-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: #267EF0;
+      color: #FFFFFF;
+      font-size: 18px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wecom-v2ex-popover-avatar img,
+    .wecom-v2ex-popover-avatar svg {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .wecom-v2ex-popover-userinfo {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .wecom-v2ex-popover-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1F2329;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.3;
+    }
+    .wecom-v2ex-popover-dept {
+      font-size: 12px;
+      color: #8F959E;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.3;
+    }
+    .wecom-v2ex-popover-money {
+      background: #F7F8FA;
+      border: 1px solid rgba(0, 0, 0, 0.04);
+      border-radius: 8px;
+      padding: 9px 12px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: background-color 0.15s, border-color 0.15s;
+    }
+    .wecom-v2ex-popover-money:hover {
+      background: #EEF1F5;
+      border-color: rgba(26, 135, 255, 0.2);
+    }
+    .wecom-v2ex-money-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .wecom-v2ex-money-title {
+      font-size: 12px;
+      color: #646A73;
+      font-weight: 500;
+    }
+    .wecom-v2ex-money-link {
+      font-size: 11px;
+      color: #1A87FF;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .wecom-v2ex-money-val {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1F2329;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px;
+      line-height: 1.4;
+    }
+    .wecom-v2ex-money-val img {
+      width: 14px;
+      height: 14px;
+      vertical-align: -2px;
+      margin: 0 1px 0 2px;
+    }
+    .wecom-v2ex-popover-actions {
+      display: flex;
+      flex-direction: column;
+      border-top: 1px solid rgba(0, 0, 0, 0.06);
+      padding-top: 6px;
+      gap: 2px;
+    }
+    .wecom-v2ex-popover-action {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 8px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #1F2329;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background-color 0.15s;
+    }
+    .wecom-v2ex-popover-action:hover {
+      background: #F2F3F5;
+    }
+    .wecom-v2ex-action-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .wecom-v2ex-action-badge {
+      font-size: 11px;
+      color: #FFFFFF;
+      background: #FA5151;
+      padding: 0 6px;
+      height: 16px;
+      line-height: 16px;
+      border-radius: 8px;
+      font-weight: 500;
     }
 
     /* ---------- 窄图标条：假 icon（纯装饰） ---------- */
@@ -6983,6 +7140,48 @@
       color: #1A87FF !important;
     }
 
+    /* V2EX 用户资料卡浮层深色适配 */
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-user-popover {
+      background: #23272E !important;
+      border-color: rgba(255, 255, 255, 0.1) !important;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-popover-avatar {
+      background: #2E3440 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-popover-name {
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-popover-dept {
+      color: #8F959E !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-popover-money {
+      background: #1C1E22 !important;
+      border-color: rgba(255, 255, 255, 0.06) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-popover-money:hover {
+      background: #282C34 !important;
+      border-color: rgba(26, 135, 255, 0.3) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-money-title {
+      color: #959CA6 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-money-link {
+      color: #4C84FF !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-money-val {
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-popover-actions {
+      border-top-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-popover-action {
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-popover-action:hover {
+      background: rgba(255, 255, 255, 0.08) !important;
+    }
+
     /* 左侧头像通知浮层与用户菜单 */
     html.wecom-dark .user-menu.wecom-user-menu-float,
     html.${ROOT_CLASS}.wecom-dark .user-menu.wecom-user-menu-float,
@@ -8763,7 +8962,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.27";
+  const SCRIPT_VERSION = "0.7.28";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -9437,6 +9636,10 @@
 
     // 「消息」项角标：显示新主题数（从 .show-more.has-topics 提取）
     syncChatBadge();
+
+    if (IS_V2EX) {
+      extractV2exMoneyFromDom(document);
+    }
   }
 
   /* ============================== 新主题角标与「消息」刷新回到顶部 ============================== */
@@ -10044,6 +10247,14 @@
     if (window.__wecomNotifOutsideBound) return;
     window.__wecomNotifOutsideBound = true;
     const onOutside = (e) => {
+      if (isV2exUserPopoverOpen()) {
+        const avatar = document.querySelector(".wecom-rail-avatar");
+        const popover = document.querySelector(".wecom-v2ex-user-popover");
+        const t = e.target;
+        if (!avatar?.contains(t) && !popover?.contains(t)) {
+          closeV2exUserPopover();
+        }
+      }
       if (!isNotifMenuOpen()) return;
       const avatar = document.querySelector(".wecom-rail-avatar");
       const menu = document.querySelector(".user-menu.wecom-user-menu-float, .wecom-user-menu-float");
@@ -10055,6 +10266,12 @@
     };
     document.addEventListener("pointerdown", onOutside, true);
     document.addEventListener("mousedown", onOutside, true);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        if (isV2exUserPopoverOpen()) closeV2exUserPopover();
+        if (isNotifMenuOpen()) closeNotifMenu();
+      }
+    });
   }
 
   function stopNotifAvatarPointer(event) {
@@ -10081,17 +10298,22 @@
         }
         event.preventDefault();
         event.stopPropagation();
+        if (isV2exUserPopoverOpen()) {
+          closeV2exUserPopover();
+        } else {
+          openV2exUserPopover();
+        }
+      });
+      const badge = rail.querySelector(".wecom-rail-avatar-badge");
+      badge?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        closeV2exUserPopover();
         clearNotificationBadge();
         const body = document.querySelector(".wecom-list-body");
         if (body) body.innerHTML = `<div class="wecom-list-status">正在加载通知…</div>`;
         loadList("/notifications", true);
       });
-      const badge = rail.querySelector(".wecom-rail-avatar-badge");
-      badge?.addEventListener("click", (e) => {
-        e.stopPropagation();
-        clearNotificationBadge();
-        avatar.click();
-      });
+      ensureNotifOutsideClose();
       return;
     }
     avatar.addEventListener("click", (event) => {
@@ -10330,6 +10552,157 @@
     if (listEl.dataset.sig === html) return;
     listEl.dataset.sig = html;
     listEl.innerHTML = html;
+  }
+
+  /* ============================== V2EX 用户资料卡与财产浮层 (#money) ============================== */
+
+  const V2EX_MONEY_KEY = "linuxdo-wecom-v2ex-money";
+  let cachedV2exMoneyHtml = null;
+
+  function extractV2exMoneyFromDom(root = document) {
+    if (!root || typeof root.querySelector !== "function") return null;
+    const el = root.querySelector("#money, .balance_area, a[href^='/balance'], #Rightbar a[href^='/balance'], #Top a[href^='/balance']");
+    if (!el) return null;
+    let html = el.innerHTML || "";
+    const aMatch = html.match(/<a\s+[^>]*href=["']?\/balance["']?[^>]*>([\s\S]*?)<\/a>/i);
+    if (aMatch) {
+      html = aMatch[1];
+    }
+    html = html.replace(/src=["']\/static\//gi, 'src="https://www.v2ex.com/static/').trim();
+    if (html) {
+      cachedV2exMoneyHtml = html;
+      try { localStorage.setItem(V2EX_MONEY_KEY, html); } catch {}
+    }
+    return html || null;
+  }
+
+  function getV2exMoneyHtml() {
+    const fromDom = extractV2exMoneyFromDom(document);
+    if (fromDom) return fromDom;
+    if (cachedV2exMoneyHtml) return cachedV2exMoneyHtml;
+    try {
+      const stored = localStorage.getItem(V2EX_MONEY_KEY);
+      if (stored && stored.trim()) {
+        cachedV2exMoneyHtml = stored.trim();
+        return cachedV2exMoneyHtml;
+      }
+    } catch {}
+    return "";
+  }
+
+  function isV2exUserPopoverOpen() {
+    return Boolean(document.querySelector(".wecom-v2ex-user-popover"));
+  }
+
+  function closeV2exUserPopover() {
+    const el = document.querySelector(".wecom-v2ex-user-popover");
+    if (el) el.remove();
+  }
+
+  function openV2exUserPopover() {
+    closeV2exUserPopover();
+    if (!IS_V2EX) return;
+
+    const disguised = isMaskAvatar() || isMaskTitleList();
+    const disguisePreset = getRailDisguiseAvatarId() ? RAIL_DISGUISE_AVATARS.find((a) => a.id === getRailDisguiseAvatarId()) : null;
+    const username = getCurrentUsername() || "";
+    const displayName = (disguised || disguisePreset) ? "企业员工" : (username || "未登录");
+    const deptText = disguised ? "技术研发部 · 在线" : (disguisePreset ? "技术研发部 · 在线" : (username ? "V2EX 会员 · 在线" : "未登录"));
+
+    // 头像
+    const railAvatar = document.querySelector(".wecom-rail-avatar");
+    let avatarContent = "";
+    if (railAvatar && railAvatar.innerHTML.trim()) {
+      avatarContent = railAvatar.innerHTML;
+    } else {
+      avatarContent = avatarLetter(displayName);
+    }
+
+    // 财产余额
+    const moneyTitle = disguised ? "个人工时 / 绩效" : "账户余额";
+    const rawMoney = getV2exMoneyHtml();
+    let moneyHtml = "";
+    if (disguised) {
+      moneyHtml = "<span>100.0 分 (正常)</span>";
+    } else if (rawMoney) {
+      moneyHtml = rawMoney;
+    } else {
+      moneyHtml = "<span style='font-size:12px;color:var(--wc-text-3, #999);'>点击查看余额</span>";
+    }
+
+    // 未读通知数量
+    const notifCount = getUnreadNotificationCount();
+
+    const popover = document.createElement("div");
+    popover.className = "wecom-v2ex-user-popover";
+    popover.setAttribute("role", "dialog");
+    popover.setAttribute("aria-label", "用户资料与财产");
+    popover.innerHTML = `
+      <div class="wecom-v2ex-popover-header">
+        <div class="wecom-v2ex-popover-avatar">${avatarContent}</div>
+        <div class="wecom-v2ex-popover-userinfo">
+          <div class="wecom-v2ex-popover-name" title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</div>
+          <div class="wecom-v2ex-popover-dept">${escapeHtml(deptText)}</div>
+        </div>
+      </div>
+      <div class="wecom-v2ex-popover-money" role="button" tabindex="0" title="查看账户余额与明细">
+        <div class="wecom-v2ex-money-top">
+          <span class="wecom-v2ex-money-title">${escapeHtml(moneyTitle)}</span>
+          <span class="wecom-v2ex-money-link">明细 &gt;</span>
+        </div>
+        <div class="wecom-v2ex-money-val">${moneyHtml}</div>
+      </div>
+      <div class="wecom-v2ex-popover-actions">
+        <a class="wecom-v2ex-popover-action" data-act="profile">
+          <span class="wecom-v2ex-action-label">${disguised ? "工作台" : (username ? "个人主页" : "去登录")}</span>
+        </a>
+        <a class="wecom-v2ex-popover-action" data-act="notifications">
+          <span class="wecom-v2ex-action-label">${disguised ? "待办通知" : "未读通知"}</span>
+          ${notifCount > 0 ? `<span class="wecom-v2ex-action-badge">${notifCount > 99 ? "99+" : notifCount}</span>` : ""}
+        </a>
+        <a class="wecom-v2ex-popover-action" data-act="nodes">
+          <span class="wecom-v2ex-action-label">${disguised ? "项目收藏" : "节点收藏"}</span>
+        </a>
+        <a class="wecom-v2ex-popover-action" data-act="following">
+          <span class="wecom-v2ex-action-label">${disguised ? "关注团队" : "特别关注"}</span>
+        </a>
+        <a class="wecom-v2ex-popover-action" data-act="daily">
+          <span class="wecom-v2ex-action-label">${disguised ? "每日打卡" : "每日签到"}</span>
+        </a>
+      </div>
+    `;
+
+    popover.querySelector(".wecom-v2ex-popover-money")?.addEventListener("click", () => {
+      closeV2exUserPopover();
+      window.open("/balance", "_blank");
+    });
+
+    popover.addEventListener("click", (e) => {
+      const act = e.target.closest(".wecom-v2ex-popover-action")?.dataset.act;
+      if (!act) return;
+      e.preventDefault();
+      closeV2exUserPopover();
+      if (act === "profile") {
+        if (!username && !disguised) {
+          window.open("/signin", "_blank");
+        } else if (!disguised && username) {
+          window.open(`/member/${encodeURIComponent(username)}`, "_blank");
+        }
+      } else if (act === "notifications") {
+        clearNotificationBadge();
+        const body = document.querySelector(".wecom-list-body");
+        if (body) body.innerHTML = `<div class="wecom-list-status">正在加载通知…</div>`;
+        loadList("/notifications", true);
+      } else if (act === "nodes") {
+        window.open("/my/nodes", "_blank");
+      } else if (act === "following") {
+        window.open("/my/following", "_blank");
+      } else if (act === "daily") {
+        window.open("/mission/daily", "_blank");
+      }
+    });
+
+    document.body.appendChild(popover);
   }
 
   function applyListNavDom() {
@@ -17467,6 +17840,7 @@
     document.querySelector(".wecom-update-notice")?.remove();
     document.querySelector(".wecom-edit-dialog")?.remove();
     document.querySelector(".wecom-v2ex-nav2")?.remove();
+    closeV2exUserPopover();
   }
 
   let initialNewTopicChecked = false;
@@ -17679,7 +18053,7 @@
       });
     }
 
-    const WECOM_UI_SEL = ".wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
+    const WECOM_UI_SEL = ".wecom-v2ex-user-popover, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
     const NATIVE_BRIDGE_SEL = "#reply-control, .dialog-holder, .dialog-container, #discourse-modal-container, .d-modal, .bootbox, .autocomplete, .autocomplete-container, .d-editor-popup, [data-identifier='emoji-picker'], .tag-chooser";
     const observer = new MutationObserver((mutations) => {
       // 忽略我们自己面板内部的 DOM 变动，否则点开筛选会立刻触发 applyTheme 回写/闪断

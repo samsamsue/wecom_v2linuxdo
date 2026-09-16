@@ -3683,6 +3683,93 @@ test("V2EX category navigation extracts #Tabs, provides persistent cache, and re
   assert.equal(simulateExtractV2exTabs(emptyDoc), null);
 });
 
+test("V2EX avatar click opens user popover card with #money balance and quick actions", () => {
+  // 1. Static code assertions
+  assert.ok(
+    scriptContent.includes(".wecom-v2ex-user-popover"),
+    "must define CSS for .wecom-v2ex-user-popover"
+  );
+  assert.ok(
+    scriptContent.includes("extractV2exMoneyFromDom"),
+    "must define extractV2exMoneyFromDom helper"
+  );
+  assert.ok(
+    scriptContent.includes("getV2exMoneyHtml"),
+    "must define getV2exMoneyHtml helper"
+  );
+  assert.ok(
+    scriptContent.includes("openV2exUserPopover"),
+    "must define openV2exUserPopover function"
+  );
+  assert.ok(
+    scriptContent.includes("closeV2exUserPopover"),
+    "must define closeV2exUserPopover function"
+  );
+  assert.ok(
+    scriptContent.includes("isV2exUserPopoverOpen"),
+    "must define isV2exUserPopoverOpen function"
+  );
+  assert.ok(
+    scriptContent.includes('const V2EX_MONEY_KEY = "linuxdo-wecom-v2ex-money";'),
+    "must define persistent cache key for V2EX money"
+  );
+  assert.ok(
+    scriptContent.includes("WECOM_UI_SEL = \".wecom-v2ex-user-popover,"),
+    "WECOM_UI_SEL must include .wecom-v2ex-user-popover"
+  );
+  assert.ok(
+    scriptContent.includes("closeV2exUserPopover();\n  }"),
+    "removePanels must call closeV2exUserPopover"
+  );
+
+  // 2. Avatar click toggles popover & badge click directly loads notifications
+  assert.ok(
+    /isV2exUserPopoverOpen\(\)\s*\?\s*closeV2exUserPopover\(\)\s*:\s*openV2exUserPopover\(\)/.test(scriptContent) ||
+    scriptContent.includes("if (isV2exUserPopoverOpen()) {\n          closeV2exUserPopover();\n        } else {\n          openV2exUserPopover();\n        }"),
+    "avatar click on V2EX must toggle user popover"
+  );
+
+  // 3. Extraction logic functional test
+  function simulateExtractV2exMoney(root) {
+    if (!root || typeof root.querySelector !== "function") return null;
+    const el = root.querySelector("#money, .balance_area, a[href^='/balance'], #Rightbar a[href^='/balance'], #Top a[href^='/balance']");
+    if (!el) return null;
+    let html = el.innerHTML || "";
+    const aMatch = html.match(/<a\s+[^>]*href=["']?\/balance["']?[^>]*>([\s\S]*?)<\/a>/i);
+    if (aMatch) {
+      html = aMatch[1];
+    }
+    html = html.replace(/src=["']\/static\//gi, 'src="https://www.v2ex.com/static/').trim();
+    return html || null;
+  }
+
+  // Variant A: #money containing <a href="/balance" class="balance_area">
+  const mockDocA = {
+    querySelector: (sel) => ({
+      innerHTML: '<a href="/balance" class="balance_area">11 <img src="/static/img/gold@2x.png" height="16" alt="G" border="0">&nbsp;50 <img src="/static/img/silver@2x.png" height="16" alt="S" border="0">&nbsp;80 <img src="/static/img/bronze@2x.png" height="16" alt="B" border="0"></a>'
+    })
+  };
+  const moneyA = simulateExtractV2exMoney(mockDocA);
+  assert.ok(moneyA.includes("https://www.v2ex.com/static/img/gold@2x.png"), "must replace relative static url");
+  assert.ok(!moneyA.includes("<a"), "must strip outer a tag");
+  assert.ok(moneyA.includes("11") && moneyA.includes("50") && moneyA.includes("80"));
+
+  // Variant B: standalone a.balance_area
+  const mockDocB = {
+    querySelector: (sel) => ({
+      innerHTML: '20 <img src="/static/img/silver@2x.png" alt="S"> 30 <img src="/static/img/bronze@2x.png" alt="B">'
+    })
+  };
+  const moneyB = simulateExtractV2exMoney(mockDocB);
+  assert.ok(moneyB.includes("https://www.v2ex.com/static/img/silver@2x.png"));
+  assert.ok(moneyB.includes("20") && moneyB.includes("30"));
+
+  // Variant C: no money element
+  const mockDocC = { querySelector: () => null };
+  assert.equal(simulateExtractV2exMoney(mockDocC), null);
+});
+
+
 
 
 
