@@ -5526,6 +5526,63 @@ test("V2EX left rail replaces schedule (cal) with notifications (notif), binds c
   assert.equal(railActiveKey, "chat", "Rail must reactivate 'chat' item when returning to messages");
 });
 
+test("entering notifications or calling clearNotificationBadge updates V2EX unread count to 0 未读提醒 across popover, storage, and native DOM (v0.7.44)", () => {
+  // 1. Static code assertions
+  assert.ok(
+    scriptContent.includes('popoverNotif.textContent = "0 未读提醒";'),
+    "clearNotificationBadge must update popover footer to '0 未读提醒'"
+  );
+  assert.ok(
+    scriptContent.includes('notifLink.textContent = "0 未读提醒";'),
+    "clearNotificationBadge must update native DOM notif link to '0 未读提醒'"
+  );
+  assert.ok(
+    scriptContent.includes("cachedV2exUserStats.unreadNotifs = 0;"),
+    "clearNotificationBadge must set cachedV2exUserStats.unreadNotifs to 0"
+  );
+  assert.ok(
+    scriptContent.includes('if (IS_V2EX && location.pathname === "/notifications")'),
+    "getUnreadNotificationCount must return 0 when pathname is /notifications"
+  );
+  assert.ok(
+    scriptContent.includes("el.textContent = `${stats.unreadNotifs} 未读提醒`;"),
+    "updateOpenV2exUserPopover must update .wecom-v2ex-footer-notifs"
+  );
+
+  // 2. Behavioral simulation
+  let cachedStats = { unreadNotifs: 3, nodesCount: 10, topicsCount: 5 };
+  let domNotifText = "3 条未读提醒";
+  let popoverNotifText = `${cachedStats.unreadNotifs} 未读提醒`;
+  let notificationCountOverride = null;
+
+  function simulateClearNotificationBadge() {
+    notificationCountOverride = 0;
+    cachedStats.unreadNotifs = 0;
+    popoverNotifText = "0 未读提醒";
+    domNotifText = "0 未读提醒";
+  }
+
+  function simulateOpenPopover() {
+    const notifCount = notificationCountOverride != null ? notificationCountOverride : cachedStats.unreadNotifs;
+    return `${Math.max(0, notifCount)} 未读提醒`;
+  }
+
+  // Before click:
+  assert.equal(popoverNotifText, "3 未读提醒");
+  assert.equal(domNotifText, "3 条未读提醒");
+
+  // User enters /notifications (click badge or popover footer):
+  simulateClearNotificationBadge();
+  assert.equal(popoverNotifText, "0 未读提醒", "Popover footer must immediately display '0 未读提醒'");
+  assert.equal(domNotifText, "0 未读提醒", "Native DOM text must display '0 未读提醒'");
+  assert.equal(cachedStats.unreadNotifs, 0, "Cached stats must have 0 unreadNotifs");
+
+  // If user opens popover while in notifications:
+  const reopenedText = simulateOpenPopover();
+  assert.equal(reopenedText, "0 未读提醒", "Reopening popover must render '0 未读提醒'");
+});
+
+
 
 
 

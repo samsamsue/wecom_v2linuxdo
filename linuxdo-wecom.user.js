@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.43
+// @version      0.7.44
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -10445,7 +10445,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.43";
+  const SCRIPT_VERSION = "0.7.44";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -10950,6 +10950,10 @@
   /** 消除未读通知角标（支持 Linux DO 与 V2EX） */
   function clearNotificationBadge() {
     notificationCountOverride = 0;
+    if (cachedV2exUserStats) {
+      cachedV2exUserStats.unreadNotifs = 0;
+      try { localStorage.setItem(V2EX_USER_STATS_KEY, JSON.stringify(cachedV2exUserStats)); } catch {}
+    }
     const avatarBadge = document.querySelector(".wecom-rail-avatar-badge");
     if (avatarBadge) {
       avatarBadge.style.display = "none";
@@ -10960,11 +10964,15 @@
       notifBadge.style.display = "none";
       notifBadge.textContent = "";
     }
-    // 清除 V2EX 原生 DOM 中的未读提示文本
+    const popoverNotif = document.querySelector(".wecom-v2ex-footer-notifs");
+    if (popoverNotif) {
+      popoverNotif.textContent = "0 未读提醒";
+    }
+    // 清除 V2EX 原生 DOM 中的未读提示文本，规范更新为 0 未读提醒
     if (IS_V2EX) {
       const notifLink = document.querySelector("#Top a[href^='/notifications'], #Rightbar a[href^='/notifications']");
-      if (notifLink && /\d/.test(notifLink.textContent)) {
-        notifLink.textContent = notifLink.textContent.replace(/\d+\s*条未读提醒?/g, "").replace(/\(\d+\)/g, "");
+      if (notifLink) {
+        notifLink.textContent = "0 未读提醒";
       }
     }
     // 同步更新 Discourse Ember current-user 与原生通知角标
@@ -10999,6 +11007,20 @@
     }
     const next = current - 1;
     notificationCountOverride = next;
+    if (cachedV2exUserStats) {
+      cachedV2exUserStats.unreadNotifs = next;
+      try { localStorage.setItem(V2EX_USER_STATS_KEY, JSON.stringify(cachedV2exUserStats)); } catch {}
+    }
+    const popoverNotif = document.querySelector(".wecom-v2ex-footer-notifs");
+    if (popoverNotif) {
+      popoverNotif.textContent = `${next} 未读提醒`;
+    }
+    if (IS_V2EX) {
+      const notifLink = document.querySelector("#Top a[href^='/notifications'], #Rightbar a[href^='/notifications']");
+      if (notifLink) {
+        notifLink.textContent = `${next} 未读提醒`;
+      }
+    }
     const avatarBadge = document.querySelector(".wecom-rail-avatar-badge");
     if (avatarBadge) {
       avatarBadge.style.display = next > 0 ? "" : "none";
@@ -11013,6 +11035,11 @@
 
   /** 读取未读通知数 */
   function getUnreadNotificationCount() {
+    if (notificationCountOverride != null) return notificationCountOverride;
+    if (IS_V2EX && location.pathname === "/notifications") {
+      notificationCountOverride = 0;
+      return 0;
+    }
     let raw = 0;
     if (IS_V2EX) {
       const notifLink = document.querySelector("#Top a[href^='/notifications'], #Rightbar a[href^='/notifications']");
@@ -12301,9 +12328,14 @@
     if (followingMatch) stats.followingCount = parseInt(followingMatch[1], 10);
 
     // Unread Notifications
-    const notifMatch = html.match(/href=["']\/notifications["'][^>]*>(\d+)\s*(?:条未读提醒|未读提醒)/i) ||
-                       html.match(/(\d+)\s*(?:条未读提醒|未读提醒)/i);
-    if (notifMatch) stats.unreadNotifs = parseInt(notifMatch[1], 10);
+    if (notificationCountOverride != null) {
+      stats.unreadNotifs = notificationCountOverride;
+    } else {
+      const notifMatch = html.match(/href=["']\/notifications["'][^>]*>(\d+)\s*(?:条未读提醒|未读提醒)/i) ||
+                         html.match(/(\d+)\s*(?:条未读提醒|未读提醒)/i);
+      if (notifMatch) stats.unreadNotifs = parseInt(notifMatch[1], 10);
+      else stats.unreadNotifs = 0;
+    }
 
     // Balance
     const money = extractV2exMoneyFromHtml(html);
@@ -12335,7 +12367,7 @@
       nodesCount: 0,
       topicsCount: 0,
       followingCount: 0,
-      unreadNotifs: getUnreadNotificationCount(),
+      unreadNotifs: notificationCountOverride != null ? notificationCountOverride : getUnreadNotificationCount(),
       moneyHtml: "",
       checkedIn: false,
       checkinDays: 0,
@@ -12357,10 +12389,14 @@
       const num = (followingEl.textContent || "").match(/\d+/);
       if (num) stats.followingCount = parseInt(num[0], 10);
     }
-    const notifEl = root.querySelector("a[href='/notifications']");
-    if (notifEl) {
-      const num = (notifEl.textContent || "").match(/\d+/);
-      if (num) stats.unreadNotifs = parseInt(num[0], 10);
+    if (notificationCountOverride != null) {
+      stats.unreadNotifs = notificationCountOverride;
+    } else {
+      const notifEl = root.querySelector("a[href='/notifications']");
+      if (notifEl) {
+        const num = (notifEl.textContent || "").match(/\d+/);
+        if (num) stats.unreadNotifs = parseInt(num[0], 10);
+      }
     }
 
     const moneyHtml = extractV2exMoneyFromDom(root);
@@ -12556,6 +12592,10 @@
       const el = popover.querySelector("[data-act='following'] .wecom-v2ex-stat-num");
       if (el) el.textContent = String(stats.followingCount);
     }
+    if (stats.unreadNotifs !== undefined) {
+      const el = popover.querySelector(".wecom-v2ex-footer-notifs");
+      if (el) el.textContent = `${stats.unreadNotifs} 未读提醒`;
+    }
     if (stats.moneyHtml && hasV2exCoins(stats.moneyHtml)) {
       const el = popover.querySelector(".wecom-v2ex-footer-coins");
       if (el) el.innerHTML = stats.moneyHtml;
@@ -12595,7 +12635,8 @@
     const nodesCount = stats.nodesCount ?? 0;
     const topicsCount = stats.topicsCount ?? 0;
     const followingCount = stats.followingCount ?? 0;
-    const unreadNotifs = stats.unreadNotifs ?? getUnreadNotificationCount();
+    const notifCount = notificationCountOverride != null ? notificationCountOverride : (stats.unreadNotifs ?? getUnreadNotificationCount());
+    const unreadNotifs = Math.max(0, notifCount);
 
     let moneyHtml = "";
     if (stats.moneyHtml && hasV2exCoins(stats.moneyHtml)) {
