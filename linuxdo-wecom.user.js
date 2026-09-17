@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.50
+// @version      0.7.51
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -9952,9 +9952,9 @@
 
   function isThreadViewEnabled() {
     try {
-      return localStorage.getItem(THREAD_VIEW_KEY) === "1";
+      return localStorage.getItem(THREAD_VIEW_KEY) !== "0";
     } catch {
-      return false;
+      return true;
     }
   }
 
@@ -10680,7 +10680,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.50";
+  const SCRIPT_VERSION = "0.7.51";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -18227,31 +18227,61 @@
   function extractReferencedReply(content) {
     if (!content) return { author: "", floor: 0 };
     const raw = String(content).trim();
-    const unwrapped = raw.replace(/^<p[^>]*>/i, "").trim();
-    const memberMatch = unwrapped.match(/^<a\s+[^>]*href=["']\/member\/([^"'/?#]+)["'][^>]*>(?:@)?([^<]*)<\/a>/i);
-    let authorPrefix = "";
+    let unwrapped = raw.replace(/^(?:<p[^>]*>|<br\s*\/?>|\s)+/i, "").trim();
+
+    let author = "";
+    let floor = 0;
+
+    // 1. Match member mention anchor at start:
+    // Examples: @<a href="/member/foo">foo</a> or <a href="/member/foo">@foo</a> or <a href="/member/foo">foo</a>
+    const memberMatch = unwrapped.match(/^(?:@\s*)?<a\s+[^>]*href=["']\/member\/([^"'/?#]+)["'][^>]*>(?:@)?([^<]*)<\/a>/i);
     if (memberMatch) {
-      authorPrefix = memberMatch[1] || memberMatch[2] || "";
+      author = memberMatch[1] || memberMatch[2] || "";
+      unwrapped = unwrapped.slice(memberMatch[0].length).trim();
     }
+
+    // 2. Match floor anchor at start of remaining text:
+    // Examples: <a href="#reply15">#15</a> or <a href="#reply15">15#</a>
+    const floorLinkMatch = unwrapped.match(/^(?:<br\s*\/?>|\s)*<a\s+[^>]*href=["'][^"']*#(?:reply)?(\d+)["'][^>]*>#?\s*(\d+)#?<\/a>/i);
+    if (floorLinkMatch) {
+      floor = Number(floorLinkMatch[1] || floorLinkMatch[2]) || 0;
+      unwrapped = unwrapped.slice(floorLinkMatch[0].length).trim();
+    }
+
+    // 3. Normalize remaining or original text
     const text = unwrapped
       .replace(/<[^>]*>/g, " ")
       .replace(/&nbsp;|&#160;/gi, " ")
       .replace(/\s+/g, " ")
       .trim();
-    const match = text.match(/^(?:@([^\s#:：]+)\s*)?(?:#\s*(\d+))\b/);
-    if (match) {
-      return { author: match[1] || authorPrefix || "", floor: Number(match[2]) || 0 };
+
+    if (!floor) {
+      const floorMatch = text.match(/^#\s*(\d+)\b/);
+      if (floorMatch) {
+        floor = Number(floorMatch[1]) || 0;
+      }
     }
-    const authorOnly = text.match(/^@([^\s#:：]+)/);
-    if (authorOnly) {
-      return { author: authorOnly[1] || authorPrefix || "", floor: 0 };
+
+    if (!author) {
+      const atMatch = text.match(/^@\s*([^\s#:：]+)/);
+      if (atMatch) {
+        author = atMatch[1];
+        if (!floor) {
+          const afterAt = text.slice(atMatch[0].length).trim();
+          const fMatch = afterAt.match(/^#\s*(\d+)\b/);
+          if (fMatch) {
+            floor = Number(fMatch[1]) || 0;
+          }
+        }
+      } else if (!floor) {
+        const fMatch = text.match(/^#\s*(\d+)\b/);
+        if (fMatch) {
+          floor = Number(fMatch[1]) || 0;
+        }
+      }
     }
-    if (authorPrefix) {
-      const rest = text.replace(new RegExp("^" + authorPrefix + "\\b", "i"), "").trim();
-      const restMatch = rest.match(/^#\s*(\d+)\b/);
-      return { author: authorPrefix, floor: restMatch ? Number(restMatch[1]) : 0 };
-    }
-    return { author: "", floor: 0 };
+
+    return { author, floor };
   }
 
   function resolveV2exReplyRelationships(posts) {

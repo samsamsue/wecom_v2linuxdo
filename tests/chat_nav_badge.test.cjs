@@ -5974,42 +5974,72 @@ test("V2EX threaded conversation view: reply target resolution, tree hierarchy, 
   assert.ok(scriptContent.includes("function isThreadViewEnabled("), "contains isThreadViewEnabled");
   assert.ok(scriptContent.includes("function setThreadViewEnabled("), "contains setThreadViewEnabled");
 
-  // 2. 验证 extractReferencedReply 严格匹配正文开头，杜绝中段误伤
+  // 2. 验证 extractReferencedReply 严格匹配正文开头，支持各种 V2EX HTML 锚点形式，杜绝中段误伤
   function extractReferencedReply(content) {
     if (!content) return { author: "", floor: 0 };
     const raw = String(content).trim();
-    const unwrapped = raw.replace(/^<p[^>]*>/i, "").trim();
-    const memberMatch = unwrapped.match(/^<a\s+[^>]*href=["']\/member\/([^"'/?#]+)["'][^>]*>(?:@)?([^<]*)<\/a>/i);
-    let authorPrefix = "";
+    let unwrapped = raw.replace(/^(?:<p[^>]*>|<br\s*\/?>|\s)+/i, "").trim();
+
+    let author = "";
+    let floor = 0;
+
+    const memberMatch = unwrapped.match(/^(?:@\s*)?<a\s+[^>]*href=["']\/member\/([^"'/?#]+)["'][^>]*>(?:@)?([^<]*)<\/a>/i);
     if (memberMatch) {
-      authorPrefix = memberMatch[1] || memberMatch[2] || "";
+      author = memberMatch[1] || memberMatch[2] || "";
+      unwrapped = unwrapped.slice(memberMatch[0].length).trim();
     }
+
+    const floorLinkMatch = unwrapped.match(/^(?:<br\s*\/?>|\s)*<a\s+[^>]*href=["'][^"']*#(?:reply)?(\d+)["'][^>]*>#?\s*(\d+)#?<\/a>/i);
+    if (floorLinkMatch) {
+      floor = Number(floorLinkMatch[1] || floorLinkMatch[2]) || 0;
+      unwrapped = unwrapped.slice(floorLinkMatch[0].length).trim();
+    }
+
     const text = unwrapped
       .replace(/<[^>]*>/g, " ")
       .replace(/&nbsp;|&#160;/gi, " ")
       .replace(/\s+/g, " ")
       .trim();
-    const match = text.match(/^(?:@([^\s#:：]+)\s*)?(?:#\s*(\d+))\b/);
-    if (match) {
-      return { author: match[1] || authorPrefix || "", floor: Number(match[2]) || 0 };
+
+    if (!floor) {
+      const floorMatch = text.match(/^#\s*(\d+)\b/);
+      if (floorMatch) {
+        floor = Number(floorMatch[1]) || 0;
+      }
     }
-    const authorOnly = text.match(/^@([^\s#:：]+)/);
-    if (authorOnly) {
-      return { author: authorOnly[1] || authorPrefix || "", floor: 0 };
+
+    if (!author) {
+      const atMatch = text.match(/^@\s*([^\s#:：]+)/);
+      if (atMatch) {
+        author = atMatch[1];
+        if (!floor) {
+          const afterAt = text.slice(atMatch[0].length).trim();
+          const fMatch = afterAt.match(/^#\s*(\d+)\b/);
+          if (fMatch) {
+            floor = Number(fMatch[1]) || 0;
+          }
+        }
+      } else if (!floor) {
+        const fMatch = text.match(/^#\s*(\d+)\b/);
+        if (fMatch) {
+          floor = Number(fMatch[1]) || 0;
+        }
+      }
     }
-    if (authorPrefix) {
-      const rest = text.replace(new RegExp("^" + authorPrefix + "\\b", "i"), "").trim();
-      const restMatch = rest.match(/^#\s*(\d+)\b/);
-      return { author: authorPrefix, floor: restMatch ? Number(restMatch[1]) : 0 };
-    }
-    return { author: "", floor: 0 };
+
+    return { author, floor };
   }
 
-  assert.deepEqual(extractReferencedReply("@a #2 ccccccc"), { author: "a", floor: 2 });
+  // 验证真实 V2EX HTML 各种前缀形式均可正确提取
+  assert.deepEqual(extractReferencedReply('@<a href="/member/a">a</a> #2 ccccccc'), { author: "a", floor: 2 });
+  assert.deepEqual(extractReferencedReply('@<a href="/member/a">a</a> <a href="#reply2">#2</a> ccccccc'), { author: "a", floor: 2 });
   assert.deepEqual(extractReferencedReply('<a href="/member/a">@a</a> #2 ccccccc'), { author: "a", floor: 2 });
   assert.deepEqual(extractReferencedReply('<a href="/member/a">a</a> #2 ccccccc'), { author: "a", floor: 2 });
   assert.deepEqual(extractReferencedReply('<a href="/member/a">@a</a> ccccccc'), { author: "a", floor: 0 });
+  assert.deepEqual(extractReferencedReply('@<a href="/member/a">a</a> ccccccc'), { author: "a", floor: 0 });
+  assert.deepEqual(extractReferencedReply("@a #2 ccccccc"), { author: "a", floor: 2 });
   assert.deepEqual(extractReferencedReply("#2 ccccccc"), { author: "", floor: 2 });
+  assert.deepEqual(extractReferencedReply('<a href="#reply2">#2</a> ccccccc'), { author: "", floor: 2 });
   assert.deepEqual(extractReferencedReply("@a: ccccccc"), { author: "a", floor: 0 });
   // 正文中段提及或数字，严格判定为无回复引用，避免误伤
   assert.deepEqual(extractReferencedReply("<p>普通路过顶贴</p>"), { author: "", floor: 0 });
