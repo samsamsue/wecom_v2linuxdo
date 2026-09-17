@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.55
+// @version      0.7.56
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -57,6 +57,7 @@
   const THEME_MODE_KEY = "linuxdo-wecom-theme-mode";
   const BOOST_ENABLED_KEY = "linuxdo-wecom-boost-enabled";
   const HIDE_CHAT_AVATAR_KEY = "linuxdo-wecom-hide-chat-avatar";
+  const HIDE_UNUSED_UI_KEY = "linuxdo-wecom-hide-unused-ui";
   const THREAD_VIEW_KEY = "linuxdo-wecom-thread-view";
   const BASE64_DECODE_KEY = "linuxdo-wecom-base64-decode";
   const IMAGE_AUTO_LAYOUT_KEY = "linuxdo-wecom-image-auto-layout";
@@ -1134,7 +1135,7 @@
       --wc-hover: #ECF0F7;
       --wc-active: #E4EAF5;
       --wc-bubble-other: #FFFFFF;
-      --wc-bubble-me: #D4E5FF;
+      --wc-bubble-me: #C9E7FF;
       --wc-border: #E6E8EB;
       --wc-border-strong: #D5D8DE;
       --wc-danger: #FF4D4F;
@@ -3238,7 +3239,7 @@
       min-width: 0; overflow: hidden; color: var(--wc-text-3);
       font-size: 11px; line-height: 16px; text-overflow: ellipsis; white-space: nowrap;
     }
-    .wecom-msg.is-reply-target .wecom-msg-bubble {
+    .wecom-msg.is-reply-target > .wecom-msg-content > .wecom-msg-bubble {
       outline: 2px solid var(--wc-accent); outline-offset: 3px;
     }
     /* 对话楼层关系（气泡内层级嵌套、小头像与防冒泡连续引导线） */
@@ -3362,18 +3363,38 @@
     .wecom-reply-children .wecom-msg.wecom-msg-me .wecom-msg-header {
       justify-content: flex-start;
     }
+    .wecom-reply-children .wecom-msg.wecom-msg-me .wecom-msg-content {
+      align-items: flex-start !important;
+      text-align: left;
+    }
+    .wecom-reply-children .wecom-msg.wecom-msg-me .wecom-msg-header,
+    .wecom-reply-children .wecom-msg.wecom-msg-me .wecom-msg-meta,
+    .wecom-reply-children .wecom-msg.wecom-msg-me .wecom-msg-boosts {
+      align-self: flex-start !important;
+      justify-content: flex-start !important;
+    }
     .wecom-msg-me .wecom-reply-children {
       text-align: left;
       direction: ltr;
     }
     .wecom-msg-header {
       display: flex;
-      align-items: center;
+      align-items: center !important;
       gap: 6px;
       margin-bottom: 4px;
+      line-height: 1.2;
     }
     .wecom-msg-header .wecom-msg-name {
       margin-bottom: 0;
+      line-height: 1.2;
+    }
+    .wecom-msg-header-time {
+      display: inline-flex;
+      align-items: center;
+      font-size: 11px;
+      color: var(--wc-text-3);
+      white-space: nowrap;
+      line-height: 1.2;
     }
     .wecom-msg-me .wecom-msg-header {
       justify-content: flex-end;
@@ -3443,6 +3464,10 @@
     .wecom-msg-meta {
       font-size: 11px; color: var(--wc-text-3);
       margin-top: 4px; display: flex; gap: 8px; align-items: center;
+    }
+    .wecom-v2ex-topic-stats {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--wc-text-3); white-space: nowrap;
     }
     .wecom-msg-likes {
       display: inline-flex;
@@ -3661,6 +3686,25 @@
     /* 允许通过设置隐藏对话详情头像 */
     html.wecom-hide-chat-avatar .wecom-msg-avatar,
     html.wecom-hide-chat-avatar .wecom-chat-avatar {
+      display: none !important;
+    }
+
+    /* 仅收起没有独立功能的企微装饰入口，保留全部可用操作。 */
+    html.wecom-hide-unused-ui .wecom-rail-item[data-rail-key="todo"],
+    html.wecom-hide-unused-ui .wecom-rail-item[data-rail-key="meet"],
+    html.wecom-hide-unused-ui .wecom-rail-item[data-rail-key="smartdoc"],
+    html.wecom-hide-unused-ui .wecom-rail-item[data-rail-key="summary"],
+    html.wecom-hide-unused-ui .wecom-rail-item[data-rail-key="work"],
+    html.wecom-hide-unused-ui .wecom-rail-item[data-rail-key="book"],
+    html.wecom-hide-unused-ui .wecom-rail-item[data-rail-key="disk"],
+    html.wecom-hide-unused-ui .wecom-rail-item[data-rail-key="advanced"],
+    html.wecom-hide-unused-ui .wecom-composer-tools [data-composer-action="cut"],
+    html.wecom-hide-unused-ui .wecom-composer-tools [data-composer-action="todo"],
+    html.wecom-hide-unused-ui .wecom-composer-tools [data-composer-action="folder"],
+    html.wecom-hide-unused-ui .wecom-composer-tools [data-composer-action="phone"],
+    html.wecom-hide-unused-ui .wecom-composer-tools [data-composer-action="apps"],
+    html.wecom-hide-unused-ui .wecom-composer-tools [data-composer-action="history"],
+    html.wecom-hide-unused-ui .wecom-tool-quick-meet {
       display: none !important;
     }
     html.wecom-hide-chat-avatar .wecom-msg {
@@ -5836,7 +5880,7 @@
       --wc-hover: #E7E7E7;
       --wc-active: #D8D8D8;
       --wc-bubble-other: #FFFFFF;
-      --wc-bubble-me: #95EC69;
+      --wc-bubble-me: #C9E7FF;
       --wc-border: #DEDEDE;
       --wc-border-strong: #CACACA;
       --wc-danger: #FA5151;
@@ -6264,7 +6308,7 @@
       /* 会话气泡规范（严格匹配微信生态与截图标准） */
       --wc-bubble-other: #E4E7EB;      /* 对方气泡：精确采样自截图 bubble2_crop.png #E4E7EB */
       --wc-bubble-other-text: #1F2329; /* 对方文字颜色 */
-      --wc-bubble-me: #95EC69;         /* 自己气泡：企微与微信标准经典绿 #95EC69 */
+      --wc-bubble-me: #C9E7FF;         /* 自己气泡 */
       --wc-bubble-me-text: #1F2329;    /* 自己文字颜色 */
       
       --wc-border: #E5E8EC;
@@ -6602,6 +6646,18 @@
     .wecom-list-resizer:hover,
     .wecom-list-resizer.dragging {
       background: rgba(38, 126, 240, 0.45) !important;
+    }
+    @media (max-width: 1000px) {
+      .${ROOT_CLASS}.${LOCK_CLASS} .wecom-list-panel {
+        left: var(--wc-nav) !important;
+        width: calc(100% - var(--wc-nav)) !important;
+        min-width: calc(100% - var(--wc-nav)) !important;
+        max-width: calc(100% - var(--wc-nav)) !important;
+      }
+      .${ROOT_CLASS}.${LOCK_CLASS} .wecom-chat-panel {
+        left: var(--wc-nav) !important;
+      }
+      .wecom-list-resizer { display: none !important; }
     }
     body.wecom-resizing-list,
     body.wecom-resizing-list * {
@@ -10058,6 +10114,22 @@
     syncThemeControls();
   }
 
+  function isHideUnusedUi() {
+    try {
+      return localStorage.getItem(HIDE_UNUSED_UI_KEY) === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  function setHideUnusedUi(on) {
+    try {
+      localStorage.setItem(HIDE_UNUSED_UI_KEY, on ? "1" : "0");
+    } catch { /* ignore */ }
+    document.documentElement.classList.toggle("wecom-hide-unused-ui", !!on);
+    syncThemeControls();
+  }
+
   function isThreadViewEnabled() {
     try {
       return localStorage.getItem(THREAD_VIEW_KEY) !== "0";
@@ -10445,7 +10517,7 @@
     const maskAvatarBtn = menu.querySelector(".wecom-menu-mask-avatar");
     if (maskAvatarBtn) {
       const on = isMaskAvatar();
-      maskAvatarBtn.classList.toggle("is-active", on);
+      maskAvatarBtn.classList.remove("is-active");
       maskAvatarBtn.setAttribute("aria-checked", on ? "true" : "false");
       const badge = maskAvatarBtn.querySelector(".wecom-menu-state-badge");
       if (badge) {
@@ -10457,9 +10529,21 @@
     const hideChatAvatarBtn = menu.querySelector(".wecom-menu-toggle-hide-chat-avatar");
     if (hideChatAvatarBtn) {
       const on = isHideChatAvatar();
-      hideChatAvatarBtn.classList.toggle("is-active", on);
+      hideChatAvatarBtn.classList.remove("is-active");
       hideChatAvatarBtn.setAttribute("aria-checked", on ? "true" : "false");
       const badge = hideChatAvatarBtn.querySelector(".wecom-menu-state-badge");
+      if (badge) {
+        badge.textContent = on ? "已开启" : "已关闭";
+        badge.className = `wecom-menu-state-badge ${on ? "is-on" : "is-off"}`;
+      }
+    }
+
+    const hideUnusedUiBtn = menu.querySelector(".wecom-menu-toggle-hide-unused-ui");
+    if (hideUnusedUiBtn) {
+      const on = isHideUnusedUi();
+      hideUnusedUiBtn.classList.remove("is-active");
+      hideUnusedUiBtn.setAttribute("aria-checked", on ? "true" : "false");
+      const badge = hideUnusedUiBtn.querySelector(".wecom-menu-state-badge");
       if (badge) {
         badge.textContent = on ? "已开启" : "已关闭";
         badge.className = `wecom-menu-state-badge ${on ? "is-on" : "is-off"}`;
@@ -10477,7 +10561,7 @@
     const boostBtn = menu.querySelector(".wecom-menu-toggle-boost");
     if (boostBtn) {
       const on = isBoostEnabled();
-      boostBtn.classList.toggle("is-active", on);
+      boostBtn.classList.remove("is-active");
       boostBtn.setAttribute("aria-checked", on ? "true" : "false");
       const badge = boostBtn.querySelector(".wecom-menu-state-badge");
       if (badge) {
@@ -10489,7 +10573,7 @@
     const threadViewBtn = menu.querySelector(".wecom-menu-toggle-thread-view");
     if (threadViewBtn) {
       const on = isThreadViewEnabled();
-      threadViewBtn.classList.toggle("is-active", on);
+      threadViewBtn.classList.remove("is-active");
       threadViewBtn.setAttribute("aria-checked", on ? "true" : "false");
       const badge = threadViewBtn.querySelector(".wecom-menu-state-badge");
       if (badge) {
@@ -10501,7 +10585,7 @@
     const base64Btn = menu.querySelector(".wecom-menu-toggle-base64");
     if (base64Btn) {
       const on = isBase64DecodeEnabled();
-      base64Btn.classList.toggle("is-active", on);
+      base64Btn.classList.remove("is-active");
       base64Btn.setAttribute("aria-checked", on ? "true" : "false");
       const badge = base64Btn.querySelector(".wecom-menu-state-badge");
       if (badge) {
@@ -10513,7 +10597,7 @@
     const imageLayoutBtn = menu.querySelector(".wecom-menu-toggle-image-layout");
     if (imageLayoutBtn) {
       const on = isImageAutoLayoutEnabled();
-      imageLayoutBtn.classList.toggle("is-active", on);
+      imageLayoutBtn.classList.remove("is-active");
       imageLayoutBtn.setAttribute("aria-checked", on ? "true" : "false");
       const badge = imageLayoutBtn.querySelector(".wecom-menu-state-badge");
       if (badge) {
@@ -10614,6 +10698,8 @@
       `${ICONS.disguise}<span class="wecom-menu-label">百家姓/九宫格头像</span><span class="wecom-menu-state-badge is-off">已关闭</span></button>` +
       `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-hide-chat-avatar" aria-checked="false">` +
       `${ICONS.userOff}<span class="wecom-menu-label">隐藏对话详情头像</span><span class="wecom-menu-state-badge is-off">已关闭</span></button>` +
+      `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-hide-unused-ui" aria-checked="false">` +
+      `${ICONS.circleOff}<span class="wecom-menu-label">隐藏无用图标和按钮</span><span class="wecom-menu-state-badge is-off">已关闭</span></button>` +
       `<div class="wecom-theme-menu-title wecom-theme-menu-divider">消息功能</div>` +
       (IS_LINUXDO ?
         `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-boost" aria-checked="true">` +
@@ -10688,6 +10774,13 @@
         event.preventDefault();
         event.stopPropagation();
         setHideChatAvatar(!isHideChatAvatar());
+        return;
+      }
+      const hideUnusedUiBtn = event.target.closest(".wecom-menu-toggle-hide-unused-ui");
+      if (hideUnusedUiBtn) {
+        event.preventDefault();
+        event.stopPropagation();
+        setHideUnusedUi(!isHideUnusedUi());
         return;
       }
       const boostBtn = event.target.closest(".wecom-menu-toggle-boost");
@@ -10806,7 +10899,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.55";
+  const SCRIPT_VERSION = "0.7.56";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -10982,8 +11075,7 @@
     { key: "work", icon: "work", label: "工作台" },
     { key: "book", icon: "book", label: "通讯录" },
     { key: "disk", icon: "disk", label: "微盘" },
-    { key: "advanced", icon: "advanced", label: "高级功能" },
-    { key: "group", icon: "group", label: "分组" }
+    { key: "advanced", icon: "advanced", label: "高级功能" }
   ];
 
   const RAIL_GROUP_ITEMS = [];
@@ -11099,6 +11191,7 @@
   const LIST_W_KEY = "linuxdo-wecom-list-width";
   const LIST_W_MIN = 200;
   const LIST_W_MAX = 520;
+  let listWidthInitialized = false;
 
   function getListWidth() {
     try {
@@ -11111,6 +11204,12 @@
   function applyListWidth(w) {
     const width = Math.min(LIST_W_MAX, Math.max(LIST_W_MIN, Math.round(w)));
     document.documentElement.style.setProperty("--wc-list", `${width}px`);
+  }
+
+  function restoreListWidth() {
+    if (listWidthInitialized) return;
+    listWidthInitialized = true;
+    applyListWidth(getListWidth());
   }
 
   function ensureListResizer() {
@@ -11145,9 +11244,10 @@
     };
 
     rz.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0) return;
       dragging = true;
       startX = e.clientX;
-      startW = parseInt(document.documentElement.style.getPropertyValue("--wc-list"), 10) || getListWidth();
+      startW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--wc-list")) || getListWidth();
       rz.classList.add("dragging");
       document.body.classList.add("wecom-resizing-list");
       try { rz.setPointerCapture(e.pointerId); } catch { /* ignore */ }
@@ -15881,8 +15981,15 @@
         setWatermarkError(panel, error instanceof Error ? error.message : String(error));
       }
     });
-    dialog.querySelector(".wecom-watermark-enabled").addEventListener("change", () => previewWatermarkSettings(panel));
-    dialog.querySelector(".wecom-watermark-text").addEventListener("input", () => previewWatermarkSettings(panel));
+    const enabledInput = dialog.querySelector(".wecom-watermark-enabled");
+    const textInput = dialog.querySelector(".wecom-watermark-text");
+    enabledInput.addEventListener("change", () => {
+      if (enabledInput.checked && !normalizeWatermarkText(textInput.value)) {
+        textInput.value = DEFAULT_WATERMARK_TEXT;
+      }
+      previewWatermarkSettings(panel);
+    });
+    textInput.addEventListener("input", () => previewWatermarkSettings(panel));
     dialog.addEventListener("keydown", (event) => {
       if (event.key === "Escape") closeWatermarkSettings(panel);
     });
@@ -17143,7 +17250,7 @@
         <div class="wecom-chat-tools">
           <button type="button" class="wecom-icon-btn wecom-chat-avatar-toggle${isHideChatAvatar() ? " is-active" : ""}" title="${isHideChatAvatar() ? "显示对话头像" : "隐藏对话头像"}" aria-label="隐藏对话头像" aria-pressed="${isHideChatAvatar() ? "true" : "false"}">${ICONS.userOff}</button>
           <button type="button" class="wecom-icon-btn wecom-chat-members-toggle" title="群成员与详情">${ICONS.users}</button>
-          <button type="button" class="wecom-icon-btn wecom-topic-bookmark"${IS_V2EX ? ' style="display:none"' : ""} title="收藏话题" aria-label="收藏话题" aria-pressed="false">${ICONS.bookmark}</button>
+          <button type="button" class="wecom-icon-btn wecom-topic-bookmark" title="收藏话题" aria-label="收藏话题" aria-pressed="false">${ICONS.bookmark}</button>
           <button type="button" class="wecom-icon-btn wecom-watermark-settings" title="背景水印设置" aria-label="背景水印设置" aria-expanded="false" aria-pressed="false">${ICONS.watermark}</button>
           <div class="wecom-platform-switcher">
             <button type="button" class="wecom-icon-btn wecom-platform-btn" aria-haspopup="true" aria-expanded="false" title="切换社区平台">
@@ -17797,7 +17904,14 @@
     }
     if (event.target.closest(".wecom-topic-bookmark")) {
       consumeClick(event);
-      openOriginalTopicBookmark();
+      if (IS_V2EX) {
+        const wasFavorited = Boolean(chatState.v2exTopicFavorited);
+        toggleV2exTopicFavorite().catch((error) => {
+          showWecomToast(error?.message || (wasFavorited ? "取消收藏失败" : "收藏话题失败"), "error", 2500);
+        });
+      } else {
+        openOriginalTopicBookmark();
+      }
       return true;
     }
     if (event.target.closest(".wecom-chat-refresh")) {
@@ -18586,7 +18700,7 @@
   }
 
   function replyReferenceHtml(post) {
-    if (IS_V2EX) return "";
+    if (IS_V2EX || (IS_LINUXDO && isThreadViewEnabled())) return "";
     // 若正文中已包含原生引用块，不再重复渲染引用
     if (post?.cooked && (post.cooked.includes('class="quote') || post.cooked.includes('<aside class="quote') || post.cooked.includes('<blockquote>'))) {
       return "";
@@ -18990,6 +19104,12 @@
     const threadClass = depth > 0 ? " is-thread-child" : "";
     const threadAttr = depth > 0 ? ` data-thread-depth="${depth}"` : "";
     const replyInd = replyIndicatorHtml(post);
+    const showHeaderTime = depth > 0 && Boolean(replyInd);
+    const timeHtml = `<span class="wecom-msg-time"${timeAttr}>${escapeHtml(formatTime(post.created_at))}</span>`;
+    const topicStats = IS_V2EX && Number(post.post_number) === 1 ? post.v2ex_topic_stats : null;
+    const topicStatsHtml = topicStats && (topicStats.views || topicStats.favorites || topicStats.thanks)
+      ? `<span class="wecom-v2ex-topic-stats" title="浏览 ${topicStats.views || 0}，收藏 ${topicStats.favorites || 0}，感谢 ${topicStats.thanks || 0}">浏览 ${topicStats.views || 0} · 收藏 ${topicStats.favorites || 0} · 感谢 ${topicStats.thanks || 0}</span>`
+      : "";
     const bodyHtml = replyBodyHtml(post, Boolean(replyInd));
     return `
       <div class="wecom-msg wecom-msg-${side}${threadClass}" data-post-number="${post.post_number}"${post.id ? ` data-post-id="${post.id}"` : ""}${post.floor != null ? ` data-floor="${post.floor}"` : ""}${threadAttr}${me ? ' data-mine="1"' : ""}>
@@ -18998,6 +19118,7 @@
           <div class="wecom-msg-header">
             <span class="wecom-msg-name"${userCardAttributes(post)}>${escapeHtml(displayName)}</span>
             ${replyInd}
+            ${showHeaderTime ? `<span class="wecom-msg-header-time">${timeHtml}</span>` : ""}
           </div>
           <div class="wecom-msg-bubble">
             ${replyReferenceHtml(post)}
@@ -19007,7 +19128,8 @@
           ${boostsHtml(post)}
           <span class="wecom-msg-meta">
             <span>#${IS_V2EX && post.floor != null && post.floor > 0 ? post.floor : post.post_number}</span>
-            <span class="wecom-msg-time"${timeAttr}>${escapeHtml(formatTime(post.created_at))}</span>
+            ${showHeaderTime ? "" : timeHtml}
+            ${topicStatsHtml}
             ${likesBadgeHtml}
           </span>
           <div class="wecom-msg-tools">
@@ -20723,12 +20845,12 @@
     return `${timeSep}<div class="wecom-thread-node" data-post-number="${post.post_number}">${bubble}</div>`;
   }
 
-  function renderBubbles(posts, myName) {
+  function renderBubbles(posts, myName, options = {}) {
     rememberChatPosts(posts);
     if (IS_V2EX) {
       resolveV2exReplyRelationships(posts);
     }
-    if (!isThreadViewEnabled()) {
+    if (!isThreadViewEnabled() || options.flat) {
       const frag = [];
       let lastTime = 0;
       for (const post of posts) {
@@ -21061,6 +21183,15 @@
     const opTimeEl = doc.querySelector("#Main .header .gray span[title], #Main .header span[title]");
     const opCreated = opTimeEl?.getAttribute("title") || doc.querySelector("#Main .header .gray")?.textContent?.trim() || "";
     const opNode = doc.querySelector("#Main .header a[href^='/go/']")?.textContent?.trim() || "";
+    const v2exTopicStats = parseV2exTopicStats(doc);
+    const v2exFavorited = Boolean(
+      doc.querySelector(`a[href*='/unfavorite/topic/${topicId}'], a[href*='/unfavorite/topic'], [onclick*='unfavorite/topic']`) ||
+      Array.from(doc.querySelectorAll(".topic_buttons a, #Main .topic_buttons a, #Main a")).some((a) => {
+        const txt = a.textContent.trim();
+        return txt === "取消收藏" || txt === "Unfavorite";
+      })
+    );
+    const v2exOnce = doc.querySelector("input[name='once']")?.value?.trim() || "";
 
     const opLikesEl = doc.querySelector("#Main .topic_thank, #Main .votes, #Main .header .fade, #Main .topic_buttons .fade");
     let opLikesCount = 0;
@@ -21078,7 +21209,8 @@
       cooked: opContent,
       created_at: opCreated,
       like_count: opLikesCount,
-      actions_summary: opLikesCount > 0 ? [{ id: 2, count: opLikesCount }] : []
+      actions_summary: opLikesCount > 0 ? [{ id: 2, count: opLikesCount }] : [],
+      v2ex_topic_stats: v2exTopicStats
     };
     const posts = [opPost];
 
@@ -21144,6 +21276,8 @@
       total_replies: totalReplies || Math.max(0, posts.length - 1),
       total_pages: totalPages || (hasNextPage ? page + 1 : page),
       node_name: opNode,
+      v2ex_favorited: v2exFavorited,
+      v2ex_once: v2exOnce,
       post_stream: {
         posts,
         stream: posts.map((p) => p.id)
@@ -21174,6 +21308,107 @@
       throw new Error(`未能解析主题 #${topicId} 的内容`);
     }
     return parsed;
+  }
+
+  function parseV2exTopicStats(doc) {
+    const text = (doc?.querySelector("#Main")?.textContent || doc?.body?.textContent || "").replace(/\s+/g, " ");
+    const countFor = (...patterns) => {
+      for (const pattern of patterns) {
+        const match = text.match(pattern);
+        if (match) return Number(String(match[1]).replace(/,/g, "")) || 0;
+      }
+      return 0;
+    };
+    return {
+      views: countFor(/([\d,]+)\s*(?:次点击|views?)/i),
+      favorites: countFor(/([\d,]+)\s*人收藏/i, /收藏\s*([\d,]+)/i),
+      thanks: countFor(/([\d,]+)\s*人感谢/i, /感谢\s*([\d,]+)\s*人/i)
+    };
+  }
+
+  function setV2exTopicFavoriteState(favorited) {
+    chatState.v2exTopicFavorited = Boolean(favorited);
+    const button = document.querySelector(".wecom-topic-bookmark");
+    if (!button) return;
+    const active = chatState.v2exTopicFavorited;
+    const label = active ? "已收藏话题（点击取消收藏）" : "收藏话题";
+    button.classList.toggle("is-bookmarked", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+    button.setAttribute("aria-label", label);
+    button.title = label;
+  }
+
+  function updateV2exTopicFavoriteStats(favorited) {
+    const op = chatState.postsByNumber?.get(1);
+    if (!op || !op.v2ex_topic_stats) return;
+    const stats = op.v2ex_topic_stats;
+    if (typeof stats.favorites === "number") {
+      stats.favorites = Math.max(0, stats.favorites + (favorited ? 1 : -1));
+      const statsEl = document.querySelector(".wecom-msg[data-post-number='1'] .wecom-v2ex-topic-stats");
+      if (statsEl) {
+        statsEl.textContent = `浏览 ${stats.views || 0} · 收藏 ${stats.favorites || 0} · 感谢 ${stats.thanks || 0}`;
+        statsEl.title = `浏览 ${stats.views || 0}，收藏 ${stats.favorites || 0}，感谢 ${stats.thanks || 0}`;
+      }
+    }
+  }
+
+  async function toggleV2exTopicFavorite() {
+    const topicId = Number(chatState.topicId);
+    if (!topicId) throw new Error("未能确定当前 V2EX 话题");
+    const isFavorited = Boolean(chatState.v2exTopicFavorited);
+    const response = await fetch(`/t/${topicId}`, { credentials: "same-origin" });
+    if (!response.ok) throw new Error(`获取收藏凭证失败（HTTP ${response.status}）`);
+    const responseText = await response.text();
+    const doc = new DOMParser().parseFromString(responseText, "text/html");
+    const once = doc.querySelector("input[name='once']")?.value?.trim();
+
+    if (isFavorited) {
+      let unfavoriteLink = doc.querySelector(`a[href*='/unfavorite/topic/${topicId}'], a[href*='/unfavorite/topic']`);
+      let href = unfavoriteLink?.getAttribute("href")?.trim();
+      if (!href) {
+        const onclickEl = doc.querySelector(`[onclick*='/unfavorite/topic/${topicId}'], [onclick*='unfavorite/topic']`);
+        const onclickStr = onclickEl?.getAttribute("onclick") || "";
+        const match = onclickStr.match(/['"](\/unfavorite\/topic\/[^'"]+)['"]/);
+        if (match) href = match[1];
+      }
+      let targetUrl = "";
+      if (href) {
+        targetUrl = href.startsWith("http") ? href : (href.startsWith("/") ? href : `/${href}`);
+      } else {
+        const tMatch = responseText.match(/[?&]t=([a-zA-Z0-9_-]+)/);
+        const token = tMatch ? tMatch[1] : (once || "");
+        if (!token) throw new Error("未能获取 V2EX 取消收藏凭证，请刷新后重试");
+        targetUrl = `/unfavorite/topic/${topicId}?t=${encodeURIComponent(token)}`;
+      }
+      const unfavoriteResponse = await fetch(targetUrl, { credentials: "same-origin" });
+      if (!unfavoriteResponse.ok) throw new Error(`取消收藏失败（HTTP ${unfavoriteResponse.status}）`);
+      setV2exTopicFavoriteState(false);
+      updateV2exTopicFavoriteStats(false);
+      showWecomToast("已取消收藏", "success", 1800);
+    } else {
+      let favoriteLink = doc.querySelector(`a[href*='/favorite/topic/${topicId}'], a[href*='/favorite/topic']`);
+      let href = favoriteLink?.getAttribute("href")?.trim();
+      if (!href) {
+        const onclickEl = doc.querySelector(`[onclick*='/favorite/topic/${topicId}'], [onclick*='favorite/topic']`);
+        const onclickStr = onclickEl?.getAttribute("onclick") || "";
+        const match = onclickStr.match(/['"](\/favorite\/topic\/[^'"]+)['"]/);
+        if (match) href = match[1];
+      }
+      let targetUrl = "";
+      if (href) {
+        targetUrl = href.startsWith("http") ? href : (href.startsWith("/") ? href : `/${href}`);
+      } else {
+        if (!once) throw new Error("未能获取 V2EX 收藏凭证，请先登录");
+        targetUrl = `/favorite/topic/${topicId}?once=${encodeURIComponent(once)}`;
+      }
+      const favoriteResponse = await fetch(targetUrl, {
+        credentials: "same-origin"
+      });
+      if (!favoriteResponse.ok) throw new Error(`收藏话题失败（HTTP ${favoriteResponse.status}）`);
+      setV2exTopicFavoriteState(true);
+      updateV2exTopicFavoriteStats(true);
+      showWecomToast("已收藏话题", "success", 1800);
+    }
   }
 
   function mapV2exTopicApiResponse(topicObj, replies = []) {
@@ -21713,8 +21948,12 @@
         : (chatState.renderedLastIdx >= 0 && chatState.renderedLastIdx < chatState.stream.length - 1);
       chatState.title = data.title || "";
       chatState.categoryId = data.category_id || null;
-      setTopicBookmarkState(Boolean(topicBookmarkFrom(data)));
-      bindBookmarkEvents();
+      if (IS_V2EX) {
+        setV2exTopicFavoriteState(Boolean(data.v2ex_favorited));
+      } else {
+        setTopicBookmarkState(Boolean(topicBookmarkFrom(data)));
+        bindBookmarkEvents();
+      }
       recordTopicHistory(data, posts);
       if (listState.listMode === "history") {
         renderHistoryList();
@@ -21966,24 +22205,18 @@
           rememberChatPosts(fresh);
           chatState.stream = fresh.map((p) => p.id).concat(chatState.stream);
           chatState.v2exPage = prevPage;
-          if (isThreadViewEnabled()) {
-            rerenderCurrentChatMessages();
-            body.scrollTop = prevTop + (body.scrollHeight - prevHeight);
-            syncRenderedWindow(body);
+          const opEl = body.querySelector(".wecom-msg[data-post-number='1']");
+          const html = renderBubbles(fresh, getCurrentUsername(), { flat: true });
+          if (opEl && opEl.nextSibling) {
+            opEl.insertAdjacentHTML("afterend", html);
+          } else if (opEl) {
+            body.insertAdjacentHTML("beforeend", html);
           } else {
-            const opEl = body.querySelector(".wecom-msg[data-post-number='1']");
-            const html = renderBubbles(fresh, getCurrentUsername());
-            if (opEl && opEl.nextSibling) {
-              opEl.insertAdjacentHTML("afterend", html);
-            } else if (opEl) {
-              body.insertAdjacentHTML("beforeend", html);
-            } else {
-              body.insertAdjacentHTML("afterbegin", html);
-            }
-            hydrateChatImages(body);
-            body.scrollTop += body.scrollHeight - prevHeight;
-            syncRenderedWindow(body);
+            body.insertAdjacentHTML("afterbegin", html);
           }
+          hydrateChatImages(body);
+          body.scrollTop += body.scrollHeight - prevHeight;
+          syncRenderedWindow(body);
         }
       } catch (err) {
         console.warn("[v2ex-wecom] loadOlderPosts failed:", err);
@@ -22007,17 +22240,10 @@
       if (body && posts.length) {
         const prevHeight = body.scrollHeight;
         const prevTop = body.scrollTop;
-        if (isThreadViewEnabled()) {
-          rememberChatPosts(posts);
-          rerenderCurrentChatMessages();
-          body.scrollTop = prevTop + (body.scrollHeight - prevHeight);
-          syncRenderedWindow(body);
-        } else {
-          body.insertAdjacentHTML("afterbegin", renderBubbles(posts, getCurrentUsername()));
-          hydrateChatImages(body);
-          body.scrollTop += body.scrollHeight - prevHeight;
-          syncRenderedWindow(body);
-        }
+        body.insertAdjacentHTML("afterbegin", renderBubbles(posts, getCurrentUsername(), { flat: true }));
+        hydrateChatImages(body);
+        body.scrollTop += body.scrollHeight - prevHeight;
+        syncRenderedWindow(body);
       }
     } catch { /* 保留现状 */ } finally {
       chatState.loading = false;
@@ -22046,7 +22272,7 @@
         const fresh = posts.filter((post) => !chatState.postsByNumber.has(postNumberOf(post)));
         if (fresh.length) {
           chatState.stream = chatState.stream.concat(fresh.map((post) => post.id));
-          appendFreshPosts(fresh, body, { scroll: false });
+          appendFreshPosts(fresh, body, { scroll: false, flat: true });
         }
         chatState.v2exPage = nextPage;
         chatState.v2exHasMore = Boolean(data?.v2ex_has_more) && posts.length > 0;
@@ -22080,7 +22306,7 @@
         ids
       );
       // 用户滚动触底触发分页时，保留当前位置，避免追加后再次自动触底。
-      appendFreshPosts(posts, body, { scroll: false });
+      appendFreshPosts(posts, body, { scroll: false, flat: true });
     } catch { /* 保留现状 */ } finally {
       chatState.loading = false;
     }
@@ -22124,7 +22350,7 @@
     const moreBar = body.querySelector(".wecom-v2ex-more-bar");
     let insertedAbove = false;
 
-    if (isThreadViewEnabled()) {
+    if (isThreadViewEnabled() && !options.flat) {
       rememberChatPosts(fresh);
       rerenderCurrentChatMessages();
       const shouldScroll = options.scroll === true || (options.scroll !== false && wasNearBottom);
@@ -22136,9 +22362,9 @@
 
     if (fresh.every((post) => postNumberOf(post) > currentMax)) {
       if (moreBar) {
-        moreBar.insertAdjacentHTML("beforebegin", renderBubbles(fresh, getCurrentUsername()));
+        moreBar.insertAdjacentHTML("beforebegin", renderBubbles(fresh, getCurrentUsername(), { flat: options.flat === true }));
       } else {
-        body.insertAdjacentHTML("beforeend", renderBubbles(fresh, getCurrentUsername()));
+        body.insertAdjacentHTML("beforeend", renderBubbles(fresh, getCurrentUsername(), { flat: options.flat === true }));
       }
     } else {
       for (const post of fresh) {
@@ -22875,6 +23101,7 @@
     document.documentElement.classList.toggle("wecom-nav2-open", isNav2Open());
     document.documentElement.classList.toggle("wecom-hide-boost", !isBoostEnabled());
     document.documentElement.classList.toggle("wecom-hide-chat-avatar", isHideChatAvatar());
+    document.documentElement.classList.toggle("wecom-hide-unused-ui", isHideUnusedUi());
     document.documentElement.classList.toggle("wecom-thread-view", isThreadViewEnabled());
     applyImageAutoLayoutSizeCss(getImageAutoLayoutSize());
     setupWindowControlsOverlay();
@@ -22916,7 +23143,7 @@
     ensureListPanel();
     ensureChatPanel();
     ensureListResizer();
-    applyListWidth(getListWidth());
+    restoreListWidth();
     syncListNav();
     startRelativeTimeRefresh();
     if (IS_V2EX) {
@@ -23029,6 +23256,7 @@
       document.documentElement.classList.add(ROOT_CLASS);
       document.documentElement.classList.toggle("wecom-hide-boost", !isBoostEnabled());
       document.documentElement.classList.toggle("wecom-hide-chat-avatar", isHideChatAvatar());
+      document.documentElement.classList.toggle("wecom-hide-unused-ui", isHideUnusedUi());
       document.documentElement.classList.toggle("wecom-thread-view", isThreadViewEnabled());
       restyleSplash();
       makeFavicon(); // document-start 尽早换标，减少未聚焦标签仍显示原 icon

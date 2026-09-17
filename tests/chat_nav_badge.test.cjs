@@ -39,6 +39,42 @@ test("linuxdo-wecom includes new topics badge extraction and chat nav click logi
   );
 });
 
+test("settings toggles use their status badges without active row backgrounds", () => {
+  assert.ok(
+    scriptContent.includes('threadViewBtn.classList.remove("is-active");') &&
+    scriptContent.includes('base64Btn.classList.remove("is-active");') &&
+    scriptContent.includes('imageLayoutBtn.classList.remove("is-active");'),
+    "checkbox settings must not receive the active row background"
+  );
+});
+
+test("list width restoration does not overwrite an active manual resize", () => {
+  assert.ok(
+    scriptContent.includes("let listWidthInitialized = false;") &&
+    scriptContent.includes("function restoreListWidth()") &&
+    scriptContent.includes("if (listWidthInitialized) return;"),
+    "must restore the saved list width only once per UI lifecycle"
+  );
+  assert.ok(
+    scriptContent.includes("startW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue(\"--wc-list\"))"),
+    "must begin dragging from the actual rendered list width"
+  );
+});
+
+test("narrow layouts let the topic list fill the viewport", () => {
+  assert.ok(
+    scriptContent.includes("@media (max-width: 1000px) {\n      .${ROOT_CLASS}.${LOCK_CLASS} .wecom-list-panel") &&
+    scriptContent.includes("min-width: calc(100% - var(--wc-nav)) !important;") &&
+    scriptContent.includes("max-width: calc(100% - var(--wc-nav)) !important;") &&
+    scriptContent.includes(".${ROOT_CLASS}.${LOCK_CLASS} .wecom-chat-panel {\n        left: var(--wc-nav) !important;"),
+    "must fill the available viewport with either the list or topic details below 1000px"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-list-resizer { display: none !important; }"),
+    "must disable the desktop list resizer below 1000px"
+  );
+});
+
 test("simulated getNewTopicsCount logic extracts number from show-more elements", () => {
   function simulateCount(text, hasClass = true) {
     if (!hasClass) return 0;
@@ -392,6 +428,12 @@ test("Top-right window controls and native view buttons are removed, and waterma
   assert.ok(
     scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-watermark-panel"),
     "must define dark mode styles for watermark panel"
+  );
+  assert.ok(
+    scriptContent.includes("if (enabledInput.checked && !normalizeWatermarkText(textInput.value))") &&
+    scriptContent.includes("textInput.value = DEFAULT_WATERMARK_TEXT;") &&
+    scriptContent.includes("previewWatermarkSettings(panel);"),
+    "enabling the watermark must immediately render a valid preview"
   );
 });
 
@@ -941,6 +983,12 @@ test("V2EX topic detail multi-page pagination and footer bar", () => {
     scriptContent.includes("data = await loadInitialV2exThreadPages(topicId, data, force, signal, targetPage);"),
     "loadTopic must merge the first two V2EX pages before rendering the conversation tree"
   );
+  assert.ok(
+    scriptContent.includes("function renderBubbles(posts, myName, options = {})") &&
+    scriptContent.includes("if (!isThreadViewEnabled() || options.flat)") &&
+    scriptContent.includes("appendFreshPosts(fresh, body, { scroll: false, flat: true });"),
+    "pagination must append replies flat instead of rebuilding the conversation tree"
+  );
 
   // Test V2EX pagination parsing simulation
   function simulatePaginationParse(html, page) {
@@ -1031,6 +1079,10 @@ test("Topic last read floor persistence and automatic restoration on detail view
   assert.ok(
     scriptContent.includes("target.floor = remembered - 1;"),
     "conv click and loadTopic must compute target floor from remembered post"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-msg.is-reply-target > .wecom-msg-content > .wecom-msg-bubble"),
+    "restored reply highlighting must outline only the target floor, not nested descendants"
   );
 
   // Test simulation: V2EX target page & floor computation
@@ -3095,6 +3147,49 @@ test("Quote title aside.quote .title is beautified with transparent background, 
     scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble aside.quote .title") &&
     scriptContent.includes("color: #929AA7 !important;"),
     "dark mode must style quote title with soft muted dark-mode color"
+  );
+});
+
+test("Settings can hide unused rail and composer controls", () => {
+  assert.ok(
+    scriptContent.includes('const HIDE_UNUSED_UI_KEY = "linuxdo-wecom-hide-unused-ui";') &&
+    scriptContent.includes("function isHideUnusedUi(") &&
+    scriptContent.includes("function setHideUnusedUi("),
+    "must persist the unused control visibility setting"
+  );
+  assert.ok(
+    scriptContent.includes("wecom-menu-toggle-hide-unused-ui") &&
+    scriptContent.includes("隐藏无用图标和按钮"),
+    "must provide the unused control visibility toggle in settings"
+  );
+  assert.ok(
+    scriptContent.includes('html.wecom-hide-unused-ui .wecom-rail-item[data-rail-key="todo"]') &&
+    scriptContent.includes('html.wecom-hide-unused-ui .wecom-composer-tools [data-composer-action="todo"]') &&
+    scriptContent.includes('html.wecom-hide-unused-ui .wecom-composer-tools [data-composer-action="phone"]') &&
+    !scriptContent.includes("html.wecom-hide-unused-ui .wecom-chat-tools"),
+    "must hide unused rail and composer controls without hiding chat header actions"
+  );
+});
+
+test("V2EX topics support header favorites and first-post engagement statistics", () => {
+  assert.ok(
+    scriptContent.includes("function parseV2exTopicStats(") &&
+    scriptContent.includes("v2ex_topic_stats: v2exTopicStats") &&
+    scriptContent.includes("wecom-v2ex-topic-stats"),
+    "must parse and render V2EX topic statistics on the opening post"
+  );
+  assert.ok(
+    scriptContent.includes("function toggleV2exTopicFavorite(") &&
+    scriptContent.includes("/favorite/topic/${topicId}?once=${encodeURIComponent(once)}") &&
+    scriptContent.includes('doc.querySelector("input[name=\'once\']")?.value?.trim()') &&
+    scriptContent.includes("unfavoriteLink") &&
+    scriptContent.includes("setV2exTopicFavoriteState(false)"),
+    "must obtain tokens and support both favoriting and unfavoriting V2EX topics"
+  );
+  assert.ok(
+    scriptContent.includes("if (IS_V2EX) {") &&
+    scriptContent.includes("toggleV2exTopicFavorite().catch"),
+    "must route the visible header bookmark button to V2EX favorites"
   );
 });
 
@@ -5988,13 +6083,32 @@ test("V2EX threaded conversation view: reply target resolution, tree hierarchy, 
     scriptContent.includes("align-self: flex-start;"),
     "keeps reply indicators left-aligned above outgoing message bubbles"
   );
+  assert.ok(
+    scriptContent.includes(".wecom-reply-children .wecom-msg.wecom-msg-me .wecom-msg-content") &&
+    scriptContent.includes("align-items: flex-start !important;"),
+    "keeps an author's nested reply bubble content left-aligned"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-reply-children .wecom-msg.wecom-msg-me .wecom-msg-boosts") &&
+    scriptContent.includes("justify-content: flex-start !important;"),
+    "keeps nested reply metadata and Boosts left-aligned"
+  );
   assert.ok(scriptContent.includes("function extractReferencedReply("), "contains extractReferencedReply");
   assert.ok(scriptContent.includes("function resolveV2exReplyRelationships("), "contains resolveV2exReplyRelationships");
   assert.ok(scriptContent.includes("function buildConversationTree("), "contains buildConversationTree");
   assert.ok(scriptContent.includes("function flattenReplies("), "contains flattenReplies");
   assert.ok(scriptContent.includes("function replyIndicatorHtml("), "contains replyIndicatorHtml");
+  assert.ok(
+    scriptContent.includes('if (IS_V2EX || (IS_LINUXDO && isThreadViewEnabled())) return "";'),
+    "must hide duplicate Linux DO reply reference cards while threaded view is enabled"
+  );
   assert.ok(scriptContent.includes("function replyBodyHtml("), "removes a duplicated leading reply mention from the message body");
   assert.ok(scriptContent.includes("const bodyHtml = replyBodyHtml(post, Boolean(replyInd));"), "uses the normalized reply body when rendering messages");
+  assert.ok(
+    scriptContent.includes("const showHeaderTime = depth > 0 && Boolean(replyInd);") &&
+    scriptContent.includes('class="wecom-msg-header-time"'),
+    "places nested reply timestamps after the reply indicator"
+  );
   assert.ok(scriptContent.includes("function isThreadViewEnabled("), "contains isThreadViewEnabled");
   assert.ok(scriptContent.includes("function setThreadViewEnabled("), "contains setThreadViewEnabled");
 
@@ -6322,17 +6436,3 @@ test("V2EX threaded conversation view: reply target resolution, tree hierarchy, 
   assert.ok(renderedRoots.includes('<div class="wecom-msg-bubble"><p>xxxxx</p><div class="wecom-reply-children">'), "children are nested inside parent bubble");
   assert.ok(renderedRoots.includes('data-post-number="5"'), "renders independent post 5");
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
