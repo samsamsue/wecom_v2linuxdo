@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.47
+// @version      0.7.48
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -6742,6 +6742,38 @@
       color: #07C160 !important;
       border: 1px solid rgba(7, 193, 96, 0.25) !important;
     }
+    .wecom-conv-tag.wecom-notif-tag {
+      display: inline-block !important;
+      font-size: 10.5px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-weight: 500;
+    }
+    .wecom-conv-tag.wecom-notif-tag.is-thank {
+      background: #FFF0ED !important;
+      color: #E64340 !important;
+      border: 1px solid rgba(230, 67, 64, 0.28) !important;
+    }
+    .wecom-conv-tag.wecom-notif-tag.is-reply {
+      background: #E8F3FF !important;
+      color: #1E6FFF !important;
+      border: 1px solid rgba(30, 111, 255, 0.28) !important;
+    }
+    .wecom-conv-tag.wecom-notif-tag.is-mention {
+      background: #F4EEFF !important;
+      color: #7B3FE4 !important;
+      border: 1px solid rgba(123, 63, 228, 0.28) !important;
+    }
+    .wecom-conv-tag.wecom-notif-tag.is-fav {
+      background: #FFF8E6 !important;
+      color: #F39C12 !important;
+      border: 1px solid rgba(243, 156, 18, 0.28) !important;
+    }
+    .wecom-conv.active .wecom-conv-tag.wecom-notif-tag {
+      background: rgba(255, 255, 255, 0.22) !important;
+      color: #FFFFFF !important;
+      border-color: rgba(255, 255, 255, 0.45) !important;
+    }
     .wecom-conv-time {
       font-size: 11px;
       color: var(--wc-text-3);
@@ -8814,6 +8846,26 @@
       color: #21C978 !important;
       border: 1px solid rgba(7, 193, 96, 0.35) !important;
     }
+    html.${ROOT_CLASS}.wecom-dark .wecom-conv-tag.wecom-notif-tag.is-thank {
+      background: rgba(230, 67, 64, 0.18) !important;
+      color: #FF7B78 !important;
+      border: 1px solid rgba(230, 67, 64, 0.35) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-conv-tag.wecom-notif-tag.is-reply {
+      background: rgba(30, 111, 255, 0.18) !important;
+      color: #5BA2FF !important;
+      border: 1px solid rgba(30, 111, 255, 0.35) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-conv-tag.wecom-notif-tag.is-mention {
+      background: rgba(123, 63, 228, 0.18) !important;
+      color: #B588FF !important;
+      border: 1px solid rgba(123, 63, 228, 0.35) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-conv-tag.wecom-notif-tag.is-fav {
+      background: rgba(243, 156, 18, 0.18) !important;
+      color: #FFC048 !important;
+      border: 1px solid rgba(243, 156, 18, 0.35) !important;
+    }
     html.${ROOT_CLASS}.wecom-dark .wecom-conv-tag {
       background: rgba(30, 111, 255, 0.15) !important;
       color: #5BA2FF !important;
@@ -10472,7 +10524,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.47";
+  const SCRIPT_VERSION = "0.7.48";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -11200,7 +11252,7 @@
     const root = rail || document.querySelector(".wecom-rail");
     if (!root) return;
     const isHistory = listState.listMode === "history";
-    const isNotif = IS_V2EX && (location.pathname === "/notifications" || listState.apiPath === "/notifications");
+    const isNotif = IS_V2EX && (location.pathname === "/notifications" || (typeof listState !== "undefined" && typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications")));
     root.querySelectorAll(".wecom-rail-item").forEach((item) => {
       const key = item.dataset.railKey;
       if (key === "group" || !key) return;
@@ -11312,7 +11364,7 @@
 
     // 若当前处于原生未支持页面（例如 /u/... 个人中心）或通知列表，点击「消息」切回首页三栏
     const currentPath = location.pathname;
-    if (IS_V2EX && (listState.apiPath === "/notifications" || currentPath === "/notifications")) {
+    if (IS_V2EX && ((typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications")) || currentPath === "/notifications")) {
       navigateInApp("/?tab=all");
       return;
     }
@@ -11345,7 +11397,7 @@
     }
 
     // 5. 强制重新拉取当前列表数据（刷新列表）
-    const apiPath = IS_V2EX && listState.apiPath === "/notifications"
+    const apiPath = IS_V2EX && (typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications"))
       ? "/?tab=all"
       : (listState.apiPath || listApiForPath(location.pathname, location.search) || "/latest.json");
     loadList(apiPath, true);
@@ -14541,8 +14593,10 @@
         }
         // 如果是通知列表项或带有通知/回复特征，消除头像通知角标
         const isNotifItem = (
-          listState.apiPath === "/notifications" ||
+          (typeof listState !== "undefined" && typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications")) ||
+          conv.classList.contains("is-notif") ||
           Boolean(conv.dataset.targetReplyId || conv.dataset.targetFloor || conv.dataset.targetAnchor) ||
+          Boolean(conv.querySelector(".wecom-notif-tag")) ||
           Boolean(conv.querySelector(".wecom-conv-tag")?.textContent?.includes("通知"))
         );
         if (isNotifItem) {
@@ -14825,39 +14879,39 @@
     const isNotif = Boolean(
       topic.notification_text ||
       topic.node_name === "通知" ||
-      (typeof listState !== "undefined" && listState.apiPath === "/notifications")
+      topic.notif_type ||
+      (typeof listState !== "undefined" && typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications"))
     );
     let notifText = topic.notification_text || "";
-    if (notifText && topic.last_poster_username && topic.last_poster_username !== "楼主" && !notifText.startsWith(topic.last_poster_username)) {
-      notifText = `${topic.last_poster_username}: ${notifText}`;
+    if (notifText && topic.last_poster_username && topic.last_poster_username !== "楼主") {
+      if (!notifText.startsWith(topic.last_poster_username) && !notifText.startsWith("❤️") && !notifText.startsWith("⭐") && !notifText.startsWith("@")) {
+        notifText = `${topic.last_poster_username}: ${notifText}`;
+      }
     }
     const rawSummary = notifText || (topic.last_poster_username
       ? `${topic.last_poster_username}: ${replyCount > 0 ? `[${replyCount}条回复]` : "发起话题"}`
       : `${topic.posts_count || 0} 回复`);
     const maskList = isMaskTitleList();
-    // 列表伪装时：顶部大字为工作流拟真标题，下方的灰色摘要字显示真实话题标题；通知列表则优先显示回复内容
-    const title = maskList ? disguiseTitleForTopic(topic) : String(topic.title || "");
+    // 通知列表绝不参与伪装标题：始终展示真实话题标题，下方摘要展示真实回复/点赞内容
+    const title = (isNotif || !maskList) ? String(topic.title || "") : disguiseTitleForTopic(topic);
     let summary = rawSummary;
-    if (maskList) {
-      if (isNotif && (topic.notification_text || notifText)) {
-        summary = (topic.title && !rawSummary.includes(topic.title))
-          ? `${rawSummary} · ${topic.title}`
-          : rawSummary;
-      } else {
-        summary = String(topic.title || rawSummary);
-      }
+    if (maskList && !isNotif) {
+      summary = String(topic.title || rawSummary);
     }
     let msgHtml = "";
     if (isNotif) {
-      if (maskList && topic.title && !rawSummary.includes(topic.title)) {
-        msgHtml = `<span class="wecom-notif-reply">${escapeHtml(rawSummary)}</span><span class="wecom-notif-topic"> · ${escapeHtml(topic.title)}</span>`;
-      } else {
-        msgHtml = `<span class="wecom-notif-reply">${escapeHtml(summary)}</span>`;
-      }
+      msgHtml = `<span class="wecom-notif-reply">${escapeHtml(summary)}</span>`;
     } else {
       msgHtml = escapeHtml(summary);
     }
-    const tag = (maskList || isMaskAvatar()) ? "" : convCategoryTag(topic);
+    let tag = "";
+    if (isNotif && (topic.notif_label || topic.notif_type)) {
+      const label = topic.notif_label || (topic.notif_type === "thank" ? "点赞" : (topic.notif_type === "mention" ? "提到" : (topic.notif_type === "fav" ? "收藏" : "回复")));
+      const type = topic.notif_type || "reply";
+      tag = `<span class="wecom-conv-tag wecom-notif-tag is-${escapeHtml(type)}">${escapeHtml(label)}</span>`;
+    } else if (!maskList && !isMaskAvatar()) {
+      tag = convCategoryTag(topic);
+    }
     const isPinned = !!(topic.pinned || topic.pinned_globally);
     let targetFloor = topic.target_floor;
     let targetReplyId = topic.target_reply_id;
@@ -14950,10 +15004,16 @@
     const body = document.querySelector(".wecom-list-body");
     if (!body) return;
     const usersById = listState.usersById || {};
-    const emptyNotice = listState.apiPath === "/notifications" ? "暂无未读提醒" : (listState.topics.length ? "没有更多了" : "");
+    const isNotifs = typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications");
+    const emptyNotice = isNotifs
+      ? (listState.topics.length ? "没有更多提醒了" : "暂无未读提醒")
+      : (listState.topics.length ? "没有更多了" : "");
+    const statusText = listState.loading && listState.topics.length > 0
+      ? "正在加载更多…"
+      : (listState.moreUrl ? "下拉或点击加载更多…" : emptyNotice);
     body.innerHTML =
       listState.topics.map((t) => convRowHtml(t, usersById)).join("") +
-      `<div class="wecom-list-status ${listState.moreUrl ? "is-clickable" : ""}">${listState.moreUrl ? "下拉或点击加载更多…" : emptyNotice}</div>`;
+      `<div class="wecom-list-status ${listState.moreUrl && !listState.loading ? "is-clickable" : ""}">${escapeHtml(statusText)}</div>`;
     syncListChips();
     syncListActive();
   }
@@ -14968,7 +15028,7 @@
       unreadN.textContent = n > 0 ? String(n > 99 ? "99+" : n) : "";
     }
     if (IS_V2EX) {
-      const isNotifs = listState.apiPath === "/notifications" || location.pathname === "/notifications";
+      const isNotifs = (typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications")) || location.pathname === "/notifications";
       if (isNotifs) {
         document.querySelectorAll(".wecom-list-panel .wecom-chip").forEach((c) => c.classList.remove("active"));
       }
@@ -15112,7 +15172,7 @@
     const path = String(apiPath || "");
     const currentPage = v2exPageForPath(path);
 
-    if (path === "/notifications" || count === 0) {
+    if (count === 0) {
       return { hasMore: false, nextPageUrl: null, totalPages: 1 };
     }
 
@@ -15137,14 +15197,17 @@
       const inputMax = pageInput ? (Number(pageInput.getAttribute("max") || pageInput.max) || 0) : 0;
       const inputVal = pageInput ? (Number(pageInput.getAttribute("value") || pageInput.value) || 0) : 0;
 
-      // 2. 提取下一页按钮（.normal_page_right 或 [title='Next Page']）
-      const nextBtn = doc.querySelector(".normal_page_right, [title='Next Page']");
-      const hasDisabledNext = Boolean(nextBtn && nextBtn.classList.contains("disable_now"));
+      // 2. 提取下一页按钮（.normal_page_right 或 [title='Next Page'] 或 input[value='›']）
+      const nextBtn = doc.querySelector(".normal_page_right, [title='Next Page'], input[value='›'], input[value='>']");
+      const hasDisabledNext = Boolean(nextBtn && (nextBtn.classList.contains("disable_now") || nextBtn.disabled));
       const hasNextBtn = Boolean(nextBtn) && !hasDisabledNext;
 
-      // 3. 提取页码链接中的最大页
-      const pageNumbers = [...doc.querySelectorAll("a.page_normal, a.page_current, a[href*='p=']")]
-        .map((el) => (el.getAttribute("href") || "").match(/[?&]p=(\d+)/))
+      // 3. 提取页码链接与按钮中的最大页
+      const pageNumbers = [...doc.querySelectorAll("a.page_normal, a.page_current, a[href*='p='], input[onclick*='p=']")]
+        .map((el) => {
+          const href = el.getAttribute("href") || el.getAttribute("onclick") || "";
+          return href.match(/[?&]p=(\d+)/);
+        })
         .filter(Boolean)
         .map((m) => Number(m[1]));
       const maxPageInLinks = pageNumbers.length ? Math.max(...pageNumbers) : 0;
@@ -15173,12 +15236,13 @@
       }
     }
 
-    // 容错降级：对于 /recent 或 /go/ 节点页面，只要当前页有话题内容且非空，允许尝试翻到下一页
-    const isRecentOrNode = path.startsWith("/recent") || path.startsWith("/go/");
-    if (isRecentOrNode && count > 0) {
+    // 容错降级：对于 /recent、/notifications 或 /go/ 节点页面，只要当前页有话题内容且达到基础单页量，允许尝试翻到下一页
+    const isRecentOrNodeOrNotif = path.startsWith("/recent") || path.startsWith("/go/") || path.startsWith("/notifications");
+    if (isRecentOrNodeOrNotif && count > 0) {
+      const canTry = path.startsWith("/notifications") ? count >= 10 : true;
       return {
-        hasMore: true,
-        nextPageUrl: v2exNextPageUrl(path),
+        hasMore: canTry,
+        nextPageUrl: canTry ? v2exNextPageUrl(path) : null,
         totalPages: 0
       };
     }
@@ -15215,7 +15279,7 @@
         const currentDomPath = listApiForPath(location.pathname, location.search);
         const canUseDom = !force && currentDomPath === apiPath && listState.topics.length === 0;
         if (canUseDom && document.querySelectorAll("#Main .cell, #Main .item").length > 0) {
-          const domTopics = apiPath === "/notifications"
+          const domTopics = (typeof apiPath === "string" && apiPath.startsWith("/notifications"))
             ? extractV2exNotificationsFromDoc(document)
             : extractV2exTopicsFromDoc(document);
           if (domTopics.length > 0) {
@@ -15270,17 +15334,19 @@
             if (resp.ok) {
               const html = await resp.text();
               fetchedDoc = new DOMParser().parseFromString(html, "text/html");
-              topics = path === "/notifications"
+              topics = path.startsWith("/notifications")
                 ? extractV2exNotificationsFromDoc(fetchedDoc)
                 : extractV2exTopicsFromDoc(fetchedDoc);
               if (path === "/notifications") {
+                clearNotificationBadge();
+              } else if (path.startsWith("/notifications")) {
                 clearNotificationBadge();
               }
             }
           } catch {
             topics = [];
           }
-          if (!topics.length && path !== "/notifications") {
+          if (!topics.length && !path.startsWith("/notifications")) {
             try {
               const res = await api("/api/topics/hot.json");
               topics = mapV2exJsonTopics(res);
@@ -15335,15 +15401,23 @@
       const requestSerial = ++listState.requestSerial;
       const pageUrl = listState.moreUrl;
       listState.loading = true;
+      const statusEl = document.querySelector(".wecom-list-status");
+      if (statusEl) {
+        statusEl.textContent = "正在加载更多…";
+        statusEl.classList.remove("is-clickable");
+      }
       try {
         const resp = await fetch(pageUrl, { credentials: "same-origin" });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const html = await resp.text();
         const doc = new DOMParser().parseFromString(html, "text/html");
-        const topics = extractV2exTopicsFromDoc(doc);
+        const isNotifPage = pageUrl.startsWith("/notifications") || (typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications"));
+        const topics = isNotifPage
+          ? extractV2exNotificationsFromDoc(doc)
+          : extractV2exTopicsFromDoc(doc);
         if (requestSerial !== listState.requestSerial) return;
-        const existing = new Set(listState.topics.map((topic) => topic.id));
-        const fresh = topics.filter((topic) => !existing.has(topic.id));
+        const existing = new Set(listState.topics.map((t) => t.dedup_key || (isNotifPage ? `${t.id}_${t.target_anchor || ""}_${t.notification_text || ""}` : t.id)));
+        const fresh = topics.filter((t) => !existing.has(t.dedup_key || (isNotifPage ? `${t.id}_${t.target_anchor || ""}_${t.notification_text || ""}` : t.id)));
         if (fresh.length > 0) {
           listState.topics = listState.topics.concat(fresh);
         }
@@ -20275,18 +20349,65 @@
       const id = match ? Number(match[1]) : 0;
       if (!id) return;
       const target = parseV2exReplyTarget(rawHref);
-      const dedupKey = cell.id || `${id}_${target.anchor || ""}_${idx}`;
+
+      const memberLink = cell.querySelector("a[href^='/member/']");
+      const author = memberLink?.textContent?.trim() || "";
+      const avatar = cell.querySelector("img.avatar")?.getAttribute("src") || "";
+
+      // 时间提取：优先匹配右侧 td 中的 .snow 或 .ago，若无则取 [title]
+      let timeStr = "";
+      const timeCandidate = cell.querySelector(".snow, .ago, td[align='right'] span, td[align='right']");
+      if (timeCandidate) {
+        timeStr = timeCandidate.getAttribute("title") || timeCandidate.textContent?.trim() || "";
+      } else {
+        const titleEl = cell.querySelector("[title]");
+        timeStr = titleEl?.getAttribute("title") || titleEl?.textContent?.trim() || "";
+      }
+
+      const dedupKey = cell.id || `${id}_${target.anchor || ""}_${author}_${timeStr}_${idx}`;
       if (seen.has(dedupKey)) return;
       seen.add(dedupKey);
 
-      const memberLink = cell.querySelector("a[href^='/member/']");
-      const avatar = cell.querySelector("img.avatar")?.getAttribute("src") || "";
-      const timeEl = cell.querySelector("[title], .ago, .fade");
+      const cellText = (cell.textContent || "").replace(/\s+/g, " ");
       const payloadEl = cell.querySelector(".payload");
-      const text = (payloadEl ? payloadEl.textContent : (cell.textContent || "")).replace(/\s+/g, " ").trim();
+
+      let notifType = "reply";
+      let notifLabel = "回复";
+
+      if (cellText.includes("感谢了你") || cellText.includes("感谢你的") || cellText.includes("点赞") || cellText.includes("送了你")) {
+        notifType = "thank";
+        notifLabel = "点赞";
+      } else if (cellText.includes("提到了你") || cellText.includes("提到你") || cellText.includes("at了你")) {
+        notifType = "mention";
+        notifLabel = "提到";
+      } else if (cellText.includes("收藏了你") || cellText.includes("收藏你的")) {
+        notifType = "fav";
+        notifLabel = "收藏";
+      } else if (cellText.includes("回复了你") || payloadEl) {
+        notifType = "reply";
+        notifLabel = "回复";
+      }
+
+      let text = "";
+      if (payloadEl) {
+        const rawPayload = payloadEl.textContent.replace(/\s+/g, " ").trim();
+        text = author ? `${author}: ${rawPayload}` : rawPayload;
+      } else if (notifType === "thank") {
+        const isReplyThank = cellText.includes("回复");
+        text = isReplyThank
+          ? `❤️ ${author || "有人"} 感谢了你的回复`
+          : `❤️ ${author || "有人"} 感谢了你的主题`;
+      } else if (notifType === "fav") {
+        text = `⭐ ${author || "有人"} 收藏了你的主题`;
+      } else if (notifType === "mention") {
+        text = `@ ${author || "有人"} 提到了你`;
+      } else {
+        text = cellText;
+      }
 
       topics.push({
         id,
+        dedup_key: dedupKey,
         target_floor: target.floor,
         target_reply_id: target.replyId,
         target_anchor: target.anchor,
@@ -20294,11 +20415,13 @@
         title: (topicLink.textContent || "").replace(/\s+/g, " ").trim() || `话题 #${id}`,
         posts_count: target.floor ? target.floor + 1 : 1,
         reply_count: target.floor || 0,
-        created_at: timeEl?.getAttribute("title") || timeEl?.textContent?.trim() || "",
-        bumped_at: timeEl?.getAttribute("title") || timeEl?.textContent?.trim() || "",
-        last_poster_username: memberLink?.textContent?.trim() || "",
-        v2ex_author: memberLink?.textContent?.trim() || "",
+        created_at: timeStr,
+        bumped_at: timeStr,
+        last_poster_username: author,
+        v2ex_author: author,
         node_name: "通知",
+        notif_type: notifType,
+        notif_label: notifLabel,
         v2ex_avatar: avatar,
         notification_text: text,
         posters: [{ user_id: id, description: "V2EX notification" }]
@@ -21796,7 +21919,7 @@
 
   function applyV2exRemoteNotifCount(count) {
     if (!IS_V2EX) return;
-    const isNotifPage = location.pathname === "/notifications" || (typeof listState !== "undefined" && listState.apiPath === "/notifications");
+    const isNotifPage = location.pathname === "/notifications" || (typeof listState !== "undefined" && typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications"));
     if (isNotifPage) {
       if (count > 0 && typeof listState !== "undefined" && !listState.loading) {
         loadList("/notifications", true);

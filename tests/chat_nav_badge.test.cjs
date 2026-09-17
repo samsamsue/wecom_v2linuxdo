@@ -5379,11 +5379,13 @@ test("V2EX notification navigation, URL pushState synchronization, MutationObser
     "MutationObserver must ignore V2EX native notification badge changes"
   );
   assert.ok(
-    scriptContent.includes('if (IS_V2EX && (listState.apiPath === "/notifications" || currentPath === "/notifications")) {\n      navigateInApp("/?tab=all");'),
+    scriptContent.includes('navigateInApp("/?tab=all");') &&
+    scriptContent.includes('listState.apiPath.startsWith("/notifications")'),
     "handleChatNavClick must navigate back to /?tab=all from /notifications"
   );
   assert.ok(
-    scriptContent.includes('emptyNotice = listState.apiPath === "/notifications" ? "暂无未读提醒"'),
+    scriptContent.includes('emptyNotice = isNotifs') &&
+    scriptContent.includes('"暂无未读提醒"'),
     "empty notifications list must display '暂无未读提醒'"
   );
   assert.ok(
@@ -5626,7 +5628,7 @@ test("convCategoryTag omits is-dept tags and CSS hides .wecom-conv-tag.is-dept (
   );
 });
 
-test("convRowHtml preserves notification reply content when fake title is enabled (v0.7.46)", () => {
+test("convRowHtml exempts notifications from fake titles and displays real title (v0.7.46-v0.7.48)", () => {
   // 1. Static assertions on userscript logic
   assert.ok(
     scriptContent.includes("const isNotif = Boolean(") &&
@@ -5635,97 +5637,84 @@ test("convRowHtml preserves notification reply content when fake title is enable
     "convRowHtml must identify notification items"
   );
   assert.ok(
-    scriptContent.includes("${rawSummary} · ${topic.title}"),
-    "convRowHtml must preserve reply content with topic title suffix in masked mode"
+    scriptContent.includes("const title = (isNotif || !maskList) ? String(topic.title || \"\") : disguiseTitleForTopic(topic);"),
+    "notifications must never use fake title and always show real title"
   );
   assert.ok(
-    scriptContent.includes("!rawSummary.includes(topic.title)"),
-    "convRowHtml must not duplicate topic title if already present in notification text"
+    scriptContent.includes("if (maskList && !isNotif)"),
+    "fake title summary override must not apply to notifications"
   );
 
   // 2. Behavioral simulation
-  function simulateConvSummary(topic, maskList, listApiPath = "") {
+  function simulateConvRow(topic, maskList, listApiPath = "") {
     const unread = topic.unread > 0 ? topic.unread : (topic.new_posts > 0 ? topic.new_posts : 0);
     const replyCount = Math.max(0, (topic.posts_count || 1) - 1);
     const isNotif = Boolean(
       topic.notification_text ||
       topic.node_name === "通知" ||
-      listApiPath === "/notifications"
+      topic.notif_type ||
+      listApiPath.startsWith("/notifications")
     );
     let notifText = topic.notification_text || "";
-    if (notifText && topic.last_poster_username && topic.last_poster_username !== "楼主" && !notifText.startsWith(topic.last_poster_username)) {
-      notifText = `${topic.last_poster_username}: ${notifText}`;
+    if (notifText && topic.last_poster_username && topic.last_poster_username !== "楼主") {
+      if (!notifText.startsWith(topic.last_poster_username) && !notifText.startsWith("❤️") && !notifText.startsWith("⭐") && !notifText.startsWith("@")) {
+        notifText = `${topic.last_poster_username}: ${notifText}`;
+      }
     }
     const rawSummary = notifText || (topic.last_poster_username
       ? `${topic.last_poster_username}: ${replyCount > 0 ? `[${replyCount}条回复]` : "发起话题"}`
       : `${topic.posts_count || 0} 回复`);
+    const title = (isNotif || !maskList) ? String(topic.title || "") : "伪装工作报告";
     let summary = rawSummary;
-    if (maskList) {
-      if (isNotif && (topic.notification_text || notifText)) {
-        summary = (topic.title && !rawSummary.includes(topic.title))
-          ? `${rawSummary} · ${topic.title}`
-          : rawSummary;
-      } else {
-        summary = String(topic.title || rawSummary);
-      }
+    if (maskList && !isNotif) {
+      summary = String(topic.title || rawSummary);
     }
-    return summary;
+    return { title, summary };
   }
 
   // Normal topic with maskList off: shows author & reply count
-  assert.equal(
-    simulateConvSummary({ id: 101, title: "关于VS Code配置", last_poster_username: "alice", posts_count: 3 }, false),
-    "alice: [2条回复]"
-  );
+  const normOff = simulateConvRow({ id: 101, title: "关于VS Code配置", last_poster_username: "alice", posts_count: 3 }, false);
+  assert.equal(normOff.title, "关于VS Code配置");
+  assert.equal(normOff.summary, "alice: [2条回复]");
 
-  // Normal topic with maskList on: shows real topic title
-  assert.equal(
-    simulateConvSummary({ id: 101, title: "关于VS Code配置", last_poster_username: "alice", posts_count: 3 }, true),
-    "关于VS Code配置"
-  );
+  // Normal topic with maskList on: shows fake title at top, real title in summary
+  const normOn = simulateConvRow({ id: 101, title: "关于VS Code配置", last_poster_username: "alice", posts_count: 3 }, true);
+  assert.equal(normOn.title, "伪装工作报告");
+  assert.equal(normOn.summary, "关于VS Code配置");
 
-  // Notification reply with maskList off: shows reply text prefixed with author
-  assert.equal(
-    simulateConvSummary({
-      id: 202,
-      title: "关于VS Code配置",
-      last_poster_username: "bob",
-      notification_text: "确实已修复，感谢！",
-      node_name: "通知"
-    }, false, "/notifications"),
-    "bob: 确实已修复，感谢！"
-  );
+  // Notification reply with maskList off: shows real topic title and reply text
+  const notifOff = simulateConvRow({
+    id: 202,
+    title: "关于VS Code配置",
+    last_poster_username: "bob",
+    notification_text: "确实已修复，感谢！",
+    node_name: "通知"
+  }, false, "/notifications");
+  assert.equal(notifOff.title, "关于VS Code配置");
+  assert.equal(notifOff.summary, "bob: 确实已修复，感谢！");
 
-  // Notification reply with maskList on: PRESERVES reply text and includes topic title
-  const maskedNotifSummary = simulateConvSummary({
+  // Notification reply with maskList ON: NEVER uses fake title! Still shows real title and reply text
+  const notifOn = simulateConvRow({
     id: 202,
     title: "关于VS Code配置",
     last_poster_username: "bob",
     notification_text: "确实已修复，感谢！",
     node_name: "通知"
   }, true, "/notifications");
-  assert.ok(
-    maskedNotifSummary.startsWith("bob: 确实已修复，感谢！"),
-    "Masked notification summary must prioritize reply content"
-  );
-  assert.equal(
-    maskedNotifSummary,
-    "bob: 确实已修复，感谢！ · 关于VS Code配置"
-  );
+  assert.equal(notifOn.title, "关于VS Code配置", "Notification must keep real topic title even when fake title is enabled");
+  assert.equal(notifOn.summary, "bob: 确实已修复，感谢！", "Notification summary must show clean reply without corruption");
 
-  // Thank notification already containing topic title: does not duplicate
-  const thankSummary = simulateConvSummary({
+  // Thank notification: clean summary
+  const thankRow = simulateConvRow({
     id: 203,
-    title: "关于VS Code配置",
-    last_poster_username: "bob",
-    notification_text: "bob 感谢了你在主题 关于VS Code配置 的回复",
+    title: "企业微信UI插件",
+    last_poster_username: "charlie",
+    notification_text: "❤️ charlie 感谢了你的回复",
+    notif_type: "thank",
     node_name: "通知"
   }, true, "/notifications");
-  assert.equal(
-    thankSummary,
-    "bob 感谢了你在主题 关于VS Code配置 的回复",
-    "Must not duplicate topic title in thank notifications"
-  );
+  assert.equal(thankRow.title, "企业微信UI插件");
+  assert.equal(thankRow.summary, "❤️ charlie 感谢了你的回复");
 });
 
 test("notification reply content is styled with non-gray color and V2EX supports background unread notification polling (v0.7.47)", () => {
@@ -5808,6 +5797,163 @@ test("notification reply content is styled with non-gray color and V2EX supports
   simulateApplyV2exRemoteNotifCount(1, true);
   assert.equal(simulatedListReloaded, true, "Must trigger notification list reload when on notifications page");
 });
+
+test("notifications exempt from fake title, clear distinction between likes/replies, and infinite scroll pagination (v0.7.48)", () => {
+  // 1. Static assertions for notification CSS, tags, and pagination logic
+  assert.ok(
+    scriptContent.includes(".wecom-conv-tag.wecom-notif-tag {") &&
+    scriptContent.includes(".wecom-conv-tag.wecom-notif-tag.is-thank") &&
+    scriptContent.includes(".wecom-conv-tag.wecom-notif-tag.is-reply") &&
+    scriptContent.includes(".wecom-conv-tag.wecom-notif-tag.is-mention") &&
+    scriptContent.includes(".wecom-conv-tag.wecom-notif-tag.is-fav"),
+    "must define distinct light mode CSS classes for notification tags"
+  );
+  assert.ok(
+    scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-conv-tag.wecom-notif-tag.is-thank") &&
+    scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-conv-tag.wecom-notif-tag.is-reply") &&
+    scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-conv-tag.wecom-notif-tag.is-mention") &&
+    scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-conv-tag.wecom-notif-tag.is-fav"),
+    "must define distinct dark mode CSS classes for notification tags"
+  );
+  assert.ok(
+    scriptContent.includes("const title = (isNotif || !maskList) ? String(topic.title || \"\") : disguiseTitleForTopic(topic);"),
+    "convRowHtml must never disguise notification titles"
+  );
+  assert.ok(
+    scriptContent.includes('const isNotifPage = pageUrl.startsWith("/notifications") || (typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications"));'),
+    "loadMoreList must recognize /notifications pageUrl"
+  );
+  assert.ok(
+    scriptContent.includes("topics = isNotifPage\n          ? extractV2exNotificationsFromDoc(doc)\n          : extractV2exTopicsFromDoc(doc);"),
+    "loadMoreList must extract notifications on notification pages"
+  );
+
+  // 2. Behavioral simulation of extractV2exNotificationsFromDoc
+  function simulateExtractNotifications(mockCells) {
+    return mockCells.map((cell) => {
+      const { href, topicTitle, author, cellText, payloadText, id } = cell;
+      let notifType = "reply";
+      let notifLabel = "回复";
+      if (cellText.includes("感谢了你") || cellText.includes("感谢你的") || cellText.includes("点赞") || cellText.includes("送了你")) {
+        notifType = "thank";
+        notifLabel = "点赞";
+      } else if (cellText.includes("提到了你") || cellText.includes("提到你") || cellText.includes("at了你")) {
+        notifType = "mention";
+        notifLabel = "提到";
+      } else if (cellText.includes("收藏了你") || cellText.includes("收藏你的")) {
+        notifType = "fav";
+        notifLabel = "收藏";
+      }
+
+      let text = "";
+      if (payloadText) {
+        text = author ? `${author}: ${payloadText}` : payloadText;
+      } else if (notifType === "thank") {
+        text = cellText.includes("回复")
+          ? `❤️ ${author || "有人"} 感谢了你的回复`
+          : `❤️ ${author || "有人"} 感谢了你的主题`;
+      } else if (notifType === "fav") {
+        text = `⭐ ${author || "有人"} 收藏了你的主题`;
+      } else if (notifType === "mention") {
+        text = `@ ${author || "有人"} 提到了你`;
+      } else {
+        text = cellText;
+      }
+
+      return {
+        id,
+        title: topicTitle,
+        notif_type: notifType,
+        notif_label: notifLabel,
+        notification_text: text,
+        node_name: "通知"
+      };
+    });
+  }
+
+  const notifs = simulateExtractNotifications([
+    {
+      id: 101,
+      href: "/t/101#reply5",
+      topicTitle: "关于MacBook选购建议",
+      author: "alice",
+      cellText: "alice 感谢了你在主题 关于MacBook选购建议 里的回复",
+      payloadText: null
+    },
+    {
+      id: 102,
+      href: "/t/102#reply18",
+      topicTitle: "分享一个VS Code插件",
+      author: "bob",
+      cellText: "bob 在 分享一个VS Code插件 里回复了你",
+      payloadText: "非常实用，点赞支持！"
+    },
+    {
+      id: 103,
+      href: "/t/103#reply2",
+      topicTitle: "AI代码辅助工具对比",
+      author: "charlie",
+      cellText: "charlie 在 AI代码辅助工具对比 里提到了你",
+      payloadText: "@you 可以参考一下这个方案"
+    }
+  ]);
+
+  // Thank notification: categorized as 'thank' / '点赞', clean message
+  assert.equal(notifs[0].notif_type, "thank");
+  assert.equal(notifs[0].notif_label, "点赞");
+  assert.equal(notifs[0].notification_text, "❤️ alice 感谢了你的回复");
+
+  // Reply notification: categorized as 'reply' / '回复', author + payload
+  assert.equal(notifs[1].notif_type, "reply");
+  assert.equal(notifs[1].notif_label, "回复");
+  assert.equal(notifs[1].notification_text, "bob: 非常实用，点赞支持！");
+
+  // Mention notification: categorized as 'mention' / '提到'
+  assert.equal(notifs[2].notif_type, "mention");
+  assert.equal(notifs[2].notif_label, "提到");
+  assert.equal(notifs[2].notification_text, "charlie: @you 可以参考一下这个方案");
+
+  // 3. Behavioral simulation of parseV2exListPagination on /notifications
+  function simulatePagination(path, count, pageInputMax, hasNextBtn) {
+    if (count === 0) return { hasMore: false, nextPageUrl: null };
+    const currentPage = 1;
+    const totalPages = pageInputMax || 0;
+    if (totalPages > 0) {
+      const hasMore = (totalPages > currentPage) || hasNextBtn;
+      return {
+        hasMore,
+        nextPageUrl: hasMore ? `${path}?p=${currentPage + 1}` : null,
+        totalPages
+      };
+    }
+    if (hasNextBtn) {
+      return {
+        hasMore: true,
+        nextPageUrl: `${path}?p=${currentPage + 1}`,
+        totalPages: 2
+      };
+    }
+    if (path.startsWith("/notifications") && count >= 10) {
+      return {
+        hasMore: true,
+        nextPageUrl: `${path}?p=${currentPage + 1}`,
+        totalPages: 0
+      };
+    }
+    return { hasMore: false, nextPageUrl: null };
+  }
+
+  // Page 1 of notifications with page_input max=3
+  const pag1 = simulatePagination("/notifications", 20, 3, true);
+  assert.equal(pag1.hasMore, true);
+  assert.equal(pag1.nextPageUrl, "/notifications?p=2");
+
+  // Page 1 of notifications with 2 items (no more pages)
+  const pagEmpty = simulatePagination("/notifications", 2, 1, false);
+  assert.equal(pagEmpty.hasMore, false);
+  assert.equal(pagEmpty.nextPageUrl, null);
+});
+
 
 
 
