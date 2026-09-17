@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.57
+// @version      0.7.58
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -3391,10 +3391,18 @@
     .wecom-msg-header-time {
       display: inline-flex;
       align-items: center;
+      gap: 5px;
       font-size: 11px;
       color: var(--wc-text-3);
       white-space: nowrap;
       line-height: 1.2;
+    }
+    .wecom-msg-header-time .wecom-msg-floor,
+    .wecom-msg-meta .wecom-msg-floor {
+      font-size: 11px;
+      color: var(--wc-text-3);
+      opacity: 0.85;
+      font-variant-numeric: tabular-nums;
     }
     .wecom-msg-me .wecom-msg-header {
       justify-content: flex-end;
@@ -10899,7 +10907,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.57";
+  const SCRIPT_VERSION = "0.7.58";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -19106,11 +19114,20 @@
     const replyInd = replyIndicatorHtml(post);
     const showHeaderTime = depth > 0 && Boolean(replyInd);
     const timeHtml = `<span class="wecom-msg-time"${timeAttr}>${escapeHtml(formatTime(post.created_at))}</span>`;
+    const floorNum = IS_V2EX && post.floor != null && post.floor > 0 ? post.floor : post.post_number;
+    const floorHtml = `<span class="wecom-msg-floor" data-floor="${floorNum}" title="${floorNum}楼">#${floorNum}</span>`;
     const topicStats = IS_V2EX && Number(post.post_number) === 1 ? post.v2ex_topic_stats : null;
     const topicStatsHtml = topicStats && (topicStats.views || topicStats.favorites || topicStats.thanks)
       ? `<span class="wecom-v2ex-topic-stats" title="浏览 ${topicStats.views || 0}，收藏 ${topicStats.favorites || 0}，感谢 ${topicStats.thanks || 0}">浏览 ${topicStats.views || 0} · 收藏 ${topicStats.favorites || 0} · 感谢 ${topicStats.thanks || 0}</span>`
       : "";
     const bodyHtml = replyBodyHtml(post, Boolean(replyInd));
+    const metaParts = [
+      showHeaderTime ? "" : timeHtml,
+      showHeaderTime ? "" : floorHtml,
+      topicStatsHtml,
+      likesBadgeHtml
+    ].filter(Boolean).join("");
+    const metaHtml = metaParts ? `<span class="wecom-msg-meta">${metaParts}</span>` : "";
     return `
       <div class="wecom-msg wecom-msg-${side}${threadClass}" data-post-number="${post.post_number}"${post.id ? ` data-post-id="${post.id}"` : ""}${post.floor != null ? ` data-floor="${post.floor}"` : ""}${threadAttr}${me ? ' data-mine="1"' : ""}>
         <span class="wecom-msg-avatar" style="background:${avatarBg}"${userCardAttributes(post)}>${avatar}</span>
@@ -19118,7 +19135,7 @@
           <div class="wecom-msg-header">
             <span class="wecom-msg-name"${userCardAttributes(post)}>${escapeHtml(displayName)}</span>
             ${replyInd}
-            ${showHeaderTime ? `<span class="wecom-msg-header-time">${timeHtml}</span>` : ""}
+            ${showHeaderTime ? `<span class="wecom-msg-header-time">${timeHtml}${floorHtml}</span>` : ""}
           </div>
           <div class="wecom-msg-bubble">
             ${replyReferenceHtml(post)}
@@ -19126,12 +19143,7 @@
             ${childrenHtml || ""}
           </div>
           ${boostsHtml(post)}
-          <span class="wecom-msg-meta">
-            <span>#${IS_V2EX && post.floor != null && post.floor > 0 ? post.floor : post.post_number}</span>
-            ${showHeaderTime ? "" : timeHtml}
-            ${topicStatsHtml}
-            ${likesBadgeHtml}
-          </span>
+          ${metaHtml}
           <div class="wecom-msg-tools">
             <button type="button" class="wecom-msg-tool${liked}" data-action="like" title="${likeLabel}">${likeToolIcon}</button>
             <button type="button" class="wecom-msg-tool" data-action="reply" title="回复">${ICONS.reply}</button>
