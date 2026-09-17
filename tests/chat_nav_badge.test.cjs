@@ -58,7 +58,7 @@ test("simulated getNewTopicsCount logic extracts number from show-more elements"
   assert.equal(simulateCount("查看 3 个新主题", false), 0);
 });
 
-test("linuxdo-wecom guards document.title to remain blank and avoids leaking detail title", () => {
+test("linuxdo-wecom blanks document.title only while fake titles are enabled", () => {
   assert.ok(
     scriptContent.includes("setupTitleGuard"),
     "must include setupTitleGuard"
@@ -68,8 +68,13 @@ test("linuxdo-wecom guards document.title to remain blank and avoids leaking det
     "must include enforceBlankTitle"
   );
   assert.ok(
-    !scriptContent.includes("document.title = `${chatState.title}"),
-    "must not set document.title to chatState.title"
+    scriptContent.includes("function isPageTitleMasked()") &&
+    scriptContent.includes('return getViewMode() !== "native" && !otherThemeActive() && isMaskTitle();'),
+    "must guard blank titles with the fake-title setting"
+  );
+  assert.ok(
+    scriptContent.includes("setPageTitle(chatState.title);"),
+    "must restore the actual topic title when fake titles are disabled"
   );
 });
 
@@ -262,6 +267,11 @@ test("Boost toggle setting enables hiding and menu toggle", () => {
   assert.ok(
     scriptContent.includes("wecom-menu-toggle-boost"),
     "must provide wecom-menu-toggle-boost button in theme settings menu"
+  );
+  assert.ok(
+    scriptContent.includes("(IS_LINUXDO ?") &&
+    scriptContent.includes('`${ICONS.boost}<span class="wecom-menu-label">显示消息 Boost</span>'),
+    "must render the Boost setting only for Linux DO, not V2EX"
   );
   assert.ok(
     scriptContent.includes("html.wecom-hide-boost .wecom-msg-boosts"),
@@ -6312,8 +6322,6 @@ test("V2EX threaded conversation view: reply target resolution, tree hierarchy, 
   assert.ok(renderedRoots.includes('<div class="wecom-msg-bubble"><p>xxxxx</p><div class="wecom-reply-children">'), "children are nested inside parent bubble");
   assert.ok(renderedRoots.includes('data-post-number="5"'), "renders independent post 5");
 });
-
-
 
 
 

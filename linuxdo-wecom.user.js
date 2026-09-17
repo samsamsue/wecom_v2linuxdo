@@ -2753,7 +2753,7 @@
     }
     .wecom-theme-menu button {
       width: 100%; height: 34px; display: flex; align-items: center; gap: 8px;
-      padding: 0 8px; border: 0; border-radius: 7px; background: transparent;
+      margin: 1px 0; padding: 0 8px; border: 0; border-radius: 7px; background: transparent;
       color: var(--wc-text-2); font: 13px var(--wc-font); text-align: left; cursor: pointer;
     }
     .wecom-theme-menu button:hover { background: var(--wc-hover); color: var(--wc-text); }
@@ -6725,27 +6725,31 @@
     .wecom-list-body,
     .wecom-chat-body,
     .wecom-chat-messages,
-    .wecom-member-body {
+    .wecom-member-body,
+    .wecom-theme-menu {
       scrollbar-width: thin !important;
       scrollbar-color: transparent transparent !important;
     }
     .wecom-list-body::-webkit-scrollbar,
     .wecom-chat-body::-webkit-scrollbar,
     .wecom-chat-messages::-webkit-scrollbar,
-    .wecom-member-body::-webkit-scrollbar {
+    .wecom-member-body::-webkit-scrollbar,
+    .wecom-theme-menu::-webkit-scrollbar {
       width: 6px !important;
       height: 6px !important;
     }
     .wecom-list-body::-webkit-scrollbar-track,
     .wecom-chat-body::-webkit-scrollbar-track,
     .wecom-chat-messages::-webkit-scrollbar-track,
-    .wecom-member-body::-webkit-scrollbar-track {
+    .wecom-member-body::-webkit-scrollbar-track,
+    .wecom-theme-menu::-webkit-scrollbar-track {
       background: transparent !important;
     }
     .wecom-list-body::-webkit-scrollbar-thumb,
     .wecom-chat-body::-webkit-scrollbar-thumb,
     .wecom-chat-messages::-webkit-scrollbar-thumb,
-    .wecom-member-body::-webkit-scrollbar-thumb {
+    .wecom-member-body::-webkit-scrollbar-thumb,
+    .wecom-theme-menu::-webkit-scrollbar-thumb {
       background: transparent !important;
       border-radius: 3px !important;
       transition: background-color 0.2s ease-in-out !important;
@@ -6758,13 +6762,16 @@
     .wecom-chat-body.is-scrolling::-webkit-scrollbar-thumb,
     .wecom-member-panel:hover .wecom-member-body::-webkit-scrollbar-thumb,
     .wecom-member-body:hover::-webkit-scrollbar-thumb,
-    .wecom-member-body.is-scrolling::-webkit-scrollbar-thumb {
+    .wecom-member-body.is-scrolling::-webkit-scrollbar-thumb,
+    .wecom-theme-menu:hover::-webkit-scrollbar-thumb,
+    .wecom-theme-menu.is-scrolling::-webkit-scrollbar-thumb {
       background: rgba(0, 0, 0, 0.2) !important;
     }
     .wecom-list-body::-webkit-scrollbar-thumb:hover,
     .wecom-chat-body::-webkit-scrollbar-thumb:hover,
     .wecom-chat-messages::-webkit-scrollbar-thumb:hover,
-    .wecom-member-body::-webkit-scrollbar-thumb:hover {
+    .wecom-member-body::-webkit-scrollbar-thumb:hover,
+    .wecom-theme-menu::-webkit-scrollbar-thumb:hover {
       background: rgba(0, 0, 0, 0.35) !important;
     }
     .wecom-list-panel:hover .wecom-list-body,
@@ -6775,7 +6782,9 @@
     .wecom-chat-body.is-scrolling,
     .wecom-member-panel:hover .wecom-member-body,
     .wecom-member-body:hover,
-    .wecom-member-body.is-scrolling {
+    .wecom-member-body.is-scrolling,
+    .wecom-theme-menu:hover,
+    .wecom-theme-menu.is-scrolling {
       scrollbar-color: rgba(0, 0, 0, 0.2) transparent !important;
     }
 
@@ -9510,13 +9519,16 @@
     html.${ROOT_CLASS}.wecom-dark .wecom-chat-body.is-scrolling::-webkit-scrollbar-thumb,
     html.${ROOT_CLASS}.wecom-dark .wecom-member-panel:hover .wecom-member-body::-webkit-scrollbar-thumb,
     html.${ROOT_CLASS}.wecom-dark .wecom-member-body:hover::-webkit-scrollbar-thumb,
-    html.${ROOT_CLASS}.wecom-dark .wecom-member-body.is-scrolling::-webkit-scrollbar-thumb {
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-body.is-scrolling::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu.is-scrolling::-webkit-scrollbar-thumb {
       background: rgba(255, 255, 255, 0.22) !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-list-body::-webkit-scrollbar-thumb:hover,
     html.${ROOT_CLASS}.wecom-dark .wecom-chat-body::-webkit-scrollbar-thumb:hover,
     html.${ROOT_CLASS}.wecom-dark .wecom-chat-messages::-webkit-scrollbar-thumb:hover,
-    html.${ROOT_CLASS}.wecom-dark .wecom-member-body::-webkit-scrollbar-thumb:hover {
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-body::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu::-webkit-scrollbar-thumb:hover {
       background: rgba(255, 255, 255, 0.38) !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-list-panel:hover .wecom-list-body,
@@ -9527,7 +9539,9 @@
     html.${ROOT_CLASS}.wecom-dark .wecom-chat-body.is-scrolling,
     html.${ROOT_CLASS}.wecom-dark .wecom-member-panel:hover .wecom-member-body,
     html.${ROOT_CLASS}.wecom-dark .wecom-member-body:hover,
-    html.${ROOT_CLASS}.wecom-dark .wecom-member-body.is-scrolling {
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-body.is-scrolling,
+    html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu.is-scrolling {
       scrollbar-color: rgba(255, 255, 255, 0.22) transparent !important;
     }
 
@@ -9698,14 +9712,51 @@
   /* ============================== 网页 Title 空白守护 ============================== */
 
   const BLANK_PAGE_TITLE = " ";
+  let nativeTitleDescriptor = null;
+  let lastVisiblePageTitle = "";
+
+  function isPageTitleMasked() {
+    return getViewMode() !== "native" && !otherThemeActive() && isMaskTitle();
+  }
+
+  function getNativeTitleDescriptor() {
+    if (nativeTitleDescriptor) return nativeTitleDescriptor;
+    const proto = typeof Document !== "undefined" ? Document.prototype : null;
+    nativeTitleDescriptor = proto ? Object.getOwnPropertyDescriptor(proto, "title") : null;
+    return nativeTitleDescriptor;
+  }
+
+  function readNativePageTitle() {
+    const descriptor = getNativeTitleDescriptor();
+    return descriptor?.get ? String(descriptor.get.call(document) || "") : "";
+  }
+
+  function writeNativePageTitle(value) {
+    const descriptor = getNativeTitleDescriptor();
+    if (descriptor?.set) descriptor.set.call(document, String(value || ""));
+  }
+
+  function setPageTitle(title) {
+    const value = String(title || "").trim();
+    if (value) lastVisiblePageTitle = value;
+    if (isPageTitleMasked()) {
+      writeNativePageTitle(BLANK_PAGE_TITLE);
+    } else if (value) {
+      writeNativePageTitle(value);
+    }
+  }
 
   function enforceBlankTitle() {
     if (typeof document === "undefined") return;
-    if (getViewMode() === "native" || otherThemeActive()) return;
+    if (!isPageTitleMasked()) {
+      const title = String(chatState?.title || lastVisiblePageTitle || "").trim();
+      if (title) writeNativePageTitle(title);
+      return;
+    }
     try {
-      if (document.title !== BLANK_PAGE_TITLE) {
-        document.title = BLANK_PAGE_TITLE;
-      }
+      const currentTitle = readNativePageTitle();
+      if (currentTitle.trim()) lastVisiblePageTitle = currentTitle;
+      writeNativePageTitle(BLANK_PAGE_TITLE);
       const titleEl = document.querySelector("title");
       if (titleEl && titleEl.textContent !== BLANK_PAGE_TITLE) {
         titleEl.textContent = BLANK_PAGE_TITLE;
@@ -9715,26 +9766,19 @@
 
   function setupTitleGuard() {
     if (typeof document === "undefined") return;
+    const desc = getNativeTitleDescriptor();
     enforceBlankTitle();
 
     try {
-      const proto = typeof Document !== "undefined" ? Document.prototype : null;
-      const desc = proto ? Object.getOwnPropertyDescriptor(proto, "title") : null;
       if (desc && desc.configurable) {
         Object.defineProperty(document, "title", {
           get() {
-            if (getViewMode() === "native" || otherThemeActive()) {
-              return desc.get ? desc.get.call(document) : BLANK_PAGE_TITLE;
-            }
-            return BLANK_PAGE_TITLE;
+            return desc.get ? desc.get.call(document) : "";
           },
           set(val) {
-            if (getViewMode() === "native" || otherThemeActive()) {
-              if (desc.set) desc.set.call(document, val);
-              return;
-            }
-            // 企微模式下强制保持空白，不显示详情页标题
-            if (desc.set) desc.set.call(document, BLANK_PAGE_TITLE);
+            const value = String(val || "");
+            if (value.trim()) lastVisiblePageTitle = value;
+            if (desc.set) desc.set.call(document, isPageTitleMasked() ? BLANK_PAGE_TITLE : value);
           },
           configurable: true,
           enumerable: true
@@ -9746,7 +9790,11 @@
       const titleEl = document.querySelector("title");
       if (titleEl && typeof MutationObserver !== "undefined") {
         const titleObserver = new MutationObserver(() => {
-          if (getViewMode() === "native" || otherThemeActive()) return;
+          if (!isPageTitleMasked()) {
+            if (titleEl.textContent.trim()) lastVisiblePageTitle = titleEl.textContent;
+            return;
+          }
+          if (titleEl.textContent.trim()) lastVisiblePageTitle = titleEl.textContent;
           if (titleEl.textContent !== BLANK_PAGE_TITLE) {
             titleEl.textContent = BLANK_PAGE_TITLE;
           }
@@ -10567,8 +10615,9 @@
       `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-hide-chat-avatar" aria-checked="false">` +
       `${ICONS.userOff}<span class="wecom-menu-label">隐藏对话详情头像</span><span class="wecom-menu-state-badge is-off">已关闭</span></button>` +
       `<div class="wecom-theme-menu-title wecom-theme-menu-divider">消息功能</div>` +
-      `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-boost" aria-checked="true">` +
-      `${ICONS.boost}<span class="wecom-menu-label">显示消息 Boost</span><span class="wecom-menu-state-badge is-on">已开启</span></button>` +
+      (IS_LINUXDO ?
+        `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-boost" aria-checked="true">` +
+        `${ICONS.boost}<span class="wecom-menu-label">显示消息 Boost</span><span class="wecom-menu-state-badge is-on">已开启</span></button>` : "") +
       `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-thread-view" aria-checked="true">` +
       `${ICONS.thread}<span class="wecom-menu-label">对话楼层关系</span><span class="wecom-menu-state-badge is-on">已开启</span></button>` +
       `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-base64" aria-checked="true">` +
@@ -10597,6 +10646,14 @@
       `<button type="button" role="menuitem" class="wecom-menu-restore-native">${ICONS.external}<span>恢复原风格 (Alt+W)</span></button>` +
       `<button type="button" role="menuitem" class="wecom-check-update">${ICONS.refresh}<span>检查脚本更新</span></button>`;
     document.body.appendChild(menu);
+    let themeMenuScrollTimer = null;
+    menu.addEventListener("scroll", () => {
+      menu.classList.add("is-scrolling");
+      clearTimeout(themeMenuScrollTimer);
+      themeMenuScrollTimer = setTimeout(() => {
+        menu.classList.remove("is-scrolling");
+      }, 800);
+    }, { passive: true });
     menu.addEventListener("click", (event) => {
       if (event.target.closest(".wecom-menu-restore-native")) {
         event.preventDefault();
@@ -18047,7 +18104,7 @@
         }
       }
     }
-    document.title = " ";
+    setPageTitle(chatState.title);
     enforceBlankTitle();
     setComposerPlaceholder(displayTitle);
 
@@ -21700,7 +21757,7 @@
           ? `企业内部群 · ${replyTotal} 条消息`
           : `归属于 ${orgName} · ${replyTotal} 条回复`;
       }
-      document.title = " ";
+      setPageTitle(chatState.title);
       enforceBlankTitle();
 
       setComposerPlaceholder(displayTitle);
