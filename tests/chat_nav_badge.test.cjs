@@ -5582,6 +5582,51 @@ test("entering notifications or calling clearNotificationBadge updates V2EX unre
   assert.equal(reopenedText, "0 未读提醒", "Reopening popover must render '0 未读提醒'");
 });
 
+test("convCategoryTag omits is-dept tags and CSS hides .wecom-conv-tag.is-dept (v0.7.45)", () => {
+  // 1. Static code assertions
+  assert.ok(
+    !scriptContent.includes('return `<span class="wecom-conv-tag is-dept">'),
+    "convCategoryTag must NOT return is-dept tag"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-conv-tag.is-dept {\n      display: none !important;"),
+    "light mode CSS must hide .wecom-conv-tag.is-dept with display: none !important"
+  );
+  assert.ok(
+    scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-conv-tag.is-dept {\n      display: none !important;"),
+    "dark mode CSS must hide .wecom-conv-tag.is-dept with display: none !important"
+  );
+
+  // 2. Behavioral simulation of convCategoryTag
+  function simulateConvCategoryTag(topic, categories = {}) {
+    if (!categories || !topic.category_id) return "";
+    const cat = categories[topic.category_id];
+    if (!cat) return "";
+    const name = cat.name || "";
+    const isExt = /外|ext|资源|闲聊|搞七/i.test(name);
+    if (!isExt) return "";
+    return `<span class="wecom-conv-tag is-ext">@${name}</span>`;
+  }
+
+  // Topic with node_name (V2EX topic)
+  assert.equal(simulateConvCategoryTag({ node_name: "qna" }), "", "V2EX node must not render dept tag");
+
+  // Normal category on Linux DO
+  assert.equal(
+    simulateConvCategoryTag({ category_id: 1 }, { 1: { name: "日常讨论" } }),
+    "",
+    "Normal department category must not render dept tag"
+  );
+
+  // External category on Linux DO
+  assert.equal(
+    simulateConvCategoryTag({ category_id: 2 }, { 2: { name: "外部联系人" } }),
+    '<span class="wecom-conv-tag is-ext">@外部联系人</span>',
+    "External category must keep is-ext tag"
+  );
+});
+
+
 
 
 
