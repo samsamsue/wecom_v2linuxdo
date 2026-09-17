@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.54
+// @version      0.7.55
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -3294,7 +3294,7 @@
       margin-top: 6px;
       padding-top: 4px;
       padding-left: 6px;
-      border-left: 1px solid rgba(0, 0, 0, 0.2) !important;
+      border-left: 1px solid rgba(0, 0, 0, 0.12) !important;
       position: relative;
       transition: border-left-color 0.16s ease;
     }
@@ -8637,7 +8637,7 @@
       color: #70a5f9;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-reply-children {
-      border-left-color: rgba(255, 255, 255, 0.22) !important;
+      border-left-color: rgba(255, 255, 255, 0.13) !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-reply-children:hover:not(:has(.wecom-reply-children:hover)),
     html.${ROOT_CLASS}.wecom-dark .wecom-reply-children:focus-within:not(:has(.wecom-reply-children:focus-within)) {
@@ -10777,7 +10777,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.54";
+  const SCRIPT_VERSION = "0.7.55";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
