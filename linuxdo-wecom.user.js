@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.46
+// @version      0.7.47
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -6764,6 +6764,23 @@
       min-width: 0;
       line-height: 1.3;
     }
+    .wecom-conv.is-notif .wecom-conv-msg,
+    .wecom-conv-msg.is-notif-msg,
+    .wecom-conv.is-notif .wecom-notif-reply {
+      color: var(--wc-text) !important;
+    }
+    .wecom-conv.is-notif .wecom-notif-topic {
+      color: var(--wc-text-3) !important;
+      font-size: 11.5px;
+    }
+    .wecom-conv.active.is-notif .wecom-conv-msg,
+    .wecom-conv.active .wecom-conv-msg.is-notif-msg,
+    .wecom-conv.active .wecom-notif-reply {
+      color: #FFFFFF !important;
+    }
+    .wecom-conv.active .wecom-notif-topic {
+      color: rgba(255, 255, 255, 0.75) !important;
+    }
     .wecom-conv-icons {
       display: flex;
       align-items: center;
@@ -8768,6 +8785,14 @@
     html.${ROOT_CLASS}.wecom-dark .wecom-conv-msg {
       color: #8C99AA !important;
     }
+    html.${ROOT_CLASS}.wecom-dark .wecom-conv.is-notif .wecom-conv-msg,
+    html.${ROOT_CLASS}.wecom-dark .wecom-conv-msg.is-notif-msg,
+    html.${ROOT_CLASS}.wecom-dark .wecom-conv.is-notif .wecom-notif-reply {
+      color: #E6E8EB !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-conv.is-notif .wecom-notif-topic {
+      color: #8C99AA !important;
+    }
     html.${ROOT_CLASS}.wecom-dark .wecom-conv-time {
       color: #6F7682 !important;
     }
@@ -10447,7 +10472,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.46";
+  const SCRIPT_VERSION = "0.7.47";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -14822,6 +14847,16 @@
         summary = String(topic.title || rawSummary);
       }
     }
+    let msgHtml = "";
+    if (isNotif) {
+      if (maskList && topic.title && !rawSummary.includes(topic.title)) {
+        msgHtml = `<span class="wecom-notif-reply">${escapeHtml(rawSummary)}</span><span class="wecom-notif-topic"> · ${escapeHtml(topic.title)}</span>`;
+      } else {
+        msgHtml = `<span class="wecom-notif-reply">${escapeHtml(summary)}</span>`;
+      }
+    } else {
+      msgHtml = escapeHtml(summary);
+    }
     const tag = (maskList || isMaskAvatar()) ? "" : convCategoryTag(topic);
     const isPinned = !!(topic.pinned || topic.pinned_globally);
     let targetFloor = topic.target_floor;
@@ -14846,7 +14881,7 @@
     const timeMs = parseTimestamp(rawTime);
     const timeAttr = timeMs ? ` data-time="${timeMs}"` : "";
     return `
-      <a class="wecom-conv${isPinned ? " is-pinned" : ""}" href="${escapeHtml(topicHref(topic))}" data-topic-id="${topic.id}" ${targetAttrs} title="${escapeHtml(String(topic.title || title || ""))}">
+      <a class="wecom-conv${isPinned ? " is-pinned" : ""}${isNotif ? " is-notif" : ""}" href="${escapeHtml(topicHref(topic))}" data-topic-id="${topic.id}" ${targetAttrs} title="${escapeHtml(String(topic.title || title || ""))}">
         ${convAvatarHtml(topic, usersById)}
         <span class="wecom-conv-info">
           <span class="wecom-conv-top">
@@ -14857,7 +14892,7 @@
             <span class="wecom-conv-time"${timeAttr}>${escapeHtml(formatTime(rawTime))}</span>
           </span>
           <span class="wecom-conv-bottom">
-            <span class="wecom-conv-msg">${escapeHtml(summary)}</span>
+            <span class="wecom-conv-msg${isNotif ? " is-notif-msg" : ""}">${msgHtml}</span>
             <span class="wecom-conv-icons">
               ${isPinned ? `<span class="wecom-conv-pin" title="置顶">${ICONS.pin}</span>` : ""}
               ${unread ? `<span class="wecom-conv-badge">${unread > 99 ? "99+" : unread}</span>` : ""}
@@ -21621,6 +21656,11 @@
       if (Number(chatState.topicId) !== topicId) return 0;
 
       const doc = new DOMParser().parseFromString(html, "text/html");
+      const remoteNotif = doc.querySelector("#Top a[href^='/notifications'], #Rightbar a[href^='/notifications']");
+      if (remoteNotif) {
+        const m = (remoteNotif.textContent || "").match(/\d+/);
+        if (m) applyV2exRemoteNotifCount(parseInt(m[0], 10));
+      }
       const parsed = parseV2exTopicDoc(topicId, doc, currentPage);
       if (!parsed || Number(chatState.topicId) !== topicId) return 0;
 
@@ -21745,6 +21785,78 @@
     if (v2exTopicPollTimer) {
       clearInterval(v2exTopicPollTimer);
       v2exTopicPollTimer = null;
+    }
+  }
+
+  /* ============================== V2EX 未读通知后台静默轮询 ============================== */
+
+  let v2exNotifPollTimer = null;
+  let v2exNotifPollInFlight = false;
+  const V2EX_NOTIF_POLL_INTERVAL_MS = 45000;
+
+  function applyV2exRemoteNotifCount(count) {
+    if (!IS_V2EX) return;
+    const isNotifPage = location.pathname === "/notifications" || (typeof listState !== "undefined" && listState.apiPath === "/notifications");
+    if (isNotifPage) {
+      if (count > 0 && typeof listState !== "undefined" && !listState.loading) {
+        loadList("/notifications", true);
+      }
+      return;
+    }
+    if (count > lastKnownRawNotifCount) {
+      notificationCountOverride = null;
+    }
+    lastKnownRawNotifCount = count;
+    if (cachedV2exUserStats) {
+      cachedV2exUserStats.unreadNotifs = count;
+      try { localStorage.setItem(V2EX_USER_STATS_KEY, JSON.stringify(cachedV2exUserStats)); } catch {}
+    }
+    const localLinks = document.querySelectorAll("#Top a[href^='/notifications'], #Rightbar a[href^='/notifications']");
+    localLinks.forEach((a) => {
+      a.textContent = count > 0 ? `${count} 条未读提醒` : "0 未读提醒";
+    });
+    syncRail();
+  }
+
+  async function pollV2exNotificationsOnce() {
+    if (!IS_V2EX || v2exNotifPollInFlight) return 0;
+    if (document.visibilityState !== "visible") return 0;
+    if (getViewMode() === "native" || otherThemeActive()) return 0;
+    v2exNotifPollInFlight = true;
+    try {
+      const resp = await fetch("/", { credentials: "same-origin", cache: "no-cache" });
+      if (!resp.ok) return 0;
+      const html = await resp.text();
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const notifLink = doc.querySelector("#Top a[href^='/notifications'], #Rightbar a[href^='/notifications']");
+      if (notifLink) {
+        const text = notifLink.textContent || "";
+        const m = text.match(/\d+/);
+        const count = m ? parseInt(m[0], 10) : 0;
+        applyV2exRemoteNotifCount(count);
+        return count;
+      }
+      return 0;
+    } catch {
+      return 0;
+    } finally {
+      v2exNotifPollInFlight = false;
+    }
+  }
+
+  function startV2exNotificationPolling() {
+    if (v2exNotifPollTimer) clearInterval(v2exNotifPollTimer);
+    v2exNotifPollTimer = setInterval(() => {
+      if (IS_V2EX && document.visibilityState === "visible") {
+        pollV2exNotificationsOnce();
+      }
+    }, V2EX_NOTIF_POLL_INTERVAL_MS);
+  }
+
+  function stopV2exNotificationPolling() {
+    if (v2exNotifPollTimer) {
+      clearInterval(v2exNotifPollTimer);
+      v2exNotifPollTimer = null;
     }
   }
 
@@ -21943,6 +22055,7 @@
     closeBase64InsertDialog();
     closeLinuxDoConnectModal();
     stopV2exTopicPolling();
+    stopV2exNotificationPolling();
     stopRelativeTimeRefresh();
     document.querySelector(".wecom-toast-container")?.remove();
     document.querySelector(".wecom-connect-overlay, .wecom-connect-modal")?.remove();
@@ -22157,8 +22270,11 @@
           makeFavicon();
           enforceBlankTitle();
           refreshRelativeTimes();
-          if (IS_V2EX && chatState.topicId && Date.now() - v2exLastPollTime >= 5000) {
-            pollV2exCurrentTopicOnce();
+          if (IS_V2EX) {
+            pollV2exNotificationsOnce();
+            if (chatState.topicId && Date.now() - v2exLastPollTime >= 5000) {
+              pollV2exCurrentTopicOnce();
+            }
           }
         }
       });
@@ -22239,6 +22355,7 @@
         syncV2exUserStats();
       }, 800);
       startV2exTopicPolling();
+      startV2exNotificationPolling();
     }
 
     // ⌘/Ctrl+K → 会话栏搜索（并同步原生 welcome-banner）

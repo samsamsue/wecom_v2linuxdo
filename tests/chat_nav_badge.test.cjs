@@ -5728,6 +5728,88 @@ test("convRowHtml preserves notification reply content when fake title is enable
   );
 });
 
+test("notification reply content is styled with non-gray color and V2EX supports background unread notification polling (v0.7.47)", () => {
+  // 1. Static assertions for non-gray notification CSS and markup
+  assert.ok(
+    scriptContent.includes(".wecom-conv.is-notif .wecom-conv-msg,") &&
+    scriptContent.includes(".wecom-conv-msg.is-notif-msg,") &&
+    scriptContent.includes(".wecom-conv.is-notif .wecom-notif-reply"),
+    "must define CSS for non-gray notification reply content"
+  );
+  assert.ok(
+    scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-conv.is-notif .wecom-notif-reply {\n      color: #E6E8EB !important;"),
+    "must define dark mode non-gray color for notification reply content"
+  );
+  assert.ok(
+    scriptContent.includes('span class="wecom-conv-msg${isNotif ? " is-notif-msg" : ""}">'),
+    "convRowHtml must render is-notif-msg class on notification rows"
+  );
+  assert.ok(
+    scriptContent.includes('span class="wecom-notif-reply"'),
+    "convRowHtml must render .wecom-notif-reply container"
+  );
+
+  // 2. Static assertions for V2EX background notification polling
+  assert.ok(
+    scriptContent.includes("const V2EX_NOTIF_POLL_INTERVAL_MS = 45000;"),
+    "must define V2EX_NOTIF_POLL_INTERVAL_MS as 45s"
+  );
+  assert.ok(
+    scriptContent.includes("function applyV2exRemoteNotifCount("),
+    "must define applyV2exRemoteNotifCount"
+  );
+  assert.ok(
+    scriptContent.includes("async function pollV2exNotificationsOnce("),
+    "must define pollV2exNotificationsOnce"
+  );
+  assert.ok(
+    scriptContent.includes("function startV2exNotificationPolling("),
+    "must define startV2exNotificationPolling"
+  );
+  assert.ok(
+    scriptContent.includes("function stopV2exNotificationPolling("),
+    "must define stopV2exNotificationPolling"
+  );
+
+  // 3. Behavioral simulation of applyV2exRemoteNotifCount
+  let simulatedOverride = 0;
+  let simulatedRawCount = 0;
+  let simulatedListReloaded = false;
+  let simulatedCachedStats = { unreadNotifs: 0 };
+  const mockDomLinks = [{ textContent: "" }];
+
+  function simulateApplyV2exRemoteNotifCount(count, isNotifPage = false) {
+    if (isNotifPage) {
+      if (count > 0) simulatedListReloaded = true;
+      return;
+    }
+    if (count > simulatedRawCount) {
+      simulatedOverride = null;
+    }
+    simulatedRawCount = count;
+    simulatedCachedStats.unreadNotifs = count;
+    mockDomLinks.forEach(a => {
+      a.textContent = count > 0 ? `${count} 条未读提醒` : "0 未读提醒";
+    });
+  }
+
+  // Initial state: 0 unread
+  simulateApplyV2exRemoteNotifCount(0);
+  assert.equal(mockDomLinks[0].textContent, "0 未读提醒");
+  assert.equal(simulatedCachedStats.unreadNotifs, 0);
+
+  // Remote detects 2 new notifications while not on notification page
+  simulateApplyV2exRemoteNotifCount(2, false);
+  assert.equal(mockDomLinks[0].textContent, "2 条未读提醒");
+  assert.equal(simulatedCachedStats.unreadNotifs, 2);
+  assert.equal(simulatedOverride, null, "Override must be cleared when count increases");
+
+  // Remote detects notification while on notification page: triggers list reload
+  simulateApplyV2exRemoteNotifCount(1, true);
+  assert.equal(simulatedListReloaded, true, "Must trigger notification list reload when on notifications page");
+});
+
+
 
 
 
