@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.42
+// @version      0.7.43
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -208,6 +208,8 @@
   ICONS.chat = ICONS.msg;
   ICONS.list = ICONS.msg;
   ICONS.calendar = ICONS.cal;
+  ICONS.notif = ICONS.bell;
+  ICONS.notification = ICONS.bell;
   ICONS.worktable = ICONS.work;
   ICONS.cloud = ICONS.doc;
   ICONS.wiki = ICONS.doc;
@@ -10443,7 +10445,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.42";
+  const SCRIPT_VERSION = "0.7.43";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -10611,7 +10613,7 @@
   /** 企业微信工作台导航项（对齐官方截图：消息、历史、日程、待办、会议、智能文档、智能总结、工作台、通讯录、微盘、高级功能、分组） */
   const RAIL_DECO_ITEMS = [
     { key: "history", icon: "history", label: "历史" },
-    IS_V2EX ? { key: "cal", icon: "cal", label: "日程" } : { key: "connect", icon: "connect", label: "Connect" },
+    IS_V2EX ? { key: "notif", icon: "bell", label: "通知" } : { key: "connect", icon: "connect", label: "Connect" },
     { key: "todo", icon: "todo", label: "待办" },
     { key: "meet", icon: "meet", label: "会议" },
     { key: "smartdoc", icon: "smartdoc", label: "智能文档", dot: true },
@@ -10881,7 +10883,7 @@
   function ensureRail() {
     let rail = document.querySelector(".wecom-rail");
     // 重建为企业微信 56px 垂直标准停靠栏
-    if (rail && (!rail.querySelector("[data-rail-key='group']") || !rail.querySelector("[data-rail-key='history']") || rail.querySelector(".wecom-rail-groups"))) {
+    if (rail && (!rail.querySelector("[data-rail-key='group']") || !rail.querySelector("[data-rail-key='history']") || rail.querySelector(".wecom-rail-groups") || (IS_V2EX && rail.querySelector("[data-rail-key='cal']")))) {
       rail.remove();
       rail = null;
     }
@@ -10917,6 +10919,7 @@
         `<button type="button" class="wecom-rail-item" data-rail-key="${item.key}" title="${item.label}">` +
         `<div class="wecom-rail-icon">${ICONS[item.icon] || ""}</div>` +
         `<span class="wecom-rail-label">${item.label}</span>` +
+        `${item.key === "notif" ? '<span class="wecom-rail-badge" style="display:none"></span>' : ""}` +
         `${item.dot ? '<i class="wecom-rail-dot"></i>' : ""}</button>`
       ).join("") +
       `<button type="button" class="wecom-rail-item wecom-rail-more" data-rail-key="group" title="展开/收起话题导航" aria-expanded="false">` +
@@ -10951,6 +10954,11 @@
     if (avatarBadge) {
       avatarBadge.style.display = "none";
       avatarBadge.textContent = "";
+    }
+    const notifBadge = document.querySelector('[data-rail-key="notif"] .wecom-rail-badge');
+    if (notifBadge) {
+      notifBadge.style.display = "none";
+      notifBadge.textContent = "";
     }
     // 清除 V2EX 原生 DOM 中的未读提示文本
     if (IS_V2EX) {
@@ -10995,6 +11003,11 @@
     if (avatarBadge) {
       avatarBadge.style.display = next > 0 ? "" : "none";
       avatarBadge.textContent = next > 99 ? "99+" : String(next);
+    }
+    const notifBadge = document.querySelector('[data-rail-key="notif"] .wecom-rail-badge');
+    if (notifBadge) {
+      notifBadge.style.display = next > 0 ? "" : "none";
+      notifBadge.textContent = next > 99 ? "99+" : String(next);
     }
   }
 
@@ -11114,13 +11127,37 @@
       avatarBadge.style.display = notifCount > 0 ? "" : "none";
       avatarBadge.textContent = notifCount > 99 ? "99+" : String(notifCount);
     }
+    const notifBadge = document.querySelector('[data-rail-key="notif"] .wecom-rail-badge');
+    if (notifBadge) {
+      notifBadge.style.display = notifCount > 0 ? "" : "none";
+      notifBadge.textContent = notifCount > 99 ? "99+" : String(notifCount);
+    }
 
     // 「消息」项角标：显示新主题数（从 .show-more.has-topics 提取）
     syncChatBadge();
+    syncRailNavActive();
 
     if (IS_V2EX) {
       extractV2exMoneyFromDom(document);
     }
+  }
+
+  function syncRailNavActive(rail) {
+    const root = rail || document.querySelector(".wecom-rail");
+    if (!root) return;
+    const isHistory = listState.listMode === "history";
+    const isNotif = IS_V2EX && (location.pathname === "/notifications" || listState.apiPath === "/notifications");
+    root.querySelectorAll(".wecom-rail-item").forEach((item) => {
+      const key = item.dataset.railKey;
+      if (key === "group" || !key) return;
+      if (isHistory) {
+        item.classList.toggle("active", key === "history");
+      } else if (isNotif) {
+        item.classList.toggle("active", key === "notif");
+      } else {
+        item.classList.toggle("active", key === "chat");
+      }
+    });
   }
 
   /* ============================== 新主题角标与「消息」刷新回到顶部 ============================== */
@@ -11308,6 +11345,56 @@
     });
   }
 
+  /** 点击左侧「通知」图标：打开通知列表并清除角标 */
+  function handleNotifNavClick() {
+    closeNotifMenu();
+
+    if (listState.listMode === "history") {
+      switchToListMode("chat");
+    }
+
+    clearNotificationBadge();
+
+    const notifBtn = document.querySelector('.wecom-rail-item[data-rail-key="notif"]');
+    if (notifBtn) {
+      const rail = notifBtn.closest(".wecom-rail");
+      if (rail) {
+        rail.querySelectorAll(".wecom-rail-item").forEach((item) => {
+          if (item.dataset.railKey === "notif") item.classList.add("active");
+          else if (item.dataset.railKey !== "group") item.classList.remove("active");
+        });
+      }
+    }
+
+    if (IS_V2EX) {
+      const body = document.querySelector(".wecom-list-body");
+      if (location.pathname !== "/notifications") {
+        if (body) body.innerHTML = `<div class="wecom-list-status">正在加载通知…</div>`;
+        navigateInApp("/notifications");
+      } else {
+        if (body) body.innerHTML = `<div class="wecom-list-status">正在加载通知…</div>`;
+        loadList("/notifications", true);
+      }
+    } else {
+      const userMenu = findUserMenu();
+      if (!userMenu || !document.documentElement.classList.contains("wecom-notif-open")) {
+        openNotifMenu();
+      } else {
+        closeNotifMenu();
+      }
+    }
+  }
+
+  function bindRailNotifClick(rail) {
+    const notifBtn = rail?.querySelector('[data-rail-key="notif"]');
+    if (!notifBtn || notifBtn.dataset.clickBound === "1") return;
+    notifBtn.dataset.clickBound = "1";
+    notifBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      handleNotifNavClick();
+    });
+  }
+
   function bindRailConnectClick(rail) {
     const connectBtn = rail?.querySelector('[data-rail-key="connect"]');
     if (!connectBtn || connectBtn.dataset.clickBound === "1") return;
@@ -11325,6 +11412,7 @@
   function bindRailNavClicks(rail) {
     bindRailChatClick(rail);
     bindRailHistoryClick(rail);
+    bindRailNotifClick(rail);
     bindRailConnectClick(rail);
   }
 

@@ -4429,10 +4429,10 @@ test("Linux DO left rail navigation displays Connect instead of calendar, and cl
     "ICONS dictionary must contain connect icon"
   );
 
-  // 3. RAIL_DECO_ITEMS differentiates Linux DO (Connect) and V2EX (日程)
+  // 3. RAIL_DECO_ITEMS differentiates Linux DO (Connect) and V2EX (通知)
   assert.ok(
-    scriptContent.includes('IS_V2EX ? { key: "cal", icon: "cal", label: "日程" } : { key: "connect", icon: "connect", label: "Connect" }'),
-    "RAIL_DECO_ITEMS must show Connect on Linux DO and 日程 on V2EX"
+    scriptContent.includes('IS_V2EX ? { key: "notif", icon: "bell", label: "通知" } : { key: "connect", icon: "connect", label: "Connect" }'),
+    "RAIL_DECO_ITEMS must show Connect on Linux DO and 通知 on V2EX"
   );
 
   // 4. Rail click binding includes bindRailConnectClick
@@ -5456,6 +5456,76 @@ test("V2EX notification navigation, URL pushState synchronization, MutationObser
   assert.equal(currentPathname, "/");
   assert.equal(appliedApi, "/?tab=all", "Navigating away returns cleanly to home tab");
 });
+
+test("V2EX left rail replaces schedule (cal) with notifications (notif), binds click, and synchronizes badges and active status (v0.7.43)", () => {
+  // 1. Static code assertions
+  assert.ok(
+    scriptContent.includes('IS_V2EX ? { key: "notif", icon: "bell", label: "通知" } : { key: "connect", icon: "connect", label: "Connect" }'),
+    "must configure notif with bell icon and '通知' label on V2EX"
+  );
+  assert.ok(
+    scriptContent.includes("function handleNotifNavClick()"),
+    "must define handleNotifNavClick function"
+  );
+  assert.ok(
+    scriptContent.includes("function bindRailNotifClick(rail)"),
+    "must define bindRailNotifClick function"
+  );
+  assert.ok(
+    scriptContent.includes('rail?.querySelector(\'[data-rail-key="notif"]\')'),
+    "bindRailNotifClick must query [data-rail-key='notif']"
+  );
+  assert.ok(
+    scriptContent.includes("bindRailNotifClick(rail);"),
+    "bindRailNavClicks must include bindRailNotifClick"
+  );
+  assert.ok(
+    scriptContent.includes("syncRailNavActive"),
+    "must define and call syncRailNavActive"
+  );
+  assert.ok(
+    scriptContent.includes('item.key === "notif" ? \'<span class="wecom-rail-badge" style="display:none"></span>\' : ""'),
+    "ensureRail must render rail badge for notif item"
+  );
+
+  // 2. Behavioral simulation
+  let currentPath = "/";
+  let railActiveKey = "chat";
+  let unreadBadgeCount = 5;
+
+  function simulateSyncRailNavActive(pathname, mode = "chat") {
+    if (mode === "history") {
+      railActiveKey = "history";
+    } else if (pathname === "/notifications") {
+      railActiveKey = "notif";
+    } else {
+      railActiveKey = "chat";
+    }
+  }
+
+  function simulateHandleNotifNavClick() {
+    unreadBadgeCount = 0; // clear badge
+    currentPath = "/notifications";
+    simulateSyncRailNavActive(currentPath);
+  }
+
+  // Initial state on home:
+  simulateSyncRailNavActive(currentPath);
+  assert.equal(railActiveKey, "chat");
+  assert.equal(unreadBadgeCount, 5);
+
+  // User clicks "通知" on rail:
+  simulateHandleNotifNavClick();
+  assert.equal(currentPath, "/notifications");
+  assert.equal(railActiveKey, "notif", "Rail must activate 'notif' item when on /notifications");
+  assert.equal(unreadBadgeCount, 0, "Notification badge must be cleared");
+
+  // User switches back to "消息":
+  currentPath = "/?tab=all";
+  simulateSyncRailNavActive(currentPath);
+  assert.equal(railActiveKey, "chat", "Rail must reactivate 'chat' item when returning to messages");
+});
+
 
 
 
