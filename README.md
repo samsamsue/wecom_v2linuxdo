@@ -3,7 +3,7 @@
 把 [Linux DO](https://linux.do/) 与 [V2EX](https://v2ex.com/) 深度定制为**企业微信 5.x 桌面端**现代 IM 风格。在保留原站真实数据、动态路由、通知系统、交互逻辑与账号功能的同时，提供极致优雅、沉浸且逼真的“办公”摸鱼体验。
 
 - 作者：**Richy**
-- 当前版本：**0.7.53**
+- 当前版本：**0.7.54**
 - 用户脚本：[`linuxdo-wecom.user.js`](linuxdo-wecom.user.js)
 - 脚本元数据：[`linuxdo-wecom.meta.js`](linuxdo-wecom.meta.js)
 - 许可证：MIT

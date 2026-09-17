@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.53
+// @version      0.7.54
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -3290,11 +3290,11 @@
     .wecom-reply-children {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      margin-top: 8px;
-      padding-top: 6px;
-      padding-left: 8px;
-      border-left: 2px solid rgba(0, 0, 0, 0.16) !important;
+      gap: 6px;
+      margin-top: 6px;
+      padding-top: 4px;
+      padding-left: 6px;
+      border-left: 1px solid rgba(0, 0, 0, 0.2) !important;
       position: relative;
       transition: border-left-color 0.16s ease;
     }
@@ -3306,58 +3306,62 @@
     /* 气泡内的子回复样式 */
     .wecom-reply-children .wecom-msg {
       max-width: 100%;
-      gap: 6px;
+      gap: 5px;
       margin-bottom: 0;
     }
-    /* 里面的头像严格保证 1:1 正方形并适度缩小 */
+    /* 里面的头像严格保证 1:1 正方形并紧凑精简 */
     .wecom-reply-children .wecom-msg-avatar {
-      width: 22px !important;
-      height: 22px !important;
-      min-width: 22px !important;
-      max-width: 22px !important;
-      flex: 0 0 22px !important;
+      width: 20px !important;
+      height: 20px !important;
+      min-width: 20px !important;
+      max-width: 20px !important;
+      flex: 0 0 20px !important;
       aspect-ratio: 1 / 1 !important;
-      border-radius: 4px !important;
-      font-size: 11px !important;
-      line-height: 22px !important;
+      border-radius: 3px !important;
+      font-size: 10px !important;
+      line-height: 20px !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
       box-sizing: border-box !important;
     }
     .wecom-reply-children .wecom-msg-avatar img {
-      width: 22px !important;
-      height: 22px !important;
-      min-width: 22px !important;
-      max-width: 22px !important;
-      flex: 0 0 22px !important;
+      width: 20px !important;
+      height: 20px !important;
+      min-width: 20px !important;
+      max-width: 20px !important;
+      flex: 0 0 20px !important;
       aspect-ratio: 1 / 1 !important;
       object-fit: cover !important;
-      border-radius: 4px !important;
+      border-radius: 3px !important;
       display: block !important;
     }
     /* 更深层子回复头像进一步紧凑保持 1:1 */
     .wecom-reply-children .wecom-reply-children .wecom-msg-avatar {
-      width: 18px !important;
-      height: 18px !important;
-      min-width: 18px !important;
-      max-width: 18px !important;
-      flex: 0 0 18px !important;
+      width: 16px !important;
+      height: 16px !important;
+      min-width: 16px !important;
+      max-width: 16px !important;
+      flex: 0 0 16px !important;
       aspect-ratio: 1 / 1 !important;
-      border-radius: 3px !important;
-      font-size: 9px !important;
-      line-height: 18px !important;
+      border-radius: 2px !important;
+      font-size: 8.5px !important;
+      line-height: 16px !important;
     }
     .wecom-reply-children .wecom-reply-children .wecom-msg-avatar img {
-      width: 18px !important;
-      height: 18px !important;
-      min-width: 18px !important;
-      max-width: 18px !important;
-      flex: 0 0 18px !important;
+      width: 16px !important;
+      height: 16px !important;
+      min-width: 16px !important;
+      max-width: 16px !important;
+      flex: 0 0 16px !important;
       aspect-ratio: 1 / 1 !important;
       object-fit: cover !important;
-      border-radius: 3px !important;
+      border-radius: 2px !important;
       display: block !important;
+    }
+    .wecom-reply-children .wecom-msg-content {
+      min-width: 0;
+      flex: 1;
     }
     .wecom-reply-children .wecom-msg-header {
       margin-bottom: 2px;
@@ -3365,14 +3369,17 @@
     }
     .wecom-reply-children .wecom-msg-name {
       font-size: 11px;
+      margin-left: 0 !important;
     }
     .wecom-reply-children .wecom-msg-bubble {
-      background: transparent;
-      border: none;
-      box-shadow: none;
-      padding: 0;
-      border-radius: 0;
-      font-size: 13px;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      border-radius: 0 !important;
+      font-size: 13px !important;
+      color: inherit !important;
     }
     .wecom-reply-children .wecom-msg-meta {
       margin-top: 2px;
@@ -3380,9 +3387,9 @@
       gap: 6px;
     }
     .wecom-reply-children .wecom-reply-children {
-      margin-top: 6px;
-      padding-top: 4px;
-      padding-left: 8px;
+      margin-top: 5px;
+      padding-top: 3px;
+      padding-left: 6px;
     }
     .wecom-reply-children .wecom-msg.wecom-msg-me {
       flex-direction: row;
@@ -10770,7 +10777,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.53";
+  const SCRIPT_VERSION = "0.7.54";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
