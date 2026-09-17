@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.58
+// @version      0.7.59
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -10907,7 +10907,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.58";
+  const SCRIPT_VERSION = "0.7.59";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -12913,24 +12913,37 @@
     return extractV2exUserStatsFromDom(document);
   }
 
-  async function syncV2exUserStats() {
+  async function syncV2exUserStats(forceNetwork = false) {
     if (!IS_V2EX || isFetchingV2exStats) return null;
-    // Try live DOM first
-    const fromDom = extractV2exUserStatsFromDom(document);
-    if (fromDom && hasV2exCoins(fromDom.moneyHtml) && fromDom.topicsCount > 0) {
-      updateOpenV2exUserPopover(fromDom);
-      return fromDom;
+    // Try live DOM first if not forcing network refresh
+    if (!forceNetwork) {
+      const fromDom = extractV2exUserStatsFromDom(document);
+      if (fromDom && hasV2exCoins(fromDom.moneyHtml) && fromDom.topicsCount > 0) {
+        updateOpenV2exUserPopover(fromDom);
+        return fromDom;
+      }
     }
-    // Background fetch if missing or empty
+    // Background fetch to silently refresh stats
     isFetchingV2exStats = true;
     try {
       const resp = await fetch("/", { credentials: "include" });
       if (!resp.ok) return null;
       const html = await resp.text();
       let stats = extractV2exUserStatsFromHtml(html);
-      if (stats && hasV2exCoins(stats.moneyHtml)) {
+      if (stats) {
         updateOpenV2exUserPopover(stats);
-        return stats;
+        if (typeof stats.unreadNotifs === "number" && location.pathname !== "/notifications") {
+          const avatarBadge = document.querySelector(".wecom-rail-avatar-badge");
+          if (avatarBadge) {
+            avatarBadge.style.display = stats.unreadNotifs > 0 ? "" : "none";
+            avatarBadge.textContent = stats.unreadNotifs > 99 ? "99+" : String(stats.unreadNotifs);
+          }
+          const notifBadge = document.querySelector('[data-rail-key="notif"] .wecom-rail-badge');
+          if (notifBadge) {
+            notifBadge.style.display = stats.unreadNotifs > 0 ? "" : "none";
+            notifBadge.textContent = stats.unreadNotifs > 99 ? "99+" : String(stats.unreadNotifs);
+          }
+        }
       }
       // If / did not include coins (e.g. topic page layout), fetch /balance directly
       if (!stats || !hasV2exCoins(stats.moneyHtml)) {
@@ -13049,6 +13062,15 @@
     const popover = document.querySelector(".wecom-v2ex-user-popover");
     if (!popover || !stats) return;
 
+    if (stats.username) {
+      const nameEl = popover.querySelector(".wecom-v2ex-popover-name");
+      if (nameEl) {
+        nameEl.textContent = stats.username;
+        nameEl.title = stats.username;
+      }
+      const userLink = popover.querySelector("a.wecom-v2ex-popover-user");
+      if (userLink) userLink.href = `/member/${encodeURIComponent(stats.username)}`;
+    }
     if (stats.nodesCount !== undefined) {
       const el = popover.querySelector("[data-act='nodes'] .wecom-v2ex-stat-num");
       if (el) el.textContent = String(stats.nodesCount);
@@ -13069,12 +13091,15 @@
       const el = popover.querySelector(".wecom-v2ex-footer-coins");
       if (el) el.innerHTML = stats.moneyHtml;
     }
-    if (stats.checkedIn) {
-      const checkinBtn = popover.querySelector(".wecom-v2ex-checkin-btn");
-      if (checkinBtn) {
-        checkinBtn.classList.add("checked");
-        checkinBtn.textContent = stats.checkinDays ? `已领取 (连续 ${stats.checkinDays} 天)` : "今日已领取";
-      }
+    const checkinBtn = popover.querySelector(".wecom-v2ex-checkin-btn");
+    if (checkinBtn) {
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      const isCheckedIn = (localStorage.getItem(V2EX_LAST_CHECKIN_KEY) === todayStr) || Boolean(stats.checkedIn);
+      checkinBtn.classList.toggle("checked", isCheckedIn);
+      checkinBtn.textContent = isCheckedIn
+        ? (stats.checkinDays ? `已领取 (连续 ${stats.checkinDays} 天)` : "今日已领取")
+        : "领取今日奖励";
     }
   }
 
@@ -13237,10 +13262,8 @@
 
     document.body.appendChild(popover);
 
-    // If moneyHtml or topicsCount is empty, fetch in background and update live
-    if (!hasV2exCoins(stats.moneyHtml) || !stats.topicsCount) {
-      syncV2exUserStats();
-    }
+    // 每次打开资料卡片均在后台无感刷新最新个人资料、金银铜币、未读提醒与签到状态
+    void syncV2exUserStats(true);
   }
 
   /* ============================== V2EX 成员资料卡弹窗 (/member/:username) ============================== */
