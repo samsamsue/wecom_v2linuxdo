@@ -5963,172 +5963,207 @@ test("V2EX threaded conversation view: reply target resolution, tree hierarchy, 
   assert.ok(scriptContent.includes(".wecom-chat-thread-toggle"), "contains .wecom-chat-thread-toggle in header tools");
   assert.ok(scriptContent.includes(".wecom-v2ex-thread-row"), "contains .wecom-v2ex-thread-row in popover");
   assert.ok(scriptContent.includes(".wecom-v2ex-thread-switch-pill"), "contains .wecom-v2ex-thread-switch-pill in popover");
-  assert.ok(scriptContent.includes(".wecom-msg.is-thread-child"), "contains .wecom-msg.is-thread-child style");
+  assert.ok(scriptContent.includes(".wecom-reply-children"), "contains .wecom-reply-children continuous tree line style");
+  assert.ok(scriptContent.includes(".wecom-thread-node"), "contains .wecom-thread-node container style");
   assert.ok(scriptContent.includes(".wecom-msg-reply-indicator"), "contains .wecom-msg-reply-indicator style");
-  assert.ok(scriptContent.includes("data-thread-depth="), "contains data-thread-depth attribute binding");
+  assert.ok(scriptContent.includes("function extractReferencedReply("), "contains extractReferencedReply");
   assert.ok(scriptContent.includes("function resolveV2exReplyRelationships("), "contains resolveV2exReplyRelationships");
   assert.ok(scriptContent.includes("function buildConversationTree("), "contains buildConversationTree");
+  assert.ok(scriptContent.includes("function flattenReplies("), "contains flattenReplies");
   assert.ok(scriptContent.includes("function replyIndicatorHtml("), "contains replyIndicatorHtml");
   assert.ok(scriptContent.includes("function isThreadViewEnabled("), "contains isThreadViewEnabled");
   assert.ok(scriptContent.includes("function setThreadViewEnabled("), "contains setThreadViewEnabled");
 
-  // 2. 抽取并验证核心算法逻辑：精确匹配用户示例与边界情况
+  // 2. 验证 extractReferencedReply 严格匹配正文开头，杜绝中段误伤
+  function extractReferencedReply(content) {
+    if (!content) return { author: "", floor: 0 };
+    const raw = String(content).trim();
+    const unwrapped = raw.replace(/^<p[^>]*>/i, "").trim();
+    const memberMatch = unwrapped.match(/^<a\s+[^>]*href=["']\/member\/([^"'/?#]+)["'][^>]*>(?:@)?([^<]*)<\/a>/i);
+    let authorPrefix = "";
+    if (memberMatch) {
+      authorPrefix = memberMatch[1] || memberMatch[2] || "";
+    }
+    const text = unwrapped
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&nbsp;|&#160;/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const match = text.match(/^(?:@([^\s#:：]+)\s*)?(?:#\s*(\d+))\b/);
+    if (match) {
+      return { author: match[1] || authorPrefix || "", floor: Number(match[2]) || 0 };
+    }
+    const authorOnly = text.match(/^@([^\s#:：]+)/);
+    if (authorOnly) {
+      return { author: authorOnly[1] || authorPrefix || "", floor: 0 };
+    }
+    if (authorPrefix) {
+      const rest = text.replace(new RegExp("^" + authorPrefix + "\\b", "i"), "").trim();
+      const restMatch = rest.match(/^#\s*(\d+)\b/);
+      return { author: authorPrefix, floor: restMatch ? Number(restMatch[1]) : 0 };
+    }
+    return { author: "", floor: 0 };
+  }
+
+  assert.deepEqual(extractReferencedReply("@a #2 ccccccc"), { author: "a", floor: 2 });
+  assert.deepEqual(extractReferencedReply('<a href="/member/a">@a</a> #2 ccccccc'), { author: "a", floor: 2 });
+  assert.deepEqual(extractReferencedReply('<a href="/member/a">a</a> #2 ccccccc'), { author: "a", floor: 2 });
+  assert.deepEqual(extractReferencedReply('<a href="/member/a">@a</a> ccccccc'), { author: "a", floor: 0 });
+  assert.deepEqual(extractReferencedReply("#2 ccccccc"), { author: "", floor: 2 });
+  assert.deepEqual(extractReferencedReply("@a: ccccccc"), { author: "a", floor: 0 });
+  // 正文中段提及或数字，严格判定为无回复引用，避免误伤
+  assert.deepEqual(extractReferencedReply("<p>普通路过顶贴</p>"), { author: "", floor: 0 });
+  assert.deepEqual(extractReferencedReply("<p>感谢分享，@someone 来看一下</p>"), { author: "", floor: 0 });
+  assert.deepEqual(extractReferencedReply("<p>在 #2 里已经讨论过了</p>"), { author: "", floor: 0 });
+  assert.deepEqual(extractReferencedReply("<p>楼主威武</p>"), { author: "", floor: 0 });
+
+  // 3. 验证回复解析与时序树状构建（参考 GreasyFork 590698 与用户示例）
   // 示例场景：
   // a: xxxxx (楼主, post 1, floor 0)
   //   b回复a: ccccccc (post 2, floor 1)
   //   c回复a: vvvvvvv (post 3, floor 2)
   //   b回复c: xxxxxxx (post 4, floor 3)
+  // d: 我是路人，顶一下 (post 5, floor 4, 无引用 -> 独立根回复，不缩进)
+  //   e回复b: 赞同你说的 (post 6, floor 5, 回复 b -> 嵌套在最新 b (post 4) 下)
   const userExamplePosts = [
     { post_number: 1, floor: 0, username: "a", cooked: "<p>xxxxx</p>" },
     { post_number: 2, floor: 1, username: "b", cooked: '<p><a href="/member/a">@a</a> ccccccc</p>' },
     { post_number: 3, floor: 2, username: "c", cooked: '<p><a href="/member/a">@a</a> vvvvvvv</p>' },
-    { post_number: 4, floor: 3, username: "b", cooked: '<p><a href="/member/c">@c</a> xxxxxxx</p>' }
+    { post_number: 4, floor: 3, username: "b", cooked: '<p><a href="/member/c">@c</a> xxxxxxx</p>' },
+    { post_number: 5, floor: 4, username: "d", cooked: "<p>我是路人，顶一下</p>" },
+    { post_number: 6, floor: 5, username: "e", cooked: '<p><a href="/member/b">@b</a> 赞同你说的</p>' }
   ];
 
-  // 运行 resolveV2exReplyRelationships 逻辑
   function resolveV2exReplyRelationships(posts) {
     if (!posts || !posts.length) return posts;
     const opPost = posts.find((p) => p.post_number === 1 || p.floor === 0) || posts[0];
-    const postsByFloor = new Map();
-    const postsByUser = new Map();
+    const opAuthor = String(opPost?.username || "").trim().toLowerCase();
 
-    for (const post of posts) {
-      if (post.floor != null) postsByFloor.set(Number(post.floor), post);
-      const u = (post.username || "").toLowerCase();
-      if (u) {
-        if (!postsByUser.has(u)) postsByUser.set(u, []);
-        postsByUser.get(u).push(post);
+    const normalized = [...posts].sort((a, b) => a.post_number - b.post_number);
+    const byFloor = new Map();
+    const latestByAuthor = new Map();
+
+    for (const post of normalized) {
+      if (post.floor != null) {
+        byFloor.set(Number(post.floor), post);
       }
     }
 
-    for (const post of posts) {
-      if (post === opPost || post.post_number === 1 || post.floor === 0) continue;
-      if (post.reply_to_post_number && post.reply_to_user) continue;
-
-      const html = post.cooked || "";
-      const text = html.replace(/<[^>]+>/g, " ");
-
-      let targetPost = null;
-      let explicit = false;
-
-      const floorMatches = [...html.matchAll(/(?:href=["'][^"']*#reply(\d+)["']|(?:^|[^\w])#(\d+)\b|\b(\d+)#|\b(\d+)\s*楼)/gi)];
-      for (const m of floorMatches) {
-        const fNum = Number(m[1] || m[2] || m[3] || m[4]);
-        if (fNum && fNum < (post.floor ?? post.post_number) && postsByFloor.has(fNum)) {
-          targetPost = postsByFloor.get(fNum);
-          explicit = true;
-          break;
+    for (const post of normalized) {
+      if (post === opPost || post.post_number === 1 || post.floor === 0) {
+        post.reply_to_post_number = null;
+        post.reply_to_floor = null;
+        post.reply_to_user = null;
+        post.is_explicit_reply = false;
+        if (opAuthor) {
+          latestByAuthor.set(opAuthor, post);
         }
+        continue;
       }
 
-      if (!targetPost) {
-        const mentionMatches = [...html.matchAll(/<a\s+[^>]*href=["']\/member\/([^"'/?#]+)["'][^>]*>|(?:^|[\s>，。！？（(])@([a-zA-Z0-9_]{1,32})/gi)];
-        for (const m of mentionMatches) {
-          const rawUser = decodeURIComponent(m[1] || m[2] || "").trim();
-          const lowerUser = rawUser.toLowerCase();
-          if (!lowerUser || lowerUser === (post.username || "").toLowerCase()) continue;
+      const ref = post.replyReference || extractReferencedReply(post.cooked || post.content || "");
+      post.replyReference = ref;
 
-          const userPosts = postsByUser.get(lowerUser) || [];
-          const priorUserPosts = userPosts.filter((p) => (p.floor ?? p.post_number) < (post.floor ?? post.post_number));
-          if (priorUserPosts.length > 0) {
-            targetPost = priorUserPosts[priorUserPosts.length - 1];
-            explicit = true;
-            break;
-          } else if (opPost && lowerUser === (opPost.username || "").toLowerCase()) {
-            targetPost = opPost;
-            explicit = true;
-            break;
-          }
-        }
+      let parent = null;
+      if (ref.floor) {
+        parent = byFloor.get(Number(ref.floor)) || null;
+      }
+      if (!parent && ref.author) {
+        parent = latestByAuthor.get(String(ref.author).toLowerCase()) || null;
       }
 
-      if (!targetPost) {
-        if (/楼上/.test(text)) {
-          const prevFloor = (post.floor ?? post.post_number) - 1;
-          if (postsByFloor.has(prevFloor)) {
-            targetPost = postsByFloor.get(prevFloor);
-            explicit = true;
-          }
-        } else if (/楼主|\blz\b/i.test(text)) {
-          targetPost = opPost;
-          explicit = true;
-        }
-      }
-
-      if (!targetPost && opPost) {
-        targetPost = opPost;
-        explicit = false;
-      }
-
-      if (targetPost) {
-        post.reply_to_post_number = targetPost.post_number;
-        post.reply_to_floor = targetPost.floor ?? (targetPost.post_number - 1);
+      if (parent && parent !== post && parent.post_number < post.post_number) {
+        post.reply_to_post_number = parent.post_number;
+        post.reply_to_floor = parent.floor != null ? parent.floor : (parent.post_number - 1);
         post.reply_to_user = {
-          username: targetPost.username,
-          name: targetPost.name || targetPost.username
+          username: parent.username,
+          name: parent.name || parent.displayName || parent.username
         };
-        post.is_explicit_reply = explicit;
+        post.is_explicit_reply = true;
+      } else {
+        post.reply_to_post_number = null;
+        post.reply_to_floor = null;
+        post.reply_to_user = null;
+        post.is_explicit_reply = false;
+      }
+
+      const authorKey = String(post.username || "").trim().toLowerCase();
+      if (authorKey) {
+        latestByAuthor.set(authorKey, post);
       }
     }
+
     return posts;
   }
 
   function buildConversationTree(posts) {
-    if (!posts || posts.length <= 1) return posts.map((p) => ({ ...p, _threadDepth: 0 }));
+    if (!posts || !posts.length) return [];
+    resolveV2exReplyRelationships(posts);
 
     const opPost = posts.find((p) => p.post_number === 1 || p.floor === 0) || posts[0];
-    const childrenMap = new Map();
+    const normalized = [...posts].sort((a, b) => a.post_number - b.post_number);
+    const byPostNum = new Map(normalized.map((p) => [p.post_number, p]));
 
-    for (const post of posts) {
-      childrenMap.set(post.post_number, []);
+    for (const post of normalized) {
+      post.children = [];
+      post._threadDepth = 0;
     }
 
-    const rootPosts = [];
+    const roots = [];
 
-    for (const post of posts) {
-      if (post === opPost || post.post_number === 1) {
-        rootPosts.push(post);
+    for (const post of normalized) {
+      if (post === opPost || post.post_number === 1 || post.floor === 0) {
+        roots.push(post);
         continue;
       }
-      const parentNum = Number(post.reply_to_post_number) || 1;
-      if (childrenMap.has(parentNum) && parentNum < post.post_number && parentNum !== 1) {
-        childrenMap.get(parentNum).push(post);
+
+      let parentNum = Number(post.reply_to_post_number) || 0;
+      let parent = parentNum ? byPostNum.get(parentNum) : null;
+
+      if (parent && parent !== post && parent.post_number < post.post_number) {
+        parent.children.push(post);
       } else {
-        if (childrenMap.has(1)) {
-          childrenMap.get(1).push(post);
-        } else {
-          rootPosts.push(post);
+        roots.push(post);
+      }
+    }
+
+    function setDepth(node, depth) {
+      node._threadDepth = depth;
+      if (node.children && node.children.length) {
+        for (const child of node.children) {
+          setDepth(child, depth + 1);
         }
       }
     }
 
-    const result = [];
-    function traverse(post, depth) {
-      result.push({ ...post, _threadDepth: depth });
-      const children = childrenMap.get(post.post_number) || [];
-      for (const child of children) {
-        traverse(child, Math.min(depth + 1, 4));
+    for (const root of roots) {
+      setDepth(root, 0);
+    }
+
+    return roots;
+  }
+
+  function flattenReplies(nodes, result = []) {
+    for (const node of Array.isArray(nodes) ? nodes : []) {
+      result.push(node);
+      if (node.children && node.children.length) {
+        flattenReplies(node.children, result);
       }
     }
-
-    for (const root of rootPosts) {
-      traverse(root, 0);
-    }
-
     return result;
   }
 
   function replyIndicatorHtml(post) {
     const parentNum = Number(post?.reply_to_post_number) || 0;
     if (!parentNum) return "";
-    if (!post.is_explicit_reply && parentNum === 1) return "";
     const targetUser = post.reply_to_user?.name || post.reply_to_user?.username || "";
     const targetFloor = post.reply_to_floor != null && post.reply_to_floor > 0
       ? `#${post.reply_to_floor}`
       : (parentNum === 1 ? "楼主" : `#${parentNum}`);
     const userPart = targetUser ? `@${targetUser}` : "";
     const floorPart = targetFloor || "";
-    return `<span class="wecom-msg-reply-indicator" data-reply-post-number="${parentNum}">` +
+    const floorAttr = post.reply_to_floor != null ? ` data-reply-floor="${post.reply_to_floor}"` : "";
+    return `<span class="wecom-msg-reply-indicator" data-reply-post-number="${parentNum}"${floorAttr}>` +
       `回复 ${userPart ? `${userPart} ` : ""}${floorPart}</span>`;
   }
 
@@ -6148,7 +6183,17 @@ test("V2EX threaded conversation view: reply target resolution, tree hierarchy, 
   assert.equal(userExamplePosts[3].reply_to_floor, 2);
   assert.equal(userExamplePosts[3].is_explicit_reply, true);
 
-  // 验证角标渲染
+  // d 为无引用普通回帖，不被强制归入楼主，保持 null
+  assert.equal(userExamplePosts[4].reply_to_post_number, null, "d has no reply reference");
+  assert.equal(userExamplePosts[4].is_explicit_reply, false);
+
+  // e 回复 b，精准关联到此前最新的 b 回帖 (post 4, floor 3)
+  assert.equal(userExamplePosts[5].reply_to_post_number, 4, "e replies to latest b (post 4)");
+  assert.equal(userExamplePosts[5].reply_to_user?.username, "b");
+  assert.equal(userExamplePosts[5].reply_to_floor, 3);
+  assert.equal(userExamplePosts[5].is_explicit_reply, true);
+
+  // 验证角标渲染与跳转属性
   const indB1 = replyIndicatorHtml(userExamplePosts[1]);
   assert.ok(indB1.includes("回复 @a 楼主"));
   assert.ok(indB1.includes('data-reply-post-number="1"'));
@@ -6156,61 +6201,71 @@ test("V2EX threaded conversation view: reply target resolution, tree hierarchy, 
   const indB2 = replyIndicatorHtml(userExamplePosts[3]);
   assert.ok(indB2.includes("回复 @c #2"));
   assert.ok(indB2.includes('data-reply-post-number="3"'));
+  assert.ok(indB2.includes('data-reply-floor="2"'));
+
+  const indD = replyIndicatorHtml(userExamplePosts[4]);
+  assert.equal(indD, "", "independent post has no reply indicator");
 
   // 验证树状遍历与层级结构
   const tree = buildConversationTree(userExamplePosts);
-  assert.equal(tree.length, 4);
-
-  // a (楼主, depth 0)
+  // roots 包含 a (楼主) 和 d (独立路人回帖)
+  assert.equal(tree.length, 2, "roots contains post a and independent post d");
   assert.equal(tree[0].username, "a");
   assert.equal(tree[0]._threadDepth, 0);
+  assert.equal(tree[1].username, "d");
+  assert.equal(tree[1]._threadDepth, 0);
 
-  // b 回复 a (depth 1)
-  assert.equal(tree[1].username, "b");
-  assert.equal(tree[1].floor, 1);
-  assert.equal(tree[1]._threadDepth, 1);
+  // 验证 a 的子节点：b (floor 1) 与 c (floor 2)
+  assert.equal(tree[0].children.length, 2);
+  assert.equal(tree[0].children[0].username, "b");
+  assert.equal(tree[0].children[0]._threadDepth, 1);
+  assert.equal(tree[0].children[1].username, "c");
+  assert.equal(tree[0].children[1]._threadDepth, 1);
 
-  // c 回复 a (depth 1)
-  assert.equal(tree[2].username, "c");
-  assert.equal(tree[2].floor, 2);
-  assert.equal(tree[2]._threadDepth, 1);
+  // 验证 c 的子节点：b (floor 3)
+  assert.equal(tree[0].children[1].children.length, 1);
+  assert.equal(tree[0].children[1].children[0].username, "b");
+  assert.equal(tree[0].children[1].children[0]._threadDepth, 2);
 
-  // b 回复 c (nested under c, depth 2)
-  assert.equal(tree[3].username, "b");
-  assert.equal(tree[3].floor, 3);
-  assert.equal(tree[3]._threadDepth, 2);
+  // 验证 b (floor 3) 的子节点：e (floor 5)
+  assert.equal(tree[0].children[1].children[0].children.length, 1);
+  assert.equal(tree[0].children[1].children[0].children[0].username, "e");
+  assert.equal(tree[0].children[1].children[0].children[0]._threadDepth, 3);
 
-  // 3. 验证楼上、精确楼层 #floor、楼主关键词以及深度上限
-  const mixedPosts = [
-    { post_number: 1, floor: 0, username: "op", cooked: "<p>题目</p>" },
-    { post_number: 2, floor: 1, username: "u1", cooked: "<p>楼主威武</p>" }, // 楼主 -> post 1
-    { post_number: 3, floor: 2, username: "u2", cooked: "<p>楼上说得好</p>" }, // 楼上 -> post 2 (floor 1)
-    { post_number: 4, floor: 3, username: "u3", cooked: "<p>完全赞同 #2 的观点</p>" }, // #2 -> post 3 (floor 2)
-    { post_number: 5, floor: 4, username: "u4", cooked: "<p>回复 @u3 我也有同感</p>" }, // @u3 -> post 4 (floor 3)
-    { post_number: 6, floor: 5, username: "u5", cooked: "<p>回复 @u4 确实如此</p>" }, // @u4 -> post 5 (floor 4)
-    { post_number: 7, floor: 6, username: "u6", cooked: "<p>回复 @u5 继续深层套娃</p>" }, // @u5 -> post 6 (floor 5)
-    { post_number: 8, floor: 7, username: "u7", cooked: "<p>普通路过顶贴</p>" } // 无引用 -> post 1
-  ];
+  // 验证平铺结构与时序一致性
+  const flattened = flattenReplies(tree);
+  assert.equal(flattened.length, 6);
+  assert.deepEqual(
+    flattened.map((p) => ({ floor: p.floor, depth: p._threadDepth })),
+    [
+      { floor: 0, depth: 0 }, // a (OP)
+      { floor: 1, depth: 1 }, // b -> a
+      { floor: 2, depth: 1 }, // c -> a
+      { floor: 3, depth: 2 }, // b -> c
+      { floor: 5, depth: 3 }, // e -> b
+      { floor: 4, depth: 0 }  // d (independent root)
+    ]
+  );
 
-  resolveV2exReplyRelationships(mixedPosts);
-  assert.equal(mixedPosts[1].reply_to_post_number, 1);
-  assert.equal(mixedPosts[2].reply_to_post_number, 2);
-  assert.equal(mixedPosts[3].reply_to_post_number, 3);
-  assert.equal(mixedPosts[4].reply_to_post_number, 4);
-  assert.equal(mixedPosts[5].reply_to_post_number, 5);
-  assert.equal(mixedPosts[6].reply_to_post_number, 6);
-  assert.equal(mixedPosts[7].reply_to_post_number, 1);
-  assert.equal(mixedPosts[7].is_explicit_reply, false);
+  // 4. 验证递归渲染 HTML 结构生成连续树形容器
+  function renderThreadNode(node, myName, state, depth = 0) {
+    node._threadDepth = depth;
+    const post = node;
+    const bubble = `<div class="wecom-msg" data-post-number="${post.post_number}" data-floor="${post.floor}"><div class="wecom-msg-name">${post.username}</div></div>`;
+    const hasChildren = Array.isArray(node.children) && node.children.length > 0;
+    const childrenHtml = hasChildren
+      ? `<div class="wecom-reply-children">${node.children.map((child) => renderThreadNode(child, myName, state, depth + 1)).join("")}</div>`
+      : "";
+    if (depth === 0 && !hasChildren) {
+      return bubble;
+    }
+    return `<div class="wecom-thread-node" data-post-number="${post.post_number}">${bubble}${childrenHtml}</div>`;
+  }
 
-  const deepTree = buildConversationTree(mixedPosts);
-  assert.equal(deepTree[0]._threadDepth, 0); // op
-  assert.equal(deepTree[1]._threadDepth, 1); // u1
-  assert.equal(deepTree[2]._threadDepth, 2); // u2 (child of u1)
-  assert.equal(deepTree[3]._threadDepth, 3); // u3 (child of u2)
-  assert.equal(deepTree[4]._threadDepth, 4); // u4 (child of u3)
-  assert.equal(deepTree[5]._threadDepth, 4); // u5 (capped at depth 4)
-  assert.equal(deepTree[6]._threadDepth, 4); // u6 (capped at depth 4)
-  assert.equal(deepTree[7]._threadDepth, 1); // u7 (top level)
+  const renderedRoots = tree.map((root) => renderThreadNode(root, "me", { lastTime: 0 }, 0)).join("");
+  assert.ok(renderedRoots.includes('class="wecom-thread-node" data-post-number="1"'), "renders thread node for post 1");
+  assert.ok(renderedRoots.includes('class="wecom-reply-children"'), "renders continuous child container");
+  assert.ok(renderedRoots.includes('data-post-number="5"'), "renders independent post 5");
 });
 
 

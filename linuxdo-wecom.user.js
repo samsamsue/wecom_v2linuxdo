@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.49
+// @version      0.7.50
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -3277,45 +3277,32 @@
     .wecom-msg.is-reply-target .wecom-msg-bubble {
       outline: 2px solid var(--wc-accent); outline-offset: 3px;
     }
-    /* 对话楼层关系（树状会话层级与引导线） */
+    /* 对话楼层关系（层级嵌套与连续引导线） */
+    .wecom-thread-node {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      min-width: 0;
+    }
     .wecom-msg.is-thread-child {
       position: relative;
     }
-    .wecom-msg.is-thread-child[data-thread-depth="1"] {
-      margin-left: 28px;
+    .wecom-reply-children {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 8px 0 2px 20px;
+      padding-left: 14px;
+      border-left: 2px solid var(--wc-border);
+      position: relative;
+      transition: border-color 0.16s ease;
     }
-    .wecom-msg.is-thread-child[data-thread-depth="2"] {
-      margin-left: 56px;
+    .wecom-reply-children:hover {
+      border-left-color: var(--wc-accent);
     }
-    .wecom-msg.is-thread-child[data-thread-depth="3"] {
-      margin-left: 84px;
-    }
-    .wecom-msg.is-thread-child[data-thread-depth="4"] {
-      margin-left: 108px;
-    }
-    .wecom-msg.is-thread-child::before {
-      content: "";
-      position: absolute;
-      left: -18px;
-      top: -12px;
-      bottom: 14px;
-      width: 2px;
-      background: var(--wc-border);
-      border-radius: 1px;
-    }
-    .wecom-msg.is-thread-child::after {
-      content: "";
-      position: absolute;
-      left: -18px;
-      top: 16px;
-      width: 14px;
-      height: 2px;
-      background: var(--wc-border);
-      border-radius: 1px;
-    }
-    .wecom-msg.is-thread-child:hover::before,
-    .wecom-msg.is-thread-child:hover::after {
-      background: var(--wc-accent);
+    .wecom-reply-children:has(> .wecom-thread-node:hover):not(:has(.wecom-reply-children > .wecom-thread-node:hover)),
+    .wecom-reply-children:has(> .wecom-msg:hover):not(:has(.wecom-reply-children > .wecom-msg:hover)) {
+      border-left-color: var(--wc-accent);
     }
     .wecom-msg-header {
       display: flex;
@@ -8549,6 +8536,16 @@
       background: rgba(67, 137, 245, 0.2);
       color: #70a5f9;
     }
+    html.${ROOT_CLASS}.wecom-dark .wecom-reply-children {
+      border-left-color: var(--wc-border);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-reply-children:hover {
+      border-left-color: var(--wc-accent);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-reply-children:has(> .wecom-thread-node:hover):not(:has(.wecom-reply-children > .wecom-thread-node:hover)),
+    html.${ROOT_CLASS}.wecom-dark .wecom-reply-children:has(> .wecom-msg:hover):not(:has(.wecom-reply-children > .wecom-msg:hover)) {
+      border-left-color: var(--wc-accent);
+    }
 
     /* 深色模式：V2EX 用户资料卡 */
     html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-member-card {
@@ -10683,7 +10680,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.49";
+  const SCRIPT_VERSION = "0.7.50";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -18227,139 +18224,159 @@
     });
   }
 
+  function extractReferencedReply(content) {
+    if (!content) return { author: "", floor: 0 };
+    const raw = String(content).trim();
+    const unwrapped = raw.replace(/^<p[^>]*>/i, "").trim();
+    const memberMatch = unwrapped.match(/^<a\s+[^>]*href=["']\/member\/([^"'/?#]+)["'][^>]*>(?:@)?([^<]*)<\/a>/i);
+    let authorPrefix = "";
+    if (memberMatch) {
+      authorPrefix = memberMatch[1] || memberMatch[2] || "";
+    }
+    const text = unwrapped
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&nbsp;|&#160;/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const match = text.match(/^(?:@([^\s#:：]+)\s*)?(?:#\s*(\d+))\b/);
+    if (match) {
+      return { author: match[1] || authorPrefix || "", floor: Number(match[2]) || 0 };
+    }
+    const authorOnly = text.match(/^@([^\s#:：]+)/);
+    if (authorOnly) {
+      return { author: authorOnly[1] || authorPrefix || "", floor: 0 };
+    }
+    if (authorPrefix) {
+      const rest = text.replace(new RegExp("^" + authorPrefix + "\\b", "i"), "").trim();
+      const restMatch = rest.match(/^#\s*(\d+)\b/);
+      return { author: authorPrefix, floor: restMatch ? Number(restMatch[1]) : 0 };
+    }
+    return { author: "", floor: 0 };
+  }
+
   function resolveV2exReplyRelationships(posts) {
     if (!posts || !posts.length) return posts;
     const opPost = posts.find((p) => p.post_number === 1 || p.floor === 0) || posts[0];
-    const postsByFloor = new Map();
-    const postsByUser = new Map();
+    const opAuthor = String(opPost?.username || "").trim().toLowerCase();
 
-    for (const post of posts) {
-      if (post.floor != null) postsByFloor.set(Number(post.floor), post);
-      const u = (post.username || "").toLowerCase();
-      if (u) {
-        if (!postsByUser.has(u)) postsByUser.set(u, []);
-        postsByUser.get(u).push(post);
+    const normalized = [...posts].sort((a, b) => postNumberOf(a) - postNumberOf(b));
+    const byFloor = new Map();
+    const latestByAuthor = new Map();
+
+    for (const post of normalized) {
+      if (post.floor != null) {
+        byFloor.set(Number(post.floor), post);
       }
     }
 
-    for (const post of posts) {
-      if (post === opPost || post.post_number === 1 || post.floor === 0) continue;
-      if (post.reply_to_post_number && post.reply_to_user) continue;
-
-      const html = post.cooked || "";
-      const text = html.replace(/<[^>]+>/g, " ");
-
-      let targetPost = null;
-      let explicit = false;
-
-      // 1. 优先匹配明确楼层引用：#floor, floor#, floor 楼, 或 href 包含 #reply<floor>
-      const floorMatches = [...html.matchAll(/(?:href=["'][^"']*#reply(\d+)["']|(?:^|[^\w])#(\d+)\b|\b(\d+)#|\b(\d+)\s*楼)/gi)];
-      for (const m of floorMatches) {
-        const fNum = Number(m[1] || m[2] || m[3] || m[4]);
-        if (fNum && fNum < (post.floor ?? post.post_number) && postsByFloor.has(fNum)) {
-          targetPost = postsByFloor.get(fNum);
-          explicit = true;
-          break;
+    for (const post of normalized) {
+      if (post === opPost || post.post_number === 1 || post.floor === 0) {
+        post.reply_to_post_number = null;
+        post.reply_to_floor = null;
+        post.reply_to_user = null;
+        post.is_explicit_reply = false;
+        if (opAuthor) {
+          latestByAuthor.set(opAuthor, post);
         }
+        continue;
       }
 
-      // 2. 匹配用户名提及：<a href="/member/user"> 或 @username
-      if (!targetPost) {
-        const mentionMatches = [...html.matchAll(/<a\s+[^>]*href=["']\/member\/([^"'/?#]+)["'][^>]*>|(?:^|[\s>，。！？（(])@([a-zA-Z0-9_]{1,32})/gi)];
-        for (const m of mentionMatches) {
-          const rawUser = decodeURIComponent(m[1] || m[2] || "").trim();
-          const lowerUser = rawUser.toLowerCase();
-          if (!lowerUser || lowerUser === (post.username || "").toLowerCase()) continue;
+      const ref = post.replyReference || extractReferencedReply(post.cooked || post.content || "");
+      post.replyReference = ref;
 
-          const userPosts = postsByUser.get(lowerUser) || [];
-          const priorUserPosts = userPosts.filter((p) => (p.floor ?? p.post_number) < (post.floor ?? post.post_number));
-          if (priorUserPosts.length > 0) {
-            targetPost = priorUserPosts[priorUserPosts.length - 1];
-            explicit = true;
-            break;
-          } else if (opPost && lowerUser === (opPost.username || "").toLowerCase()) {
-            targetPost = opPost;
-            explicit = true;
-            break;
-          }
-        }
+      let parent = null;
+      if (ref.floor) {
+        parent = byFloor.get(Number(ref.floor)) || null;
+      }
+      if (!parent && ref.author) {
+        parent = latestByAuthor.get(String(ref.author).toLowerCase()) || null;
       }
 
-      // 3. 匹配相对楼层与主贴关键词：楼上, 楼主, lz
-      if (!targetPost) {
-        if (/楼上/.test(text)) {
-          const prevFloor = (post.floor ?? post.post_number) - 1;
-          if (postsByFloor.has(prevFloor)) {
-            targetPost = postsByFloor.get(prevFloor);
-            explicit = true;
-          }
-        } else if (/楼主|\blz\b/i.test(text)) {
-          targetPost = opPost;
-          explicit = true;
-        }
-      }
-
-      // 4. 默认：若未明确指定任何回复对象，归属于楼主/主贴 (post 1)
-      if (!targetPost && opPost) {
-        targetPost = opPost;
-        explicit = false;
-      }
-
-      if (targetPost) {
-        post.reply_to_post_number = targetPost.post_number;
-        post.reply_to_floor = targetPost.floor ?? (targetPost.post_number - 1);
+      if (parent && parent !== post && postNumberOf(parent) < postNumberOf(post)) {
+        post.reply_to_post_number = parent.post_number;
+        post.reply_to_floor = parent.floor != null ? parent.floor : (parent.post_number - 1);
         post.reply_to_user = {
-          username: targetPost.username,
-          name: targetPost.name || targetPost.username
+          username: parent.username,
+          name: parent.name || parent.displayName || parent.username
         };
-        post.is_explicit_reply = explicit;
+        post.is_explicit_reply = true;
+      } else {
+        post.reply_to_post_number = null;
+        post.reply_to_floor = null;
+        post.reply_to_user = null;
+        post.is_explicit_reply = false;
+      }
+
+      const authorKey = String(post.username || "").trim().toLowerCase();
+      if (authorKey) {
+        latestByAuthor.set(authorKey, post);
       }
     }
+
     return posts;
   }
 
   function buildConversationTree(posts) {
-    if (!posts || posts.length <= 1) return posts.map((p) => ({ ...p, _threadDepth: 0 }));
-
-    const opPost = posts.find((p) => p.post_number === 1 || p.floor === 0) || posts[0];
-    const childrenMap = new Map();
-
-    for (const post of posts) {
-      childrenMap.set(post.post_number, []);
+    if (!posts || !posts.length) return [];
+    if (IS_V2EX) {
+      resolveV2exReplyRelationships(posts);
     }
 
-    const rootPosts = [];
+    const opPost = posts.find((p) => p.post_number === 1 || p.floor === 0) || posts[0];
+    const normalized = [...posts].sort((a, b) => postNumberOf(a) - postNumberOf(b));
+    const byPostNum = new Map(normalized.map((p) => [postNumberOf(p), p]));
 
-    for (const post of posts) {
-      if (post === opPost || post.post_number === 1) {
-        rootPosts.push(post);
+    for (const post of normalized) {
+      post.children = [];
+      post._threadDepth = 0;
+    }
+
+    const roots = [];
+
+    for (const post of normalized) {
+      if (post === opPost || post.post_number === 1 || post.floor === 0) {
+        roots.push(post);
         continue;
       }
-      const parentNum = Number(post.reply_to_post_number) || 1;
-      if (childrenMap.has(parentNum) && parentNum < post.post_number && parentNum !== 1) {
-        childrenMap.get(parentNum).push(post);
+
+      let parentNum = Number(post.reply_to_post_number) || 0;
+      let parent = parentNum ? byPostNum.get(parentNum) : null;
+
+      // Discourse (Linux.do) posts with reply_to_post_number === 1 are top-level topic replies, keep in roots
+      if (parent && parentNum === 1 && !IS_V2EX) {
+        parent = null;
+      }
+
+      if (parent && parent !== post && postNumberOf(parent) < postNumberOf(post)) {
+        parent.children.push(post);
       } else {
-        if (childrenMap.has(1)) {
-          childrenMap.get(1).push(post);
-        } else {
-          rootPosts.push(post);
+        roots.push(post);
+      }
+    }
+
+    function setDepth(node, depth) {
+      node._threadDepth = depth;
+      if (node.children && node.children.length) {
+        for (const child of node.children) {
+          setDepth(child, depth + 1);
         }
       }
     }
 
-    const result = [];
-    function traverse(post, depth) {
-      result.push({ ...post, _threadDepth: depth });
-      const children = childrenMap.get(post.post_number) || [];
-      for (const child of children) {
-        traverse(child, Math.min(depth + 1, 4));
+    for (const root of roots) {
+      setDepth(root, 0);
+    }
+
+    return roots;
+  }
+
+  function flattenReplies(nodes, result = []) {
+    for (const node of Array.isArray(nodes) ? nodes : []) {
+      result.push(node);
+      if (node.children && node.children.length) {
+        flattenReplies(node.children, result);
       }
     }
-
-    for (const root of rootPosts) {
-      traverse(root, 0);
-    }
-
     return result;
   }
 
@@ -18377,7 +18394,8 @@
       : (parentNum === 1 ? "楼主" : `#${parentNum}`);
     const userPart = targetUser ? `@${escapeHtml(targetUser)}` : "";
     const floorPart = targetFloor ? escapeHtml(targetFloor) : "";
-    return `<span class="wecom-msg-reply-indicator" data-reply-post-number="${parentNum}" title="跳转到引用消息 #${parentNum}">` +
+    const floorAttr = post.reply_to_floor != null ? ` data-reply-floor="${post.reply_to_floor}"` : "";
+    return `<span class="wecom-msg-reply-indicator" data-reply-post-number="${parentNum}"${floorAttr} title="跳转到引用消息 #${parentNum}">` +
       `回复 ${userPart ? `<span class="wecom-msg-reply-indicator-user">${userPart}</span> ` : ""}` +
       `<span class="wecom-msg-reply-indicator-floor">${floorPart}</span>` +
       `</span>`;
@@ -18438,7 +18456,11 @@
 
   function focusRenderedReply(reference) {
     const number = Number(reference?.dataset.replyPostNumber) || 0;
-    const message = document.querySelector(`.wecom-msg[data-post-number="${number}"]`);
+    const floor = Number(reference?.dataset.replyFloor) || 0;
+    let message = number ? document.querySelector(`.wecom-msg[data-post-number="${number}"]`) : null;
+    if (!message && floor > 0) {
+      message = document.querySelector(`.wecom-msg[data-floor="${floor}"]`);
+    }
     if (!message) return false;
     clearTimeout(replyHighlightTimer);
     highlightedReplyMessage?.classList.remove("is-reply-target");
@@ -20507,30 +20529,67 @@
 
   const TIME_SEP_GAP = 10 * 60 * 1000;
 
+  function renderThreadNode(node, myName, state, depth = 0) {
+    node._threadDepth = depth;
+    const post = node;
+    const hasLiked = (post.actions_summary || []).some((a) => a.id === 2 && a.acted) ||
+      post.current_user_reaction?.id === "heart" ||
+      post.current_user_used_main_reaction ||
+      Boolean(post.current_user_reaction);
+    if (post.id && hasLiked) {
+      likedPosts.add(post.id);
+    }
+    const t = new Date(post.created_at).getTime();
+    let timeSep = "";
+    if (depth === 0) {
+      if (t - state.lastTime > TIME_SEP_GAP) {
+        timeSep = `<div class="wecom-msg-time-sep">${escapeHtml(formatClock(post.created_at))}</div>`;
+        state.lastTime = t;
+      }
+    }
+    const bubble = bubbleHtml(post, myName);
+    const hasChildren = Array.isArray(node.children) && node.children.length > 0;
+    const childrenHtml = hasChildren
+      ? `<div class="wecom-reply-children">${node.children.map((child) => renderThreadNode(child, myName, state, depth + 1)).join("")}</div>`
+      : "";
+
+    if (depth === 0 && !hasChildren) {
+      return `${timeSep}${bubble}`;
+    }
+    return `${timeSep}<div class="wecom-thread-node" data-post-number="${post.post_number}">${bubble}${childrenHtml}</div>`;
+  }
+
   function renderBubbles(posts, myName) {
     rememberChatPosts(posts);
     if (IS_V2EX) {
       resolveV2exReplyRelationships(posts);
     }
-    const displayPosts = isThreadViewEnabled() ? buildConversationTree(posts) : posts;
-    const frag = [];
-    let lastTime = 0;
-    for (const post of displayPosts) {
-      const hasLiked = (post.actions_summary || []).some((a) => a.id === 2 && a.acted) ||
-        post.current_user_reaction?.id === "heart" ||
-        post.current_user_used_main_reaction ||
-        Boolean(post.current_user_reaction);
-      if (post.id && hasLiked) {
-        likedPosts.add(post.id);
-      }
-      const t = new Date(post.created_at).getTime();
-      if (!isThreadViewEnabled() || post._threadDepth === 0 || post._threadDepth === 1) {
+    if (!isThreadViewEnabled()) {
+      const frag = [];
+      let lastTime = 0;
+      for (const post of posts) {
+        const hasLiked = (post.actions_summary || []).some((a) => a.id === 2 && a.acted) ||
+          post.current_user_reaction?.id === "heart" ||
+          post.current_user_used_main_reaction ||
+          Boolean(post.current_user_reaction);
+        if (post.id && hasLiked) {
+          likedPosts.add(post.id);
+        }
+        const t = new Date(post.created_at).getTime();
         if (t - lastTime > TIME_SEP_GAP) {
           frag.push(`<div class="wecom-msg-time-sep">${escapeHtml(formatClock(post.created_at))}</div>`);
           lastTime = t;
         }
+        frag.push(bubbleHtml(post, myName));
       }
-      frag.push(bubbleHtml(post, myName));
+      return frag.join("");
+    }
+
+    const tree = buildConversationTree(posts);
+    const frag = [];
+    const state = { lastTime: 0 };
+    for (const root of tree) {
+      frag.push(renderThreadNode(root, myName, state, 0));
     }
     return frag.join("");
   }
