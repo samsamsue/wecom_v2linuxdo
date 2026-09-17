@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.56
+// @version      0.7.57
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -221,7 +221,7 @@
   ICONS.project = ICONS.proj;
   ICONS.watermark = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 18.5h14M8 16l4-10 4 10M9.4 12.5h5.2" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.5 5.5l1 1 2-2" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
-  const FAVICON_URI = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJhIiB4MT0iOCIgeTE9IjQiIHgyPSI1NiIgeTI9IjYwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzQwOTZmZiIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzE3NjlkMiIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcng9IjE1IiBmaWxsPSJ1cmwoI2EpIi8+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTExIDI3LjVDMTEgMTguOTQgMTguODQgMTIgMjguNSAxMlM0NiAxOC45NCA0NiAyNy41IDM4LjE2IDQzIDI4LjUgNDNjLTIuMTMgMC00LjE3LS4zNC02LjA2LS45NUwxNCA0N2wyLjQ4LTcuMTZDMTMuMSAzNi45MSAxMSAzMi41NSAxMSAyNy41WiIvPjxwYXRoIGZpbGw9IiMxOWM4NzgiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIyLjUiIGQ9Ik0zNCAzNy41QzM0IDMwLjYgNDAuMjcgMjUgNDggMjVzMTQgNS42IDE0IDEyLjVTNTUuNzMgNTAgNDggNTBjLTEuNTUgMC0zLjA0LS4yMy00LjQzLS42NUwzNyA1M2wxLjg0LTUuMjNDMzUuODcgNDUuMzkgMzQgNDEuNzMgMzQgMzcuNVoiLz48Y2lyY2xlIGN4PSIyMyIgY3k9IjI3IiByPSIyIiBmaWxsPSIjMjY3ZWYwIi8+PGNpcmNsZSBjeD0iMzMiIGN5PSIyNyIgcj0iMiIgZmlsbD0iIzI2N2VmMCIvPjxjaXJjbGUgY3g9IjQ0IiBjeT0iMzcuNSIgcj0iMS43IiBmaWxsPSIjZmZmIi8+PGNpcmNsZSBjeD0iNTIiIGN5PSIzNy41IiByPSIxLjciIGZpbGw9IiNmZmYiLz48L3N2Zz4=";
+  const FAVICON_URI = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjUgMTY1Ij48cGF0aCBkPSJNMTE5Ljc4OTE5LDEzNC43MjMyMUMxMDguNjEyMTgzLDE0MS40NTAwOSw5NS42NTQ4LDE0NSw4Mi4yNzgzMiwxNDVDNDQuNTY5MjQyLDE0NSwxNCwxMTcuMDE3NzkyLDE0LDgyLjVDMTQsNDcuOTgyMjAxLDQ0LjU2OTI0MiwyMCw4Mi4yNzgzMiwyMEMxMTkuOTg3NCwyMCwxNTAuNTU2NjQsNDcuOTgyMjAxLDE1MC41NTY2NCw4Mi41QzE1MC41NTY2NCw5My42MDM3NjcsMTQ3LjI4Mjk2LDEwNC42MTA5MDksMTQxLjEzMzg5LDExNC4xODIyOTdMMTUxLDE0NSwxMTkuNzg5MTksMTM0LjcyMzIxWk0xMzEuMDQ4NTUsODIuNUMxMzEuMDQ4NTUsMTA3LjA4NDYxOCwxMDkuMjEzMzcxLDEyNy4wMTQzOSw4Mi4yNzgzMiwxMjcuMDE0MzlDNTUuMzQzMjY2LDEyNy4wMTQzOSwzMy41MDgwOTEsMTA3LjA4NDYxOCwzMy41MDgwOTEsODIuNUMzMy41MDgwOTEsNTcuOTE1Mzc5LDU1LjM0MzI2NiwzNy45ODU2MTEsODIuMjc4MzIsMzcuOTg1NjExQzEwOS4yMTMzNzEsMzcuOTg1NjExLDEzMS4wNDg1NSw1Ny45MTUzNzksMTMxLjA0ODU1LDgyLjVaIiBmaWxsPSIjMzY2MkVDIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiLz48L3N2Zz4=";
 
 
   /* ============================== 工具函数 ============================== */
@@ -10899,7 +10899,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.56";
+  const SCRIPT_VERSION = "0.7.57";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
