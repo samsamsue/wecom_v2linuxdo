@@ -6436,3 +6436,54 @@ test("V2EX threaded conversation view: reply target resolution, tree hierarchy, 
   assert.ok(renderedRoots.includes('<div class="wecom-msg-bubble"><p>xxxxx</p><div class="wecom-reply-children">'), "children are nested inside parent bubble");
   assert.ok(renderedRoots.includes('data-post-number="5"'), "renders independent post 5");
 });
+
+test("V2EX balance card duplication fix: cleanV2exMoneyContent strips wrapping tags, prevents duplicate blocks on second open (v0.7.60)", () => {
+  // 1. Script contains cleanV2exMoneyContent
+  assert.ok(
+    scriptContent.includes("function cleanV2exMoneyContent("),
+    "must define cleanV2exMoneyContent helper"
+  );
+
+  // 2. Script removes all popovers on close
+  assert.ok(
+    scriptContent.includes('document.querySelectorAll(".wecom-v2ex-user-popover").forEach(el => el.remove());'),
+    "closeV2exUserPopover must remove all popover elements"
+  );
+
+  // 3. Functional tests for cleanV2exMoneyContent
+  function cleanV2exMoneyContent(raw) {
+    if (!raw || typeof raw !== "string") return "";
+    let str = raw.trim();
+    str = str.replace(/<\/?(?!img\b)[a-z0-9]+(?:\s+[^>]*)?>/gi, " ").trim();
+    str = str.replace(/src=["']\/static\//gi, 'src="https://www.v2ex.com/static/');
+    str = str.replace(/\s+/g, " ").trim();
+    return str;
+  }
+
+  // Corrupted unclosed tag (from previous regex bug)
+  const corrupted = '<a href="/balance" class="balance_area">11 <img src="/static/img/gold@2x.png"> 50 <img src="/static/img/silver@2x.png"> 80 <img src="/static/img/bronze@2x.png">';
+  const cleanedCorrupted = cleanV2exMoneyContent(corrupted);
+  assert.ok(!cleanedCorrupted.includes("<a"), "must strip <a tag");
+  assert.ok(!cleanedCorrupted.includes("balance_area"), "must strip balance_area class");
+  assert.ok(cleanedCorrupted.includes("https://www.v2ex.com/static/img/gold@2x.png"), "must replace static img url");
+  assert.ok(cleanedCorrupted.includes("11") && cleanedCorrupted.includes("50") && cleanedCorrupted.includes("80"));
+
+  // Nested #money > a
+  const nestedMoney = '<div id="money"><a href="/balance" class="balance_area">11 <img src="/static/img/gold@2x.png"> 50 <img src="/static/img/silver@2x.png"> 80 <img src="/static/img/bronze@2x.png"></a></div>';
+  const cleanedNested = cleanV2exMoneyContent(nestedMoney);
+  assert.ok(!cleanedNested.includes("<div") && !cleanedNested.includes("<a"), "must strip all div and a tags");
+  assert.ok(cleanedNested.includes("https://www.v2ex.com/static/img/gold@2x.png"));
+
+  // DOM extraction ignores userscript popover elements
+  assert.ok(
+    scriptContent.includes('el.closest(".wecom-v2ex-user-popover, .wecom-v2ex-member-card, .wecom-rail, .wecom-v2ex-footer-coins-group")'),
+    "extractV2exMoneyFromDom must ignore userscript-injected elements"
+  );
+
+  // getV2exUserStats cleans cached moneyHtml on read
+  assert.ok(
+    scriptContent.includes("cleanV2exMoneyContent(cachedV2exUserStats.moneyHtml)"),
+    "getV2exUserStats must clean moneyHtml on read to heal corrupt localStorage"
+  );
+});
+

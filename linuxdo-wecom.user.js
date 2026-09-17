@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.59
+// @version      0.7.60
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -10907,7 +10907,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.59";
+  const SCRIPT_VERSION = "0.7.60";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -12693,16 +12693,29 @@
            /(?:🟡|⚪|🟤)/.test(html);
   }
 
+  function cleanV2exMoneyContent(raw) {
+    if (!raw || typeof raw !== "string") return "";
+    let str = raw.trim();
+    // Strip all HTML tags EXCEPT <img> tags to avoid nested <a> or <div> rendering duplicates
+    str = str.replace(/<\/?(?!img\b)[a-z0-9]+(?:\s+[^>]*)?>/gi, " ").trim();
+    str = str.replace(/src=["']\/static\//gi, 'src="https://www.v2ex.com/static/');
+    str = str.replace(/\s+/g, " ").trim();
+    return str;
+  }
+
   function extractV2exMoneyFromDom(root = document) {
     if (!root || typeof root.querySelector !== "function") return null;
     const candidates = (typeof root.querySelectorAll === "function") ?
       root.querySelectorAll("#money, .balance_area, #Rightbar a[href*='/balance'], #Top a[href*='/balance'], a[href*='/balance']") :
       [];
     for (const el of candidates) {
+      if (el.closest && el.closest(".wecom-v2ex-user-popover, .wecom-v2ex-member-card, .wecom-rail, .wecom-v2ex-footer-coins-group")) {
+        continue;
+      }
       let html = el.innerHTML || "";
       const aMatch = html.match(/<a\s+[^>]*href=["']?[^"'>]*\/balance[^"'>]*["']?[^>]*>([\s\S]*?)<\/a>/i);
       if (aMatch) html = aMatch[1];
-      html = html.replace(/src=["']\/static\//gi, 'src="https://www.v2ex.com/static/').trim();
+      html = cleanV2exMoneyContent(html);
       if (hasV2exCoins(html)) {
         cachedV2exMoneyHtml = html;
         try { localStorage.setItem(V2EX_MONEY_KEY, html); } catch {}
@@ -12713,10 +12726,13 @@
       root.querySelector("#money, .balance_area, a[href^='/balance'], #Rightbar a[href^='/balance'], #Top a[href^='/balance']") :
       null;
     if (single) {
+      if (single.closest && single.closest(".wecom-v2ex-user-popover, .wecom-v2ex-member-card, .wecom-rail, .wecom-v2ex-footer-coins-group")) {
+        return null;
+      }
       let html = single.innerHTML || "";
       const aMatch = html.match(/<a\s+[^>]*href=["']?[^"'>]*\/balance[^"'>]*["']?[^>]*>([\s\S]*?)<\/a>/i);
       if (aMatch) html = aMatch[1];
-      html = html.replace(/src=["']\/static\//gi, 'src="https://www.v2ex.com/static/').trim();
+      html = cleanV2exMoneyContent(html);
       if (hasV2exCoins(html)) {
         cachedV2exMoneyHtml = html;
         try { localStorage.setItem(V2EX_MONEY_KEY, html); } catch {}
@@ -12728,12 +12744,12 @@
 
   function getV2exMoneyHtml() {
     const fromDom = extractV2exMoneyFromDom(document);
-    if (fromDom && hasV2exCoins(fromDom)) return fromDom;
-    if (cachedV2exMoneyHtml && hasV2exCoins(cachedV2exMoneyHtml)) return cachedV2exMoneyHtml;
+    if (fromDom && hasV2exCoins(fromDom)) return cleanV2exMoneyContent(fromDom);
+    if (cachedV2exMoneyHtml && hasV2exCoins(cachedV2exMoneyHtml)) return cleanV2exMoneyContent(cachedV2exMoneyHtml);
     try {
       const stored = localStorage.getItem(V2EX_MONEY_KEY);
       if (stored && hasV2exCoins(stored)) {
-        cachedV2exMoneyHtml = stored.trim();
+        cachedV2exMoneyHtml = cleanV2exMoneyContent(stored);
         return cachedV2exMoneyHtml;
       }
     } catch {}
@@ -12742,23 +12758,35 @@
 
   function extractV2exMoneyFromHtml(html) {
     if (!html || typeof html !== "string") return "";
-    const areaMatch = html.match(/<(?:a|div|span)\s+[^>]*(?:class=["'][^"']*balance_area[^"']*["']|id=["']money["'])[^>]*>([\s\S]*?)<\/(?:a|div|span)>/i);
-    if (areaMatch) {
-      let bHtml = areaMatch[1];
-      const innerA = bHtml.match(/<a\s+[^>]*>([\s\S]*?)<\/a>/i);
-      if (innerA) bHtml = innerA[1];
-      bHtml = bHtml.replace(/src=["']\/static\//gi, 'src="https://www.v2ex.com/static/').trim();
-      if (hasV2exCoins(bHtml)) return bHtml;
+    // 1. Match <div id="money">...</div>
+    const moneyDivMatch = html.match(/<div\s+[^>]*id=["']money["'][^>]*>([\s\S]*?)<\/div>/i);
+    if (moneyDivMatch) {
+      const cleaned = cleanV2exMoneyContent(moneyDivMatch[1]);
+      if (hasV2exCoins(cleaned)) return cleaned;
     }
-    const aMatch = html.match(/<a\s+[^>]*href=["'][^"']*\/balance[^"']*["'][^>]*>([\s\S]*?)<\/a>/i);
-    if (aMatch) {
-      const bHtml = aMatch[1].replace(/src=["']\/static\//gi, 'src="https://www.v2ex.com/static/').trim();
-      if (hasV2exCoins(bHtml)) return bHtml;
+    // 2. Match <a ... class="...balance_area...">...</a>
+    const balanceAMatch = html.match(/<a\s+[^>]*class=["'][^"']*balance_area[^"']*["'][^>]*>([\s\S]*?)<\/a>/i);
+    if (balanceAMatch) {
+      const cleaned = cleanV2exMoneyContent(balanceAMatch[1]);
+      if (hasV2exCoins(cleaned)) return cleaned;
     }
+    // 3. Match <div ... class="...balance_area...">...</div>
+    const balanceDivMatch = html.match(/<div\s+[^>]*class=["'][^"']*balance_area[^"']*["'][^>]*>([\s\S]*?)<\/div>/i);
+    if (balanceDivMatch) {
+      const cleaned = cleanV2exMoneyContent(balanceDivMatch[1]);
+      if (hasV2exCoins(cleaned)) return cleaned;
+    }
+    // 4. Match <a ... href=".../balance...">...</a>
+    const balanceHrefMatch = html.match(/<a\s+[^>]*href=["'][^"']*\/balance[^"']*["'][^>]*>([\s\S]*?)<\/a>/i);
+    if (balanceHrefMatch) {
+      const cleaned = cleanV2exMoneyContent(balanceHrefMatch[1]);
+      if (hasV2exCoins(cleaned)) return cleaned;
+    }
+    // 5. Raw coin pattern snippet fallback
     const snippetMatch = html.match(/(\d+\s*<img[^>]+(?:gold|silver|bronze)[^>]*>[\s\S]*?(?:<img[^>]+(?:gold|silver|bronze)[^>]*>|\d+))/i);
     if (snippetMatch) {
-      const bHtml = snippetMatch[1].replace(/src=["']\/static\//gi, 'src="https://www.v2ex.com/static/').trim();
-      if (hasV2exCoins(bHtml)) return bHtml;
+      const cleaned = cleanV2exMoneyContent(snippetMatch[1]);
+      if (hasV2exCoins(cleaned)) return cleaned;
     }
     return "";
   }
@@ -12902,12 +12930,22 @@
   }
 
   function getV2exUserStats() {
-    if (cachedV2exUserStats) return cachedV2exUserStats;
+    if (cachedV2exUserStats) {
+      if (cachedV2exUserStats.moneyHtml) {
+        cachedV2exUserStats.moneyHtml = cleanV2exMoneyContent(cachedV2exUserStats.moneyHtml);
+      }
+      return cachedV2exUserStats;
+    }
     try {
       const raw = localStorage.getItem(V2EX_USER_STATS_KEY);
       if (raw) {
         cachedV2exUserStats = JSON.parse(raw);
-        if (cachedV2exUserStats) return cachedV2exUserStats;
+        if (cachedV2exUserStats) {
+          if (cachedV2exUserStats.moneyHtml) {
+            cachedV2exUserStats.moneyHtml = cleanV2exMoneyContent(cachedV2exUserStats.moneyHtml);
+          }
+          return cachedV2exUserStats;
+        }
       }
     } catch {}
     return extractV2exUserStatsFromDom(document);
@@ -13054,8 +13092,7 @@
   }
 
   function closeV2exUserPopover() {
-    const el = document.querySelector(".wecom-v2ex-user-popover");
-    if (el) el.remove();
+    document.querySelectorAll(".wecom-v2ex-user-popover").forEach(el => el.remove());
   }
 
   function updateOpenV2exUserPopover(stats) {
@@ -13089,7 +13126,7 @@
     }
     if (stats.moneyHtml && hasV2exCoins(stats.moneyHtml)) {
       const el = popover.querySelector(".wecom-v2ex-footer-coins");
-      if (el) el.innerHTML = stats.moneyHtml;
+      if (el) el.innerHTML = cleanV2exMoneyContent(stats.moneyHtml);
     }
     const checkinBtn = popover.querySelector(".wecom-v2ex-checkin-btn");
     if (checkinBtn) {
@@ -13134,11 +13171,11 @@
 
     let moneyHtml = "";
     if (stats.moneyHtml && hasV2exCoins(stats.moneyHtml)) {
-      moneyHtml = stats.moneyHtml;
+      moneyHtml = cleanV2exMoneyContent(stats.moneyHtml);
     } else {
       const rawMoney = getV2exMoneyHtml();
       if (rawMoney && hasV2exCoins(rawMoney)) {
-        moneyHtml = rawMoney;
+        moneyHtml = cleanV2exMoneyContent(rawMoney);
       } else {
         moneyHtml = `<span class="wecom-v2ex-coins-loading" style="font-size:12px;color:var(--wc-text-3, #999);">加载余额…</span>`;
       }
