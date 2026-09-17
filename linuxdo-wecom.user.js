@@ -1640,43 +1640,7 @@
     .wecom-v2ex-help-btn:hover {
       color: #1A87FF;
     }
-    .wecom-v2ex-thread-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: #F7F8FA;
-      border-radius: 6px;
-      padding: 6px 10px;
-      font-size: 12px;
-      color: #4E5969;
-      margin-top: 6px;
-    }
-    .wecom-v2ex-thread-switch-pill {
-      width: 24px;
-      height: 12px;
-      border-radius: 6px;
-      background: #C9CDD4;
-      position: relative;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .wecom-v2ex-thread-switch-pill::after {
-      content: "";
-      position: absolute;
-      left: 2px;
-      top: 2px;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #FFFFFF;
-      transition: transform 0.2s;
-    }
-    .wecom-v2ex-thread-switch-pill.active {
-      background: #1A87FF;
-    }
-    .wecom-v2ex-thread-switch-pill.active::after {
-      transform: translateX(12px);
-    }
+
     .wecom-v2ex-checkin-row {
       display: flex;
       align-items: center;
@@ -3414,6 +3378,10 @@
     .wecom-msg-me .wecom-msg-header {
       justify-content: flex-end;
     }
+    .wecom-msg-me .wecom-msg-header:has(.wecom-msg-reply-indicator) {
+      align-self: flex-start;
+      justify-content: flex-start;
+    }
     .wecom-msg-reply-indicator {
       display: inline-flex;
       align-items: center;
@@ -3691,16 +3659,15 @@
     }
 
     /* 允许通过设置隐藏对话详情头像 */
-    html.wecom-hide-chat-avatar .wecom-msg-avatar {
+    html.wecom-hide-chat-avatar .wecom-msg-avatar,
+    html.wecom-hide-chat-avatar .wecom-chat-avatar {
       display: none !important;
     }
     html.wecom-hide-chat-avatar .wecom-msg {
       gap: 0 !important;
     }
     .wecom-chat-avatar-toggle.is-active,
-    .wecom-chat-avatar-toggle[aria-pressed="true"],
-    .wecom-chat-thread-toggle.is-active,
-    .wecom-chat-thread-toggle[aria-pressed="true"] {
+    .wecom-chat-avatar-toggle[aria-pressed="true"] {
       color: var(--wc-accent) !important;
       background: var(--wc-accent-soft) !important;
     }
@@ -8624,10 +8591,6 @@
       background: #1C1E22 !important;
       color: #8C8C8C !important;
     }
-    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-thread-row {
-      background: #1C1E22 !important;
-      color: #8C8C8C !important;
-    }
     html.${ROOT_CLASS}.wecom-dark .wecom-msg-reply-indicator {
       background: rgba(255, 255, 255, 0.08);
       color: #9aa0a6;
@@ -10061,10 +10024,6 @@
     } catch { /* ignore */ }
     document.documentElement.classList.toggle("wecom-thread-view", !!on);
     syncThemeControls();
-    const popoverPill = document.querySelector(".wecom-v2ex-thread-switch-pill");
-    if (popoverPill) {
-      popoverPill.classList.toggle("active", !!on);
-    }
     rerenderCurrentChatMessages();
   }
 
@@ -10467,20 +10426,24 @@
       chatAvatarToggleBtn.title = hidden ? "显示对话头像" : "隐藏对话头像";
     }
 
-    const chatThreadToggleBtn = document.querySelector(".wecom-chat-thread-toggle");
-    if (chatThreadToggleBtn) {
-      const enabled = isThreadViewEnabled();
-      chatThreadToggleBtn.classList.toggle("is-active", enabled);
-      chatThreadToggleBtn.setAttribute("aria-pressed", enabled ? "true" : "false");
-      chatThreadToggleBtn.title = enabled ? "关闭对话楼层树（恢复平铺）" : "开启对话楼层树（按回复关系嵌套）";
-    }
-
     const boostBtn = menu.querySelector(".wecom-menu-toggle-boost");
     if (boostBtn) {
       const on = isBoostEnabled();
       boostBtn.classList.toggle("is-active", on);
       boostBtn.setAttribute("aria-checked", on ? "true" : "false");
       const badge = boostBtn.querySelector(".wecom-menu-state-badge");
+      if (badge) {
+        badge.textContent = on ? "已开启" : "已关闭";
+        badge.className = `wecom-menu-state-badge ${on ? "is-on" : "is-off"}`;
+      }
+    }
+
+    const threadViewBtn = menu.querySelector(".wecom-menu-toggle-thread-view");
+    if (threadViewBtn) {
+      const on = isThreadViewEnabled();
+      threadViewBtn.classList.toggle("is-active", on);
+      threadViewBtn.setAttribute("aria-checked", on ? "true" : "false");
+      const badge = threadViewBtn.querySelector(".wecom-menu-state-badge");
       if (badge) {
         badge.textContent = on ? "已开启" : "已关闭";
         badge.className = `wecom-menu-state-badge ${on ? "is-on" : "is-off"}`;
@@ -10606,6 +10569,8 @@
       `<div class="wecom-theme-menu-title wecom-theme-menu-divider">消息功能</div>` +
       `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-boost" aria-checked="true">` +
       `${ICONS.boost}<span class="wecom-menu-label">显示消息 Boost</span><span class="wecom-menu-state-badge is-on">已开启</span></button>` +
+      `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-thread-view" aria-checked="true">` +
+      `${ICONS.thread}<span class="wecom-menu-label">对话楼层关系</span><span class="wecom-menu-state-badge is-on">已开启</span></button>` +
       `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-base64" aria-checked="true">` +
       `${ICONS.code}<span class="wecom-menu-label">划词自动解码 Base64</span><span class="wecom-menu-state-badge is-on">已开启</span></button>` +
       `<div class="wecom-theme-menu-title wecom-theme-menu-divider">详情排版</div>` +
@@ -10673,6 +10638,13 @@
         event.preventDefault();
         event.stopPropagation();
         setBoostEnabled(!isBoostEnabled());
+        return;
+      }
+      const threadViewBtn = event.target.closest(".wecom-menu-toggle-thread-view");
+      if (threadViewBtn) {
+        event.preventDefault();
+        event.stopPropagation();
+        setThreadViewEnabled(!isThreadViewEnabled());
         return;
       }
       const base64Btn = event.target.closest(".wecom-menu-toggle-base64");
@@ -13048,10 +13020,6 @@
         </span>
       </div>
 
-      <div class="wecom-v2ex-thread-row">
-        <span>对话楼层关系</span>
-        <div class="wecom-v2ex-thread-switch-pill ${isThreadViewEnabled() ? 'active' : ''}" role="button" tabindex="0" title="开启后回帖按会话分支层级缩进展示"></div>
-      </div>
     `;
 
     // 日夜模式切换
@@ -13062,12 +13030,6 @@
       applyTheme();
       const pill = popover.querySelector(".wecom-v2ex-theme-switch-pill");
       if (pill) pill.classList.toggle("active", isDarkMode());
-    });
-
-    // 对话楼层关系开关
-    popover.querySelector(".wecom-v2ex-thread-switch-pill")?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      setThreadViewEnabled(!isThreadViewEnabled());
     });
 
     // 签到按钮点击
@@ -16607,7 +16569,7 @@
 
         if (scope === bubble) {
           cleanMessageBodyWhitespace(bodyEl);
-          bubble.appendChild(gallery);
+          bodyEl.after(gallery);
         } else {
           cleanMessageBodyWhitespace(scope);
           scope.appendChild(gallery);
@@ -17068,7 +17030,6 @@
       !panel.querySelector('[data-composer-action="base64"]') ||
       !panel.querySelector('[data-composer-action="doc"]') || !panel.querySelector('[data-composer-action="apps"]') ||
       !panel.querySelector(".wecom-platform-switcher") || !panel.querySelector(".wecom-chat-avatar-toggle") ||
-      !panel.querySelector(".wecom-chat-thread-toggle") ||
       !panel.querySelector(".wecom-composer-bottom .wecom-compose-status"))) {
       panel.remove();
       panel = null;
@@ -17123,7 +17084,6 @@
           </div>
         </div>
         <div class="wecom-chat-tools">
-          <button type="button" class="wecom-icon-btn wecom-chat-thread-toggle${isThreadViewEnabled() ? " is-active" : ""}" title="${isThreadViewEnabled() ? "关闭对话楼层树（恢复平铺）" : "开启对话楼层树（按回复关系嵌套）"}" aria-label="对话楼层关系" aria-pressed="${isThreadViewEnabled() ? "true" : "false"}">${ICONS.thread}</button>
           <button type="button" class="wecom-icon-btn wecom-chat-avatar-toggle${isHideChatAvatar() ? " is-active" : ""}" title="${isHideChatAvatar() ? "显示对话头像" : "隐藏对话头像"}" aria-label="隐藏对话头像" aria-pressed="${isHideChatAvatar() ? "true" : "false"}">${ICONS.userOff}</button>
           <button type="button" class="wecom-icon-btn wecom-chat-members-toggle" title="群成员与详情">${ICONS.users}</button>
           <button type="button" class="wecom-icon-btn wecom-topic-bookmark"${IS_V2EX ? ' style="display:none"' : ""} title="收藏话题" aria-label="收藏话题" aria-pressed="false">${ICONS.bookmark}</button>
@@ -17744,11 +17704,6 @@
           loadOlderPosts();
         }
       }
-      return true;
-    }
-    if (event.target.closest(".wecom-chat-thread-toggle")) {
-      consumeClick(event);
-      setThreadViewEnabled(!isThreadViewEnabled());
       return true;
     }
     if (event.target.closest(".wecom-chat-avatar-toggle")) {
@@ -18528,6 +18483,29 @@
       `</span>`;
   }
 
+  function replyBodyHtml(post, hasReplyIndicator) {
+    const cooked = String(post?.cooked || post?.content || "");
+    if (!IS_V2EX || !hasReplyIndicator || !post?.is_explicit_reply) return cooked;
+
+    const reference = post.replyReference || extractReferencedReply(cooked);
+    const author = String(reference?.author || post?.reply_to_user?.username || "").trim();
+    if (!author) return cooked;
+
+    const escapedAuthor = author.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const leadingContent = "(\\s*(?:<p\\b[^>]*>\\s*)?)";
+    const memberLink = new RegExp(
+      `^${leadingContent}(?:@\\s*)?<a\\s+[^>]*href=["']\\/member\\/${escapedAuthor}(?:["'/?#]|$)[^>]*>(?:@\\s*)?[^<]*<\\/a>\\s*`,
+      "i"
+    );
+    const plainMention = new RegExp(
+      `^${leadingContent}@\\s*${escapedAuthor}(?=\\s|#|<br\\s*\\/?\\s*>|<\\/p>|$)\\s*`,
+      "i"
+    );
+
+    // The reply indicator already identifies the recipient, so omit the duplicated leading mention.
+    return cooked.replace(memberLink, "$1").replace(plainMention, "$1");
+  }
+
   function rerenderCurrentChatMessages() {
     const body = document.querySelector(".wecom-chat-body");
     if (!body || !chatState.topicId || !chatState.postsByNumber || chatState.postsByNumber.size === 0) {
@@ -18955,6 +18933,7 @@
     const threadClass = depth > 0 ? " is-thread-child" : "";
     const threadAttr = depth > 0 ? ` data-thread-depth="${depth}"` : "";
     const replyInd = replyIndicatorHtml(post);
+    const bodyHtml = replyBodyHtml(post, Boolean(replyInd));
     return `
       <div class="wecom-msg wecom-msg-${side}${threadClass}" data-post-number="${post.post_number}"${post.id ? ` data-post-id="${post.id}"` : ""}${post.floor != null ? ` data-floor="${post.floor}"` : ""}${threadAttr}${me ? ' data-mine="1"' : ""}>
         <span class="wecom-msg-avatar" style="background:${avatarBg}"${userCardAttributes(post)}>${avatar}</span>
@@ -18965,7 +18944,7 @@
           </div>
           <div class="wecom-msg-bubble">
             ${replyReferenceHtml(post)}
-            <div class="wecom-msg-body">${post.cooked || ""}</div>
+            <div class="wecom-msg-body">${bodyHtml}</div>
             ${childrenHtml || ""}
           </div>
           ${boostsHtml(post)}
@@ -21324,6 +21303,36 @@
     return data;
   }
 
+  function mergeV2exTopicPages(firstPage, secondPage) {
+    const postsByNumber = new Map();
+    for (const page of [firstPage, secondPage]) {
+      for (const post of page?.post_stream?.posts || []) {
+        const postNumber = postNumberOf(post);
+        if (postNumber && !postsByNumber.has(postNumber)) postsByNumber.set(postNumber, post);
+      }
+    }
+    const posts = [...postsByNumber.values()].sort((a, b) => postNumberOf(a) - postNumberOf(b));
+    return {
+      ...firstPage,
+      post_stream: {
+        ...(firstPage.post_stream || {}),
+        posts,
+        stream: posts.map((post) => post.id)
+      },
+      v2ex_page: Number(secondPage?.v2ex_page) || 2,
+      v2ex_has_more: Boolean(secondPage?.v2ex_has_more),
+      total_pages: Math.max(Number(firstPage?.total_pages) || 0, Number(secondPage?.total_pages) || 0),
+      total_replies: Number(firstPage?.total_replies) || Number(secondPage?.total_replies) || Math.max(0, posts.length - 1)
+    };
+  }
+
+  async function loadInitialV2exThreadPages(topicId, data, force, signal, targetPage) {
+    if (!isThreadViewEnabled() || Number(targetPage) !== 1 || !data?.v2ex_has_more) return data;
+    const secondPage = await fetchTopicJson(topicId, 0, force, signal, 2);
+    if (signal?.aborted) return data;
+    return mergeV2exTopicPages(data, secondPage);
+  }
+
   function rememberTopicPost(topicId, postNumber) {
     const id = Number(topicId);
     const n = Number(postNumber) || 0;
@@ -21601,6 +21610,10 @@
       const targetPage = (IS_V2EX && target && target.page) ? target.page : 1;
       let data = await fetchTopicJson(topicId, requestedPost, force, signal, targetPage);
       if (signal.aborted || Number(chatState.topicId) !== topicId) return; // 路由已切走或已取消
+      if (IS_V2EX) {
+        data = await loadInitialV2exThreadPages(topicId, data, force, signal, targetPage);
+        if (signal.aborted || Number(chatState.topicId) !== topicId) return;
+      }
       let openPost = openingPostNumber(topicId, data);
       if (!openPost && target && target.floor) {
         openPost = target.floor + 1;

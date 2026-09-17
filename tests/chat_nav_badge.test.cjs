@@ -923,6 +923,14 @@ test("V2EX topic detail multi-page pagination and footer bar", () => {
     scriptContent.includes("chatState.hasNewer = Boolean(chatState.v2exHasMore);"),
     "syncRenderedWindow must sync hasNewer with v2exHasMore"
   );
+  assert.ok(
+    scriptContent.includes("function loadInitialV2exThreadPages("),
+    "threaded V2EX topics must load their second page before the first render"
+  );
+  assert.ok(
+    scriptContent.includes("data = await loadInitialV2exThreadPages(topicId, data, force, signal, targetPage);"),
+    "loadTopic must merge the first two V2EX pages before rendering the conversation tree"
+  );
 
   // Test V2EX pagination parsing simulation
   function simulatePaginationParse(html, page) {
@@ -2989,8 +2997,8 @@ test("Images inside blockquote are auto-laid out into independent galleries with
     "applyImageAutoLayout must group candidate images by blockquote scope"
   );
   assert.ok(
-    scriptContent.includes("if (scope === bubble) {\n          cleanMessageBodyWhitespace(bodyEl);\n          bubble.appendChild(gallery);\n        } else {\n          cleanMessageBodyWhitespace(scope);\n          scope.appendChild(gallery);\n        }"),
-    "applyImageAutoLayout must append blockquote gallery to scope and bubble gallery to bubble"
+    scriptContent.includes("if (scope === bubble) {\n          cleanMessageBodyWhitespace(bodyEl);\n          bodyEl.after(gallery);\n        } else {\n          cleanMessageBodyWhitespace(scope);\n          scope.appendChild(gallery);\n        }"),
+    "applyImageAutoLayout must keep a bubble gallery after its body and before nested reply floors"
   );
 
   // 4. Verify querySelectorAll is used to remove all galleries on toggle
@@ -3096,8 +3104,9 @@ test("Conversation detail avatars can be configured to be hidden via settings an
   // 3. Verify CSS styling when hidden
   assert.ok(
     scriptContent.includes("html.wecom-hide-chat-avatar .wecom-msg-avatar") &&
+    scriptContent.includes("html.wecom-hide-chat-avatar .wecom-chat-avatar") &&
     scriptContent.includes("display: none !important;"),
-    "must hide .wecom-msg-avatar when html.wecom-hide-chat-avatar class is present"
+    "must hide message and header avatars when html.wecom-hide-chat-avatar class is present"
   );
 
   // 4. Verify presence in theme menu
@@ -5960,17 +5969,22 @@ test("V2EX threaded conversation view: reply target resolution, tree hierarchy, 
   const scriptContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.user.js"), "utf8");
 
   // 1. 验证关键选择器与 CSS 规则存在
-  assert.ok(scriptContent.includes(".wecom-chat-thread-toggle"), "contains .wecom-chat-thread-toggle in header tools");
-  assert.ok(scriptContent.includes(".wecom-v2ex-thread-row"), "contains .wecom-v2ex-thread-row in popover");
-  assert.ok(scriptContent.includes(".wecom-v2ex-thread-switch-pill"), "contains .wecom-v2ex-thread-switch-pill in popover");
+  assert.ok(scriptContent.includes(".wecom-menu-toggle-thread-view"), "contains .wecom-menu-toggle-thread-view in settings menu");
   assert.ok(scriptContent.includes(".wecom-reply-children"), "contains .wecom-reply-children continuous tree line style");
   assert.ok(scriptContent.includes(".wecom-thread-node"), "contains .wecom-thread-node container style");
   assert.ok(scriptContent.includes(".wecom-msg-reply-indicator"), "contains .wecom-msg-reply-indicator style");
+  assert.ok(
+    scriptContent.includes(".wecom-msg-me .wecom-msg-header:has(.wecom-msg-reply-indicator)") &&
+    scriptContent.includes("align-self: flex-start;"),
+    "keeps reply indicators left-aligned above outgoing message bubbles"
+  );
   assert.ok(scriptContent.includes("function extractReferencedReply("), "contains extractReferencedReply");
   assert.ok(scriptContent.includes("function resolveV2exReplyRelationships("), "contains resolveV2exReplyRelationships");
   assert.ok(scriptContent.includes("function buildConversationTree("), "contains buildConversationTree");
   assert.ok(scriptContent.includes("function flattenReplies("), "contains flattenReplies");
   assert.ok(scriptContent.includes("function replyIndicatorHtml("), "contains replyIndicatorHtml");
+  assert.ok(scriptContent.includes("function replyBodyHtml("), "removes a duplicated leading reply mention from the message body");
+  assert.ok(scriptContent.includes("const bodyHtml = replyBodyHtml(post, Boolean(replyInd));"), "uses the normalized reply body when rendering messages");
   assert.ok(scriptContent.includes("function isThreadViewEnabled("), "contains isThreadViewEnabled");
   assert.ok(scriptContent.includes("function setThreadViewEnabled("), "contains setThreadViewEnabled");
 
@@ -6298,12 +6312,6 @@ test("V2EX threaded conversation view: reply target resolution, tree hierarchy, 
   assert.ok(renderedRoots.includes('<div class="wecom-msg-bubble"><p>xxxxx</p><div class="wecom-reply-children">'), "children are nested inside parent bubble");
   assert.ok(renderedRoots.includes('data-post-number="5"'), "renders independent post 5");
 });
-
-
-
-
-
-
 
 
 
