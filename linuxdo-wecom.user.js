@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.45
+// @version      0.7.46
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -10447,7 +10447,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.45";
+  const SCRIPT_VERSION = "0.7.46";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -14797,13 +14797,31 @@
   function convRowHtml(topic, usersById) {
     const unread = topic.unread > 0 ? topic.unread : (topic.new_posts > 0 ? topic.new_posts : 0);
     const replyCount = Math.max(0, (topic.posts_count || 1) - 1);
-    const rawSummary = topic.notification_text || (topic.last_poster_username
+    const isNotif = Boolean(
+      topic.notification_text ||
+      topic.node_name === "通知" ||
+      (typeof listState !== "undefined" && listState.apiPath === "/notifications")
+    );
+    let notifText = topic.notification_text || "";
+    if (notifText && topic.last_poster_username && topic.last_poster_username !== "楼主" && !notifText.startsWith(topic.last_poster_username)) {
+      notifText = `${topic.last_poster_username}: ${notifText}`;
+    }
+    const rawSummary = notifText || (topic.last_poster_username
       ? `${topic.last_poster_username}: ${replyCount > 0 ? `[${replyCount}条回复]` : "发起话题"}`
       : `${topic.posts_count || 0} 回复`);
     const maskList = isMaskTitleList();
-    // 列表伪装时：顶部大字为工作流拟真标题，下方的灰色摘要字显示真实话题标题！
+    // 列表伪装时：顶部大字为工作流拟真标题，下方的灰色摘要字显示真实话题标题；通知列表则优先显示回复内容
     const title = maskList ? disguiseTitleForTopic(topic) : String(topic.title || "");
-    const summary = maskList ? String(topic.title || rawSummary) : rawSummary;
+    let summary = rawSummary;
+    if (maskList) {
+      if (isNotif && (topic.notification_text || notifText)) {
+        summary = (topic.title && !rawSummary.includes(topic.title))
+          ? `${rawSummary} · ${topic.title}`
+          : rawSummary;
+      } else {
+        summary = String(topic.title || rawSummary);
+      }
+    }
     const tag = (maskList || isMaskAvatar()) ? "" : convCategoryTag(topic);
     const isPinned = !!(topic.pinned || topic.pinned_globally);
     let targetFloor = topic.target_floor;
@@ -20129,7 +20147,7 @@
         seen.add(dedupKey);
 
         const nextInner = dock.nextElementSibling?.classList.contains("inner") ? dock.nextElementSibling : null;
-        const replyContent = nextInner?.querySelector(".reply_content")?.textContent?.trim() || "";
+        const replyContent = (nextInner?.querySelector(".reply_content")?.textContent || "").replace(/\s+/g, " ").trim();
         const timeEl = dock.querySelector(".fade, .ago");
         const nodeLink = dock.querySelector("a[href^='/go/']");
         const title = topicLink.textContent.trim() || `话题 #${id}`;
@@ -20230,7 +20248,7 @@
       const avatar = cell.querySelector("img.avatar")?.getAttribute("src") || "";
       const timeEl = cell.querySelector("[title], .ago, .fade");
       const payloadEl = cell.querySelector(".payload");
-      const text = payloadEl?.textContent?.trim() || (cell.textContent || "").replace(/\s+/g, " ").trim();
+      const text = (payloadEl ? payloadEl.textContent : (cell.textContent || "")).replace(/\s+/g, " ").trim();
 
       topics.push({
         id,

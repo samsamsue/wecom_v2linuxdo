@@ -5626,6 +5626,109 @@ test("convCategoryTag omits is-dept tags and CSS hides .wecom-conv-tag.is-dept (
   );
 });
 
+test("convRowHtml preserves notification reply content when fake title is enabled (v0.7.46)", () => {
+  // 1. Static assertions on userscript logic
+  assert.ok(
+    scriptContent.includes("const isNotif = Boolean(") &&
+    scriptContent.includes("topic.notification_text") &&
+    scriptContent.includes("topic.node_name === \"通知\""),
+    "convRowHtml must identify notification items"
+  );
+  assert.ok(
+    scriptContent.includes("${rawSummary} · ${topic.title}"),
+    "convRowHtml must preserve reply content with topic title suffix in masked mode"
+  );
+  assert.ok(
+    scriptContent.includes("!rawSummary.includes(topic.title)"),
+    "convRowHtml must not duplicate topic title if already present in notification text"
+  );
+
+  // 2. Behavioral simulation
+  function simulateConvSummary(topic, maskList, listApiPath = "") {
+    const unread = topic.unread > 0 ? topic.unread : (topic.new_posts > 0 ? topic.new_posts : 0);
+    const replyCount = Math.max(0, (topic.posts_count || 1) - 1);
+    const isNotif = Boolean(
+      topic.notification_text ||
+      topic.node_name === "通知" ||
+      listApiPath === "/notifications"
+    );
+    let notifText = topic.notification_text || "";
+    if (notifText && topic.last_poster_username && topic.last_poster_username !== "楼主" && !notifText.startsWith(topic.last_poster_username)) {
+      notifText = `${topic.last_poster_username}: ${notifText}`;
+    }
+    const rawSummary = notifText || (topic.last_poster_username
+      ? `${topic.last_poster_username}: ${replyCount > 0 ? `[${replyCount}条回复]` : "发起话题"}`
+      : `${topic.posts_count || 0} 回复`);
+    let summary = rawSummary;
+    if (maskList) {
+      if (isNotif && (topic.notification_text || notifText)) {
+        summary = (topic.title && !rawSummary.includes(topic.title))
+          ? `${rawSummary} · ${topic.title}`
+          : rawSummary;
+      } else {
+        summary = String(topic.title || rawSummary);
+      }
+    }
+    return summary;
+  }
+
+  // Normal topic with maskList off: shows author & reply count
+  assert.equal(
+    simulateConvSummary({ id: 101, title: "关于VS Code配置", last_poster_username: "alice", posts_count: 3 }, false),
+    "alice: [2条回复]"
+  );
+
+  // Normal topic with maskList on: shows real topic title
+  assert.equal(
+    simulateConvSummary({ id: 101, title: "关于VS Code配置", last_poster_username: "alice", posts_count: 3 }, true),
+    "关于VS Code配置"
+  );
+
+  // Notification reply with maskList off: shows reply text prefixed with author
+  assert.equal(
+    simulateConvSummary({
+      id: 202,
+      title: "关于VS Code配置",
+      last_poster_username: "bob",
+      notification_text: "确实已修复，感谢！",
+      node_name: "通知"
+    }, false, "/notifications"),
+    "bob: 确实已修复，感谢！"
+  );
+
+  // Notification reply with maskList on: PRESERVES reply text and includes topic title
+  const maskedNotifSummary = simulateConvSummary({
+    id: 202,
+    title: "关于VS Code配置",
+    last_poster_username: "bob",
+    notification_text: "确实已修复，感谢！",
+    node_name: "通知"
+  }, true, "/notifications");
+  assert.ok(
+    maskedNotifSummary.startsWith("bob: 确实已修复，感谢！"),
+    "Masked notification summary must prioritize reply content"
+  );
+  assert.equal(
+    maskedNotifSummary,
+    "bob: 确实已修复，感谢！ · 关于VS Code配置"
+  );
+
+  // Thank notification already containing topic title: does not duplicate
+  const thankSummary = simulateConvSummary({
+    id: 203,
+    title: "关于VS Code配置",
+    last_poster_username: "bob",
+    notification_text: "bob 感谢了你在主题 关于VS Code配置 的回复",
+    node_name: "通知"
+  }, true, "/notifications");
+  assert.equal(
+    thankSummary,
+    "bob 感谢了你在主题 关于VS Code配置 的回复",
+    "Must not duplicate topic title in thank notifications"
+  );
+});
+
+
 
 
 
