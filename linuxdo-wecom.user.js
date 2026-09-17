@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.51
+// @version      0.7.52
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -3277,7 +3277,7 @@
     .wecom-msg.is-reply-target .wecom-msg-bubble {
       outline: 2px solid var(--wc-accent); outline-offset: 3px;
     }
-    /* 对话楼层关系（层级嵌套与连续引导线） */
+    /* 对话楼层关系（气泡内层级嵌套、小头像与防冒泡连续引导线） */
     .wecom-thread-node {
       display: flex;
       flex-direction: column;
@@ -3290,19 +3290,73 @@
     .wecom-reply-children {
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      margin: 8px 0 2px 20px;
-      padding-left: 14px;
+      gap: 10px;
+      margin-top: 10px;
+      padding-top: 10px;
+      padding-left: 12px;
       border-left: 2px solid var(--wc-border);
+      border-top: 1px solid var(--wc-border-subtle, rgba(0, 0, 0, 0.05));
       position: relative;
-      transition: border-color 0.16s ease;
+      transition: border-left-color 0.16s ease;
     }
-    .wecom-reply-children:hover {
-      border-left-color: var(--wc-accent);
+    /* 楼层线高光防止冒泡：仅高亮最内层直接处于 hover/focus 的连线 */
+    .wecom-reply-children:hover:not(:has(.wecom-reply-children:hover)),
+    .wecom-reply-children:focus-within:not(:has(.wecom-reply-children:focus-within)) {
+      border-left-color: var(--wc-accent) !important;
     }
-    .wecom-reply-children:has(> .wecom-thread-node:hover):not(:has(.wecom-reply-children > .wecom-thread-node:hover)),
-    .wecom-reply-children:has(> .wecom-msg:hover):not(:has(.wecom-reply-children > .wecom-msg:hover)) {
-      border-left-color: var(--wc-accent);
+    /* 气泡内的子回复样式 */
+    .wecom-reply-children .wecom-msg {
+      max-width: 100%;
+      gap: 8px;
+      margin-bottom: 0;
+    }
+    /* 里面的头像相对小一点：一级子楼层 24px，更深层子楼层 20px */
+    .wecom-reply-children .wecom-msg-avatar {
+      width: 24px;
+      height: 24px;
+      font-size: 11px;
+      border-radius: 3px;
+    }
+    .wecom-reply-children .wecom-reply-children .wecom-msg-avatar {
+      width: 20px;
+      height: 20px;
+      font-size: 10px;
+    }
+    .wecom-reply-children .wecom-msg-header {
+      margin-bottom: 2px;
+      gap: 5px;
+    }
+    .wecom-reply-children .wecom-msg-name {
+      font-size: 11.5px;
+    }
+    .wecom-reply-children .wecom-msg-bubble {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      padding: 0;
+      border-radius: 0;
+      font-size: 13px;
+    }
+    .wecom-reply-children .wecom-msg-meta {
+      margin-top: 3px;
+      font-size: 10.5px;
+      gap: 6px;
+    }
+    .wecom-reply-children .wecom-reply-children {
+      margin-top: 8px;
+      padding-top: 8px;
+      padding-left: 10px;
+    }
+    .wecom-reply-children .wecom-msg.wecom-msg-me {
+      flex-direction: row;
+      align-self: flex-start;
+    }
+    .wecom-reply-children .wecom-msg.wecom-msg-me .wecom-msg-header {
+      justify-content: flex-start;
+    }
+    .wecom-msg-me .wecom-reply-children {
+      text-align: left;
+      direction: ltr;
     }
     .wecom-msg-header {
       display: flex;
@@ -3420,8 +3474,10 @@
       opacity: 0; visibility: hidden;
       transition: opacity 0.15s ease;
     }
-    .wecom-msg:hover .wecom-msg-tools { opacity: 1; visibility: visible; }
+    .wecom-msg:hover:not(:has(.wecom-msg:hover)) > .wecom-msg-content > .wecom-msg-tools,
+    .wecom-msg.has-boost-popover > .wecom-msg-content > .wecom-msg-tools { opacity: 1; visibility: visible; }
     .wecom-msg-me .wecom-msg-tools { right: auto; left: 0; }
+    .wecom-reply-children .wecom-msg-tools { top: -8px; }
     .wecom-msg-tool {
       width: 26px; height: 26px;
       display: flex; align-items: center; justify-content: center;
@@ -8538,13 +8594,11 @@
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-reply-children {
       border-left-color: var(--wc-border);
+      border-top-color: rgba(255, 255, 255, 0.08);
     }
-    html.${ROOT_CLASS}.wecom-dark .wecom-reply-children:hover {
-      border-left-color: var(--wc-accent);
-    }
-    html.${ROOT_CLASS}.wecom-dark .wecom-reply-children:has(> .wecom-thread-node:hover):not(:has(.wecom-reply-children > .wecom-thread-node:hover)),
-    html.${ROOT_CLASS}.wecom-dark .wecom-reply-children:has(> .wecom-msg:hover):not(:has(.wecom-reply-children > .wecom-msg:hover)) {
-      border-left-color: var(--wc-accent);
+    html.${ROOT_CLASS}.wecom-dark .wecom-reply-children:hover:not(:has(.wecom-reply-children:hover)),
+    html.${ROOT_CLASS}.wecom-dark .wecom-reply-children:focus-within:not(:has(.wecom-reply-children:focus-within)) {
+      border-left-color: var(--wc-accent) !important;
     }
 
     /* 深色模式：V2EX 用户资料卡 */
@@ -10680,7 +10734,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.51";
+  const SCRIPT_VERSION = "0.7.52";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -18819,7 +18873,7 @@
     }
   }
 
-  function bubbleHtml(post, myName) {
+  function bubbleHtml(post, myName, childrenHtml = "") {
     const me = isMyPost(post, myName);
     const side = me ? "me" : "other";
     const displayName = userDisplayName(post, post.username || "?");
@@ -18869,6 +18923,7 @@
           <div class="wecom-msg-bubble">
             ${replyReferenceHtml(post)}
             <div class="wecom-msg-body">${post.cooked || ""}</div>
+            ${childrenHtml || ""}
           </div>
           ${boostsHtml(post)}
           <span class="wecom-msg-meta">
@@ -20577,16 +20632,16 @@
         state.lastTime = t;
       }
     }
-    const bubble = bubbleHtml(post, myName);
     const hasChildren = Array.isArray(node.children) && node.children.length > 0;
     const childrenHtml = hasChildren
       ? `<div class="wecom-reply-children">${node.children.map((child) => renderThreadNode(child, myName, state, depth + 1)).join("")}</div>`
       : "";
+    const bubble = bubbleHtml(post, myName, childrenHtml);
 
     if (depth === 0 && !hasChildren) {
       return `${timeSep}${bubble}`;
     }
-    return `${timeSep}<div class="wecom-thread-node" data-post-number="${post.post_number}">${bubble}${childrenHtml}</div>`;
+    return `${timeSep}<div class="wecom-thread-node" data-post-number="${post.post_number}">${bubble}</div>`;
   }
 
   function renderBubbles(posts, myName) {

@@ -6277,24 +6277,25 @@ test("V2EX threaded conversation view: reply target resolution, tree hierarchy, 
     ]
   );
 
-  // 4. 验证递归渲染 HTML 结构生成连续树形容器
+  // 4. 验证递归渲染 HTML 结构生成气泡内嵌套子回复容器与防冒泡引导线
   function renderThreadNode(node, myName, state, depth = 0) {
     node._threadDepth = depth;
     const post = node;
-    const bubble = `<div class="wecom-msg" data-post-number="${post.post_number}" data-floor="${post.floor}"><div class="wecom-msg-name">${post.username}</div></div>`;
     const hasChildren = Array.isArray(node.children) && node.children.length > 0;
     const childrenHtml = hasChildren
       ? `<div class="wecom-reply-children">${node.children.map((child) => renderThreadNode(child, myName, state, depth + 1)).join("")}</div>`
       : "";
+    const bubble = `<div class="wecom-msg" data-post-number="${post.post_number}" data-floor="${post.floor}"><div class="wecom-msg-name">${post.username}</div><div class="wecom-msg-bubble">${post.cooked || ""}${childrenHtml}</div></div>`;
     if (depth === 0 && !hasChildren) {
       return bubble;
     }
-    return `<div class="wecom-thread-node" data-post-number="${post.post_number}">${bubble}${childrenHtml}</div>`;
+    return `<div class="wecom-thread-node" data-post-number="${post.post_number}">${bubble}</div>`;
   }
 
   const renderedRoots = tree.map((root) => renderThreadNode(root, "me", { lastTime: 0 }, 0)).join("");
   assert.ok(renderedRoots.includes('class="wecom-thread-node" data-post-number="1"'), "renders thread node for post 1");
   assert.ok(renderedRoots.includes('class="wecom-reply-children"'), "renders continuous child container");
+  assert.ok(renderedRoots.includes('<div class="wecom-msg-bubble"><p>xxxxx</p><div class="wecom-reply-children">'), "children are nested inside parent bubble");
   assert.ok(renderedRoots.includes('data-post-number="5"'), "renders independent post 5");
 });
 
