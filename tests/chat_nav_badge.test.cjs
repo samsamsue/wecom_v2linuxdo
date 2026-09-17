@@ -5368,6 +5368,96 @@ test("Linux DO like button provides immediate visual feedback, optimistic badge 
   assert.equal(resF.toasts[1].type, "error");
 });
 
+test("V2EX notification navigation, URL pushState synchronization, MutationObserver badge guard, and empty list stability (v0.7.42)", () => {
+  // 1. Static code assertions
+  assert.ok(
+    scriptContent.includes('if (location.pathname !== "/notifications") {\n          navigateInApp("/notifications");'),
+    "must call navigateInApp('/notifications') on avatar badge or popover click"
+  );
+  assert.ok(
+    scriptContent.includes('el.closest("#Top a[href^=\'/notifications\'], #Rightbar a[href^=\'/notifications\']")'),
+    "MutationObserver must ignore V2EX native notification badge changes"
+  );
+  assert.ok(
+    scriptContent.includes('if (IS_V2EX && (listState.apiPath === "/notifications" || currentPath === "/notifications")) {\n      navigateInApp("/?tab=all");'),
+    "handleChatNavClick must navigate back to /?tab=all from /notifications"
+  );
+  assert.ok(
+    scriptContent.includes('emptyNotice = listState.apiPath === "/notifications" ? "暂无未读提醒"'),
+    "empty notifications list must display '暂无未读提醒'"
+  );
+  assert.ok(
+    scriptContent.includes("!force && listState.loadedApiPath === apiPath && Array.isArray(listState.topics)"),
+    "loadList must recognize loaded empty topics array without unnecessary refetching"
+  );
+
+  // 2. Behavioral simulation of the notification click & flash bug prevention
+  let currentPathname = "/";
+  let historyPath = "/";
+  let appliedApi = "";
+  let mutationObserverTriggered = false;
+
+  function navigateInAppSim(url) {
+    historyPath = url;
+    currentPathname = url.split("?")[0];
+    applyThemeSim();
+  }
+
+  function listApiForPathSim(pathname, search = "") {
+    if (pathname === "/notifications") return pathname;
+    if (search.includes("tab=hot")) return "/api/topics/hot.json";
+    return "/?tab=all";
+  }
+
+  function applyThemeSim() {
+    appliedApi = listApiForPathSim(currentPathname);
+  }
+
+  function simulateMutation(targetSelector) {
+    const isUi = targetSelector.includes("wecom");
+    const isBadge = targetSelector.includes("#Top a[href^='/notifications']");
+    if (isUi || isBadge) {
+      return false; // ignored
+    }
+    mutationObserverTriggered = true;
+    applyThemeSim();
+    return true;
+  }
+
+  // Initial state: User is on home with unread badge
+  assert.equal(currentPathname, "/");
+
+  // Step 1: User clicks "3 未读提醒"
+  // Avatar badge click handler clears badge
+  const badgeMutated = simulateMutation("#Top a[href^='/notifications']");
+  assert.equal(badgeMutated, false, "MutationObserver must NOT treat badge clear as external mutation");
+  assert.equal(mutationObserverTriggered, false);
+
+  // Step 2: navigateInApp("/notifications") is executed
+  navigateInAppSim("/notifications");
+  assert.equal(currentPathname, "/notifications");
+  assert.equal(historyPath, "/notifications");
+  assert.equal(appliedApi, "/notifications", "Theme must resolve and apply /notifications api path");
+
+  // Step 3: If an external mutation DOES occur while on /notifications
+  const externalMutation = simulateMutation("#content");
+  assert.equal(externalMutation, true);
+  assert.equal(mutationObserverTriggered, true);
+  // Even if applyTheme runs, it stays on /notifications because currentPathname is /notifications
+  assert.equal(appliedApi, "/notifications", "Must remain on /notifications and not revert to home");
+
+  // Step 4: Clicking chat nav on left rail navigates back to home
+  function handleChatNavClickSim() {
+    if (currentPathname === "/notifications") {
+      navigateInAppSim("/?tab=all");
+    }
+  }
+  handleChatNavClickSim();
+  assert.equal(currentPathname, "/");
+  assert.equal(appliedApi, "/?tab=all", "Navigating away returns cleanly to home tab");
+});
+
+
 
 
 

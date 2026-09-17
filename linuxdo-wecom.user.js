@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.41
+// @version      0.7.42
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -10443,7 +10443,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.41";
+  const SCRIPT_VERSION = "0.7.42";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -10955,7 +10955,7 @@
     // 清除 V2EX 原生 DOM 中的未读提示文本
     if (IS_V2EX) {
       const notifLink = document.querySelector("#Top a[href^='/notifications'], #Rightbar a[href^='/notifications']");
-      if (notifLink) {
+      if (notifLink && /\d/.test(notifLink.textContent)) {
         notifLink.textContent = notifLink.textContent.replace(/\d+\s*条未读提醒?/g, "").replace(/\(\d+\)/g, "");
       }
     }
@@ -11219,8 +11219,12 @@
       return;
     }
 
-    // 若当前处于原生未支持页面（例如 /u/... 个人中心），点击「消息」应切回首页三栏
+    // 若当前处于原生未支持页面（例如 /u/... 个人中心）或通知列表，点击「消息」切回首页三栏
     const currentPath = location.pathname;
+    if (IS_V2EX && (listState.apiPath === "/notifications" || currentPath === "/notifications")) {
+      navigateInApp("/?tab=all");
+      return;
+    }
     if (!isHomePath(currentPath) && !isTopicPath(currentPath)) {
       navigateInApp(IS_V2EX ? "/?tab=all" : "/latest");
       return;
@@ -11809,7 +11813,11 @@
         clearNotificationBadge();
         const body = document.querySelector(".wecom-list-body");
         if (body) body.innerHTML = `<div class="wecom-list-status">正在加载通知…</div>`;
-        loadList("/notifications", true);
+        if (location.pathname !== "/notifications") {
+          navigateInApp("/notifications");
+        } else {
+          loadList("/notifications", true);
+        }
       });
       ensureNotifOutsideClose();
       return;
@@ -12612,7 +12620,11 @@
         clearNotificationBadge();
         const body = document.querySelector(".wecom-list-body");
         if (body) body.innerHTML = `<div class="wecom-list-status">正在加载通知…</div>`;
-        loadList("/notifications", true);
+        if (location.pathname !== "/notifications") {
+          navigateInApp("/notifications");
+        } else {
+          loadList("/notifications", true);
+        }
       } else if (act === "nodes") {
         window.open("/my/nodes", "_blank");
       } else if (act === "topics") {
@@ -14560,9 +14572,15 @@
         chip.classList.add("active");
         if (IS_V2EX) {
           const chipKey = chip.dataset.chip;
-          if (chipKey === "all" || chipKey === "latest") loadList("/?tab=all", true);
-          else if (chipKey === "hot") loadList("/api/topics/hot.json", true);
-          else loadList(`/?tab=${chipKey}`, true);
+          let targetPath = "/?tab=all";
+          if (chipKey === "all" || chipKey === "latest") targetPath = "/?tab=all";
+          else if (chipKey === "hot") targetPath = "/?tab=hot";
+          else targetPath = `/?tab=${chipKey}`;
+          if (location.pathname + location.search !== targetPath) {
+            navigateInApp(targetPath);
+          } else {
+            loadList(targetPath === "/?tab=hot" ? "/api/topics/hot.json" : targetPath, true);
+          }
         } else {
           navigateInApp(chip.dataset.chip === "unread" ? "/unseen" : "/latest");
         }
@@ -14751,9 +14769,10 @@
     const body = document.querySelector(".wecom-list-body");
     if (!body) return;
     const usersById = listState.usersById || {};
+    const emptyNotice = listState.apiPath === "/notifications" ? "暂无未读提醒" : (listState.topics.length ? "没有更多了" : "");
     body.innerHTML =
       listState.topics.map((t) => convRowHtml(t, usersById)).join("") +
-      `<div class="wecom-list-status ${listState.moreUrl ? "is-clickable" : ""}">${listState.moreUrl ? "下拉或点击加载更多…" : (listState.topics.length ? "没有更多了" : "")}</div>`;
+      `<div class="wecom-list-status ${listState.moreUrl ? "is-clickable" : ""}">${listState.moreUrl ? "下拉或点击加载更多…" : emptyNotice}</div>`;
     syncListChips();
     syncListActive();
   }
@@ -14766,6 +14785,12 @@
     if (unreadN) {
       const n = listState.topics.reduce((sum, t) => sum + (t.unread || 0) + (t.new_posts || 0), 0);
       unreadN.textContent = n > 0 ? String(n > 99 ? "99+" : n) : "";
+    }
+    if (IS_V2EX) {
+      const isNotifs = listState.apiPath === "/notifications" || location.pathname === "/notifications";
+      if (isNotifs) {
+        document.querySelectorAll(".wecom-list-panel .wecom-chip").forEach((c) => c.classList.remove("active"));
+      }
     }
   }
 
@@ -14991,7 +15016,7 @@
   async function loadList(apiPath, force) {
     if (!apiPath) return;
     if (IS_V2EX) {
-      if (!force && listState.loadedApiPath === apiPath && listState.topics.length) {
+      if (!force && listState.loadedApiPath === apiPath && Array.isArray(listState.topics)) {
         syncListActive();
         return;
       }
@@ -15006,8 +15031,12 @@
         listState.moreUrl = null;
       }
       try {
-        if (!force && document.querySelectorAll("#Main .cell, #Main .item").length > 0 && listState.topics.length === 0) {
-          const domTopics = extractV2exTopicsFromDoc(document);
+        const currentDomPath = listApiForPath(location.pathname, location.search);
+        const canUseDom = !force && currentDomPath === apiPath && listState.topics.length === 0;
+        if (canUseDom && document.querySelectorAll("#Main .cell, #Main .item").length > 0) {
+          const domTopics = apiPath === "/notifications"
+            ? extractV2exNotificationsFromDoc(document)
+            : extractV2exTopicsFromDoc(document);
           if (domTopics.length > 0) {
             listState.topics = domTopics;
             setV2exPagination(apiPath, domTopics.length, document);
@@ -22000,6 +22029,7 @@
         if (!el) return true;
         if (el.closest(WECOM_UI_SEL) || el.closest(NATIVE_BRIDGE_SEL)) return false;
         if (el.id === "linuxdo-wecom-theme") return false;
+        if (el.closest("#Top a[href^='/notifications'], #Rightbar a[href^='/notifications']")) return false;
         return true;
       });
       if (external) {
