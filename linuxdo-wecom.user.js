@@ -221,7 +221,7 @@
   ICONS.project = ICONS.proj;
   ICONS.watermark = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 18.5h14M8 16l4-10 4 10M9.4 12.5h5.2" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.5 5.5l1 1 2-2" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
-  const FAVICON_URI = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjUgMTY1Ij48cGF0aCBkPSJNMTE5Ljc4OTE5LDEzNC43MjMyMUMxMDguNjEyMTgzLDE0MS40NTAwOSw5NS42NTQ4LDE0NSw4Mi4yNzgzMiwxNDVDNDQuNTY5MjQyLDE0NSwxNCwxMTcuMDE3NzkyLDE0LDgyLjVDMTQsNDcuOTgyMjAxLDQ0LjU2OTI0MiwyMCw4Mi4yNzgzMiwyMEMxMTkuOTg3NCwyMCwxNTAuNTU2NjQsNDcuOTgyMjAxLDE1MC41NTY2NCw4Mi41QzE1MC41NTY2NCw5My42MDM3NjcsMTQ3LjI4Mjk2LDEwNC42MTA5MDksMTQxLjEzMzg5LDExNC4xODIyOTdMMTUxLDE0NSwxMTkuNzg5MTksMTM0LjcyMzIxWk0xMzEuMDQ4NTUsODIuNUMxMzEuMDQ4NTUsMTA3LjA4NDYxOCwxMDkuMjEzMzcxLDEyNy4wMTQzOSw4Mi4yNzgzMiwxMjcuMDE0MzlDNTUuMzQzMjY2LDEyNy4wMTQzOSwzMy41MDgwOTEsMTA3LjA4NDYxOCwzMy41MDgwOTEsODIuNUMzMy41MDgwOTEsNTcuOTE1Mzc5LDU1LjM0MzI2NiwzNy45ODU2MTEsODIuMjc4MzIsMzcuOTg1NjExQzEwOS4yMTMzNzEsMzcuOTg1NjExLDEzMS4wNDg1NSw1Ny45MTUzNzksMTMxLjA0ODU1LDgyLjVaIiBmaWxsPSIjMzY2MkVDIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiLz48L3N2Zz4=";
+  const FAVICON_URI = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBmaWxsPSJub25lIiB2ZXJzaW9uPSIxLjEiIHdpZHRoPSIxNjUiIGhlaWdodD0iMTY1IiB2aWV3Qm94PSIwIDAgMTY1IDE2NSI+PGRlZnM+PGNsaXBQYXRoIGlkPSJtYXN0ZXJfc3ZnMF8xOTMzXzM5MzMiPjxyZWN0IHg9IjAiIHk9IjAiIHdpZHRoPSIxNjUiIGhlaWdodD0iMTY1IiByeD0iMCIvPjwvY2xpcFBhdGg+PC9kZWZzPjxnIGNsaXAtcGF0aD0idXJsKCNtYXN0ZXJfc3ZnMF8xOTMzXzM5MzMpIj48cGF0aCBkPSJNMTE5Ljc4OTE5LDEzNC43MjMyMUMxMDguNjEyMTgzLDE0MS40NTAwOSw5NS42NTQ4LDE0NSw4Mi4yNzgzMiwxNDVDNDQuNTY5MjQyLDE0NSwxNCwxMTcuMDE3NzkyLDE0LDgyLjVDMTQsNDcuOTgyMjAxLDQ0LjU2OTI0MiwyMCw4Mi4yNzgzMiwyMEMxMTkuOTg3NCwyMCwxNTAuNTU2NjQsNDcuOTgyMjAxLDE1MC41NTY2NCw4Mi41QzE1MC41NTY2NCw5My42MDM3NjcsMTQ3LjI4Mjk2LDEwNC42MTA5MDksMTQxLjEzMzg5LDExNC4xODIyOTdMMTUxLDE0NUwxMTkuNzg5MTksMTM0LjcyMzIxWk0xMzEuMDQ4NTUsODIuNUMxMzEuMDQ4NTUsMTA3LjA4NDYxOCwxMDkuMjEzMzcxLDEyNy4wMTQzOSw4Mi4yNzgzMiwxMjcuMDE0MzlDNTUuMzQzMjY2LDEyNy4wMTQzOSwzMy41MDgwOTEsMTA3LjA4NDYxOCwzMy41MDgwOTEsODIuNUMzMy41MDgwOTEsNTcuOTE1Mzc5LDU1LjM0MzI2NiwzNy45ODU2MTEsODIuMjc4MzIsMzcuOTg1NjExQzEwOS4yMTMzNzEsMzcuOTg1NjExLDEzMS4wNDg1NSw1Ny45MTUzNzksMTMxLjA0ODU1LDgyLjVaIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGZpbGw9IiMwMDZCRkYiIGZpbGwtb3BhY2l0eT0iMSIvPjwvZz48L3N2Zz4=";
 
 
   /* ============================== 工具函数 ============================== */
@@ -6107,7 +6107,8 @@
       font: 12px var(--wc-font);
     }
     .wecom-list-search input::placeholder { color: #8C8C8C; }
-    .wecom-list-add {
+    .wecom-list-add,
+    .wecom-list-add-btn {
       width: 30px;
       height: 30px;
       display: grid;
@@ -6120,8 +6121,10 @@
       color: #555;
       cursor: pointer;
     }
-    .wecom-list-add:hover { background: #D4D4D4; }
-    .wecom-list-add svg { width: 17px; height: 17px; }
+    .wecom-list-add:hover,
+    .wecom-list-add-btn:hover { background: #D4D4D4; }
+    .wecom-list-add svg,
+    .wecom-list-add-btn svg { width: 17px; height: 17px; }
     .wecom-list-add-wrap {
       position: relative;
       flex: 0 0 auto;
@@ -6326,6 +6329,7 @@
     .wecom-chat-tools .wecom-icon-btn svg,
     .wecom-chat-actions .wecom-icon-btn svg,
     .wecom-list-search form svg,
+    .wecom-list-add svg,
     .wecom-list-add-btn svg,
     .wecom-member-actions .wecom-icon-btn svg,
     .wecom-arrow-icon svg,
@@ -6784,6 +6788,7 @@
       font-size: 13px !important;
     }
     /* 搜索右侧加号操作按钮 */
+    .wecom-list-add,
     .wecom-list-add-btn {
       width: 32px !important;
       height: 32px !important;
@@ -6803,10 +6808,12 @@
       box-shadow: none !important;
       transition: background 0.1s ease, color 0.1s ease;
     }
+    .wecom-list-add:hover,
     .wecom-list-add-btn:hover {
       background: #D5DAE2 !important;
       color: var(--wc-text) !important;
     }
+    .wecom-list-add svg,
     .wecom-list-add-btn svg {
       width: 16px !important;
       height: 16px !important;
@@ -9020,37 +9027,63 @@
 
     /* 搜索栏与新增按钮 */
     html.${ROOT_CLASS}.wecom-dark .wecom-list-search form,
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-btn {
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-add,
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-btn,
+    html.wecom-dark .wecom-list-search form,
+    html.wecom-dark .wecom-list-add,
+    html.wecom-dark .wecom-list-add-btn {
       background: #2B2D31 !important;
       background-color: #2B2D31 !important;
       color: #8F959E !important;
     }
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-search form:focus-within {
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-search form:focus-within,
+    html.wecom-dark .wecom-list-search form:focus-within {
       background: #23262B !important;
       background-color: #23262B !important;
       border-color: #388BFD !important;
       box-shadow: 0 0 0 1px #388BFD !important;
     }
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-btn:hover {
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-add:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-btn:hover,
+    html.wecom-dark .wecom-list-add:hover,
+    html.wecom-dark .wecom-list-add-btn:hover {
       background: #363A42 !important;
       color: #FFFFFF !important;
     }
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-menu {
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-add svg,
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-btn svg,
+    html.wecom-dark .wecom-list-add svg,
+    html.wecom-dark .wecom-list-add-btn svg {
+      color: #8F959E !important;
+      stroke: currentColor !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-add:hover svg,
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-btn:hover svg,
+    html.wecom-dark .wecom-list-add:hover svg,
+    html.wecom-dark .wecom-list-add-btn:hover svg {
+      color: #FFFFFF !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-menu,
+    html.wecom-dark .wecom-list-add-menu {
       background: #232529 !important;
       border-color: rgba(255, 255, 255, 0.12) !important;
       box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45) !important;
     }
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-item {
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-item,
+    html.wecom-dark .wecom-list-add-item {
       color: #D3D8E2 !important;
     }
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-item svg {
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-item svg,
+    html.wecom-dark .wecom-list-add-item svg {
       stroke: #8C99AA !important;
     }
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-item:hover {
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-item:hover,
+    html.wecom-dark .wecom-list-add-item:hover {
       background: #2C2F36 !important;
       color: #FFFFFF !important;
     }
-    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-item:hover svg {
+    html.${ROOT_CLASS}.wecom-dark .wecom-list-add-item:hover svg,
+    html.wecom-dark .wecom-list-add-item:hover svg {
       stroke: #3D8AF5 !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-list-search input {
@@ -9767,8 +9800,11 @@
       style.id = STYLE_ID;
       (document.head || document.documentElement).appendChild(style);
     }
-    // 始终刷新，避免旧版 CSS（挡住回复按钮）残留
-    style.textContent = `${RAW_CSS}\n${WECOM_REFINEMENTS}\n${WECOM_LATEST_REFINEMENTS}\n${WECOM_DARK_REFINEMENTS}`;
+    // 仅在 CSS 变化时刷新，避免反复触碰 DOM 产生冗余 childList 变更
+    const nextCss = `${RAW_CSS}\n${WECOM_REFINEMENTS}\n${WECOM_LATEST_REFINEMENTS}\n${WECOM_DARK_REFINEMENTS}`;
+    if (style.textContent !== nextCss) {
+      style.textContent = nextCss;
+    }
   }
 
   let faviconObserver = null;
@@ -10558,16 +10594,21 @@
   function syncThemeControls() {
     const mode = getThemeMode();
     const dark = isDarkMode();
-    const toggle = document.querySelector(".wecom-theme-toggle");
-    if (toggle) {
+    const nextIcon = dark ? ICONS.sun : ICONS.moon;
+    const nextLabel = dark ? "浅色模式" : "深色模式";
+    const nextTitle = dark ? "切换到浅色模式" : "切换到深色模式";
+    const nextPressed = dark ? "true" : "false";
+    document.querySelectorAll(".wecom-theme-toggle").forEach((toggle) => {
       const label = toggle.querySelector(".wecom-theme-label");
       const icon = toggle.querySelector(".wecom-theme-icon");
       toggle.classList.toggle("is-dark", dark);
-      toggle.setAttribute("aria-pressed", dark ? "true" : "false");
-      toggle.title = dark ? "切换到浅色模式" : "切换到深色模式";
-      if (label) label.textContent = dark ? "浅色模式" : "深色模式";
-      if (icon) icon.innerHTML = dark ? ICONS.sun : ICONS.moon;
-    }
+      if (toggle.getAttribute("aria-pressed") !== nextPressed) toggle.setAttribute("aria-pressed", nextPressed);
+      if (toggle.title !== nextTitle) toggle.title = nextTitle;
+      if (label && label.textContent !== nextLabel) label.textContent = nextLabel;
+      if (icon && icon.innerHTML !== nextIcon) icon.innerHTML = nextIcon;
+    });
+    const v2exPill = document.querySelector(".wecom-v2ex-theme-switch-pill");
+    if (v2exPill) v2exPill.classList.toggle("active", dark);
     const menu = document.querySelector(".wecom-theme-menu");
     if (!menu) return;
     menu.querySelectorAll("button[data-theme-mode]").forEach((button) => {
@@ -10721,6 +10762,21 @@
     if (window.__wecomThemeControlsBound) return;
     window.__wecomThemeControlsBound = true;
     document.addEventListener("click", (event) => {
+      const toggle = event.target.closest(".wecom-theme-toggle");
+      if (toggle) {
+        event.preventDefault();
+        event.stopPropagation();
+        setThemeMode(isDarkMode() ? "light" : "dark");
+        return;
+      }
+      const options = event.target.closest(".wecom-theme-options");
+      if (options) {
+        event.preventDefault();
+        event.stopPropagation();
+        const menu = document.querySelector(".wecom-theme-menu");
+        setThemeMenuOpen(!!menu?.hidden);
+        return;
+      }
       if (!event.target.closest(".wecom-theme-controls, .wecom-theme-menu")) setThemeMenuOpen(false);
     });
     document.addEventListener("keydown", (event) => {
@@ -11413,7 +11469,11 @@
   }
 
   function ensureRail() {
-    let rail = document.querySelector(".wecom-rail");
+    const rails = document.querySelectorAll(".wecom-rail");
+    if (rails.length > 1) {
+      for (let i = 1; i < rails.length; i++) rails[i].remove();
+    }
+    let rail = rails[0] || null;
     // 重建为企业微信 56px 垂直标准停靠栏
     if (rail && (!rail.querySelector("[data-rail-key='group']") || !rail.querySelector("[data-rail-key='history']") || rail.querySelector(".wecom-rail-groups") || (IS_V2EX && rail.querySelector("[data-rail-key='cal']")))) {
       rail.remove();
@@ -14918,18 +14978,24 @@
     } catch { /* ignore */ }
   }
 
+  let pageLoadingIndicatorDisabled = false;
   /** 禁用 Discourse 原生页面加载进度条设置 */
   function disablePageLoadingIndicator() {
-    if (IS_V2EX) return;
+    if (IS_V2EX || pageLoadingIndicatorDisabled) return;
     try {
-      if (window.Discourse?.SiteSettings) {
-        window.Discourse.SiteSettings.page_loading_indicator = "none";
-      }
       const owner = getEmberOwner();
       const settings = safeLookup(owner, "service:site-settings");
       if (settings) {
         if ("page_loading_indicator" in settings) settings.page_loading_indicator = "none";
         settings.set?.("page_loading_indicator", "none");
+        pageLoadingIndicatorDisabled = true;
+        return;
+      }
+      // 仅在未安装弃用 getter 的旧版环境尝试兜底，避免触发 Discourse 2.8+ 的弃用警告
+      const rawDescriptor = Object.getOwnPropertyDescriptor(window.Discourse || {}, "SiteSettings");
+      if (rawDescriptor && typeof rawDescriptor.get !== "function" && window.Discourse?.SiteSettings) {
+        window.Discourse.SiteSettings.page_loading_indicator = "none";
+        pageLoadingIndicatorDisabled = true;
       }
     } catch { /* ignore */ }
   }
@@ -15356,7 +15422,7 @@
           <input type="search" name="q" placeholder="${searchPlaceholder}" autocomplete="off" enterkeyhint="search" aria-label="搜索话题">
         </form>
         <div class="wecom-list-add-wrap">
-          <button type="button" class="wecom-list-add" title="新建与导航" aria-label="新建与导航" aria-haspopup="menu" aria-expanded="false">${ICONS.plus}</button>
+          <button type="button" class="wecom-list-add wecom-list-add-btn" title="新建与导航" aria-label="新建与导航" aria-haspopup="menu" aria-expanded="false">${ICONS.plus}</button>
           <div class="wecom-list-add-menu" hidden role="menu">
             <button type="button" class="wecom-list-add-item" data-add-action="new-topic" role="menuitem">
               <span class="wecom-list-add-item-icon">${ICONS.compose}</span>
@@ -23312,7 +23378,23 @@
     } catch { /* ignore */ }
   }
 
+  let isApplyingTheme = false;
+  let domMutationObserver = null;
+
   function applyTheme() {
+    if (isApplyingTheme) return;
+    isApplyingTheme = true;
+    try {
+      _applyTheme();
+    } finally {
+      if (domMutationObserver) {
+        domMutationObserver.takeRecords();
+      }
+      isApplyingTheme = false;
+    }
+  }
+
+  function _applyTheme() {
     if (otherThemeActive()) {
       console.warn("[linuxdo-wecom] 检测到 IDEA / 飞书 / 钉钉主题脚本已启用，企业微信主题自动避让。请只保留其中一个。");
       document.documentElement.classList.remove(ROOT_CLASS, LOCK_CLASS, "wecom-topic-open", "wecom-dark");
@@ -23524,18 +23606,44 @@
       });
     }
 
-    const WECOM_UI_SEL = ".wecom-toast-container, .wecom-connect-overlay, .wecom-connect-modal, .wecom-base64-insert-dialog, .wecom-v2ex-user-popover, .wecom-v2ex-member-card, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
+    const WECOM_UI_SEL = ".wecom-toast-container, .wecom-connect-overlay, .wecom-connect-modal, .wecom-base64-insert-dialog, .wecom-v2ex-user-popover, .wecom-v2ex-member-card, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-rail-resizer, .wecom-list-resizer, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
     const NATIVE_BRIDGE_SEL = "#reply-control, .dialog-holder, .dialog-container, #discourse-modal-container, .d-modal, .bootbox, .autocomplete, .autocomplete-container, .d-editor-popup, [data-identifier='emoji-picker'], .tag-chooser";
+
+    function isWecomOrBridgeNode(node) {
+      if (!node) return false;
+      if (node.nodeType === 3) {
+        node = node.parentElement;
+        if (!node) return false;
+      }
+      if (node.nodeType !== 1) return false;
+      const el = node;
+      if (el.id === "linuxdo-wecom-theme" || el.id === FAVICON_ID) return true;
+      if (el.dataset && (el.dataset.wecomShortcut || el.dataset.wecomWco)) return true;
+      if (typeof el.className === "string" && el.className.includes("wecom-")) return true;
+      if (el.closest?.(WECOM_UI_SEL) || el.closest?.(NATIVE_BRIDGE_SEL)) return true;
+      if (el.closest?.("#Top a[href^='/notifications'], #Rightbar a[href^='/notifications']")) return true;
+      if (el.tagName === "LINK" && (el.rel?.includes("icon") || el.rel === "manifest")) return true;
+      return false;
+    }
+
     const observer = new MutationObserver((mutations) => {
+      if (isApplyingTheme) return;
       // 忽略我们自己面板内部的 DOM 变动，否则点开筛选会立刻触发 applyTheme 回写/闪断
       const external = mutations.some((m) => {
         const t = m.target;
         if (!(t instanceof Element) && !(t instanceof CharacterData)) return true;
         const el = t instanceof Element ? t : t.parentElement;
         if (!el) return true;
+        if (isWecomOrBridgeNode(el)) return false;
         if (el.closest(WECOM_UI_SEL) || el.closest(NATIVE_BRIDGE_SEL)) return false;
         if (el.id === "linuxdo-wecom-theme") return false;
         if (el.closest("#Top a[href^='/notifications'], #Rightbar a[href^='/notifications']")) return false;
+        if (el === document.body || el === document.head || el === document.documentElement) {
+          const changedNodes = [...(m.addedNodes || []), ...(m.removedNodes || [])];
+          if (changedNodes.length > 0 && changedNodes.every(isWecomOrBridgeNode)) {
+            return false;
+          }
+        }
         return true;
       });
       if (external) {
@@ -23545,6 +23653,7 @@
       }
       scheduleSyncChatBadge();
     });
+    domMutationObserver = observer;
     disablePageLoadingIndicator();
     removeLoadingSliderDom();
     observer.observe(document.documentElement, { childList: true, subtree: true });
@@ -23581,6 +23690,8 @@
     bindV2exEmojiPickerEvents();
     // 快捷键 Alt+W / Alt+O：在企微 IM 视图与原站风格间快速切换
     bindViewModeShortcut();
+    // 停靠栏深浅色切换与外观设置全局事件代理
+    bindThemeControls();
     // 定时同步头像通知角标与新主题角标（3 秒轮询）
     if (!window.__wecomNotifBadgeTimer) {
       window.__wecomNotifBadgeTimer = setInterval(() => {

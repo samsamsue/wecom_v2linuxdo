@@ -6586,6 +6586,119 @@ test("Test 89: Floor message metadata (wecom-msg-meta) positioned inside wecom-m
   );
 });
 
+test("Test 90: Left-bottom theme toggle event delegation, duplicate rail pruning, and wecom-list-add dark mode styles", () => {
+  // 1. 验证 wecom-list-add 在深色模式下的样式定义与按钮 class 完整性
+  assert.ok(
+    scriptContent.includes('class="wecom-list-add wecom-list-add-btn"'),
+    "list add button must carry both .wecom-list-add and .wecom-list-add-btn classes"
+  );
+  assert.ok(
+    scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-list-add,") &&
+    scriptContent.includes("html.wecom-dark .wecom-list-add,"),
+    "WECOM_DARK_REFINEMENTS must style .wecom-list-add with dark background and color"
+  );
+  assert.ok(
+    scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-list-add:hover,") &&
+    scriptContent.includes("html.wecom-dark .wecom-list-add:hover,"),
+    "WECOM_DARK_REFINEMENTS must style .wecom-list-add:hover for dark mode"
+  );
+  assert.ok(
+    scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-list-add svg,") &&
+    scriptContent.includes("html.wecom-dark .wecom-list-add svg,"),
+    "WECOM_DARK_REFINEMENTS must style .wecom-list-add svg in dark mode"
+  );
+
+  // 2. 验证 bindThemeControls 全局事件委托 (event delegation)
+  assert.ok(
+    scriptContent.includes('const toggle = event.target.closest(".wecom-theme-toggle");') &&
+    scriptContent.includes('setThemeMode(isDarkMode() ? "light" : "dark");'),
+    "bindThemeControls must delegate click events for .wecom-theme-toggle globally"
+  );
+  assert.ok(
+    scriptContent.includes('const options = event.target.closest(".wecom-theme-options");') &&
+    scriptContent.includes('setThemeMenuOpen(!!menu?.hidden);'),
+    "bindThemeControls must delegate click events for .wecom-theme-options globally"
+  );
+
+  // 3. 验证 bootstrap 启动阶段即注册全局主题控制器
+  assert.ok(
+    scriptContent.includes("bindViewModeShortcut();\n    // 停靠栏深浅色切换与外观设置全局事件代理\n    bindThemeControls();"),
+    "bootstrap must call bindThemeControls early to ensure click events are never missed"
+  );
+
+  // 4. 验证 syncThemeControls 支持同步所有 .wecom-theme-toggle 实例及 V2EX 弹窗 pill
+  assert.ok(
+    scriptContent.includes('document.querySelectorAll(".wecom-theme-toggle").forEach('),
+    "syncThemeControls must update all .wecom-theme-toggle elements on the page"
+  );
+  assert.ok(
+    scriptContent.includes('v2exPill.classList.toggle("active", dark);'),
+    "syncThemeControls must sync the V2EX popover theme switch pill"
+  );
+
+  // 5. 验证 ensureRail 清理多余重复 rail 元素
+  assert.ok(
+    scriptContent.includes('const rails = document.querySelectorAll(".wecom-rail");') &&
+    scriptContent.includes("if (rails.length > 1)"),
+    "ensureRail must prune duplicate rails to avoid stale detached elements"
+  );
+});
+
+test("Test 91: Discourse SiteSettings deprecation warning prevention and MutationObserver infinite loop break", () => {
+  // 1. 验证 disablePageLoadingIndicator 不直接触碰 Discourse 2.8+ 弃用 getter 并具备禁用状态缓存
+  assert.ok(
+    scriptContent.includes("let pageLoadingIndicatorDisabled = false;") &&
+    scriptContent.includes("if (IS_V2EX || pageLoadingIndicatorDisabled) return;"),
+    "disablePageLoadingIndicator must cache completion state to avoid redundant calls"
+  );
+  assert.ok(
+    scriptContent.includes('const settings = safeLookup(owner, "service:site-settings");') &&
+    scriptContent.includes('settings.page_loading_indicator = "none";') &&
+    scriptContent.includes('typeof rawDescriptor.get !== "function"'),
+    "disablePageLoadingIndicator must prefer injected site-settings service and avoid touching deprecated Discourse.SiteSettings getter"
+  );
+
+  // 2. 验证 applyTheme 防重入及执行完毕后清空 MutationObserver 积压记录
+  assert.ok(
+    scriptContent.includes("let isApplyingTheme = false;") &&
+    scriptContent.includes("let domMutationObserver = null;"),
+    "applyTheme must maintain isApplyingTheme and domMutationObserver references"
+  );
+  assert.ok(
+    scriptContent.includes("if (isApplyingTheme) return;") &&
+    scriptContent.includes("isApplyingTheme = true;") &&
+    scriptContent.includes("domMutationObserver.takeRecords();") &&
+    scriptContent.includes("isApplyingTheme = false;"),
+    "applyTheme must take pending records in finally block to eliminate observer queue bounce"
+  );
+
+  // 3. 验证 bootstrap MutationObserver 具有自研组件与 body/head 挂载过滤
+  assert.ok(
+    scriptContent.includes("function isWecomOrBridgeNode(node)") &&
+    scriptContent.includes("if (isApplyingTheme) return;") &&
+    scriptContent.includes("changedNodes.every(isWecomOrBridgeNode)"),
+    "MutationObserver must ignore internal WeCom node mutations on root containers"
+  );
+
+  // 4. 验证 syncThemeControls 和 injectStyle 包含脏检查避免重复操作 DOM
+  assert.ok(
+    scriptContent.includes("if (icon && icon.innerHTML !== nextIcon) icon.innerHTML = nextIcon;") &&
+    scriptContent.includes("if (style.textContent !== nextCss)"),
+    "syncThemeControls and injectStyle must check for actual changes before writing DOM"
+  );
+
+  // 5. 验证 FAVICON_URI 已更新为新的企业微信矢量图标
+  const faviconMatch = scriptContent.match(/const FAVICON_URI = "data:image\/svg\+xml;base64,([^"]+)";/);
+  assert.ok(faviconMatch, "FAVICON_URI must be a valid base64 svg data URI");
+  const decodedFavicon = Buffer.from(faviconMatch[1], "base64").toString("utf8");
+  assert.ok(
+    decodedFavicon.includes("#006BFF") && decodedFavicon.includes("119.78919"),
+    "FAVICON_URI must contain the updated WeCom icon svg"
+  );
+});
+
+
+
 
 
 
