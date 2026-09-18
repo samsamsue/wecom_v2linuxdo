@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.61
+// @version      0.7.62
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -3385,9 +3385,9 @@
       color: inherit !important;
     }
     .wecom-reply-children .wecom-msg-meta {
-      margin-top: 2px;
+      margin-top: 0;
       font-size: 10px;
-      gap: 6px;
+      gap: 5px;
     }
     .wecom-reply-children .wecom-reply-children {
       margin-top: 5px;
@@ -3417,6 +3417,7 @@
     }
     .wecom-msg-header {
       display: flex;
+      flex-wrap: wrap;
       align-items: center !important;
       gap: 6px;
       margin-bottom: 4px;
@@ -3426,7 +3427,9 @@
       margin-bottom: 0;
       line-height: 1.2;
     }
-    .wecom-msg-header-time {
+    .wecom-msg-header-time,
+    .wecom-msg-header .wecom-msg-meta,
+    .wecom-msg-meta {
       display: inline-flex;
       align-items: center;
       gap: 5px;
@@ -3434,6 +3437,7 @@
       color: var(--wc-text-3);
       white-space: nowrap;
       line-height: 1.2;
+      margin-top: 0;
     }
     .wecom-msg-header-time .wecom-msg-floor,
     .wecom-msg-meta .wecom-msg-floor {
@@ -3509,7 +3513,8 @@
     .wecom-msg-bubble a { color: var(--wc-accent); }
     .wecom-msg-meta {
       font-size: 11px; color: var(--wc-text-3);
-      margin-top: 4px; display: flex; gap: 8px; align-items: center;
+      margin-top: 0; display: inline-flex; gap: 6px; align-items: center;
+      line-height: 1.2;
     }
     .wecom-v2ex-topic-stats {
       display: inline-flex; align-items: center; gap: 6px;
@@ -10965,7 +10970,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.61";
+  const SCRIPT_VERSION = "0.7.62";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -19332,7 +19337,6 @@
     const threadClass = depth > 0 ? " is-thread-child" : "";
     const threadAttr = depth > 0 ? ` data-thread-depth="${depth}"` : "";
     const replyInd = replyIndicatorHtml(post);
-    const showHeaderTime = depth > 0 && Boolean(replyInd);
     const timeHtml = `<span class="wecom-msg-time"${timeAttr}>${escapeHtml(formatTime(post.created_at))}</span>`;
     const floorNum = IS_V2EX && post.floor != null && post.floor > 0 ? post.floor : post.post_number;
     const floorHtml = `<span class="wecom-msg-floor" data-floor="${floorNum}" title="${floorNum}楼">#${floorNum}</span>`;
@@ -19342,8 +19346,8 @@
       : "";
     const bodyHtml = replyBodyHtml(post, Boolean(replyInd));
     const metaParts = [
-      showHeaderTime ? "" : timeHtml,
-      showHeaderTime ? "" : floorHtml,
+      timeHtml,
+      floorHtml,
       topicStatsHtml,
       likesBadgeHtml
     ].filter(Boolean).join("");
@@ -19355,7 +19359,7 @@
           <div class="wecom-msg-header">
             <span class="wecom-msg-name"${userCardAttributes(post)}>${escapeHtml(displayName)}</span>
             ${replyInd}
-            ${showHeaderTime ? `<span class="wecom-msg-header-time">${timeHtml}${floorHtml}</span>` : ""}
+            ${metaHtml}
           </div>
           <div class="wecom-msg-bubble">
             ${replyReferenceHtml(post)}
@@ -19363,7 +19367,6 @@
             ${childrenHtml || ""}
           </div>
           ${boostsHtml(post)}
-          ${metaHtml}
           <div class="wecom-msg-tools">
             <button type="button" class="wecom-msg-tool${liked}" data-action="like" title="${likeLabel}">${likeToolIcon}</button>
             <button type="button" class="wecom-msg-tool" data-action="reply" title="回复">${ICONS.reply}</button>

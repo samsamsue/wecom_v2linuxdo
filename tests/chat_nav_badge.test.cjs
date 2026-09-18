@@ -6105,9 +6105,9 @@ test("V2EX threaded conversation view: reply target resolution, tree hierarchy, 
   assert.ok(scriptContent.includes("function replyBodyHtml("), "removes a duplicated leading reply mention from the message body");
   assert.ok(scriptContent.includes("const bodyHtml = replyBodyHtml(post, Boolean(replyInd));"), "uses the normalized reply body when rendering messages");
   assert.ok(
-    scriptContent.includes("const showHeaderTime = depth > 0 && Boolean(replyInd);") &&
-    scriptContent.includes('class="wecom-msg-header-time"'),
-    "places nested reply timestamps after the reply indicator"
+    scriptContent.includes('<div class="wecom-msg-header">') &&
+    scriptContent.includes("${metaHtml}"),
+    "places message metadata inside wecom-msg-header"
   );
   assert.ok(scriptContent.includes("function isThreadViewEnabled("), "contains isThreadViewEnabled");
   assert.ok(scriptContent.includes("function setThreadViewEnabled("), "contains setThreadViewEnabled");
@@ -6540,6 +6540,52 @@ test("V2EX member profile card handles 404 user profiles as banned or renamed (v
   assert.equal(simulateCheckProfile(200, "<html><div class='box'><div class='cell'>V2EX › 用户未找到</div></div></html>").isNotFound, true);
   assert.equal(simulateCheckProfile(200, "<html><h1>normaluser</h1><img class='avatar' src='//v2ex.com/avatar.png'></html>").isNotFound, false);
 });
+
+test("Test 89: Floor message metadata (wecom-msg-meta) positioned inside wecom-msg-header row (v0.7.62)", () => {
+  // 1. 验证 HTML 模板结构：wecom-msg-meta 紧随 displayName / replyInd 渲染在 wecom-msg-header 内部
+  const expectedHeaderPattern =
+    '<div class="wecom-msg-header">\\s*' +
+    '<span class="wecom-msg-name"\\${userCardAttributes\\(post\\)}>\\${escapeHtml\\(displayName\\)}<\\/span>\\s*' +
+    '\\${replyInd}\\s*' +
+    '\\${metaHtml}\\s*' +
+    '<\\/div>';
+  assert.ok(
+    new RegExp(expectedHeaderPattern).test(scriptContent),
+    "wecom-msg-header must contain displayName, replyInd, and metaHtml inline"
+  );
+
+  // 2. 验证 wecom-msg-bubble 之后不再多余渲染 metaHtml
+  const postBubbleFragment =
+    '<div class="wecom-msg-bubble">\\s*' +
+    '\\${replyReferenceHtml\\(post\\)}\\s*' +
+    '<div class="wecom-msg-body">\\${bodyHtml}<\\/div>\\s*' +
+    '\\${childrenHtml \\|\\| ""}\\s*' +
+    '<\\/div>\\s*' +
+    '\\${boostsHtml\\(post\\)}\\s*' +
+    '<div class="wecom-msg-tools">';
+  assert.ok(
+    new RegExp(postBubbleFragment).test(scriptContent),
+    "metaHtml must not be rendered after wecom-msg-bubble"
+  );
+
+  // 3. 验证样式：.wecom-msg-header 支持 flex-wrap，.wecom-msg-meta 为 inline-flex 且 margin-top 为 0
+  assert.ok(
+    scriptContent.includes(".wecom-msg-header {") &&
+    scriptContent.includes("flex-wrap: wrap;"),
+    "wecom-msg-header must include flex-wrap: wrap to accommodate header meta gracefully"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-msg-header .wecom-msg-meta") &&
+    scriptContent.includes("display: inline-flex;"),
+    "wecom-msg-meta in header must use inline-flex display"
+  );
+  assert.ok(
+    scriptContent.includes("margin-top: 0;") &&
+    scriptContent.includes(".wecom-msg-meta {"),
+    "wecom-msg-meta must not have top margin pushing it downwards"
+  );
+});
+
 
 
 
