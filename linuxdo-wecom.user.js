@@ -3255,7 +3255,7 @@
     .wecom-chat-panel[data-empty="1"] .wecom-topic-bookmark { display: none; }
     .wecom-msg-content { min-width: 0; display: flex; flex-direction: column; position: relative; }
     .wecom-msg-me .wecom-msg-content { align-items: flex-end; }
-    .wecom-msg-name { font-size: 12px; color: var(--wc-text-3); margin-bottom: 4px; }
+    .wecom-msg-name { font-size: 12px; color: var(--wc-text-3); margin-bottom: 0 !important; }
     .wecom-msg-me .wecom-msg-name { display: none; }
     .wecom-reply-reference {
       display: grid; grid-template-columns: 16px minmax(0, 1fr); column-gap: 6px;
@@ -5068,6 +5068,105 @@
       color: #FFFFFF !important;
     }
 
+    /* ---------- 企业微信风格确认弹窗 (.wecom-confirm-dialog) ---------- */
+    .wecom-confirm-dialog,
+    .wecom-confirm-dialog * { box-sizing: border-box; }
+    .wecom-confirm-dialog[hidden] { display: none !important; }
+    .wecom-confirm-dialog {
+      position: fixed;
+      inset: 0;
+      z-index: 12500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(24, 35, 49, .45);
+      backdrop-filter: blur(2px);
+      font-family: var(--wc-font);
+    }
+    .wecom-confirm-card {
+      width: min(380px, calc(100vw - 32px));
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      border: 1px solid #D6DEE8;
+      border-radius: 10px;
+      background: #FFFFFF;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, .18);
+      color: #1F2329;
+      animation: wecom-confirm-in .15s ease-out;
+    }
+    @keyframes wecom-confirm-in {
+      from { opacity: 0; transform: scale(.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .wecom-confirm-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .wecom-confirm-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1F2329;
+    }
+    .wecom-confirm-close {
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border: 0;
+      border-radius: 4px;
+      background: transparent;
+      color: #8F959E;
+      font-size: 18px;
+      line-height: 22px;
+      cursor: pointer;
+    }
+    .wecom-confirm-close:hover { background: #EEF3F8; color: #1F2329; }
+    .wecom-confirm-body {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #4E5969;
+      margin-bottom: 20px;
+      word-break: break-word;
+    }
+    .wecom-confirm-subtext {
+      display: block;
+      margin-top: 6px;
+      font-size: 12px;
+      color: #86909C;
+    }
+    .wecom-confirm-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .wecom-confirm-actions button {
+      min-width: 72px;
+      height: 32px;
+      padding: 0 14px;
+      border: 1px solid #CCD6E2;
+      border-radius: 6px;
+      background: #FFFFFF;
+      color: #4E5969;
+      font: 13px var(--wc-font);
+      cursor: pointer;
+      transition: background .12s, border-color .12s;
+    }
+    .wecom-confirm-actions button:hover {
+      background: #F2F3F5;
+    }
+    .wecom-confirm-actions .wecom-confirm-btn-primary {
+      border-color: #267EF0;
+      background: #267EF0;
+      color: #FFFFFF;
+    }
+    .wecom-confirm-actions .wecom-confirm-btn-primary:hover {
+      background: #1B6EDB;
+      border-color: #1B6EDB;
+    }
+
     /* ---------- 消息编辑弹窗 ---------- */
     .wecom-edit-dialog,
     .wecom-edit-dialog * { box-sizing: border-box; }
@@ -6268,7 +6367,7 @@
       height: 38px;
       border-radius: 8px;
     }
-    .wecom-msg-name { margin-bottom: 5px; color: #999; }
+    .wecom-msg-name { margin-bottom: 0 !important; color: #999; }
     .wecom-msg-bubble {
       position: relative;
       padding: 9px 12px;
@@ -6840,7 +6939,9 @@
     .wecom-chat-body,
     .wecom-chat-messages,
     .wecom-member-body,
-    .wecom-theme-menu {
+    .wecom-theme-menu,
+    .wecom-v2ex-member-card,
+    .wecom-v2ex-user-popover {
       scrollbar-width: thin !important;
       scrollbar-color: transparent transparent !important;
     }
@@ -6848,7 +6949,9 @@
     .wecom-chat-body::-webkit-scrollbar,
     .wecom-chat-messages::-webkit-scrollbar,
     .wecom-member-body::-webkit-scrollbar,
-    .wecom-theme-menu::-webkit-scrollbar {
+    .wecom-theme-menu::-webkit-scrollbar,
+    .wecom-v2ex-member-card::-webkit-scrollbar,
+    .wecom-v2ex-user-popover::-webkit-scrollbar {
       width: 6px !important;
       height: 6px !important;
     }
@@ -6856,14 +6959,18 @@
     .wecom-chat-body::-webkit-scrollbar-track,
     .wecom-chat-messages::-webkit-scrollbar-track,
     .wecom-member-body::-webkit-scrollbar-track,
-    .wecom-theme-menu::-webkit-scrollbar-track {
+    .wecom-theme-menu::-webkit-scrollbar-track,
+    .wecom-v2ex-member-card::-webkit-scrollbar-track,
+    .wecom-v2ex-user-popover::-webkit-scrollbar-track {
       background: transparent !important;
     }
     .wecom-list-body::-webkit-scrollbar-thumb,
     .wecom-chat-body::-webkit-scrollbar-thumb,
     .wecom-chat-messages::-webkit-scrollbar-thumb,
     .wecom-member-body::-webkit-scrollbar-thumb,
-    .wecom-theme-menu::-webkit-scrollbar-thumb {
+    .wecom-theme-menu::-webkit-scrollbar-thumb,
+    .wecom-v2ex-member-card::-webkit-scrollbar-thumb,
+    .wecom-v2ex-user-popover::-webkit-scrollbar-thumb {
       background: transparent !important;
       border-radius: 3px !important;
       transition: background-color 0.2s ease-in-out !important;
@@ -6878,14 +6985,18 @@
     .wecom-member-body:hover::-webkit-scrollbar-thumb,
     .wecom-member-body.is-scrolling::-webkit-scrollbar-thumb,
     .wecom-theme-menu:hover::-webkit-scrollbar-thumb,
-    .wecom-theme-menu.is-scrolling::-webkit-scrollbar-thumb {
+    .wecom-theme-menu.is-scrolling::-webkit-scrollbar-thumb,
+    .wecom-v2ex-member-card:hover::-webkit-scrollbar-thumb,
+    .wecom-v2ex-user-popover:hover::-webkit-scrollbar-thumb {
       background: rgba(0, 0, 0, 0.2) !important;
     }
     .wecom-list-body::-webkit-scrollbar-thumb:hover,
     .wecom-chat-body::-webkit-scrollbar-thumb:hover,
     .wecom-chat-messages::-webkit-scrollbar-thumb:hover,
     .wecom-member-body::-webkit-scrollbar-thumb:hover,
-    .wecom-theme-menu::-webkit-scrollbar-thumb:hover {
+    .wecom-theme-menu::-webkit-scrollbar-thumb:hover,
+    .wecom-v2ex-member-card::-webkit-scrollbar-thumb:hover,
+    .wecom-v2ex-user-popover::-webkit-scrollbar-thumb:hover {
       background: rgba(0, 0, 0, 0.35) !important;
     }
     .wecom-list-panel:hover .wecom-list-body,
@@ -6898,7 +7009,9 @@
     .wecom-member-body:hover,
     .wecom-member-body.is-scrolling,
     .wecom-theme-menu:hover,
-    .wecom-theme-menu.is-scrolling {
+    .wecom-theme-menu.is-scrolling,
+    .wecom-v2ex-member-card:hover,
+    .wecom-v2ex-user-popover:hover {
       scrollbar-color: rgba(0, 0, 0, 0.2) transparent !important;
     }
 
@@ -7727,7 +7840,7 @@
     .wecom-msg-name {
       font-size: 12px !important;
       color: var(--wc-text-3) !important;
-      margin-bottom: 4px !important;
+      margin-bottom: 0 !important;
       margin-left: 1px;
       display: flex;
       align-items: center;
@@ -7939,6 +8052,33 @@
       padding-left: 8px;
       margin: 6px 0;
       color: var(--wc-text-2);
+    }
+    /* V2EX 附言 (.subtle) 样式规范（浅色模式） */
+    .wecom-msg-bubble .subtle {
+      background: rgba(0, 0, 0, 0.02) !important;
+      border-left: 3px solid #D5D8DE !important;
+      border-top: 1px solid rgba(0, 0, 0, 0.06) !important;
+      border-right: 1px solid rgba(0, 0, 0, 0.06) !important;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+      color: inherit !important;
+      border-radius: 0 6px 6px 0 !important;
+      padding: 8px 12px !important;
+      margin: 10px 0 6px 0 !important;
+    }
+    .wecom-msg-bubble .subtle .fade {
+      color: var(--wc-text-3, #86909C) !important;
+      font-size: 12px !important;
+      font-weight: 500 !important;
+      display: inline-block !important;
+      margin-bottom: 4px !important;
+    }
+    .wecom-msg-bubble .subtle .topic_content {
+      color: inherit !important;
+      font-size: 14px !important;
+      line-height: 1.6 !important;
+    }
+    .wecom-msg-bubble .subtle .sep5 {
+      height: 4px !important;
     }
     .wecom-msg-bubble img {
       max-width: 100%;
@@ -9419,19 +9559,29 @@
     /* V2EX 附言 (.subtle) */
     html.wecom-dark .wecom-msg-bubble .subtle,
     html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble .subtle {
-      background: rgba(255, 255, 255, 0.04) !important;
-      border-left: 3px solid #388BFD !important;
+      background: rgba(255, 255, 255, 0.03) !important;
+      border-left: 3px solid rgba(255, 255, 255, 0.2) !important;
       border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
       border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
       border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
       color: #ECEFF4 !important;
       border-radius: 0 6px 6px 0 !important;
-      padding: 6px 10px !important;
-      margin: 8px 0 !important;
+      padding: 8px 12px !important;
+      margin: 10px 0 6px 0 !important;
     }
     html.wecom-dark .wecom-msg-bubble .subtle .fade,
     html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble .subtle .fade {
       color: #8C99AA !important;
+      font-size: 12px !important;
+      font-weight: 500 !important;
+      display: inline-block !important;
+      margin-bottom: 4px !important;
+    }
+    html.wecom-dark .wecom-msg-bubble .subtle .topic_content,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble .subtle .topic_content {
+      color: #D3D9E2 !important;
+      font-size: 14px !important;
+      line-height: 1.6 !important;
     }
 
     /* @提及徽标 */
@@ -9550,6 +9700,52 @@
     }
 
     /* 消息编辑弹窗 */
+    /* 确认弹窗深色模式 */
+    html.wecom-dark .wecom-confirm-card,
+    html.${ROOT_CLASS}.wecom-dark .wecom-confirm-card {
+      background: #23272E !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      color: #ECEFF4 !important;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45) !important;
+    }
+    html.wecom-dark .wecom-confirm-title,
+    html.${ROOT_CLASS}.wecom-dark .wecom-confirm-title {
+      color: #ECEFF4 !important;
+    }
+    html.wecom-dark .wecom-confirm-body,
+    html.${ROOT_CLASS}.wecom-dark .wecom-confirm-body {
+      color: #C1C9D2 !important;
+    }
+    html.wecom-dark .wecom-confirm-subtext,
+    html.${ROOT_CLASS}.wecom-dark .wecom-confirm-subtext {
+      color: #8C99AA !important;
+    }
+    html.wecom-dark .wecom-confirm-close,
+    html.${ROOT_CLASS}.wecom-dark .wecom-confirm-close {
+      color: #8C99AA !important;
+    }
+    html.wecom-dark .wecom-confirm-close:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-confirm-close:hover {
+      background: rgba(255, 255, 255, 0.08) !important;
+      color: #FFFFFF !important;
+    }
+    html.wecom-dark .wecom-confirm-actions button:not(.wecom-confirm-btn-primary),
+    html.${ROOT_CLASS}.wecom-dark .wecom-confirm-actions button:not(.wecom-confirm-btn-primary) {
+      background: #2C323B !important;
+      border-color: rgba(255, 255, 255, 0.14) !important;
+      color: #ECEFF4 !important;
+    }
+    html.wecom-dark .wecom-confirm-actions button:not(.wecom-confirm-btn-primary):hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-confirm-actions button:not(.wecom-confirm-btn-primary):hover {
+      background: #363C47 !important;
+    }
+    html.wecom-dark .wecom-confirm-actions .wecom-confirm-btn-primary,
+    html.${ROOT_CLASS}.wecom-dark .wecom-confirm-actions .wecom-confirm-btn-primary {
+      background: #267EF0 !important;
+      border-color: #267EF0 !important;
+      color: #FFFFFF !important;
+    }
+
     html.wecom-dark .wecom-edit-dialog-card,
     html.${ROOT_CLASS}.wecom-dark .wecom-edit-dialog-card {
       background: #23272E !important;
@@ -9681,14 +9877,18 @@
     html.${ROOT_CLASS}.wecom-dark .wecom-member-body:hover::-webkit-scrollbar-thumb,
     html.${ROOT_CLASS}.wecom-dark .wecom-member-body.is-scrolling::-webkit-scrollbar-thumb,
     html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu:hover::-webkit-scrollbar-thumb,
-    html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu.is-scrolling::-webkit-scrollbar-thumb {
+    html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu.is-scrolling::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-member-card:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-user-popover:hover::-webkit-scrollbar-thumb {
       background: rgba(255, 255, 255, 0.22) !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-list-body::-webkit-scrollbar-thumb:hover,
     html.${ROOT_CLASS}.wecom-dark .wecom-chat-body::-webkit-scrollbar-thumb:hover,
     html.${ROOT_CLASS}.wecom-dark .wecom-chat-messages::-webkit-scrollbar-thumb:hover,
     html.${ROOT_CLASS}.wecom-dark .wecom-member-body::-webkit-scrollbar-thumb:hover,
-    html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu::-webkit-scrollbar-thumb:hover {
+    html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-member-card::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-user-popover::-webkit-scrollbar-thumb:hover {
       background: rgba(255, 255, 255, 0.38) !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-list-panel:hover .wecom-list-body,
@@ -9701,7 +9901,9 @@
     html.${ROOT_CLASS}.wecom-dark .wecom-member-body:hover,
     html.${ROOT_CLASS}.wecom-dark .wecom-member-body.is-scrolling,
     html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu:hover,
-    html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu.is-scrolling {
+    html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu.is-scrolling,
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-member-card:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-user-popover:hover {
       scrollbar-color: rgba(255, 255, 255, 0.22) transparent !important;
     }
 
@@ -12800,6 +13002,78 @@
     return toast;
   }
 
+  /* ============================== 全局企业微信风格确认弹层 ============================== */
+
+  function showWecomConfirm({
+    title = "提示",
+    message = "确定继续该操作吗？",
+    subtext = "",
+    confirmText = "确定",
+    cancelText = "取消"
+  } = {}) {
+    return new Promise((resolve) => {
+      let dialog = document.querySelector(".wecom-confirm-dialog");
+      if (!dialog) {
+        dialog = document.createElement("div");
+        dialog.className = "wecom-confirm-dialog";
+        document.body.appendChild(dialog);
+      }
+
+      dialog.innerHTML = `
+        <div class="wecom-confirm-card" role="dialog" aria-modal="true" aria-labelledby="wecom-confirm-title">
+          <div class="wecom-confirm-head">
+            <strong id="wecom-confirm-title" class="wecom-confirm-title">${escapeHtml(title)}</strong>
+            <button type="button" class="wecom-confirm-close" data-confirm-action="cancel" aria-label="关闭">×</button>
+          </div>
+          <div class="wecom-confirm-body">
+            <div>${escapeHtml(message).replace(/\n/g, "<br>")}</div>
+            ${subtext ? `<span class="wecom-confirm-subtext">${escapeHtml(subtext)}</span>` : ""}
+          </div>
+          <div class="wecom-confirm-actions">
+            <button type="button" class="wecom-confirm-btn-cancel" data-confirm-action="cancel">${escapeHtml(cancelText)}</button>
+            <button type="button" class="wecom-confirm-btn-primary" data-confirm-action="confirm">${escapeHtml(confirmText)}</button>
+          </div>
+        </div>
+      `;
+      dialog.removeAttribute("hidden");
+
+      const cleanup = () => {
+        dialog.setAttribute("hidden", "hidden");
+        dialog.innerHTML = "";
+        document.removeEventListener("keydown", onKey);
+      };
+
+      const onKey = (e) => {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          cleanup();
+          resolve(false);
+        } else if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          cleanup();
+          resolve(true);
+        }
+      };
+      document.addEventListener("keydown", onKey);
+
+      dialog.onclick = (e) => {
+        const actionBtn = e.target.closest("[data-confirm-action]");
+        if (actionBtn) {
+          const action = actionBtn.getAttribute("data-confirm-action");
+          cleanup();
+          resolve(action === "confirm");
+          return;
+        }
+        if (e.target === dialog) {
+          cleanup();
+          resolve(false);
+        }
+      };
+
+      dialog.querySelector(".wecom-confirm-btn-primary")?.focus();
+    });
+  }
+
   /* ============================== V2EX 用户资料卡与财产浮层 (#money) ============================== */
 
   const V2EX_MONEY_KEY = "linuxdo-wecom-v2ex-money";
@@ -13430,6 +13704,17 @@
 
   const v2exMemberProfileCache = new Map();
   const V2EX_MEMBER_CACHE_TTL = 5 * 60 * 1000;
+  const V2EX_MEMBER_CACHE_MAX = 60;
+
+  function cacheMemberProfile(username, data) {
+    if (!username || !data) return;
+    v2exMemberProfileCache.delete(username);
+    if (v2exMemberProfileCache.size >= V2EX_MEMBER_CACHE_MAX) {
+      const oldestKey = v2exMemberProfileCache.keys().next().value;
+      if (oldestKey) v2exMemberProfileCache.delete(oldestKey);
+    }
+    v2exMemberProfileCache.set(username, { time: Date.now(), data });
+  }
 
   function parseV2exMemberProfile(html, username) {
     if (!html || typeof html !== "string") return null;
@@ -13614,7 +13899,7 @@
           isNotFound: true,
           status: 404
         };
-        v2exMemberProfileCache.set(username, { time: now, data: notFoundData });
+        cacheMemberProfile(username, notFoundData);
         return notFoundData;
       }
       if (!resp.ok) {
@@ -13625,34 +13910,29 @@
         };
       }
       const html = await resp.text();
-      if (
-        html.includes("未能找到指定的用户") ||
-        html.includes("用户未找到") ||
-        html.includes("Member not found") ||
-        html.includes("找不到指定") ||
-        ((html.includes("404") || html.includes("Not Found")) && (html.includes("用户") || html.includes("Member") || html.includes("指定")))
-      ) {
+      const profile = parseV2exMemberProfile(html, username);
+      const hasValidProfile = Boolean(profile && (profile.uid || profile.avatarUrl || profile.joinedDate));
+
+      if (hasValidProfile) {
+        cacheMemberProfile(username, profile);
+        return profile;
+      }
+
+      // 仅当未能提取出有效用户资料时，才检测是否为 404 错误页，避免帖子标题包含 404 导致误判
+      const isTitleNotFound = /<title>[^<]*(?:404|not found|用户未找到|找不到)[^<]*<\/title>/i.test(html);
+      const isBoxNotFound = /<div[^>]*class=["'][^"']*(?:message|problem)[^"']*["'][^>]*>[\s\S]*?(?:未能找到指定的用户|用户未找到|Member not found|找不到指定)/i.test(html);
+
+      if (isTitleNotFound || isBoxNotFound || (!profile?.uid && !profile?.avatarUrl && !profile?.joinedDate)) {
         const notFoundData = {
           username,
           isNotFound: true,
           status: 404
         };
-        v2exMemberProfileCache.set(username, { time: now, data: notFoundData });
+        cacheMemberProfile(username, notFoundData);
         return notFoundData;
       }
-      const profile = parseV2exMemberProfile(html, username);
-      if (profile) {
-        if (!profile.uid && !profile.avatarUrl && !profile.joinedDate) {
-          const notFoundData = {
-            username,
-            isNotFound: true,
-            status: 404
-          };
-          v2exMemberProfileCache.set(username, { time: now, data: notFoundData });
-          return notFoundData;
-        }
-        v2exMemberProfileCache.set(username, { time: now, data: profile });
-      }
+
+      cacheMemberProfile(username, profile);
       return profile;
     } catch (err) {
       console.warn("[linuxdo-wecom] Failed to fetch member profile:", username, err);
@@ -15700,6 +15980,51 @@
     syncListActive();
   }
 
+  /**
+   * 列表触底翻页增量追加卡片，避免全量 innerHTML 重刷导致的 GC 与 DOM 抖动
+   */
+  function appendListRows(freshTopics = []) {
+    const body = document.querySelector(".wecom-list-body");
+    if (!body) return;
+    const usersById = listState.usersById || {};
+    const isNotifs = typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications");
+    const emptyNotice = isNotifs
+      ? (listState.topics.length ? "没有更多提醒了" : "暂无未读提醒")
+      : (listState.topics.length ? "没有更多了" : "");
+    const statusText = listState.loading && listState.topics.length > 0
+      ? "正在加载更多…"
+      : (listState.moreUrl ? "下拉或点击加载更多…" : emptyNotice);
+
+    const statusEl = body.querySelector(".wecom-list-status");
+    if (!statusEl && !body.querySelector(".wecom-conv")) {
+      renderListRows();
+      return;
+    }
+
+    if (Array.isArray(freshTopics) && freshTopics.length > 0) {
+      const html = freshTopics.map((t) => convRowHtml(t, usersById)).join("");
+      if (statusEl) {
+        statusEl.insertAdjacentHTML("beforebegin", html);
+      } else {
+        body.insertAdjacentHTML("beforeend", html);
+      }
+    }
+
+    const currentStatusEl = body.querySelector(".wecom-list-status");
+    if (currentStatusEl) {
+      currentStatusEl.textContent = statusText;
+      currentStatusEl.className = "wecom-list-status " + (listState.moreUrl && !listState.loading ? "is-clickable" : "");
+    } else {
+      body.insertAdjacentHTML(
+        "beforeend",
+        '<div class="wecom-list-status ' + (listState.moreUrl && !listState.loading ? "is-clickable" : "") + '">' + escapeHtml(statusText) + '</div>'
+      );
+    }
+
+    syncListChips();
+    syncListActive();
+  }
+
   /** 中栏 chips 计数：消息 = 已加载话题数，未读 = unread/new_posts 求和 */
   function syncListChips() {
     const allN = document.querySelector('.wecom-chip[data-chip="all"] .n');
@@ -15809,7 +16134,11 @@
     listState.topics = append ? listState.topics.concat(fresh) : topics;
     const more = data.topic_list && data.topic_list.more_topics_url;
     listState.moreUrl = more ? more.replace(/\.json\b/, ".json") : null;
-    renderListRows();
+    if (append) {
+      appendListRows(fresh);
+    } else {
+      renderListRows();
+    }
     syncRail();
   }
 
@@ -16108,10 +16437,17 @@
         const pagination = parseV2exListPagination(doc, pageUrl, topics.length);
         listState.v2exHasMore = pagination.hasMore && (topics.length > 0);
         listState.moreUrl = listState.v2exHasMore ? pagination.nextPageUrl : null;
-        renderListRows();
+        appendListRows(fresh);
         syncRail();
       } catch (error) {
-        if (requestSerial === listState.requestSerial) console.error("[v2ex-wecom] load more topics failed", error);
+        if (requestSerial === listState.requestSerial) {
+          console.error("[v2ex-wecom] load more topics failed", error);
+          const statusEl = document.querySelector(".wecom-list-status");
+          if (statusEl) {
+            statusEl.textContent = "加载失败，点击重试";
+            statusEl.classList.add("is-clickable");
+          }
+        }
       } finally {
         if (requestSerial === listState.requestSerial) listState.loading = false;
       }
@@ -16119,6 +16455,11 @@
     }
     const requestSerial = ++listState.requestSerial;
     listState.loading = true;
+    const statusEl = document.querySelector(".wecom-list-status");
+    if (statusEl) {
+      statusEl.textContent = "正在加载更多…";
+      statusEl.classList.remove("is-clickable");
+    }
     try {
       const data = await api(listState.moreUrl);
       if (requestSerial !== listState.requestSerial) return;
@@ -16126,6 +16467,11 @@
     } catch (error) {
       if (requestSerial === listState.requestSerial) {
         console.error("[linuxdo-wecom] load more topics failed", error);
+        const statusEl = document.querySelector(".wecom-list-status");
+        if (statusEl) {
+          statusEl.textContent = "加载失败，点击重试";
+          statusEl.classList.add("is-clickable");
+        }
       }
     } finally {
       if (requestSerial === listState.requestSerial) listState.loading = false;
@@ -19972,6 +20318,7 @@
   }
 
   const activeLikingPosts = new Set();
+  const activeConfirmingPosts = new Set();
 
   async function toggleLike(postId, btn, msgEl) {
     const msg = msgEl || btn?.closest?.(".wecom-msg");
@@ -19990,8 +20337,7 @@
       return;
     }
 
-    if (activeLikingPosts.has(postId)) return;
-    activeLikingPosts.add(postId);
+    if (activeLikingPosts.has(postId) || activeConfirmingPosts.has(postId)) return;
 
     try {
       if (IS_V2EX) {
@@ -20000,6 +20346,31 @@
           showWecomToast("已经感谢过该回复了", "info", 1800);
           return;
         }
+
+        const isTopic = Number(msg?.dataset?.postNumber) === 1 || Number(msg?.dataset?.floor) === 0;
+        const postAuthor = msg?.querySelector(".wecom-msg-name")?.textContent?.trim() || "作者";
+        const targetLabel = isTopic ? "感谢主题" : "感谢回复";
+        const promptMsg = isTopic
+          ? `确定要向本主题的创建者 @${postAuthor} 发送谢意吗？`
+          : `确定要向本条回复的创建者 @${postAuthor} 发送谢意吗？`;
+
+        activeConfirmingPosts.add(postId);
+        let confirmed = false;
+        try {
+          confirmed = await showWecomConfirm({
+            title: "发送谢意",
+            message: promptMsg,
+            subtext: "发送后将消耗 10 个铜币，且不可撤销。",
+            confirmText: "确定发送",
+            cancelText: "取消"
+          });
+        } finally {
+          activeConfirmingPosts.delete(postId);
+        }
+
+        if (!confirmed) return;
+
+        activeLikingPosts.add(postId);
         btn.classList.add("liked");
         likedPosts.add(postId);
         let likeNumEl = msg?.querySelector(".wecom-msg-like-num");
@@ -20008,19 +20379,19 @@
           const next = (parseInt(likeNumEl.textContent.trim(), 10) || 0) + 1;
           likeNumEl.textContent = String(next);
           const badge = msg?.querySelector(".wecom-msg-likes");
-          if (badge) badge.title = `感谢回复：${next}`;
+          if (badge) badge.title = `${targetLabel}：${next}`;
         } else if (msg) {
           const meta = msg.querySelector(".wecom-msg-meta");
           if (meta) {
             const badge = document.createElement("span");
             badge.className = "wecom-msg-likes";
-            badge.title = "感谢回复：1";
+            badge.title = `${targetLabel}：1`;
             badge.innerHTML = `<span class="wecom-msg-like-icon">${ICONS.heart}</span><span class="wecom-msg-like-num">1</span>`;
             meta.appendChild(badge);
             addedBadge = true;
           }
         }
-        showWecomToast("已感谢回复", "success", 1800);
+        showWecomToast(isTopic ? "已感谢主题" : "已感谢回复", "success", 1800);
         try {
           let once = document.querySelector("#Main form input[name='once'], input[name='once']")?.value;
           if (!once) {
@@ -20030,7 +20401,10 @@
             once = doc.querySelector("input[name='once']")?.value;
           }
           if (!once) throw new Error("请先登录 V2EX");
-          const resp = await fetch(`/thank/reply/${postId}?once=${once}`, {
+          const thankUrl = isTopic
+            ? `/thank/topic/${chatState.topicId || postId}?once=${once}`
+            : `/thank/reply/${postId}?once=${once}`;
+          const resp = await fetch(thankUrl, {
             method: "POST",
             credentials: "same-origin"
           });
@@ -20043,8 +20417,10 @@
           } else if (addedBadge) {
             msg?.querySelector(".wecom-msg-likes")?.remove();
           }
-          showWecomToast("感谢回复失败：" + (err.message || "网络异常"), "error", 2500);
-          console.warn("[v2ex] thank reply failed", err);
+          showWecomToast(`${targetLabel}失败：` + (err.message || "网络异常"), "error", 2500);
+          console.warn("[v2ex] thank failed", err);
+        } finally {
+          activeLikingPosts.delete(postId);
         }
         return;
       }
@@ -21480,7 +21856,33 @@
       opUsername = "v2ex_user";
     }
     const opAvatar = doc.querySelector("#Main .header img.avatar")?.getAttribute("src") || "";
-    const opContent = doc.querySelector("#Main .topic_content, #Main .entry-content")?.innerHTML || "<p>（无正文）</p>";
+
+    // 提取正文（排除附言 .subtle 内部的 .topic_content）
+    const mainContentEl = Array.from(
+      doc.querySelectorAll("#Main .topic_content, #Main .entry-content")
+    ).find((el) => !el.closest?.(".subtle"));
+    const opMainHtml = mainContentEl?.innerHTML?.trim() || "";
+
+    // 提取所有附言（.subtle）
+    const subtleEls = Array.from(
+      doc.querySelectorAll("#Main .box .subtle, #Main .subtle, .subtle")
+    ).filter((el) => !el.parentElement?.closest?.(".subtle"));
+    const opSubtleHtml = subtleEls
+      .map((el) => el.outerHTML?.trim() || "")
+      .filter(Boolean)
+      .join("\n");
+
+    let opContent = "";
+    if (opMainHtml && opSubtleHtml) {
+      opContent = `${opMainHtml}\n${opSubtleHtml}`;
+    } else if (opMainHtml) {
+      opContent = opMainHtml;
+    } else if (opSubtleHtml) {
+      opContent = opSubtleHtml;
+    } else {
+      opContent = "<p>（无正文）</p>";
+    }
+
     const opTimeEl = doc.querySelector("#Main .header .gray span[title], #Main .header span[title]");
     const opCreated = opTimeEl?.getAttribute("title") || doc.querySelector("#Main .header .gray")?.textContent?.trim() || "";
     const opNode = doc.querySelector("#Main .header a[href^='/go/']")?.textContent?.trim() || "";
@@ -23355,6 +23757,7 @@
     document.querySelector(".wecom-theme-menu")?.remove();
     document.querySelector(".wecom-update-notice")?.remove();
     document.querySelector(".wecom-edit-dialog")?.remove();
+    document.querySelector(".wecom-confirm-dialog")?.remove();
     document.querySelector(".wecom-v2ex-nav2")?.remove();
     closeV2exUserPopover();
     closeV2exMemberCard();
@@ -23606,7 +24009,7 @@
       });
     }
 
-    const WECOM_UI_SEL = ".wecom-toast-container, .wecom-connect-overlay, .wecom-connect-modal, .wecom-base64-insert-dialog, .wecom-v2ex-user-popover, .wecom-v2ex-member-card, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-rail-resizer, .wecom-list-resizer, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
+    const WECOM_UI_SEL = ".wecom-toast-container, .wecom-confirm-dialog, .wecom-connect-overlay, .wecom-connect-modal, .wecom-base64-insert-dialog, .wecom-v2ex-user-popover, .wecom-v2ex-member-card, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-rail-resizer, .wecom-list-resizer, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
     const NATIVE_BRIDGE_SEL = "#reply-control, .dialog-holder, .dialog-container, #discourse-modal-container, .d-modal, .bootbox, .autocomplete, .autocomplete-container, .d-editor-popup, [data-identifier='emoji-picker'], .tag-chooser";
 
     function isWecomOrBridgeNode(node) {

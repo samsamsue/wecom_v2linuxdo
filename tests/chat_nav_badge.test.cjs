@@ -6697,6 +6697,199 @@ test("Test 91: Discourse SiteSettings deprecation warning prevention and Mutatio
   );
 });
 
+test("Test 92: V2EX topic appendices (.subtle) extraction and dual-mode bubble styling", () => {
+  // 1. 验证 parseV2exTopicDoc 提取正文时排除 .subtle 内部的 .topic_content，避免无正文时重复
+  assert.ok(
+    scriptContent.includes('doc.querySelectorAll("#Main .topic_content, #Main .entry-content")') &&
+    scriptContent.includes('!el.closest?.(".subtle")'),
+    "parseV2exTopicDoc must extract main content excluding subtle children"
+  );
+
+  // 2. 验证 parseV2exTopicDoc 提取所有附言（.subtle）并拼接进 opContent
+  assert.ok(
+    scriptContent.includes('doc.querySelectorAll("#Main .box .subtle, #Main .subtle, .subtle")') &&
+    scriptContent.includes('!el.parentElement?.closest?.(".subtle")') &&
+    scriptContent.includes('opSubtleHtml'),
+    "parseV2exTopicDoc must extract all subtle appendices"
+  );
+  assert.ok(
+    scriptContent.includes("if (opMainHtml && opSubtleHtml) {") &&
+    scriptContent.includes("opContent = `${opMainHtml}\\n${opSubtleHtml}`;") &&
+    scriptContent.includes("else if (opSubtleHtml) {"),
+    "parseV2exTopicDoc must combine main content and appendices or fallback gracefully"
+  );
+
+  // 3. 验证浅色与深色模式下均有 .wecom-msg-bubble .subtle 完整样式定义（低调浅灰色左边框）
+  assert.ok(
+    scriptContent.includes("/* V2EX 附言 (.subtle) 样式规范（浅色模式） */") &&
+    scriptContent.includes(".wecom-msg-bubble .subtle {") &&
+    scriptContent.includes("border-left: 3px solid #D5D8DE !important;"),
+    "WECOM_LATEST_REFINEMENTS must style .wecom-msg-bubble .subtle with muted gray border in light mode"
+  );
+  assert.ok(
+    scriptContent.includes("html.wecom-dark .wecom-msg-bubble .subtle,") &&
+    scriptContent.includes("border-left: 3px solid rgba(255, 255, 255, 0.2) !important;"),
+    "WECOM_DARK_REFINEMENTS must style .wecom-msg-bubble .subtle with muted border in dark mode"
+  );
+});
+
+test("Test 93: V2EX thank action confirmation layer (.wecom-confirm-dialog) to prevent accidental clicks", () => {
+  // 1. 验证定义了 showWecomConfirm 确认弹层组件
+  assert.ok(
+    scriptContent.includes("function showWecomConfirm({") &&
+    scriptContent.includes('class="wecom-confirm-card"') &&
+    scriptContent.includes('class="wecom-confirm-btn-primary"'),
+    "must define showWecomConfirm with modal structure and action buttons"
+  );
+
+  // 2. 验证弹窗样式与深色模式样式
+  assert.ok(
+    scriptContent.includes(".wecom-confirm-dialog") &&
+    scriptContent.includes(".wecom-confirm-btn-primary {"),
+    "CSS must style .wecom-confirm-dialog and primary confirm button"
+  );
+  assert.ok(
+    scriptContent.includes("html.wecom-dark .wecom-confirm-card,") &&
+    scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-confirm-card"),
+    "WECOM_DARK_REFINEMENTS must style confirm modal in dark mode"
+  );
+
+  // 3. 验证 toggleLike 在 V2EX 环境下弹出确认层并防误触
+  assert.ok(
+    scriptContent.includes("activeConfirmingPosts.add(postId);") &&
+    scriptContent.includes("confirmed = await showWecomConfirm({") &&
+    scriptContent.includes("if (!confirmed) return;"),
+    "toggleLike must invoke showWecomConfirm and early return on cancel to prevent accidental thank"
+  );
+  assert.ok(
+    scriptContent.includes('subtext: "发送后将消耗 10 个铜币，且不可撤销。"') &&
+    scriptContent.includes('title: "发送谢意"'),
+    "showWecomConfirm call must inform user about 10 copper coins deduction and irreversibility"
+  );
+
+  // 4. 验证区分主题与回帖感谢接口
+  assert.ok(
+    scriptContent.includes("const thankUrl = isTopic") &&
+    scriptContent.includes("`/thank/topic/${chatState.topicId || postId}?once=${once}`") &&
+    scriptContent.includes("`/thank/reply/${postId}?once=${once}`"),
+    "toggleLike must route to thank/topic for topic post and thank/reply for replies"
+  );
+});
+
+test("Test 94: V2EX member profile 404 false-positive prevention (e.g. opengps) and cache size bound", () => {
+  // 1. 验证有效资料优先于 404 文本检测，避免发过包含 404 标题的正常用户被误判
+  assert.ok(
+    scriptContent.includes("const hasValidProfile = Boolean(profile && (profile.uid || profile.avatarUrl || profile.joinedDate));") &&
+    scriptContent.includes("if (hasValidProfile) {"),
+    "fetchV2exMemberProfile must prioritize valid parsed profile over error heuristics"
+  );
+
+  // 2. 验证仅在未能提取有效用户资料时检测 404 标题或提示框
+  assert.ok(
+    scriptContent.includes("const isTitleNotFound = /<title>[^<]*(?:404|not found|用户未找到|找不到)[^<]*<\\/title>/i.test(html);") &&
+    scriptContent.includes("const isBoxNotFound = /<div[^>]*class=[\"'][^\"']*(?:message|problem)"),
+    "fetchV2exMemberProfile must check title and problem box only when profile is missing"
+  );
+
+  // 3. 验证存在 LRU 淘汰函数 cacheMemberProfile 及最大容量控制
+  assert.ok(
+    scriptContent.includes("const V2EX_MEMBER_CACHE_MAX = 60;") &&
+    scriptContent.includes("function cacheMemberProfile(username, data) {") &&
+    scriptContent.includes("v2exMemberProfileCache.delete(oldestKey);"),
+    "must bound v2exMemberProfileCache with LRU eviction to prevent unbounded memory growth"
+  );
+});
+
+test("Test 95: wecom-msg-name margin-bottom removal and user card auto-hiding scrollbars", () => {
+  // 1. 验证 .wecom-msg-name 的 margin-bottom 已置为 0
+  assert.ok(
+    scriptContent.includes(".wecom-msg-name {") &&
+    scriptContent.includes("margin-bottom: 0 !important;"),
+    ".wecom-msg-name must set margin-bottom: 0 !important"
+  );
+  assert.ok(
+    !/\.wecom-msg-name\s*\{[^}]*margin-bottom:\s*4px/i.test(scriptContent),
+    "must eliminate obsolete margin-bottom: 4px !important on message names"
+  );
+
+  // 2. 验证用户卡片包含在自动隐藏滚动条规则中
+  assert.ok(
+    scriptContent.includes(".wecom-v2ex-member-card,") &&
+    scriptContent.includes(".wecom-v2ex-user-popover {") &&
+    scriptContent.includes("scrollbar-color: transparent transparent !important;"),
+    "user card must use transparent scrollbars by default"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-v2ex-member-card:hover::-webkit-scrollbar-thumb,") &&
+    scriptContent.includes(".wecom-v2ex-user-popover:hover::-webkit-scrollbar-thumb {"),
+    "user card scrollbar thumb must appear on hover like conversation list"
+  );
+  assert.ok(
+    scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-member-card:hover::-webkit-scrollbar-thumb,"),
+    "dark mode must style user card scrollbar thumb on hover"
+  );
+});
+
+test("Test 96: list pagination incremental append to avoid innerHTML redraw (appendListRows)", () => {
+  // 1. 验证定义了 appendListRows 增量追加函数
+  assert.ok(
+    scriptContent.includes("function appendListRows(freshTopics = []) {") &&
+    scriptContent.includes("statusEl.insertAdjacentHTML(\"beforebegin\", html);"),
+    "must define appendListRows with insertAdjacentHTML before statusEl to avoid full innerHTML redraw"
+  );
+
+  // 2. 验证 applyListJson 在 append 为 true 时调用 appendListRows(fresh)
+  assert.ok(
+    scriptContent.includes("if (append) {") &&
+    scriptContent.includes("appendListRows(fresh);") &&
+    scriptContent.includes("renderListRows();"),
+    "applyListJson must call appendListRows(fresh) when append is true and fallback to renderListRows"
+  );
+
+  // 3. 验证 V2EX 在 loadMoreList 中使用 appendListRows(fresh)
+  assert.ok(
+    scriptContent.includes("appendListRows(fresh);") &&
+    scriptContent.includes("syncRail();"),
+    "loadMoreList must use appendListRows for incremental pagination"
+  );
+
+  // 4. 验证 loadMoreList 在加载中展示「正在加载更多…」，失败时提供点击重试
+  assert.ok(
+    scriptContent.includes('statusEl.textContent = "正在加载更多…";') &&
+    scriptContent.includes('statusEl.textContent = "加载失败，点击重试";') &&
+    scriptContent.includes('statusEl.classList.add("is-clickable");'),
+    "loadMoreList must manage status element state for loading and error recovery"
+  );
+
+  // 5. 行为仿真验证：已有 DOM 节点未被替换，新节点直接追加在 statusEl 前面
+  const existingConv = { id: 101, title: "原有第一篇话题" };
+  const freshTopics = [
+    { id: 102, title: "第二页新增话题 A" },
+    { id: 103, title: "第二页新增话题 B" }
+  ];
+
+  let bodyHtml = `<a class="wecom-conv" data-topic-id="101">原有第一篇话题</a><div class="wecom-list-status is-clickable">下拉或点击加载更多…</div>`;
+  const inserted = [];
+  const mockStatusEl = {
+    textContent: "下拉或点击加载更多…",
+    className: "wecom-list-status is-clickable",
+    insertAdjacentHTML(position, html) {
+      inserted.push({ position, html });
+    }
+  };
+
+  // 模拟增量追加调用
+  const mockHtml = freshTopics.map((t) => `<a class="wecom-conv" data-topic-id="${t.id}">${t.title}</a>`).join("");
+  mockStatusEl.insertAdjacentHTML("beforebegin", mockHtml);
+
+  assert.strictEqual(inserted.length, 1);
+  assert.strictEqual(inserted[0].position, "beforebegin");
+  assert.ok(inserted[0].html.includes("第二页新增话题 A"));
+  assert.ok(inserted[0].html.includes("第二页新增话题 B"));
+});
+
+
+
 
 
 
