@@ -6487,3 +6487,59 @@ test("V2EX balance card duplication fix: cleanV2exMoneyContent strips wrapping t
   );
 });
 
+test("V2EX member profile card handles 404 user profiles as banned or renamed (v0.7.61)", () => {
+  // 1. Static code checks
+  assert.ok(
+    scriptContent.includes(".wecom-member-badge.is-banned"),
+    "must include CSS for banned member badge"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-member-notice.is-banned"),
+    "must include CSS for banned member notice box"
+  );
+  assert.ok(
+    scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-member-badge.is-banned"),
+    "must include dark mode CSS for banned member badge"
+  );
+  assert.ok(
+    scriptContent.includes("resp.status === 404"),
+    "fetchV2exMemberProfile must check for 404 status code"
+  );
+  assert.ok(
+    scriptContent.includes("isNotFound: true"),
+    "fetchV2exMemberProfile must set isNotFound: true"
+  );
+  assert.ok(
+    scriptContent.includes("已被封号或改名 (404)"),
+    "openV2exMemberCard must display banned or renamed tagline on 404"
+  );
+  assert.ok(
+    scriptContent.includes("已封号 / 改名"),
+    "openV2exMemberCard must display banned or renamed badge text on 404"
+  );
+
+  // 2. Functional simulation of 404 detection logic
+  function simulateCheckProfile(status, html) {
+    if (status === 404) {
+      return { isNotFound: true, status: 404 };
+    }
+    if (
+      html.includes("未能找到指定的用户") ||
+      html.includes("用户未找到") ||
+      html.includes("Member not found") ||
+      html.includes("找不到指定") ||
+      ((html.includes("404") || html.includes("Not Found")) && (html.includes("用户") || html.includes("Member") || html.includes("指定")))
+    ) {
+      return { isNotFound: true, status: 404 };
+    }
+    return { isNotFound: false };
+  }
+
+  assert.equal(simulateCheckProfile(404, "").isNotFound, true);
+  assert.equal(simulateCheckProfile(200, "<html>404 未能找到指定的用户</html>").isNotFound, true);
+  assert.equal(simulateCheckProfile(200, "<html><div class='box'><div class='cell'>V2EX › 用户未找到</div></div></html>").isNotFound, true);
+  assert.equal(simulateCheckProfile(200, "<html><h1>normaluser</h1><img class='avatar' src='//v2ex.com/avatar.png'></html>").isNotFound, false);
+});
+
+
+

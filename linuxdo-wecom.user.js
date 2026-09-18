@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.60
+// @version      0.7.61
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -1773,6 +1773,44 @@
       border-radius: 4px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+    }
+    .wecom-member-badge.is-banned {
+      background: #FFE8E8;
+      color: #F53F3F;
+      border: 1px solid #FFCECE;
+    }
+    .wecom-member-notice {
+      margin: 0 16px 10px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      line-height: 1.5;
+      box-sizing: border-box;
+    }
+    .wecom-member-notice.is-banned {
+      background: #FFF7F7;
+      border: 1px solid #FFCECE;
+      color: #4E5969;
+    }
+    .wecom-member-notice-title {
+      font-weight: 600;
+      color: #F53F3F;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 3px;
+    }
+    .wecom-member-notice-desc {
+      font-size: 11px;
+      color: #86909C;
+      line-height: 1.4;
+    }
+    .wecom-member-notice-desc code {
+      background: rgba(0, 0, 0, 0.05);
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-family: monospace;
     }
     .wecom-member-tagline {
       font-size: 12px;
@@ -8708,6 +8746,26 @@
       background: #112A45;
       color: #4096FF;
     }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-badge.is-banned {
+      background: #3B1C1C;
+      border-color: #F53F3F;
+      color: #F76560;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-notice.is-banned {
+      background: #2A1A1A;
+      border-color: #5C2223;
+      color: #C0C5CE;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-notice-title {
+      color: #F76560;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-notice-desc {
+      color: #8C8C8C;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-notice-desc code {
+      background: rgba(255, 255, 255, 0.08);
+      color: #D4D4D4;
+    }
     html.${ROOT_CLASS}.wecom-dark .wecom-member-tagline {
       color: #8C8C8C;
     }
@@ -10907,7 +10965,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.60";
+  const SCRIPT_VERSION = "0.7.61";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -13485,16 +13543,59 @@
 
     try {
       const resp = await fetch(`/member/${encodeURIComponent(username)}`, { credentials: "include" });
-      if (!resp.ok) return null;
+      if (resp.status === 404) {
+        const notFoundData = {
+          username,
+          isNotFound: true,
+          status: 404
+        };
+        v2exMemberProfileCache.set(username, { time: now, data: notFoundData });
+        return notFoundData;
+      }
+      if (!resp.ok) {
+        return {
+          username,
+          isError: true,
+          status: resp.status
+        };
+      }
       const html = await resp.text();
+      if (
+        html.includes("未能找到指定的用户") ||
+        html.includes("用户未找到") ||
+        html.includes("Member not found") ||
+        html.includes("找不到指定") ||
+        ((html.includes("404") || html.includes("Not Found")) && (html.includes("用户") || html.includes("Member") || html.includes("指定")))
+      ) {
+        const notFoundData = {
+          username,
+          isNotFound: true,
+          status: 404
+        };
+        v2exMemberProfileCache.set(username, { time: now, data: notFoundData });
+        return notFoundData;
+      }
       const profile = parseV2exMemberProfile(html, username);
       if (profile) {
+        if (!profile.uid && !profile.avatarUrl && !profile.joinedDate) {
+          const notFoundData = {
+            username,
+            isNotFound: true,
+            status: 404
+          };
+          v2exMemberProfileCache.set(username, { time: now, data: notFoundData });
+          return notFoundData;
+        }
         v2exMemberProfileCache.set(username, { time: now, data: profile });
       }
       return profile;
     } catch (err) {
       console.warn("[linuxdo-wecom] Failed to fetch member profile:", username, err);
-      return null;
+      return {
+        username,
+        isError: true,
+        message: err?.message || "网络异常"
+      };
     }
   }
 
@@ -13539,6 +13640,8 @@
           <div class="wecom-member-tagline"><span class="wecom-member-loading-text">正在获取资料…</span></div>
         </div>
       </div>
+
+      <div class="wecom-member-notice" style="display:none"></div>
 
       <div class="wecom-member-card-actions" style="display:none">
         <button type="button" class="wecom-member-action-btn wecom-member-follow-btn" title="特别关注">⭐ 特别关注</button>
@@ -13621,6 +13724,63 @@
 
     fetchV2exMemberProfile(username).then((profile) => {
       if (!profile || !card.isConnected) return;
+
+      if (profile.isNotFound) {
+        const badge = card.querySelector(".wecom-member-badge");
+        if (badge) {
+          badge.textContent = "已封号 / 改名";
+          badge.classList.add("is-banned");
+          badge.style.display = "";
+        }
+        const tagline = card.querySelector(".wecom-member-tagline");
+        if (tagline) {
+          tagline.innerHTML = `<span style="color:#F53F3F;font-weight:500;">已被封号或改名 (404)</span>`;
+        }
+        const noticeBox = card.querySelector(".wecom-member-notice");
+        if (noticeBox) {
+          noticeBox.className = "wecom-member-notice is-banned";
+          noticeBox.innerHTML = `
+            <div class="wecom-member-notice-title">⚠️ 用户主页不存在 (404)</div>
+            <div class="wecom-member-notice-desc">访问 <code>/member/${escapeHtml(username)}</code> 返回 404 Not Found。在 V2EX 中，此状态通常表示该账号已被封禁、注销或已修改用户名。</div>
+          `;
+          noticeBox.style.display = "block";
+        }
+        const dot = card.querySelector(".wecom-member-online-dot");
+        if (dot) dot.style.display = "none";
+
+        // 隐藏关注/屏蔽/主题/回复等动态面板
+        card.querySelector(".wecom-member-card-actions")?.style.setProperty("display", "none");
+        card.querySelector(".wecom-member-meta-pills")?.style.setProperty("display", "none");
+        card.querySelector(".wecom-member-coins-row")?.style.setProperty("display", "none");
+        card.querySelector(".wecom-member-intro")?.style.setProperty("display", "none");
+        card.querySelector(".wecom-member-socials")?.style.setProperty("display", "none");
+        card.querySelector(".wecom-member-topics-box")?.style.setProperty("display", "none");
+        card.querySelector(".wecom-member-replies-box")?.style.setProperty("display", "none");
+
+        const fullProfileBtn = card.querySelector(".wecom-member-btn.primary");
+        if (fullProfileBtn) {
+          fullProfileBtn.textContent = "尝试访问主页 ↗";
+          fullProfileBtn.title = "主页返回 404，该用户可能已被封号或改名";
+        }
+
+        // 重新校验卡片可视区域定位
+        if (triggerEl && typeof triggerEl.getBoundingClientRect === "function") {
+          const rect = card.getBoundingClientRect();
+          if (rect.bottom > window.innerHeight - 10) {
+            const newTop = Math.max(10, window.innerHeight - rect.height - 10);
+            card.style.top = `${Math.round(newTop)}px`;
+          }
+        }
+        return;
+      }
+
+      if (profile.isError) {
+        const tagline = card.querySelector(".wecom-member-tagline");
+        if (tagline) {
+          tagline.textContent = `资料获取失败 (${profile.status || profile.message || "异常"})`;
+        }
+        return;
+      }
 
       if (profile.avatarUrl) {
         const avatarImg = card.querySelector(".wecom-member-avatar-img");
