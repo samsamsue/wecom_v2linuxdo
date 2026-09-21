@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.65
+// @version      0.7.66
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -1043,13 +1043,13 @@
 
   function recordTopicHistory(data, posts = []) {
     if (!data || !data.id) return;
-    const topicId = Number(data.id);
+    const topicId = IS_JUEJIN ? String(data.id) : Number(data.id);
     const existing = readTopicHistory();
     const opPost = (posts && posts.length) ? posts[0] : (data.post_stream?.posts?.[0] || null);
 
     let author = opPost?.username || data.details?.created_by?.username || "";
     let avatar = opPost?.avatar_template || data.details?.created_by?.avatar_template || "";
-    if (IS_V2EX) {
+    if (IS_V2EX || IS_JUEJIN) {
       author = author || opPost?.name || data.member?.username || "";
       avatar = avatar || opPost?.avatar || data.member?.avatar_normal || "";
     }
@@ -1058,6 +1058,8 @@
     let categoryColor = "";
     if (IS_V2EX) {
       nodeName = data.node_title || data.node_name || "";
+    } else if (IS_JUEJIN) {
+      nodeName = data.juejin_pin?.topic?.title || "沸点";
     } else {
       const cat = categoryById(data.category_id);
       if (cat) {
@@ -1068,7 +1070,7 @@
 
     const replyCount = Number(data.total_replies != null ? data.total_replies : (data.posts_count ? data.posts_count - 1 : 0)) || 0;
 
-    const convTopic = (listState.topics || []).find((t) => Number(t.id) === topicId);
+    const convTopic = (listState.topics || []).find((t) => isSameTopic(t.id, topicId));
     if (convTopic) {
       if (!author) author = convTopic.last_poster_username || "";
       if (!avatar) avatar = convTopic.v2ex_avatar || convTopic.avatar_template || "";
@@ -1079,8 +1081,8 @@
       id: topicId,
       title: data.title || convTopic?.title || `话题 #${topicId}`,
       last_poster_username: author,
-      v2ex_avatar: IS_V2EX ? avatar : "",
-      avatar_template: !IS_V2EX ? avatar : "",
+      v2ex_avatar: (IS_V2EX || IS_JUEJIN) ? avatar : "",
+      avatar_template: (!IS_V2EX && !IS_JUEJIN) ? avatar : "",
       node_name: nodeName,
       category_id: data.category_id || convTopic?.category_id || null,
       category_color: categoryColor,
@@ -1088,11 +1090,11 @@
       posts_count: replyCount + 1,
       visited_at: Date.now(),
       bumped_at: Date.now(),
-      platform: IS_V2EX ? "v2ex" : "linuxdo",
+      platform: IS_JUEJIN ? "juejin" : (IS_V2EX ? "v2ex" : "linuxdo"),
       slug: data.slug || convTopic?.slug || ""
     };
 
-    const filtered = existing.filter((t) => Number(t.id) !== topicId || (t.platform && t.platform !== item.platform));
+    const filtered = existing.filter((t) => !isSameTopic(t.id, topicId) || (t.platform && t.platform !== item.platform));
     filtered.unshift(item);
     saveTopicHistory(filtered);
   }
@@ -11280,7 +11282,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.65";
+  const SCRIPT_VERSION = "0.7.66";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -12864,6 +12866,7 @@
 
   async function loadCategories() {
     if (IS_V2EX) return [];
+    if (IS_JUEJIN) return [];
     if (categoriesCache && categoriesCache.length) return categoriesCache;
     const preloaded = getPreloadedCategories();
     if (preloaded && preloaded.length) {
@@ -19454,6 +19457,7 @@
   }
 
   function replyPostHref(postNumber) {
+    if (IS_JUEJIN) return `/pin/${chatState.topicId}`;
     const topicId = Number(chatState.topicId) || 0;
     const slug = chatState.slug || topicRouteFromPath(location.pathname).slug;
     if (!topicId) return `#post_${Number(postNumber)}`;
@@ -22036,7 +22040,7 @@
   }
 
   async function postsForTopicOpening(topicId, stream, posts, aroundPostNumber, signal) {
-    if (IS_V2EX) return posts;
+    if (IS_V2EX || IS_JUEJIN) return posts;
     const ordered = orderedTopicPosts(posts, stream);
     const target = Number(aroundPostNumber) || 0;
     if (target > 1) return ordered;
@@ -22813,6 +22817,12 @@
   }
 
   function replaceTopicPostUrl(topicId, postNumber) {
+    if (IS_JUEJIN) {
+      if (location.pathname !== `/pin/${topicId}`) {
+        try { history.replaceState(history.state, "", `/pin/${topicId}`); } catch { /* ignore */ }
+      }
+      return;
+    }
     if (IS_V2EX) {
       if (location.pathname !== `/t/${topicId}`) {
         try { history.replaceState(history.state, "", `/t/${topicId}`); } catch { /* ignore */ }
@@ -22919,7 +22929,7 @@
   }
 
   function reportReadTimings(topicId, postNumbers) {
-    if (IS_V2EX || !topicId || !postNumbers.length) return;
+    if (IS_V2EX || IS_JUEJIN || !topicId || !postNumbers.length) return;
     if (markPostsOnscreen(postNumbers)) return;
     const body = new URLSearchParams();
     body.set("topic_id", String(topicId));
@@ -23043,7 +23053,7 @@
       if (signal.aborted || !isSameTopic(chatState.topicId, topicId)) return; // 路由已切走或已取消
       if (IS_V2EX) {
         data = await loadInitialV2exThreadPages(topicId, data, force, signal, targetPage);
-        if (signal.aborted || Number(chatState.topicId) !== topicId) return;
+        if (signal.aborted || !isSameTopic(chatState.topicId, topicId)) return;
       }
       let openPost = openingPostNumber(topicId, data);
       if (!openPost && target && target.floor) {
@@ -23057,7 +23067,7 @@
           if (err?.name === "AbortError") throw err;
           /* 保留首页 */
         }
-        if (signal.aborted || Number(chatState.topicId) !== topicId) return;
+        if (signal.aborted || !isSameTopic(chatState.topicId, topicId)) return;
       }
       const stream = (data.post_stream && data.post_stream.stream) || [];
       const posts = await postsForTopicOpening(
@@ -23067,7 +23077,7 @@
         openPost,
         signal
       );
-      if (signal.aborted || Number(chatState.topicId) !== topicId) return;
+      if (signal.aborted || !isSameTopic(chatState.topicId, topicId)) return;
       renderPinnedBanner(posts);
       renderMemberPanel(data, posts);
       chatState.stream = stream.length ? stream.slice() : posts.map((post) => post.id);
@@ -23159,7 +23169,7 @@
         }
       }
       loadCategories().then(() => {
-        if (Number(chatState.topicId) !== topicId) return;
+        if (!isSameTopic(chatState.topicId, topicId)) return;
         const cat = data.category_id ? categoryById(data.category_id) : null;
         const chipsBox = document.querySelector(".wecom-chat-chips");
         const maskDetail = isMaskTitleDetail();
@@ -23184,7 +23194,7 @@
         }
       });
 
-      if (body && Number(chatState.topicId) === topicId) {
+      if (body && isSameTopic(chatState.topicId, topicId)) {
         body.dataset.topicId = String(topicId);
         body.innerHTML = renderBubbles(posts, getCurrentUsername()) ||
           `<div class="wecom-chat-empty">${ICONS.msg}<div>暂无消息</div></div>`;
@@ -23368,6 +23378,7 @@
       }
       return;
     }
+    if (IS_JUEJIN) return;
     if (!chatState.hasOlder) return;
     const ids = chatState.stream.slice(Math.max(0, chatState.renderedFirstIdx - 20), chatState.renderedFirstIdx);
     if (!ids.length) return;
@@ -23492,7 +23503,7 @@
 
   function appendFreshPosts(posts, body, options = {}) {
     if (!body || !Array.isArray(posts) || !posts.length) return 0;
-    if (body.dataset.topicId && chatState.topicId && Number(body.dataset.topicId) !== Number(chatState.topicId)) {
+    if (body.dataset.topicId && chatState.topicId && (IS_JUEJIN ? String(body.dataset.topicId) !== String(chatState.topicId) : Number(body.dataset.topicId) !== Number(chatState.topicId))) {
       return 0;
     }
     rememberChatPosts(posts);
@@ -23677,7 +23688,7 @@
 
   /** 发帖后：原生隐藏流里出现的新帖 → 追加为气泡 */
   function syncNewPostsFromDom() {
-    if (IS_V2EX || !chatState.topicId) return 0;
+    if (IS_V2EX || IS_JUEJIN || !chatState.topicId) return 0;
     const body = document.querySelector(".wecom-chat-body");
     if (!body || body.querySelector(".wecom-chat-loading")) return 0;
     if (body.dataset.topicId && Number(body.dataset.topicId) !== Number(chatState.topicId)) return 0;
