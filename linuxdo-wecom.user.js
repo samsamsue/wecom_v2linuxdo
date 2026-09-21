@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.66
+// @version      0.7.67
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -11282,7 +11282,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.66";
+  const SCRIPT_VERSION = "0.7.67";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -18279,13 +18279,13 @@
             </button>
             <div class="wecom-platform-dropdown" hidden>
               <div class="wecom-platform-dropdown-title">选择社区平台</div>
-              <div class="wecom-platform-item${!IS_V2EX ? " is-active" : ""}" data-target-platform="linuxdo">
+              <div class="wecom-platform-item${IS_LINUXDO ? " is-active" : ""}" data-target-platform="linuxdo">
                 <span class="wecom-platform-item-icon">🐧</span>
                 <div class="wecom-platform-item-info">
                   <div class="wecom-platform-item-name">Linux DO</div>
                   <div class="wecom-platform-item-desc">linux.do · 新时代技术社区</div>
                 </div>
-                ${!IS_V2EX ? '<span class="wecom-platform-item-check">✓</span>' : ""}
+                ${IS_LINUXDO ? '<span class="wecom-platform-item-check">✓</span>' : ""}
               </div>
               <div class="wecom-platform-item${IS_V2EX ? " is-active" : ""}" data-target-platform="v2ex">
                 <span class="wecom-platform-item-icon">✌️</span>
@@ -18998,9 +18998,18 @@
     const action = button.dataset.action;
     if (action === "like") return toggleLike(Number(message.dataset.postId), button, message);
     if (action === "reply") return replyToPost(Number(message.dataset.postNumber));
-    if (action === "boost") return openBoostPopover(message, button);
-    if (action === "bookmark") return openOriginalPostBookmark(message).catch(reportPostBookmarkError);
-    if (action === "edit") return openEditPost(message, button);
+    if (action === "boost") {
+      if (!IS_LINUXDO) return;
+      return openBoostPopover(message, button);
+    }
+    if (action === "bookmark") {
+      if (!IS_LINUXDO) return;
+      return openOriginalPostBookmark(message).catch(reportPostBookmarkError);
+    }
+    if (action === "edit") {
+      if (!IS_LINUXDO) return;
+      return openEditPost(message, button);
+    }
   }
 
   function handleChatPanelClick(event, panel) {
@@ -19874,6 +19883,7 @@
   }
 
   function boostsHtml(post) {
+    if (!IS_LINUXDO) return "";
     if (!isBoostEnabled()) return "";
     const boosts = Array.isArray(post?.boosts) ? post.boosts : [];
     if (!boosts.length) return "";
@@ -19917,6 +19927,7 @@
   }
 
   function openBoostPopover(msgEl, anchorBtn) {
+    if (!IS_LINUXDO) return;
     closeBoostPopover();
     const postId = Number(msgEl?.dataset.postId);
     const postNumber = Number(msgEl?.dataset.postNumber);
@@ -20115,13 +20126,13 @@
     const isBookmarked = booleanFlag(post.bookmarked) || Boolean(post.bookmark_id);
     const bookmarkClass = isBookmarked ? " bookmarked" : "";
     const bookmarkLabel = isBookmarked ? "编辑楼层书签" : "收藏本楼层";
-    const bookmarkButton = !IS_V2EX && post.id
+    const bookmarkButton = IS_LINUXDO && post.id
       ? `<button type="button" class="wecom-msg-tool${bookmarkClass}" data-action="bookmark" title="${bookmarkLabel}" aria-label="${bookmarkLabel}" aria-pressed="${isBookmarked}">${ICONS.bookmark}</button>`
       : "";
-    const editButton = !IS_V2EX && me && (post.id || post.post_number)
+    const editButton = IS_LINUXDO && me && (post.id || post.post_number)
       ? `<button type="button" class="wecom-msg-tool" data-action="edit" title="编辑">${ICONS.edit}</button>`
       : "";
-    const boostButton = !IS_V2EX
+    const boostButton = IS_LINUXDO
       ? `<button type="button" class="wecom-msg-tool" data-action="boost" title="添加 Boost">${ICONS.boost}</button>`
       : "";
     const likeCount = Number(post.like_count) || (post.actions_summary || []).find((a) => a.id === 2)?.count || 0;
@@ -20296,6 +20307,7 @@
   }
 
   async function openEditPost(message, trigger) {
+    if (!IS_LINUXDO) return;
     const postId = Number(message?.dataset.postId) || 0;
     const postNumber = Number(message?.dataset.postNumber);
     if (!postNumber || message?.dataset.mine !== "1") {
@@ -20710,11 +20722,11 @@
   async function toggleLike(postId, btn, msgEl) {
     const msg = msgEl || btn?.closest?.(".wecom-msg");
     if (!postId && msg) {
-      postId = Number(msg.dataset?.postId);
+      postId = IS_JUEJIN ? msg.dataset?.postId : Number(msg.dataset?.postId);
       if (!postId) {
         const postNumber = Number(msg.dataset?.postNumber);
         const post = chatState.postsByNumber?.get(postNumber);
-        if (post?.id) postId = Number(post.id);
+        if (post?.id) postId = IS_JUEJIN ? String(post.id) : Number(post.id);
       }
     }
     if (!postId) return;
@@ -20729,7 +20741,7 @@
     try {
       if (IS_JUEJIN) {
         const isOp = Number(msg?.dataset?.postNumber) === 1;
-        const targetId = isOp ? String(chatState.topicId || postId) : String(postId);
+        const targetId = isOp ? String(chatState.topicId || postId) : String(msg?.dataset?.postId || postId);
         const itemType = isOp ? 4 : 5;
         const isLiked = btn.classList.contains("liked");
         const endpoint = isLiked ? "/interact_api/v1/digg/cancel" : "/interact_api/v1/digg/save";
@@ -21207,6 +21219,7 @@
   }
 
   async function openOriginalPostBookmark(message) {
+    if (!IS_LINUXDO) return;
     const postId = Number(message?.dataset?.postId);
     const postNumber = Number(message?.dataset?.postNumber);
     const topicId = Number(chatState.topicId);
@@ -21911,6 +21924,12 @@
     showTargetedReply(postNumber);
     const { input } = composeUi();
     if (IS_V2EX && input) {
+      const message = document.querySelector(`.wecom-msg[data-post-number="${postNumber}"]`);
+      const name = message?.querySelector(".wecom-msg-name")?.textContent?.trim();
+      if (name && !input.value.includes(`@${name}`)) {
+        input.value = `@${name} ` + input.value;
+      }
+    } else if (IS_JUEJIN && input) {
       const message = document.querySelector(`.wecom-msg[data-post-number="${postNumber}"]`);
       const name = message?.querySelector(".wecom-msg-name")?.textContent?.trim();
       if (name && !input.value.includes(`@${name}`)) {
@@ -23795,12 +23814,12 @@
   }
 
   async function refreshTopicAfterSubmission(topicId) {
-    if (!topicId || chatState.topicId !== topicId) return;
+    if (!topicId || !isSameTopic(chatState.topicId, topicId)) return;
     await delay(COMPOSER_INPUT_SETTLE_MS);
     let lastError = null;
     for (const delayMs of POST_SYNC_RETRY_DELAYS_MS) {
       if (delayMs) await delay(delayMs);
-      if (chatState.topicId !== topicId) return;
+      if (!isSameTopic(chatState.topicId, topicId)) return;
       try {
         if (await refreshTopicOnce(topicId)) return;
       } catch (error) {

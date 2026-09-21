@@ -6956,3 +6956,39 @@ test("Test 97: Juejin Pins (掘金 · 沸点) platform support, 64-bit ID string
   assert.ok(scriptContent.includes('endpoint = isLiked ? "/interact_api/v1/digg/cancel" : "/interact_api/v1/digg/save"'), "toggleLike hooks juejin digg save/cancel");
   assert.ok(scriptContent.includes('submitJuejinComment(chatState.topicId, raw)'), "submitComposer hooks submitJuejinComment");
 });
+
+test("Test 98: Bubble hover tools isolation: Boost, bookmark, and edit tools restricted to Linux DO (v0.7.67)", () => {
+  assert.ok(
+    scriptContent.includes("const boostButton = IS_LINUXDO"),
+    "boostButton must be strictly scoped to IS_LINUXDO"
+  );
+  assert.ok(
+    scriptContent.includes("const bookmarkButton = IS_LINUXDO && post.id"),
+    "bookmarkButton must be strictly scoped to IS_LINUXDO"
+  );
+  assert.ok(
+    scriptContent.includes("const editButton = IS_LINUXDO && me && (post.id || post.post_number)"),
+    "editButton must be strictly scoped to IS_LINUXDO"
+  );
+  assert.ok(
+    scriptContent.includes('if (!IS_LINUXDO) return "";\n    if (!isBoostEnabled()) return "";'),
+    "boostsHtml must return empty string when not on Linux DO"
+  );
+  assert.ok(
+    scriptContent.includes('function openBoostPopover(msgEl, anchorBtn) {\n    if (!IS_LINUXDO) return;'),
+    "openBoostPopover must guard against non-Linux DO invocation"
+  );
+  assert.ok(
+    scriptContent.includes('async function openEditPost(message, trigger) {\n    if (!IS_LINUXDO) return;'),
+    "openEditPost must guard against non-Linux DO invocation"
+  );
+  assert.ok(
+    scriptContent.includes('async function openOriginalPostBookmark(message) {\n    if (!IS_LINUXDO) return;'),
+    "openOriginalPostBookmark must guard against non-Linux DO invocation"
+  );
+  assert.ok(
+    scriptContent.includes('class="wecom-platform-item${IS_LINUXDO ? " is-active" : ""}" data-target-platform="linuxdo"'),
+    "platform switcher must check IS_LINUXDO instead of !IS_V2EX"
+  );
+});
+
