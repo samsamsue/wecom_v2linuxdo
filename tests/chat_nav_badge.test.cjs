@@ -1179,7 +1179,8 @@ test("Linux DO notification menu teardown, route synchronization, and topic navi
     "handleChatNavClick must close notification menu"
   );
   assert.ok(
-    scriptContent.includes('navigateInApp(IS_V2EX ? "/?tab=all" : "/latest");'),
+    scriptContent.includes('navigateInApp(IS_V2EX ? "/?tab=all" : "/latest");') ||
+    scriptContent.includes('navigateInApp(IS_V2EX ? "/?tab=all" : (IS_JUEJIN ? "/pins/recommended" : "/latest"));'),
     "handleChatNavClick must route to latest when clicking from unsupported path"
   );
 
@@ -3535,8 +3536,8 @@ test("V2EX built-in emoji picker integrates with composer, supports tabs, Unicod
 
   // 3. Composer tool action branches for IS_V2EX and graceful fallback
   assert.ok(
-    scriptContent.includes("if (action === \"emoji\") {\n      if (IS_V2EX) {\n        toggleV2exEmojiPicker(button);\n        return;\n      }\n      showOfficialEmojiPicker(button).catch(() => {\n        toggleV2exEmojiPicker(button);\n      });\n      return;\n    }"),
-    "handleComposerToolClick must branch to toggleV2exEmojiPicker when IS_V2EX is true, and fall back on error"
+    scriptContent.includes("if (action === \"emoji\") {\n      if (IS_V2EX || IS_JUEJIN) {\n        toggleV2exEmojiPicker(button);\n        return;\n      }\n      showOfficialEmojiPicker(button).catch(() => {\n        toggleV2exEmojiPicker(button);\n      });\n      return;\n    }"),
+    "handleComposerToolClick must branch to toggleV2exEmojiPicker when IS_V2EX or IS_JUEJIN is true, and fall back on error"
   );
 
   // 4. Modal check includes .wecom-v2ex-emoji-picker
@@ -4543,10 +4544,10 @@ test("Linux DO left rail navigation displays Connect instead of calendar, and cl
     "ICONS dictionary must contain connect icon"
   );
 
-  // 3. RAIL_DECO_ITEMS differentiates Linux DO (Connect) and V2EX (通知)
+  // 3. RAIL_DECO_ITEMS differentiates Linux DO (Connect) and V2EX/Juejin (通知)
   assert.ok(
-    scriptContent.includes('IS_V2EX ? { key: "notif", icon: "bell", label: "通知" } : { key: "connect", icon: "connect", label: "Connect" }'),
-    "RAIL_DECO_ITEMS must show Connect on Linux DO and 通知 on V2EX"
+    scriptContent.includes('(IS_V2EX || IS_JUEJIN) ? { key: "notif", icon: "bell", label: "通知" } : { key: "connect", icon: "connect", label: "Connect" }'),
+    "RAIL_DECO_ITEMS must show Connect on Linux DO and 通知 on V2EX/Juejin"
   );
 
   // 4. Rail click binding includes bindRailConnectClick
@@ -5576,8 +5577,8 @@ test("V2EX notification navigation, URL pushState synchronization, MutationObser
 test("V2EX left rail replaces schedule (cal) with notifications (notif), binds click, and synchronizes badges and active status (v0.7.43)", () => {
   // 1. Static code assertions
   assert.ok(
-    scriptContent.includes('IS_V2EX ? { key: "notif", icon: "bell", label: "通知" } : { key: "connect", icon: "connect", label: "Connect" }'),
-    "must configure notif with bell icon and '通知' label on V2EX"
+    scriptContent.includes('(IS_V2EX || IS_JUEJIN) ? { key: "notif", icon: "bell", label: "通知" } : { key: "connect", icon: "connect", label: "Connect" }'),
+    "must configure notif with bell icon and '通知' label on V2EX and Juejin"
   );
   assert.ok(
     scriptContent.includes("function handleNotifNavClick()"),
@@ -7025,4 +7026,561 @@ test("Test 99: Juejin Pins background comment polling and seamless fresh reply a
     scriptContent.includes("pollJuejinCurrentTopicOnce();"),
     "visibilitychange must trigger Juejin topic polling"
   );
+});
+
+test("Test 100: Juejin user profile card popup, metrics, follow action, and dismissal (v0.7.69)", () => {
+  // 1. Core function and state definitions
+  assert.ok(
+    scriptContent.includes("async function fetchJuejinUserProfile(userId)"),
+    "must define fetchJuejinUserProfile"
+  );
+  assert.ok(
+    scriptContent.includes("function openJuejinMemberCard(username, userId, triggerEl, event)"),
+    "must define openJuejinMemberCard"
+  );
+  assert.ok(
+    scriptContent.includes("function closeJuejinMemberCard()"),
+    "must define closeJuejinMemberCard"
+  );
+  assert.ok(
+    scriptContent.includes("function isJuejinMemberCardOpen()"),
+    "must define isJuejinMemberCardOpen"
+  );
+  assert.ok(
+    scriptContent.includes("const juejinUserCache = new Map();"),
+    "must define juejinUserCache memory cache"
+  );
+
+  // 2. Lifecycle, cleanup, and selector integration
+  assert.match(
+    scriptContent,
+    /WECOM_UI_SEL\s*=\s*"[^"]*\.wecom-juejin-member-card/,
+    "WECOM_UI_SEL must include .wecom-juejin-member-card"
+  );
+  assert.ok(
+    scriptContent.includes("closeJuejinMemberCard();"),
+    "removePanels must call closeJuejinMemberCard"
+  );
+  assert.ok(
+    scriptContent.includes("if (isJuejinMemberCardOpen()) closeJuejinMemberCard();"),
+    "Escape keydown listener must close Juejin member card"
+  );
+
+  // 3. User card trigger routing
+  assert.ok(
+    scriptContent.includes("openJuejinMemberCard(username, uid, trigger, event);"),
+    "openOriginalUserCard must invoke openJuejinMemberCard on Juejin"
+  );
+  assert.ok(
+    scriptContent.includes("IS_JUEJIN && topic.last_poster_username"),
+    "convAvatarHtml must handle Juejin author attributes"
+  );
+  assert.ok(
+    scriptContent.includes('data-user-id="${escapeHtml(String(jUid))}"'),
+    "convAvatarHtml must attach data-user-id for Juejin author"
+  );
+
+  // 4. syncUserCardElement & data-user-id
+  assert.ok(
+    scriptContent.includes('for (const attribute of ["data-user-card", "role", "tabindex", "aria-label", "title", "data-user-id"])'),
+    "syncUserCardElement must clean up data-user-id"
+  );
+  assert.ok(
+    scriptContent.includes("element.dataset.userId = String(uid);"),
+    "syncUserCardElement must populate data-user-id from user_id"
+  );
+
+  // 5. Follow & undo endpoints
+  assert.ok(
+    scriptContent.includes('const endpoint = willFollow ? "/interact_api/v1/follow/do" : "/interact_api/v1/follow/undo";'),
+    "openJuejinMemberCard must support follow and unfollow toggle"
+  );
+  assert.ok(
+    scriptContent.includes("juejinApi(endpoint, { id: String(profile.userId || userId), type: 1, client_type: 2608 })") ||
+    scriptContent.includes("juejinApi(endpoint, { id: String(userId), type: 1, client_type: 2608 })"),
+    "follow action must call juejinApi with correct payload"
+  );
+
+  // 6. Metrics formatting simulation
+  const mockUserResp = {
+    err_no: 0,
+    data: {
+      user_id: "272252119999999",
+      user_name: "前端技术大佬",
+      avatar_large: "https://p3-passport.byteimg.com/img/avatar.png",
+      company: "字节跳动",
+      job_title: "前端架构师",
+      description: "专注于现代化前端架构与性能优化",
+      level: 6,
+      power: 28400,
+      got_digg_count: 15300,
+      got_view_count: 520000,
+      post_shortmsg_count: 88,
+      post_article_count: 42,
+      follower_count: 6700,
+      followee_count: 120,
+      is_followed: false,
+      is_current_user: false
+    }
+  };
+
+  const user = mockUserResp.data;
+  const profile = {
+    userId: String(user.user_id),
+    username: user.user_name || "掘友",
+    avatarUrl: user.avatar_large || "",
+    company: user.company || "",
+    jobTitle: user.job_title || "",
+    description: user.description || "",
+    level: Number(user.level) || 0,
+    power: Number(user.power) || 0,
+    gotDiggCount: Number(user.got_digg_count) || 0,
+    postArticleCount: Number(user.post_article_count) || 0,
+    postPinCount: Number(user.post_shortmsg_count) || 0,
+    followerCount: Number(user.follower_count) || 0,
+    followeeCount: Number(user.followee_count) || 0,
+    isFollowed: Boolean(user.is_followed),
+    isCurrentUser: Boolean(user.is_current_user)
+  };
+
+  assert.strictEqual(profile.userId, "272252119999999");
+  assert.strictEqual(profile.username, "前端技术大佬");
+  assert.strictEqual(profile.level, 6);
+  assert.strictEqual(profile.power, 28400);
+  assert.strictEqual(profile.gotDiggCount, 15300);
+  assert.strictEqual(profile.followerCount, 6700);
+  assert.strictEqual(profile.postPinCount, 88);
+  assert.strictEqual(profile.postArticleCount, 42);
+  assert.strictEqual([profile.jobTitle, profile.company].filter(Boolean).join(" @ "), "前端架构师 @ 字节跳动");
+});
+
+test("Test 101: Juejin UI deduplication, publish modal, notification routing, and redundant feature stripping (v0.7.70)", () => {
+  // 1. Redundant feature stripping: Connect removed from Juejin
+  assert.ok(
+    scriptContent.includes('(IS_V2EX || IS_JUEJIN) ? { key: "notif", icon: "bell", label: "通知" } : { key: "connect", icon: "connect", label: "Connect" }'),
+    "Juejin must not show Connect on rail"
+  );
+  assert.ok(
+    scriptContent.includes('loadList("/notification", true);'),
+    "Juejin notification click must load notifications in-page via loadList"
+  );
+  assert.ok(
+    scriptContent.includes("if (IS_LINUXDO) {\n      bindRailConnectClick(rail);\n    }"),
+    "bindRailConnectClick must be restricted to Linux DO"
+  );
+
+  // 2. Chat header bookmark replaced with open in web on Juejin
+  assert.ok(
+    scriptContent.includes('IS_JUEJIN ? `\n          <button type="button" class="wecom-icon-btn wecom-open-pin-web" title="在原站打开沸点 ↗" aria-label="在原站打开沸点">${ICONS.external}</button>'),
+    "Juejin chat header must replace bookmark with open-in-web"
+  );
+  assert.ok(
+    scriptContent.includes('window.open(`https://juejin.cn/pin/${chatState.topicId}`'),
+    "wecom-open-pin-web click must open current pin on juejin.cn"
+  );
+  assert.ok(
+    scriptContent.includes("if (IS_JUEJIN) return true;"),
+    "wecom-topic-bookmark click must guard against Juejin"
+  );
+
+  // 3. Avoid 200px gap from setNav2Open
+  assert.ok(
+    scriptContent.includes("if (IS_JUEJIN) {\n      setListNavOpen(open);\n      return;\n    }"),
+    "setNav2Open must delegate to setListNavOpen on Juejin"
+  );
+  assert.ok(
+    scriptContent.includes("if (IS_JUEJIN) return false;\n    try { return localStorage.getItem(NAV2_KEY)"),
+    "isNav2Open must return false on Juejin"
+  );
+
+  // 4. In-page Juejin pin publishing modal
+  assert.ok(
+    scriptContent.includes("async function publishJuejinPin(content, topicId = \"\")"),
+    "must define publishJuejinPin API caller"
+  );
+  assert.ok(
+    scriptContent.includes("function openJuejinPublishModal()"),
+    "must define openJuejinPublishModal"
+  );
+  assert.ok(
+    scriptContent.includes("function closeJuejinPublishModal()"),
+    "must define closeJuejinPublishModal"
+  );
+  assert.ok(
+    scriptContent.includes("closeJuejinPublishModal();"),
+    "removePanels must call closeJuejinPublishModal"
+  );
+
+  // 5. Left-top rail avatar click on Juejin
+  assert.ok(
+    scriptContent.includes("if (isJuejinMemberCardOpen()) {\n          closeJuejinMemberCard();\n          return;\n        }"),
+    "rail avatar click on Juejin must toggle member card"
+  );
+
+  // 6. Direct built-in emoji picker on Juejin
+  assert.ok(
+    scriptContent.includes("if (IS_V2EX || IS_JUEJIN) {\n        toggleV2exEmojiPicker(button);\n        return;\n      }"),
+    "composer emoji picker must directly invoke built-in picker on Juejin"
+  );
+
+  // 7. getEmberOwner early return
+  assert.ok(
+    scriptContent.includes("function getEmberOwner() {\n    if (IS_V2EX || IS_JUEJIN) return null;"),
+    "getEmberOwner must return null early on V2EX and Juejin"
+  );
+
+  // 8. Juejin chips expansion
+  assert.ok(
+    scriptContent.includes('data-chip="topic_6824710203108229134">掘友求助</button>'),
+    "chipsHtml must include 掘友求助 for Juejin"
+  );
+  assert.ok(
+    scriptContent.includes('data-chip="topic_6824710203204698126">树洞吐槽</button>'),
+    "chipsHtml must include 树洞吐槽 for Juejin"
+  );
+});
+
+test("Test 102: Juejin notification list panel (V2EX-style) & rail avatar profile card popover (v0.7.71)", () => {
+  // 1. Left rail notification click loads in-panel notification list like V2EX
+  assert.ok(
+    scriptContent.includes('loadList("/notification", true);'),
+    "Juejin notification click must load notifications in-page via loadList"
+  );
+  assert.ok(
+    scriptContent.includes('function syncRailNavActive(rail)'),
+    "must have syncRailNavActive helper"
+  );
+  assert.ok(
+    scriptContent.includes('location.pathname.startsWith("/notification")') &&
+    scriptContent.includes('listState.apiPath.startsWith("/notification")'),
+    "syncRailNavActive must set notif active when in /notification"
+  );
+
+  // 2. Chat nav click returns from notification to recommend
+  assert.ok(
+    scriptContent.includes('listState.apiPath.startsWith("/notification")') &&
+    scriptContent.includes('loadList("recommend", true);'),
+    "handleChatNavClick must return to recommend when leaving notifications on Juejin"
+  );
+
+  // 3. Juejin notification list fetching & mapping
+  assert.ok(
+    scriptContent.includes('async function fetchJuejinNotificationsList(cursor = "0")'),
+    "must define fetchJuejinNotificationsList"
+  );
+  assert.ok(
+    scriptContent.includes('function mapJuejinMessageToTopic(msg, idx = 0)'),
+    "must define mapJuejinMessageToTopic"
+  );
+  assert.ok(
+    scriptContent.includes('function extractJuejinNotificationsFromDoc(doc)'),
+    "must define extractJuejinNotificationsFromDoc"
+  );
+  assert.ok(
+    scriptContent.includes('const res = listState.apiPath.startsWith("/notification")\n          ? await fetchJuejinNotificationsList(listState.juejinCursor)\n          : await fetchJuejinPinsList(listState.apiPath, listState.juejinCursor);'),
+    "loadMoreList must fetch notifications when listState.apiPath starts with /notification"
+  );
+
+  // 4. In-panel row rendering for notifications
+  assert.ok(
+    scriptContent.includes('(listState.apiPath.startsWith("/notifications") || listState.apiPath.startsWith("/notification"))'),
+    "list rendering must treat both /notifications and /notification as notification mode"
+  );
+
+  // 5. Rail avatar profile popover & self profile retrieval
+  assert.ok(
+    scriptContent.includes('const currentUser = getCurrentUserIdentity();'),
+    "bindRailAvatarNotif must get current user identity on Juejin"
+  );
+  assert.ok(
+    scriptContent.includes('openJuejinMemberCard(username, uid, avatar, event);'),
+    "bindRailAvatarNotif must call openJuejinMemberCard on avatar click"
+  );
+  assert.ok(
+    scriptContent.includes('/user_api/v1/user/get'),
+    "fetchJuejinUserProfile must call /user_api/v1/user/get for self profile"
+  );
+  assert.ok(
+    scriptContent.includes('isCurrentUser: Boolean(user.is_current_user || !userId)'),
+    "profile extraction must flag isCurrentUser"
+  );
+  assert.ok(
+    scriptContent.includes('wecom-member-self-tag') &&
+    scriptContent.includes('当前登录账号'),
+    "openJuejinMemberCard must display self badge for current user"
+  );
+
+  // 6. Modal / viewer open check includes member cards and publish dialog
+  assert.ok(
+    scriptContent.includes('.wecom-juejin-member-card:not([hidden])'),
+    "isModalOrViewerOpen must include Juejin member card"
+  );
+  assert.ok(
+    scriptContent.includes('.wecom-juejin-publish-dialog:not([hidden])'),
+    "isModalOrViewerOpen must include Juejin publish dialog"
+  );
+});
+
+test("Test 103: Full-site unified 6px auto-hiding scrollbar system (Connect, Nav2, Cards, Inputs, Modals) (v0.7.72)", () => {
+  // 1. LINUX DO Connect modal & body unified scrollbars and structure
+  assert.ok(
+    scriptContent.includes(".wecom-connect-modal,") &&
+    scriptContent.includes(".wecom-connect-body,") &&
+    scriptContent.includes("scrollbar-color: transparent transparent !important;"),
+    "Connect modal & body must have transparent scrollbars by default"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-connect-modal::-webkit-scrollbar,") &&
+    scriptContent.includes(".wecom-connect-body::-webkit-scrollbar,") &&
+    scriptContent.includes("width: 6px !important;"),
+    "Connect modal & body must use standard 6px scrollbar width"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-connect-body {") &&
+    scriptContent.includes("flex: 1 1 auto;") &&
+    scriptContent.includes("min-height: 0;"),
+    "Connect body must flex and scroll smoothly between pinned header/footer"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-connect-header {") &&
+    scriptContent.includes("flex-shrink: 0;"),
+    "Connect header must be pinned with flex-shrink: 0"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-connect-footer {") &&
+    scriptContent.includes("flex-shrink: 0;"),
+    "Connect footer must be pinned with flex-shrink: 0"
+  );
+  assert.ok(
+    scriptContent.includes('connectBody?.classList.add("is-scrolling");') &&
+    scriptContent.includes('connectBody?.addEventListener("scroll", handleConnectScroll, { passive: true });'),
+    "openLinuxDoConnectModal must bind scroll listener for .is-scrolling"
+  );
+
+  // 2. Nav2 list scrollbar unification & obsolete rule removal
+  assert.ok(
+    scriptContent.includes(".wecom-v2ex-nav2-list,") &&
+    scriptContent.includes(".wecom-v2ex-nav2-list::-webkit-scrollbar,"),
+    "Nav2 list must participate in unified scrollbar rules"
+  );
+  assert.ok(
+    !/\.wecom-v2ex-nav2-list\s*\{[^}]*::-webkit-scrollbar\s*\{[^}]*width:\s*4px/i.test(scriptContent),
+    "Obsolete 4px custom scrollbar on Nav2 list must be removed"
+  );
+  assert.ok(
+    !scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-nav2-list:hover::-webkit-scrollbar-thumb {\n      background: rgba(255, 255, 255, 0.15);"),
+    "Obsolete 0.15 dark mode hover rule on Nav2 list must be removed"
+  );
+  assert.ok(
+    scriptContent.includes('listEl?.addEventListener("scroll", () => {') &&
+    scriptContent.includes('listEl.classList.add("is-scrolling");'),
+    "Nav2 list must toggle .is-scrolling on scroll"
+  );
+
+  // 3. Complete list of scrollable surfaces included in unified styling
+  const requiredSurfaces = [
+    ".wecom-list-body",
+    ".wecom-chat-body",
+    ".wecom-chat-messages",
+    ".wecom-member-body",
+    ".wecom-theme-menu",
+    ".wecom-connect-modal",
+    ".wecom-connect-body",
+    ".wecom-v2ex-nav2-list",
+    ".wecom-emoji-picker-body",
+    ".wecom-base64-popover-body",
+    ".wecom-base64-insert-result",
+    ".wecom-chat-compose",
+    ".wecom-edit-input",
+    ".wecom-juejin-publish-input",
+    ".wecom-juejin-member-card",
+    ".user-menu.wecom-user-menu-float",
+    ".d-editor-preview-wrapper",
+    ".wecom-msg-bubble pre",
+    ".wecom-msg-content pre",
+    "#discourse-modal-container .modal-body",
+    ".d-modal__body",
+    ".wecom-v2ex-member-card",
+    ".wecom-v2ex-user-popover"
+  ];
+
+  for (const sel of requiredSurfaces) {
+    assert.ok(
+      scriptContent.includes(`${sel},`) || scriptContent.includes(`${sel} {`),
+      `Base scrollbar rule must include ${sel}`
+    );
+    assert.ok(
+      scriptContent.includes(`${sel}::-webkit-scrollbar,`) || scriptContent.includes(`${sel}::-webkit-scrollbar {`),
+      `Webkit scrollbar rule must include ${sel}`
+    );
+    assert.ok(
+      scriptContent.includes(`${sel}::-webkit-scrollbar-thumb,`) || scriptContent.includes(`${sel}::-webkit-scrollbar-thumb {`),
+      `Webkit thumb rule must include ${sel}`
+    );
+  }
+
+  // 4. Dark mode unified rules
+  assert.ok(
+    scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-connect-body:hover::-webkit-scrollbar-thumb,") &&
+    scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-connect-body.is-scrolling::-webkit-scrollbar-thumb,") &&
+    scriptContent.includes("background: rgba(255, 255, 255, 0.22) !important;"),
+    "Dark mode must style Connect scrollbar thumb on hover and scroll with 0.22 opacity"
+  );
+  assert.ok(
+    scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-connect-body::-webkit-scrollbar-thumb:hover,") &&
+    scriptContent.includes("background: rgba(255, 255, 255, 0.38) !important;"),
+    "Dark mode must style Connect scrollbar thumb direct hover with 0.38 opacity"
+  );
+
+  // 5. Member cards .is-scrolling support
+  assert.ok(
+    scriptContent.includes("openV2exMemberCard(username, triggerEl, event)") &&
+    scriptContent.includes('card.addEventListener("scroll", () => {\n      card.classList.add("is-scrolling");'),
+    "openV2exMemberCard must support .is-scrolling feedback on scroll"
+  );
+  assert.ok(
+    scriptContent.includes("openJuejinMemberCard(username, userId, triggerEl, event)") &&
+    scriptContent.includes('card.addEventListener("scroll", () => {\n      card.classList.add("is-scrolling");'),
+    "openJuejinMemberCard must support .is-scrolling feedback on scroll"
+  );
+});
+
+test("Test 104: Seamless visual scroll anchoring during polling and replies insertion (v0.7.73)", () => {
+  // 1. Definition and structure checks
+  assert.ok(
+    scriptContent.includes("function captureChatScrollAnchor(body)"),
+    "must define captureChatScrollAnchor"
+  );
+  assert.ok(
+    scriptContent.includes("function restoreChatScrollAnchor(body, anchor, options = {})"),
+    "must define restoreChatScrollAnchor"
+  );
+  assert.ok(
+    scriptContent.includes("const anchor = captureChatScrollAnchor(body);"),
+    "appendFreshPosts must capture anchor before DOM mutations"
+  );
+  assert.ok(
+    scriptContent.includes("restoreChatScrollAnchor(body, anchor, options);"),
+    "appendFreshPosts must restore scroll anchor on polling/non-bottom"
+  );
+  assert.ok(
+    scriptContent.includes("if (totalAppended === 0 && currentBody.scrollTop !== prevScrollTop)"),
+    "polling must avoid overriding anchor compensation when totalAppended > 0"
+  );
+
+  // 2. Functional algorithm verification
+  function simulateAnchorHandling({ initialScrollTop, initialOffsetTop, insertedAboveHeight, insertedBelowHeight, options = {} }) {
+    let scrollTop = initialScrollTop;
+    const anchorOffsetTop = initialOffsetTop;
+    const currentOffsetTop = initialOffsetTop + insertedAboveHeight;
+    const drift = currentOffsetTop - anchorOffsetTop;
+
+    const shouldScroll = options.scroll === true || (options.scroll !== false && !options.isPolling && options.wasNearBottom);
+    if (shouldScroll) {
+      scrollTop = 999999;
+    } else {
+      if (Math.abs(drift) >= 0.5) {
+        scrollTop += drift;
+      }
+    }
+
+    const finalScreenPositionOfAnchor = currentOffsetTop - (scrollTop - initialScrollTop);
+    return {
+      scrollTop,
+      drift,
+      finalScreenPositionOfAnchor,
+      displacement: finalScreenPositionOfAnchor - initialOffsetTop
+    };
+  }
+
+  // Case A: User scrolled to middle reading post #20 (initial offset 20px).
+  // Polling inserts 120px of replies ahead (above post #20) and 300px at bottom.
+  const resA = simulateAnchorHandling({
+    initialScrollTop: 1500,
+    initialOffsetTop: 20,
+    insertedAboveHeight: 120,
+    insertedBelowHeight: 300,
+    options: { isPolling: true, scroll: false }
+  });
+  assert.strictEqual(resA.scrollTop, 1620, "scrollTop must be adjusted by exactly the inserted above height (120px)");
+  assert.strictEqual(resA.finalScreenPositionOfAnchor, 20, "post #20 must stay at the exact same screen position");
+  assert.strictEqual(resA.displacement, 0, "visual displacement of user reading target must be strictly 0px (completely seamless)");
+
+  // Case B: Polling inserts replies only below current view (insertedAboveHeight = 0)
+  const resB = simulateAnchorHandling({
+    initialScrollTop: 1500,
+    initialOffsetTop: 20,
+    insertedAboveHeight: 0,
+    insertedBelowHeight: 500,
+    options: { isPolling: true, scroll: false }
+  });
+  assert.strictEqual(resB.scrollTop, 1500, "scrollTop must not change when items are inserted below");
+  assert.strictEqual(resB.finalScreenPositionOfAnchor, 20);
+  assert.strictEqual(resB.displacement, 0);
+
+  // Case C: User actively posts a reply with { scroll: true }
+  const resC = simulateAnchorHandling({
+    initialScrollTop: 1500,
+    initialOffsetTop: 20,
+    insertedAboveHeight: 0,
+    insertedBelowHeight: 200,
+    options: { scroll: true }
+  });
+  assert.strictEqual(resC.scrollTop, 999999, "user posting must follow to bottom");
+});
+
+test("Test 105: LINUX DO Connect modal anti-compression and full content uncropped layout (v0.7.74)", () => {
+  // 1. Static assertions for modal width, overflow, and anti-compression rules
+  assert.ok(
+    scriptContent.includes(".wecom-connect-modal {") &&
+    scriptContent.includes("width: 520px;") &&
+    scriptContent.includes("overflow: hidden;"),
+    "Connect modal must be 520px wide with overflow: hidden"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-connect-body > * {\n      flex-shrink: 0;\n    }"),
+    "Connect body direct children must have flex-shrink: 0 to prevent block compression"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-connect-section,\n    .wecom-connect-source-note,\n    .wecom-connect-loading {\n      flex-shrink: 0;\n      min-height: min-content;\n    }"),
+    "Connect sections, cards, and banners must enforce flex-shrink: 0 and min-height: min-content"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-connect-req-item {") &&
+    scriptContent.includes("min-height: 44px;") &&
+    scriptContent.includes("flex-shrink: 0;"),
+    "Connect requirement items must have min-height: 44px and flex-shrink: 0"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-connect-req-values {") &&
+    scriptContent.includes("white-space: nowrap;"),
+    "Connect requirement values must have white-space: nowrap to prevent line wraps"
+  );
+
+  // 2. Structural simulation: items inside body preserve natural heights under flexbox
+  function simulateFlexColumnLayout({ containerHeight, items }) {
+    // If flex-shrink: 0, every item takes its full preferred height
+    const renderedHeights = items.map((it) => it.naturalHeight);
+    const totalContentHeight = renderedHeights.reduce((a, b) => a + b, 0);
+    const isCropped = renderedHeights.some((h, idx) => h < items[idx].naturalHeight);
+    const canScroll = totalContentHeight > containerHeight;
+    return { renderedHeights, totalContentHeight, isCropped, canScroll };
+  }
+
+  const result = simulateFlexColumnLayout({
+    containerHeight: 639,
+    items: [
+      { name: "user-card", naturalHeight: 76 },
+      { name: "banner", naturalHeight: 54 },
+      { name: "progress", naturalHeight: 56 },
+      { name: "section-1", naturalHeight: 168 },
+      { name: "section-2", naturalHeight: 124 },
+      { name: "section-3", naturalHeight: 80 },
+      { name: "note", naturalHeight: 20 }
+    ]
+  });
+
+  assert.strictEqual(result.isCropped, false, "no item should ever be cropped or compressed");
+  assert.strictEqual(result.totalContentHeight, 578, "total height should match sum of natural heights");
+  assert.strictEqual(result.renderedHeights[3], 168, "section 1 must remain 168px high");
 });

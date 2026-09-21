@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.68
+// @version      0.7.74
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -1380,9 +1380,6 @@
       overscroll-behavior: contain;
       padding: 8px 8px;
     }
-    .wecom-v2ex-nav2-list::-webkit-scrollbar { width: 4px; }
-    .wecom-v2ex-nav2-list::-webkit-scrollbar-thumb { background: transparent; border-radius: 2px; }
-    .wecom-v2ex-nav2-list:hover::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.15); }
     .wecom-v2ex-nav2-item {
       display: flex;
       align-items: center;
@@ -2095,10 +2092,10 @@
       animation: wecomFadeIn 0.15s ease-out;
     }
     .wecom-connect-modal {
-      width: 500px;
+      width: 520px;
       max-width: calc(100vw - 32px);
       max-height: calc(100vh - 40px);
-      overflow-y: auto;
+      overflow: hidden;
       background: #FFFFFF;
       border-radius: 12px;
       box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -2116,6 +2113,7 @@
       align-items: center;
       justify-content: space-between;
       position: relative;
+      flex-shrink: 0;
     }
     .wecom-connect-title-group {
       display: flex;
@@ -2174,6 +2172,22 @@
       display: flex;
       flex-direction: column;
       gap: 14px;
+      flex: 1 1 auto;
+      overflow-y: auto;
+      overflow-x: hidden;
+      min-height: 0;
+    }
+    .wecom-connect-body > * {
+      flex-shrink: 0;
+    }
+    .wecom-connect-user-card,
+    .wecom-connect-banner,
+    .wecom-connect-progress-box,
+    .wecom-connect-section,
+    .wecom-connect-source-note,
+    .wecom-connect-loading {
+      flex-shrink: 0;
+      min-height: min-content;
     }
     .wecom-connect-loading {
       padding: 40px 0;
@@ -2353,6 +2367,8 @@
       border-radius: 8px;
       overflow: hidden;
       background: #FFFFFF;
+      flex-shrink: 0;
+      min-height: min-content;
     }
     .wecom-connect-section-title {
       padding: 8px 12px;
@@ -2376,6 +2392,8 @@
       padding: 9px 12px;
       border-bottom: 1px solid #F2F3F5;
       gap: 10px;
+      min-height: 44px;
+      flex-shrink: 0;
     }
     .wecom-connect-req-item:last-child {
       border-bottom: none;
@@ -2422,6 +2440,7 @@
       color: #646A73;
       font-variant-numeric: tabular-nums;
       text-align: right;
+      white-space: nowrap;
     }
     .wecom-connect-req-values .cur {
       font-weight: 700;
@@ -2436,6 +2455,7 @@
       padding: 2px 7px;
       border-radius: 10px;
       white-space: nowrap;
+      flex-shrink: 0;
     }
     .wecom-connect-req-badge.met {
       background: #E8FFEA;
@@ -2489,6 +2509,7 @@
       justify-content: space-between;
       align-items: center;
       border-radius: 0 0 12px 12px;
+      flex-shrink: 0;
     }
     .wecom-connect-btn {
       height: 32px;
@@ -6988,12 +7009,29 @@
       box-sizing: border-box;
       scrollbar-width: thin;
     }
-    /* 统一高精度企微自动隐藏滚动条：平时透明隐藏，移入面板或滚动时柔和显现，与详情框完全一致 */
+    /* 统一高精度企微自动隐藏滚动条：平时透明隐藏，移入面板或滚动时柔和显现，全站列表、弹窗与内容区全面统一 */
     .wecom-list-body,
     .wecom-chat-body,
     .wecom-chat-messages,
     .wecom-member-body,
     .wecom-theme-menu,
+    .wecom-connect-modal,
+    .wecom-connect-body,
+    .wecom-v2ex-nav2-list,
+    .wecom-emoji-picker-body,
+    .wecom-base64-popover-body,
+    .wecom-base64-insert-result,
+    .wecom-chat-compose,
+    .wecom-edit-input,
+    .wecom-juejin-publish-input,
+    .wecom-juejin-member-card,
+    .user-menu.wecom-user-menu-float,
+    .user-menu.wecom-user-menu-float .panel-body,
+    .d-editor-preview-wrapper,
+    .wecom-msg-bubble pre,
+    .wecom-msg-content pre,
+    #discourse-modal-container .modal-body,
+    .d-modal__body,
     .wecom-v2ex-member-card,
     .wecom-v2ex-user-popover {
       scrollbar-width: thin !important;
@@ -7004,6 +7042,23 @@
     .wecom-chat-messages::-webkit-scrollbar,
     .wecom-member-body::-webkit-scrollbar,
     .wecom-theme-menu::-webkit-scrollbar,
+    .wecom-connect-modal::-webkit-scrollbar,
+    .wecom-connect-body::-webkit-scrollbar,
+    .wecom-v2ex-nav2-list::-webkit-scrollbar,
+    .wecom-emoji-picker-body::-webkit-scrollbar,
+    .wecom-base64-popover-body::-webkit-scrollbar,
+    .wecom-base64-insert-result::-webkit-scrollbar,
+    .wecom-chat-compose::-webkit-scrollbar,
+    .wecom-edit-input::-webkit-scrollbar,
+    .wecom-juejin-publish-input::-webkit-scrollbar,
+    .wecom-juejin-member-card::-webkit-scrollbar,
+    .user-menu.wecom-user-menu-float::-webkit-scrollbar,
+    .user-menu.wecom-user-menu-float .panel-body::-webkit-scrollbar,
+    .d-editor-preview-wrapper::-webkit-scrollbar,
+    .wecom-msg-bubble pre::-webkit-scrollbar,
+    .wecom-msg-content pre::-webkit-scrollbar,
+    #discourse-modal-container .modal-body::-webkit-scrollbar,
+    .d-modal__body::-webkit-scrollbar,
     .wecom-v2ex-member-card::-webkit-scrollbar,
     .wecom-v2ex-user-popover::-webkit-scrollbar {
       width: 6px !important;
@@ -7014,6 +7069,23 @@
     .wecom-chat-messages::-webkit-scrollbar-track,
     .wecom-member-body::-webkit-scrollbar-track,
     .wecom-theme-menu::-webkit-scrollbar-track,
+    .wecom-connect-modal::-webkit-scrollbar-track,
+    .wecom-connect-body::-webkit-scrollbar-track,
+    .wecom-v2ex-nav2-list::-webkit-scrollbar-track,
+    .wecom-emoji-picker-body::-webkit-scrollbar-track,
+    .wecom-base64-popover-body::-webkit-scrollbar-track,
+    .wecom-base64-insert-result::-webkit-scrollbar-track,
+    .wecom-chat-compose::-webkit-scrollbar-track,
+    .wecom-edit-input::-webkit-scrollbar-track,
+    .wecom-juejin-publish-input::-webkit-scrollbar-track,
+    .wecom-juejin-member-card::-webkit-scrollbar-track,
+    .user-menu.wecom-user-menu-float::-webkit-scrollbar-track,
+    .user-menu.wecom-user-menu-float .panel-body::-webkit-scrollbar-track,
+    .d-editor-preview-wrapper::-webkit-scrollbar-track,
+    .wecom-msg-bubble pre::-webkit-scrollbar-track,
+    .wecom-msg-content pre::-webkit-scrollbar-track,
+    #discourse-modal-container .modal-body::-webkit-scrollbar-track,
+    .d-modal__body::-webkit-scrollbar-track,
     .wecom-v2ex-member-card::-webkit-scrollbar-track,
     .wecom-v2ex-user-popover::-webkit-scrollbar-track {
       background: transparent !important;
@@ -7023,6 +7095,23 @@
     .wecom-chat-messages::-webkit-scrollbar-thumb,
     .wecom-member-body::-webkit-scrollbar-thumb,
     .wecom-theme-menu::-webkit-scrollbar-thumb,
+    .wecom-connect-modal::-webkit-scrollbar-thumb,
+    .wecom-connect-body::-webkit-scrollbar-thumb,
+    .wecom-v2ex-nav2-list::-webkit-scrollbar-thumb,
+    .wecom-emoji-picker-body::-webkit-scrollbar-thumb,
+    .wecom-base64-popover-body::-webkit-scrollbar-thumb,
+    .wecom-base64-insert-result::-webkit-scrollbar-thumb,
+    .wecom-chat-compose::-webkit-scrollbar-thumb,
+    .wecom-edit-input::-webkit-scrollbar-thumb,
+    .wecom-juejin-publish-input::-webkit-scrollbar-thumb,
+    .wecom-juejin-member-card::-webkit-scrollbar-thumb,
+    .user-menu.wecom-user-menu-float::-webkit-scrollbar-thumb,
+    .user-menu.wecom-user-menu-float .panel-body::-webkit-scrollbar-thumb,
+    .d-editor-preview-wrapper::-webkit-scrollbar-thumb,
+    .wecom-msg-bubble pre::-webkit-scrollbar-thumb,
+    .wecom-msg-content pre::-webkit-scrollbar-thumb,
+    #discourse-modal-container .modal-body::-webkit-scrollbar-thumb,
+    .d-modal__body::-webkit-scrollbar-thumb,
     .wecom-v2ex-member-card::-webkit-scrollbar-thumb,
     .wecom-v2ex-user-popover::-webkit-scrollbar-thumb {
       background: transparent !important;
@@ -7040,6 +7129,36 @@
     .wecom-member-body.is-scrolling::-webkit-scrollbar-thumb,
     .wecom-theme-menu:hover::-webkit-scrollbar-thumb,
     .wecom-theme-menu.is-scrolling::-webkit-scrollbar-thumb,
+    .wecom-connect-overlay:hover .wecom-connect-modal::-webkit-scrollbar-thumb,
+    .wecom-connect-modal:hover::-webkit-scrollbar-thumb,
+    .wecom-connect-modal.is-scrolling::-webkit-scrollbar-thumb,
+    .wecom-connect-modal:hover .wecom-connect-body::-webkit-scrollbar-thumb,
+    .wecom-connect-body:hover::-webkit-scrollbar-thumb,
+    .wecom-connect-body.is-scrolling::-webkit-scrollbar-thumb,
+    .wecom-v2ex-nav2:hover .wecom-v2ex-nav2-list::-webkit-scrollbar-thumb,
+    .wecom-v2ex-nav2-list:hover::-webkit-scrollbar-thumb,
+    .wecom-v2ex-nav2-list.is-scrolling::-webkit-scrollbar-thumb,
+    .wecom-emoji-picker-body:hover::-webkit-scrollbar-thumb,
+    .wecom-emoji-picker-body.is-scrolling::-webkit-scrollbar-thumb,
+    .wecom-base64-popover-body:hover::-webkit-scrollbar-thumb,
+    .wecom-base64-insert-result:hover::-webkit-scrollbar-thumb,
+    .wecom-chat-compose:hover::-webkit-scrollbar-thumb,
+    .wecom-chat-compose:focus::-webkit-scrollbar-thumb,
+    .wecom-edit-input:hover::-webkit-scrollbar-thumb,
+    .wecom-juejin-publish-input:hover::-webkit-scrollbar-thumb,
+    .wecom-juejin-member-card:hover::-webkit-scrollbar-thumb,
+    .wecom-juejin-member-card.is-scrolling::-webkit-scrollbar-thumb,
+    .user-menu.wecom-user-menu-float:hover::-webkit-scrollbar-thumb,
+    .user-menu.wecom-user-menu-float.is-scrolling::-webkit-scrollbar-thumb,
+    .user-menu.wecom-user-menu-float:hover .panel-body::-webkit-scrollbar-thumb,
+    .user-menu.wecom-user-menu-float .panel-body:hover::-webkit-scrollbar-thumb,
+    .d-editor-preview-wrapper:hover::-webkit-scrollbar-thumb,
+    .wecom-msg-bubble pre:hover::-webkit-scrollbar-thumb,
+    .wecom-msg-content pre:hover::-webkit-scrollbar-thumb,
+    #discourse-modal-container .modal.show .modal-body:hover::-webkit-scrollbar-thumb,
+    .d-modal__container:hover .d-modal__body::-webkit-scrollbar-thumb,
+    .d-modal__body:hover::-webkit-scrollbar-thumb,
+    .wecom-v2ex-member-card.is-scrolling::-webkit-scrollbar-thumb,
     .wecom-v2ex-member-card:hover::-webkit-scrollbar-thumb,
     .wecom-v2ex-user-popover:hover::-webkit-scrollbar-thumb {
       background: rgba(0, 0, 0, 0.2) !important;
@@ -7049,6 +7168,23 @@
     .wecom-chat-messages::-webkit-scrollbar-thumb:hover,
     .wecom-member-body::-webkit-scrollbar-thumb:hover,
     .wecom-theme-menu::-webkit-scrollbar-thumb:hover,
+    .wecom-connect-modal::-webkit-scrollbar-thumb:hover,
+    .wecom-connect-body::-webkit-scrollbar-thumb:hover,
+    .wecom-v2ex-nav2-list::-webkit-scrollbar-thumb:hover,
+    .wecom-emoji-picker-body::-webkit-scrollbar-thumb:hover,
+    .wecom-base64-popover-body::-webkit-scrollbar-thumb:hover,
+    .wecom-base64-insert-result::-webkit-scrollbar-thumb:hover,
+    .wecom-chat-compose::-webkit-scrollbar-thumb:hover,
+    .wecom-edit-input::-webkit-scrollbar-thumb:hover,
+    .wecom-juejin-publish-input::-webkit-scrollbar-thumb:hover,
+    .wecom-juejin-member-card::-webkit-scrollbar-thumb:hover,
+    .user-menu.wecom-user-menu-float::-webkit-scrollbar-thumb:hover,
+    .user-menu.wecom-user-menu-float .panel-body::-webkit-scrollbar-thumb:hover,
+    .d-editor-preview-wrapper::-webkit-scrollbar-thumb:hover,
+    .wecom-msg-bubble pre::-webkit-scrollbar-thumb:hover,
+    .wecom-msg-content pre::-webkit-scrollbar-thumb:hover,
+    #discourse-modal-container .modal-body::-webkit-scrollbar-thumb:hover,
+    .d-modal__body::-webkit-scrollbar-thumb:hover,
     .wecom-v2ex-member-card::-webkit-scrollbar-thumb:hover,
     .wecom-v2ex-user-popover::-webkit-scrollbar-thumb:hover {
       background: rgba(0, 0, 0, 0.35) !important;
@@ -7064,6 +7200,36 @@
     .wecom-member-body.is-scrolling,
     .wecom-theme-menu:hover,
     .wecom-theme-menu.is-scrolling,
+    .wecom-connect-overlay:hover .wecom-connect-modal,
+    .wecom-connect-modal:hover,
+    .wecom-connect-modal.is-scrolling,
+    .wecom-connect-modal:hover .wecom-connect-body,
+    .wecom-connect-body:hover,
+    .wecom-connect-body.is-scrolling,
+    .wecom-v2ex-nav2:hover .wecom-v2ex-nav2-list,
+    .wecom-v2ex-nav2-list:hover,
+    .wecom-v2ex-nav2-list.is-scrolling,
+    .wecom-emoji-picker-body:hover,
+    .wecom-emoji-picker-body.is-scrolling,
+    .wecom-base64-popover-body:hover,
+    .wecom-base64-insert-result:hover,
+    .wecom-chat-compose:hover,
+    .wecom-chat-compose:focus,
+    .wecom-edit-input:hover,
+    .wecom-juejin-publish-input:hover,
+    .wecom-juejin-member-card:hover,
+    .wecom-juejin-member-card.is-scrolling,
+    .user-menu.wecom-user-menu-float:hover,
+    .user-menu.wecom-user-menu-float.is-scrolling,
+    .user-menu.wecom-user-menu-float:hover .panel-body,
+    .user-menu.wecom-user-menu-float .panel-body:hover,
+    .d-editor-preview-wrapper:hover,
+    .wecom-msg-bubble pre:hover,
+    .wecom-msg-content pre:hover,
+    #discourse-modal-container .modal.show .modal-body:hover,
+    .d-modal__container:hover .d-modal__body,
+    .d-modal__body:hover,
+    .wecom-v2ex-member-card.is-scrolling,
     .wecom-v2ex-member-card:hover,
     .wecom-v2ex-user-popover:hover {
       scrollbar-color: rgba(0, 0, 0, 0.2) transparent !important;
@@ -8834,9 +9000,6 @@
     html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-nav2-header {
       border-bottom-color: #26292E !important;
     }
-    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-nav2-list:hover::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.15);
-    }
     html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-nav2-item {
       color: #959CA6 !important;
     }
@@ -9932,6 +10095,36 @@
     html.${ROOT_CLASS}.wecom-dark .wecom-member-body.is-scrolling::-webkit-scrollbar-thumb,
     html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu:hover::-webkit-scrollbar-thumb,
     html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu.is-scrolling::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-overlay:hover .wecom-connect-modal::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-modal:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-modal.is-scrolling::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-modal:hover .wecom-connect-body::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-body:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-body.is-scrolling::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-nav2:hover .wecom-v2ex-nav2-list::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-nav2-list:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-nav2-list.is-scrolling::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-emoji-picker-body:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-emoji-picker-body.is-scrolling::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-base64-popover-body:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-base64-insert-result:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-compose:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-compose:focus::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-edit-input:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-juejin-publish-input:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-juejin-member-card:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-juejin-member-card.is-scrolling::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .user-menu.wecom-user-menu-float:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .user-menu.wecom-user-menu-float.is-scrolling::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .user-menu.wecom-user-menu-float:hover .panel-body::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .user-menu.wecom-user-menu-float .panel-body:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .d-editor-preview-wrapper:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble pre:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-content pre:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark #discourse-modal-container .modal.show .modal-body:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .d-modal__container:hover .d-modal__body::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .d-modal__body:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-member-card.is-scrolling::-webkit-scrollbar-thumb,
     html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-member-card:hover::-webkit-scrollbar-thumb,
     html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-user-popover:hover::-webkit-scrollbar-thumb {
       background: rgba(255, 255, 255, 0.22) !important;
@@ -9941,6 +10134,23 @@
     html.${ROOT_CLASS}.wecom-dark .wecom-chat-messages::-webkit-scrollbar-thumb:hover,
     html.${ROOT_CLASS}.wecom-dark .wecom-member-body::-webkit-scrollbar-thumb:hover,
     html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-modal::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-body::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-nav2-list::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-emoji-picker-body::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-base64-popover-body::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-base64-insert-result::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-compose::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-edit-input::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-juejin-publish-input::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-juejin-member-card::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .user-menu.wecom-user-menu-float::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .user-menu.wecom-user-menu-float .panel-body::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .d-editor-preview-wrapper::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble pre::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-content pre::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark #discourse-modal-container .modal-body::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .d-modal__body::-webkit-scrollbar-thumb:hover,
     html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-member-card::-webkit-scrollbar-thumb:hover,
     html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-user-popover::-webkit-scrollbar-thumb:hover {
       background: rgba(255, 255, 255, 0.38) !important;
@@ -9956,6 +10166,36 @@
     html.${ROOT_CLASS}.wecom-dark .wecom-member-body.is-scrolling,
     html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu:hover,
     html.${ROOT_CLASS}.wecom-dark .wecom-theme-menu.is-scrolling,
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-overlay:hover .wecom-connect-modal,
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-modal:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-modal.is-scrolling,
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-modal:hover .wecom-connect-body,
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-body:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-connect-body.is-scrolling,
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-nav2:hover .wecom-v2ex-nav2-list,
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-nav2-list:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-nav2-list.is-scrolling,
+    html.${ROOT_CLASS}.wecom-dark .wecom-emoji-picker-body:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-emoji-picker-body.is-scrolling,
+    html.${ROOT_CLASS}.wecom-dark .wecom-base64-popover-body:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-base64-insert-result:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-compose:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-compose:focus,
+    html.${ROOT_CLASS}.wecom-dark .wecom-edit-input:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-juejin-publish-input:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-juejin-member-card:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-juejin-member-card.is-scrolling,
+    html.${ROOT_CLASS}.wecom-dark .user-menu.wecom-user-menu-float:hover,
+    html.${ROOT_CLASS}.wecom-dark .user-menu.wecom-user-menu-float.is-scrolling,
+    html.${ROOT_CLASS}.wecom-dark .user-menu.wecom-user-menu-float:hover .panel-body,
+    html.${ROOT_CLASS}.wecom-dark .user-menu.wecom-user-menu-float .panel-body:hover,
+    html.${ROOT_CLASS}.wecom-dark .d-editor-preview-wrapper:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-bubble pre:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-content pre:hover,
+    html.${ROOT_CLASS}.wecom-dark #discourse-modal-container .modal.show .modal-body:hover,
+    html.${ROOT_CLASS}.wecom-dark .d-modal__container:hover .d-modal__body,
+    html.${ROOT_CLASS}.wecom-dark .d-modal__body:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-member-card.is-scrolling,
     html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-member-card:hover,
     html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-user-popover:hover {
       scrollbar-color: rgba(255, 255, 255, 0.22) transparent !important;
@@ -10426,10 +10666,15 @@
   const NAV2_KEY = "linuxdo-wecom-nav2"; // "1" = 展开原生侧栏
 
   function isNav2Open() {
+    if (IS_JUEJIN) return false;
     try { return localStorage.getItem(NAV2_KEY) === "1"; } catch { return false; }
   }
 
   function setNav2Open(open) {
+    if (IS_JUEJIN) {
+      setListNavOpen(open);
+      return;
+    }
     try { localStorage.setItem(NAV2_KEY, open ? "1" : "0"); } catch { /* ignore */ }
     document.documentElement.classList.toggle("wecom-nav2-open", open);
     const moreBtn = document.querySelector(".wecom-rail-more, [data-rail-key='group']");
@@ -11282,7 +11527,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.68";
+  const SCRIPT_VERSION = "0.7.74";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -11450,7 +11695,7 @@
   /** 企业微信工作台导航项（对齐官方截图：消息、历史、日程、待办、会议、智能文档、智能总结、工作台、通讯录、微盘、高级功能、分组） */
   const RAIL_DECO_ITEMS = [
     { key: "history", icon: "history", label: "历史" },
-    IS_V2EX ? { key: "notif", icon: "bell", label: "通知" } : { key: "connect", icon: "connect", label: "Connect" },
+    (IS_V2EX || IS_JUEJIN) ? { key: "notif", icon: "bell", label: "通知" } : { key: "connect", icon: "connect", label: "Connect" },
     { key: "todo", icon: "todo", label: "待办" },
     { key: "meet", icon: "meet", label: "会议" },
     { key: "smartdoc", icon: "smartdoc", label: "智能文档", dot: true },
@@ -11896,6 +12141,16 @@
         const m = text.match(/\d+/);
         if (m) raw = parseInt(m[0], 10);
       }
+    } else if (IS_JUEJIN) {
+      const badge = document.querySelector(
+        ".notification-count, .nav-item.notification .badge, .badge-count, a[href*='/notification'] .count, a[href*='/notification'] .badge"
+      );
+      if (badge) {
+        const text = badge.textContent?.trim() || "";
+        const m = text.match(/\d+/);
+        if (m) raw = parseInt(m[0], 10);
+        else if (text) raw = 1;
+      }
     } else {
       try {
         const owner = getEmberOwner();
@@ -12021,7 +12276,8 @@
     const root = rail || document.querySelector(".wecom-rail");
     if (!root) return;
     const isHistory = listState.listMode === "history";
-    const isNotif = IS_V2EX && (location.pathname === "/notifications" || (typeof listState !== "undefined" && typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications")));
+    const isNotif = (IS_V2EX && (location.pathname === "/notifications" || (typeof listState !== "undefined" && typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications")))) ||
+      (IS_JUEJIN && (location.pathname.startsWith("/notification") || (typeof listState !== "undefined" && typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notification"))));
     root.querySelectorAll(".wecom-rail-item").forEach((item) => {
       const key = item.dataset.railKey;
       if (key === "group" || !key) return;
@@ -12133,12 +12389,16 @@
 
     // 若当前处于原生未支持页面（例如 /u/... 个人中心）或通知列表，点击「消息」切回首页三栏
     const currentPath = location.pathname;
-    if (IS_V2EX && ((typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications")) || currentPath === "/notifications")) {
-      navigateInApp("/?tab=all");
+    if ((IS_V2EX || IS_JUEJIN) && ((typeof listState.apiPath === "string" && (listState.apiPath.startsWith("/notifications") || listState.apiPath.startsWith("/notification"))) || currentPath === "/notifications" || currentPath.startsWith("/notification"))) {
+      if (IS_JUEJIN) {
+        loadList("recommend", true);
+      } else {
+        navigateInApp("/?tab=all");
+      }
       return;
     }
     if (!isHomePath(currentPath) && !isTopicPath(currentPath)) {
-      navigateInApp(IS_V2EX ? "/?tab=all" : "/latest");
+      navigateInApp(IS_V2EX ? "/?tab=all" : (IS_JUEJIN ? "/pins/recommended" : "/latest"));
       return;
     }
 
@@ -12166,9 +12426,9 @@
     }
 
     // 5. 强制重新拉取当前列表数据（刷新列表）
-    const apiPath = IS_V2EX && (typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications"))
-      ? "/?tab=all"
-      : (listState.apiPath || listApiForPath(location.pathname, location.search) || "/latest.json");
+    const apiPath = (IS_V2EX || IS_JUEJIN) && (typeof listState.apiPath === "string" && (listState.apiPath.startsWith("/notifications") || listState.apiPath.startsWith("/notification")))
+      ? (IS_JUEJIN ? "recommend" : "/?tab=all")
+      : (listState.apiPath || listApiForPath(location.pathname, location.search) || (IS_JUEJIN ? "recommend" : (IS_V2EX ? "/?tab=all" : "/latest.json")));
     loadList(apiPath, true);
 
     // 6. 立即更新角标
@@ -12250,6 +12510,10 @@
         if (body) body.innerHTML = `<div class="wecom-list-status">正在加载通知…</div>`;
         loadList("/notifications", true);
       }
+    } else if (IS_JUEJIN) {
+      const body = document.querySelector(".wecom-list-body");
+      if (body) body.innerHTML = `<div class="wecom-list-status">正在加载通知…</div>`;
+      loadList("/notification", true);
     } else {
       const userMenu = findUserMenu();
       if (!userMenu || !document.documentElement.classList.contains("wecom-notif-open")) {
@@ -12288,7 +12552,9 @@
     bindRailChatClick(rail);
     bindRailHistoryClick(rail);
     bindRailNotifClick(rail);
-    bindRailConnectClick(rail);
+    if (IS_LINUXDO) {
+      bindRailConnectClick(rail);
+    }
   }
 
 
@@ -12734,6 +13000,7 @@
       if (e.key === "Escape") {
         if (isV2exUserPopoverOpen()) closeV2exUserPopover();
         if (isV2exMemberCardOpen()) closeV2exMemberCard();
+        if (isJuejinMemberCardOpen()) closeJuejinMemberCard();
         if (isNotifMenuOpen()) closeNotifMenu();
       }
     });
@@ -12781,6 +13048,35 @@
         } else {
           loadList("/notifications", true);
         }
+      });
+      ensureNotifOutsideClose();
+      return;
+    }
+    if (IS_JUEJIN) {
+      avatar.addEventListener("click", (event) => {
+        if (event.altKey) {
+          event.preventDefault();
+          event.stopPropagation();
+          cycleRailDisguiseAvatar();
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        if (isJuejinMemberCardOpen()) {
+          closeJuejinMemberCard();
+          return;
+        }
+        const currentUser = getCurrentUserIdentity();
+        const username = currentUser.username || "我";
+        const uid = currentUser.id || null;
+        openJuejinMemberCard(username, uid, avatar, event);
+      });
+      const badge = rail.querySelector(".wecom-rail-avatar-badge");
+      badge?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        closeJuejinMemberCard();
+        clearNotificationBadge();
+        handleNotifNavClick();
       });
       ensureNotifOutsideClose();
       return;
@@ -12919,6 +13215,8 @@
     { href: "/pins/hot", label: "热门" },
     { href: "/pins/topic/6824710203301167112", label: "上班摸鱼" },
     { href: "/pins/topic/6824710203112423437", label: "代码人生" },
+    { href: "/pins/topic/6824710203108229134", label: "掘友求助" },
+    { href: "/pins/topic/6824710203204698126", label: "树洞吐槽" },
     { href: "/pins/topic/7091610245012815879", label: "掘金相亲角" },
     { href: "/pins/topic/6819970850532360206", label: "下班打卡" }
   ];
@@ -12988,6 +13286,7 @@
       digg_count: info.digg_count || 0,
       pic_list: info.pic_list || [],
       is_digg: Boolean(item.user_interact?.is_digg),
+      user_id: author.user_id,
       author_info: author
     };
   }
@@ -13107,6 +13406,247 @@
     };
   }
 
+  function mapJuejinMessageToTopic(msg, idx = 0) {
+    if (!msg) return null;
+    const uInfo = msg.user_info || msg.author_info || msg.from_user || msg.user || {};
+    const username = uInfo.user_name || uInfo.name || "掘友";
+    const avatar = uInfo.avatar_large || uInfo.avatar || "";
+    const userId = uInfo.user_id ? String(uInfo.user_id) : "";
+
+    let notifType = "reply";
+    let notifLabel = "回复";
+    const actionType = String(msg.action_type || msg.message_type || msg.type || "").toLowerCase();
+    const actionDesc = String(msg.action_desc || msg.title || msg.content || "");
+    if (actionType.includes("digg") || actionType.includes("like") || actionDesc.includes("赞")) {
+      notifType = "thank";
+      notifLabel = "点赞";
+    } else if (actionType.includes("follow") || actionDesc.includes("关注")) {
+      notifType = "mention";
+      notifLabel = "关注";
+    } else if (actionType.includes("collect") || actionDesc.includes("收藏")) {
+      notifType = "fav";
+      notifLabel = "收藏";
+    } else if (actionType.includes("system") || actionDesc.includes("系统")) {
+      notifType = "system";
+      notifLabel = "系统";
+    }
+
+    const targetInfo = msg.target_info || msg.short_msg_info || msg.item_info || msg.pin_info || {};
+    const rawTargetId = targetInfo.item_id || targetInfo.msg_id || targetInfo.id || msg.item_id || msg.msg_id || msg.target_id;
+    const topicId = rawTargetId ? String(rawTargetId) : (msg.message_id || msg.id ? `notif_${msg.message_id || msg.id}` : `notif_${idx}_${Date.now()}`);
+
+    const ctime = Number(msg.ctime || msg.created_at || msg.create_time || Date.now() / 1000);
+    const timeIso = new Date(ctime > 1e11 ? ctime : ctime * 1000).toISOString();
+
+    const targetTitle = targetInfo.content || targetInfo.title || "你的沸点动态";
+    const msgContent = msg.content || msg.message_content || msg.reply_content || "";
+    let notificationText = "";
+    if (msgContent) {
+      notificationText = `${username}: ${msgContent}`;
+    } else if (notifType === "thank") {
+      notificationText = `❤️ ${username} 赞了你的内容`;
+    } else if (notifType === "mention") {
+      notificationText = `👥 ${username} 关注了你`;
+    } else if (notifType === "fav") {
+      notificationText = `⭐ ${username} 收藏了你的内容`;
+    } else {
+      notificationText = actionDesc || `${username} 与你互动`;
+    }
+
+    return {
+      id: topicId,
+      dedup_key: String(msg.message_id || msg.id || topicId),
+      title: targetTitle ? (targetTitle.length > 40 ? targetTitle.slice(0, 40) + "…" : targetTitle) : `通知 #${topicId}`,
+      posts_count: 1,
+      reply_count: 0,
+      created_at: timeIso,
+      bumped_at: timeIso,
+      last_poster_username: username,
+      v2ex_author: username,
+      author_info: { user_id: userId, user_name: username, avatar_large: avatar },
+      node_name: "通知",
+      notif_type: notifType,
+      notif_label: notifLabel,
+      v2ex_avatar: avatar,
+      notification_text: notificationText,
+      open_url: targetInfo.msg_id ? `https://juejin.cn/pin/${targetInfo.msg_id}` : (rawTargetId ? `https://juejin.cn/pin/${rawTargetId}` : "https://juejin.cn/notification")
+    };
+  }
+
+  function extractJuejinNotificationsFromDoc(doc) {
+    if (!doc) return [];
+    const topics = [];
+    const seen = new Set();
+    const items = doc.querySelectorAll(
+      ".notification-item, .list-item, .notify-item, .message-item, .notification-list-item, [class*='notification-item'], [class*='message-item']"
+    );
+    items.forEach((item, idx) => {
+      const userLink = item.querySelector("a[href*='/user/'], .user-name, .username, .name");
+      const username = userLink?.textContent?.trim() || item.querySelector("img[alt]")?.alt || "掘友";
+      const userHref = userLink?.getAttribute("href") || "";
+      const uidMatch = userHref.match(/\/user\/([^/?#]+)/);
+      const userId = uidMatch ? uidMatch[1] : "";
+
+      const avatarEl = item.querySelector("img.avatar, .user-avatar img, a.avatar img, img[src*='avatar'], img");
+      const avatar = avatarEl?.getAttribute("src") || "";
+
+      const timeEl = item.querySelector(".time, .date, .snow, .ago, time, [title]");
+      const timeStr = timeEl?.getAttribute("title") || timeEl?.textContent?.trim() || new Date().toISOString();
+
+      const pinLink = item.querySelector("a[href*='/pin/']");
+      const postLink = item.querySelector("a[href*='/post/']");
+      let topicId = "";
+      let targetTitle = "";
+      if (pinLink) {
+        const m = (pinLink.getAttribute("href") || "").match(/\/pin\/(\d+)/);
+        if (m) topicId = m[1];
+        targetTitle = pinLink.textContent?.trim() || "";
+      } else if (postLink) {
+        const m = (postLink.getAttribute("href") || "").match(/\/post\/(\d+)/);
+        if (m) topicId = m[1];
+        targetTitle = postLink.textContent?.trim() || "";
+      }
+      if (!topicId) {
+        topicId = `notif_${userId || idx}_${Date.now()}`;
+      }
+
+      const dedupKey = item.id || `${topicId}_${username}_${timeStr}_${idx}`;
+      if (seen.has(dedupKey)) return;
+      seen.add(dedupKey);
+
+      const fullText = (item.textContent || "").replace(/\s+/g, " ");
+      let notifType = "reply";
+      let notifLabel = "回复";
+      if (fullText.includes("赞") || fullText.includes("点赞")) {
+        notifType = "thank";
+        notifLabel = "点赞";
+      } else if (fullText.includes("关注")) {
+        notifType = "mention";
+        notifLabel = "关注";
+      } else if (fullText.includes("收藏")) {
+        notifType = "fav";
+        notifLabel = "收藏";
+      } else if (fullText.includes("系统") || fullText.includes("通知")) {
+        notifType = "system";
+        notifLabel = "系统";
+      }
+
+      const detailEl = item.querySelector(".content, .detail, .desc, .reply-content, .text");
+      const detailText = detailEl?.textContent?.trim() || "";
+      let notifText = "";
+      if (detailText) {
+        notifText = username ? `${username}: ${detailText}` : detailText;
+      } else if (notifType === "thank") {
+        notifText = `❤️ ${username} 赞了你的内容`;
+      } else if (notifType === "mention") {
+        notifText = `👥 ${username} 关注了你`;
+      } else if (notifType === "fav") {
+        notifText = `⭐ ${username} 收藏了你的内容`;
+      } else {
+        notifText = fullText;
+      }
+
+      topics.push({
+        id: topicId,
+        dedup_key: dedupKey,
+        title: targetTitle ? (targetTitle.length > 40 ? targetTitle.slice(0, 40) + "…" : targetTitle) : (pinLink ? "沸点互动" : "通知提醒"),
+        posts_count: 1,
+        reply_count: 0,
+        created_at: timeStr,
+        bumped_at: timeStr,
+        last_poster_username: username,
+        v2ex_author: username,
+        author_info: { user_id: userId, user_name: username, avatar_large: avatar },
+        node_name: "通知",
+        notif_type: notifType,
+        notif_label: notifLabel,
+        v2ex_avatar: avatar,
+        notification_text: notifText,
+        open_url: pinLink?.href || postLink?.href || "https://juejin.cn/notification"
+      });
+    });
+    return topics;
+  }
+
+  async function fetchJuejinNotificationsList(cursor = "0") {
+    let topics = [];
+    let nextCursor = "0";
+    let hasMore = false;
+
+    // 1. 若当前页面 DOM 已包含通知列表，直接就地抽取
+    if (document.querySelectorAll(".notification-item, .list-item, .notify-item, .message-item").length > 0) {
+      topics = extractJuejinNotificationsFromDoc(document);
+      if (topics.length > 0) {
+        return { topics, cursor: "0", hasMore: false };
+      }
+    }
+
+    // 2. 尝试调用官方消息列表 API
+    const candidateEndpoints = [
+      { path: "/interact_api/v1/message/query_message", body: { cursor: cursor || "0", limit: 20 } },
+      { path: "/interact_api/v1/message/list", body: { cursor: cursor || "0", limit: 20 } },
+      { path: "/interact_api/v1/notification/list", body: { cursor: cursor || "0", limit: 20 } }
+    ];
+
+    for (const cand of candidateEndpoints) {
+      try {
+        const resp = await juejinApi(cand.path, cand.body);
+        if (resp && Array.isArray(resp.data) && resp.data.length > 0) {
+          topics = resp.data.map(mapJuejinMessageToTopic).filter(Boolean);
+          if (topics.length > 0) {
+            nextCursor = resp.cursor || String(resp.data.length);
+            hasMore = Boolean(resp.has_more);
+            return { topics, cursor: nextCursor, hasMore };
+          }
+        }
+      } catch {
+        // 继续尝试下一个候选
+      }
+    }
+
+    // 3. 尝试拉取 /notification HTML 解析
+    try {
+      const resp = await fetch("/notification", { credentials: "same-origin" });
+      if (resp.ok) {
+        const html = await resp.text();
+        const doc = new DOMParser().parseFromString(html, "text/html");
+        topics = extractJuejinNotificationsFromDoc(doc);
+        if (topics.length > 0) {
+          return { topics, cursor: "0", hasMore: false };
+        }
+      }
+    } catch {
+      // 容错降级
+    }
+
+    // 4. 若接口与 HTML 无通知项，但有未读数，尝试探测 /interact_api/v1/message/count
+    try {
+      const countResp = await juejinApi("/interact_api/v1/message/count");
+      const cData = countResp?.data || {};
+      const totalCount = Number(cData.count || cData.user_notification || cData.user_message || 0);
+      if (totalCount > 0 && topics.length === 0) {
+        topics.push({
+          id: "juejin_notification_entry",
+          title: `您有 ${totalCount} 条新通知提醒`,
+          last_poster_username: "掘金通知",
+          v2ex_author: "掘金系统",
+          node_name: "通知",
+          notif_type: "reply",
+          notif_label: "未读",
+          v2ex_avatar: "https://lf3-cdn-tos.bytescm.com/obj/static/xitu_juejin_web/6c61ae65fc70415b522a0f19b5dda156.svg",
+          notification_text: `点击在原站查看全部 ${totalCount} 条未读通知 ↗`,
+          created_at: new Date().toISOString(),
+          bumped_at: new Date().toISOString(),
+          open_url: "https://juejin.cn/notification"
+        });
+      }
+    } catch {
+      // ignore
+    }
+
+    return { topics, cursor: "0", hasMore: false };
+  }
+
   async function loadJuejinList(apiPath, force) {
     if (!force && listState.loadedApiPath === apiPath && Array.isArray(listState.topics) && listState.topics.length) {
       syncListActive();
@@ -13117,7 +13657,13 @@
     listState.loading = true;
     listState.apiPath = apiPath;
     try {
-      const res = await fetchJuejinPinsList(apiPath, "0");
+      let res;
+      if (apiPath.startsWith("/notification")) {
+        clearNotificationBadge();
+        res = await fetchJuejinNotificationsList("0");
+      } else {
+        res = await fetchJuejinPinsList(apiPath, "0");
+      }
       if (requestSerial !== listState.requestSerial) return;
       listState.topics = res.topics;
       listState.juejinCursor = res.cursor;
@@ -13130,7 +13676,8 @@
       if (requestSerial !== listState.requestSerial) return;
       console.error("[juejin-wecom] list load failed", error);
       const body = document.querySelector(".wecom-list-body");
-      if (body) body.innerHTML = `<div class="wecom-list-status">掘金沸点加载失败：${escapeHtml(error.message)}</div>`;
+      const isNotif = apiPath.startsWith("/notification");
+      if (body) body.innerHTML = `<div class="wecom-list-status">${isNotif ? "通知加载失败：" : "掘金沸点加载失败："}${escapeHtml(error.message)}</div>`;
     } finally {
       if (requestSerial === listState.requestSerial) listState.loading = false;
     }
@@ -13231,6 +13778,15 @@
       syncV2exNav2();
       syncListNav();
     });
+    const listEl = nav2.querySelector(".wecom-v2ex-nav2-list");
+    let nav2ScrollTimer = null;
+    listEl?.addEventListener("scroll", () => {
+      listEl.classList.add("is-scrolling");
+      clearTimeout(nav2ScrollTimer);
+      nav2ScrollTimer = setTimeout(() => {
+        listEl.classList.remove("is-scrolling");
+      }, 800);
+    }, { passive: true });
     return nav2;
   }
 
@@ -14344,6 +14900,15 @@
       }
     });
 
+    let cardScrollTimer = null;
+    card.addEventListener("scroll", () => {
+      card.classList.add("is-scrolling");
+      clearTimeout(cardScrollTimer);
+      cardScrollTimer = setTimeout(() => {
+        card.classList.remove("is-scrolling");
+      }, 800);
+    }, { passive: true });
+
     const onOutsideClick = (e) => {
       if (!card.contains(e.target) && (!triggerEl || !triggerEl.contains(e.target))) {
         closeV2exMemberCard();
@@ -14622,6 +15187,333 @@
 
   function openV2exMemberProfilePage(username) {
     window.open(`/member/${encodeURIComponent(username)}`, "_blank");
+  }
+
+  /* ============================== 掘金 · 沸点 用户资料卡弹窗 ============================== */
+
+  const juejinUserCache = new Map();
+
+  async function fetchJuejinUserProfile(userId) {
+    const cacheKey = userId ? String(userId) : "__current_user__";
+    if (juejinUserCache.has(cacheKey)) {
+      return juejinUserCache.get(cacheKey);
+    }
+    try {
+      const endpoint = userId
+        ? `/user_api/v1/user/get?user_id=${encodeURIComponent(userId)}`
+        : `/user_api/v1/user/get`;
+      const resp = await juejinApi(endpoint);
+      const user = resp.data || {};
+      if (!user.user_id && !user.user_name) return null;
+      const profile = {
+        userId: String(user.user_id || userId || ""),
+        username: user.user_name || "掘友",
+        avatarUrl: user.avatar_large || "",
+        company: user.company || "",
+        jobTitle: user.job_title || "",
+        description: user.description || "",
+        level: Number(user.level) || 0,
+        power: Number(user.power) || 0,
+        gotDiggCount: Number(user.got_digg_count) || 0,
+        gotViewCount: Number(user.got_view_count) || 0,
+        postArticleCount: Number(user.post_article_count) || 0,
+        postPinCount: Number(user.post_shortmsg_count) || 0,
+        followerCount: Number(user.follower_count) || 0,
+        followeeCount: Number(user.followee_count) || 0,
+        isFollowed: Boolean(user.is_followed),
+        isCurrentUser: Boolean(user.is_current_user || !userId)
+      };
+      if (profile.userId) {
+        rememberCurrentUser({ username: profile.username, id: profile.userId });
+      }
+      if (juejinUserCache.size > 200) {
+        const firstKey = juejinUserCache.keys().next().value;
+        juejinUserCache.delete(firstKey);
+      }
+      juejinUserCache.set(cacheKey, profile);
+      if (profile.userId) {
+        juejinUserCache.set(String(profile.userId), profile);
+      }
+      return profile;
+    } catch (err) {
+      console.warn("[juejin-wecom] fetchUserProfile failed", err);
+      return { isError: true, message: err.message };
+    }
+  }
+
+  function isJuejinMemberCardOpen() {
+    return Boolean(document.querySelector(".wecom-juejin-member-card"));
+  }
+
+  function closeJuejinMemberCard() {
+    const card = document.querySelector(".wecom-juejin-member-card");
+    if (card) card.remove();
+  }
+
+  function openJuejinMemberCard(username, userId, triggerEl, event) {
+    if (!username && !userId) {
+      const current = getCurrentUserIdentity();
+      username = current.username || "我";
+      userId = current.id || null;
+    }
+    if (!username || username === "楼主") {
+      username = "掘友";
+    }
+    closeJuejinMemberCard();
+    closeV2exMemberCard();
+
+    const triggerImg = triggerEl?.querySelector?.("img") || (triggerEl?.tagName === "IMG" ? triggerEl : null);
+    const initialAvatarSrc = triggerImg?.src || "";
+
+    const card = document.createElement("div");
+    card.className = "wecom-v2ex-member-card wecom-juejin-member-card";
+    card.setAttribute("role", "dialog");
+    card.setAttribute("aria-label", `${username} 的个人资料`);
+
+    card.innerHTML = `
+      <button type="button" class="wecom-member-card-close" title="关闭" aria-label="关闭">×</button>
+
+      <div class="wecom-member-card-header">
+        <div class="wecom-member-avatar-box">
+          ${initialAvatarSrc
+            ? `<img class="wecom-member-avatar-img" src="${escapeHtml(initialAvatarSrc)}" alt="${escapeHtml(username)}">`
+            : `<div class="wecom-member-avatar-img" style="display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:700;">${escapeHtml(avatarLetter(username))}</div>`}
+          <span class="wecom-member-online-dot" style="display:none"></span>
+        </div>
+        <div class="wecom-member-title-box">
+          <div class="wecom-member-name-row">
+            <span class="wecom-member-username">${escapeHtml(username)}</span>
+            <span class="wecom-member-badge" style="display:none">Lv.1</span>
+          </div>
+          <div class="wecom-member-tagline"><span class="wecom-member-loading-text">${userId ? "正在获取资料…" : "掘金创作者"}</span></div>
+        </div>
+      </div>
+
+      <div class="wecom-member-notice" style="display:none"></div>
+
+      <div class="wecom-member-card-actions" style="display:none">
+        <button type="button" class="wecom-member-action-btn wecom-member-follow-btn" title="关注此人">+ 关注</button>
+      </div>
+
+      <div class="wecom-member-meta-pills" style="display:none"></div>
+
+      <div class="wecom-member-intro" style="display:none"></div>
+
+      <div class="wecom-member-card-footer">
+        <a class="wecom-member-btn primary wecom-member-home-link" href="${userId ? `https://juejin.cn/user/${userId}` : 'javascript:;'}" target="_blank">查看完整主页 ↗</a>
+        <button type="button" class="wecom-member-btn secondary wecom-copy-username-btn">复制用户名</button>
+      </div>
+    `;
+
+    document.body.appendChild(card);
+
+    if (triggerEl && typeof triggerEl.getBoundingClientRect === "function") {
+      const rect = triggerEl.getBoundingClientRect();
+      const cardWidth = 320;
+      const cardHeight = card.offsetHeight || 280;
+      const margin = 10;
+
+      let left = rect.right + margin;
+      let top = rect.top;
+
+      if (left + cardWidth > window.innerWidth - margin) {
+        left = rect.left - cardWidth - margin;
+        if (left < margin) {
+          left = Math.max(margin, (window.innerWidth - cardWidth) / 2);
+          top = rect.bottom + margin;
+        }
+      }
+
+      if (top + cardHeight > window.innerHeight - margin) {
+        top = Math.max(margin, window.innerHeight - cardHeight - margin);
+      }
+      if (top < margin) top = margin;
+
+      card.style.position = "fixed";
+      card.style.left = `${Math.round(left)}px`;
+      card.style.top = `${Math.round(top)}px`;
+      card.style.zIndex = "100005";
+    } else {
+      card.style.position = "fixed";
+      card.style.left = "50%";
+      card.style.top = "50%";
+      card.style.transform = "translate(-50%, -50%)";
+      card.style.zIndex = "100005";
+    }
+
+    card.querySelector(".wecom-member-card-close")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeJuejinMemberCard();
+    });
+
+    card.querySelector(".wecom-copy-username-btn")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      try {
+        navigator.clipboard.writeText(username);
+        showWecomToast(`已复制用户名：${username}`, "success");
+      } catch {
+        showWecomToast(username, "info");
+      }
+    });
+
+    let cardScrollTimer = null;
+    card.addEventListener("scroll", () => {
+      card.classList.add("is-scrolling");
+      clearTimeout(cardScrollTimer);
+      cardScrollTimer = setTimeout(() => {
+        card.classList.remove("is-scrolling");
+      }, 800);
+    }, { passive: true });
+
+    const onOutsideClick = (e) => {
+      if (!card.contains(e.target) && (!triggerEl || !triggerEl.contains(e.target))) {
+        closeJuejinMemberCard();
+        document.removeEventListener("click", onOutsideClick, true);
+      }
+    };
+    setTimeout(() => {
+      document.addEventListener("click", onOutsideClick, true);
+    }, 10);
+
+    fetchJuejinUserProfile(userId).then((profile) => {
+      if (!profile || !card.isConnected) return;
+
+      if (profile.isError) {
+        const tagline = card.querySelector(".wecom-member-tagline");
+        if (tagline) tagline.textContent = "掘金创作者";
+        return;
+      }
+
+      if (profile.userId) {
+        const homeLink = card.querySelector(".wecom-member-home-link");
+        if (homeLink) homeLink.href = `https://juejin.cn/user/${profile.userId}`;
+      }
+
+      if (profile.avatarUrl) {
+        const avatarImg = card.querySelector(".wecom-member-avatar-img");
+        if (avatarImg && avatarImg.tagName === "IMG") {
+          avatarImg.src = profile.avatarUrl;
+        }
+        const railImg = document.querySelector(".wecom-rail-avatar img");
+        if (railImg && profile.isCurrentUser && !railImg.src.includes("data:")) {
+          railImg.src = profile.avatarUrl;
+        }
+      }
+
+      if (profile.username) {
+        const nameEl = card.querySelector(".wecom-member-username");
+        if (nameEl) nameEl.textContent = profile.username;
+      }
+
+      if (profile.level > 0) {
+        const badge = card.querySelector(".wecom-member-badge");
+        if (badge) {
+          badge.textContent = `Lv.${profile.level}`;
+          badge.style.display = "";
+        }
+      }
+
+      const tagline = card.querySelector(".wecom-member-tagline");
+      if (tagline) {
+        const parts = [profile.jobTitle, profile.company].filter(Boolean);
+        tagline.textContent = parts.join(" @ ") || "掘金创作者";
+      }
+
+      // 关注按钮或本人身份状态管理
+      const actionsContainer = card.querySelector(".wecom-member-card-actions");
+      const followBtn = card.querySelector(".wecom-member-follow-btn");
+      if (actionsContainer) {
+        if (profile.isCurrentUser) {
+          actionsContainer.style.display = "flex";
+          actionsContainer.innerHTML = `<span class="wecom-member-self-tag" style="font-size:12px;color:var(--wecom-primary,#2ba245);background:rgba(43,162,69,0.1);padding:4px 12px;border-radius:12px;font-weight:500;">✓ 当前登录账号</span>`;
+        } else if (followBtn) {
+          actionsContainer.style.display = "flex";
+          const updateFollowBtnState = () => {
+            if (profile.isFollowed) {
+              followBtn.classList.add("is-active");
+              followBtn.innerHTML = `✓ 已关注`;
+              followBtn.title = "点击取消关注";
+            } else {
+              followBtn.classList.remove("is-active");
+              followBtn.innerHTML = `+ 关注`;
+              followBtn.title = "关注该创作者";
+            }
+          };
+          updateFollowBtnState();
+
+          followBtn.addEventListener("click", async (e) => {
+            e.stopPropagation();
+            if (followBtn.disabled) return;
+            followBtn.disabled = true;
+            const willFollow = !profile.isFollowed;
+            const endpoint = willFollow ? "/interact_api/v1/follow/do" : "/interact_api/v1/follow/undo";
+            try {
+              await juejinApi(endpoint, { id: String(profile.userId || userId), type: 1, client_type: 2608 });
+              profile.isFollowed = willFollow;
+              updateFollowBtnState();
+              showWecomToast(willFollow ? `已关注 ${profile.username}` : `已取消关注 ${profile.username}`, "success");
+            } catch (err) {
+              showWecomToast(`操作失败：${err.message || "请先登录掘金"}`, "warning");
+            } finally {
+              followBtn.disabled = false;
+            }
+          });
+        }
+      }
+
+      // 组装掘金专属指标气泡
+      const pillsBox = card.querySelector(".wecom-member-meta-pills");
+      if (pillsBox) {
+        const pills = [];
+        if (profile.power > 0) {
+          pills.push(`<span class="wecom-member-pill highlight" title="掘力值">⚡ 掘力值 ${profile.power.toLocaleString()}</span>`);
+        }
+        if (profile.gotDiggCount > 0) {
+          pills.push(`<span class="wecom-member-pill" title="获得点赞数">👍 获赞 ${profile.gotDiggCount.toLocaleString()}</span>`);
+        }
+        if (profile.followerCount > 0) {
+          pills.push(`<span class="wecom-member-pill" title="粉丝数">👥 粉丝 ${profile.followerCount.toLocaleString()}</span>`);
+        }
+        if (profile.followeeCount > 0) {
+          pills.push(`<span class="wecom-member-pill" title="关注数">关注 ${profile.followeeCount.toLocaleString()}</span>`);
+        }
+        if (profile.postPinCount > 0) {
+          pills.push(`<span class="wecom-member-pill" title="沸点发布数">💬 沸点 ${profile.postPinCount.toLocaleString()}</span>`);
+        }
+        if (profile.postArticleCount > 0) {
+          pills.push(`<span class="wecom-member-pill" title="文章发布数">📝 文章 ${profile.postArticleCount.toLocaleString()}</span>`);
+        }
+        if (pills.length) {
+          pillsBox.innerHTML = pills.join("");
+          pillsBox.style.display = "flex";
+        }
+      }
+
+      if (profile.description) {
+        const introBox = card.querySelector(".wecom-member-intro");
+        if (introBox) {
+          introBox.innerHTML = `<div style="color:#8F959E;margin-bottom:4px;font-size:11px;">简介</div><div>${escapeHtml(profile.description)}</div>`;
+          introBox.style.display = "block";
+        }
+      }
+
+      const homeLink = card.querySelector(".wecom-member-home-link");
+      if (homeLink) {
+        homeLink.href = `https://juejin.cn/user/${profile.userId || userId}`;
+      }
+
+      // 重新校验卡片边界
+      if (triggerEl && typeof triggerEl.getBoundingClientRect === "function") {
+        const rect = card.getBoundingClientRect();
+        if (rect.bottom > window.innerHeight - 10) {
+          const newTop = Math.max(10, window.innerHeight - rect.height - 10);
+          card.style.top = `${Math.round(newTop)}px`;
+        }
+      }
+    }).catch(() => {
+      const tagline = card.querySelector(".wecom-member-tagline");
+      if (tagline) tagline.textContent = "掘金创作者";
+    });
   }
 
   /* ============================== LINUX DO Connect 弹窗 ============================== */
@@ -15353,6 +16245,21 @@
         .catch((err) => renderConnectModalContent(modal, null, err.message || "请求失败"));
     });
 
+    // Scroll listener for smooth scrollbar feedback
+    let connectScrollTimer = null;
+    const connectBody = modal.querySelector(".wecom-connect-body");
+    const handleConnectScroll = () => {
+      connectBody?.classList.add("is-scrolling");
+      modal.classList.add("is-scrolling");
+      clearTimeout(connectScrollTimer);
+      connectScrollTimer = setTimeout(() => {
+        connectBody?.classList.remove("is-scrolling");
+        modal.classList.remove("is-scrolling");
+      }, 800);
+    };
+    connectBody?.addEventListener("scroll", handleConnectScroll, { passive: true });
+    modal.addEventListener("scroll", handleConnectScroll, { passive: true });
+
     // Escape key
     connectKeydownHandler = (e) => {
       if (e.key === "Escape") {
@@ -15390,6 +16297,15 @@
     listNavOpen = !!open;
     try { localStorage.setItem(LIST_NAV_KEY, listNavOpen ? "1" : "0"); } catch { /* ignore */ }
     applyListNavDom();
+    if (IS_JUEJIN) {
+      const moreBtn = document.querySelector(".wecom-rail-more, [data-rail-key='group']");
+      if (moreBtn) {
+        moreBtn.classList.toggle("is-on", listNavOpen);
+        moreBtn.classList.toggle("active", listNavOpen);
+        moreBtn.setAttribute("aria-expanded", listNavOpen ? "true" : "false");
+        moreBtn.title = listNavOpen ? "收起话题筛选" : "展开话题筛选";
+      }
+    }
   }
 
   function collectListNavItems() {
@@ -15652,9 +16568,119 @@
     }, 10000);
   }
 
+  async function publishJuejinPin(content, topicId = "") {
+    const text = String(content || "").trim();
+    if (!text) throw new Error("请输入沸点内容");
+    const payload = {
+      content: text,
+      sync_to_org: false
+    };
+    if (topicId) payload.topic_id = String(topicId);
+    return await juejinApi("/content_api/v1/short_msg/publish", payload);
+  }
+
+  function closeJuejinPublishModal() {
+    const modal = document.querySelector(".wecom-juejin-publish-dialog");
+    if (modal) modal.remove();
+  }
+
+  function openJuejinPublishModal() {
+    closeJuejinPublishModal();
+    const dialog = document.createElement("div");
+    dialog.className = "wecom-edit-dialog wecom-juejin-publish-dialog";
+    dialog.setAttribute("role", "dialog");
+    dialog.setAttribute("aria-modal", "true");
+    dialog.setAttribute("aria-labelledby", "wecom-juejin-publish-title");
+
+    dialog.innerHTML = `
+      <div class="wecom-edit-dialog-card" style="max-width:540px;width:92%;">
+        <div class="wecom-edit-dialog-head">
+          <strong id="wecom-juejin-publish-title" class="wecom-edit-dialog-title">发布沸点动态</strong>
+          <button type="button" class="wecom-edit-dialog-close" aria-label="关闭">×</button>
+        </div>
+        <div class="wecom-juejin-publish-body" style="display:flex;flex-direction:column;gap:12px;">
+          <textarea class="wecom-juejin-publish-input" placeholder="分享技术见解、生活点滴或摸鱼日常..." rows="5" maxlength="1000" style="width:100%;resize:vertical;padding:10px 12px;border:1px solid var(--wc-border);border-radius:6px;background:var(--wc-bg-2, #fff);color:var(--wc-text);font-size:14px;outline:none;font-family:inherit;line-height:1.5;box-sizing:border-box;"></textarea>
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+            <div style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--wc-text-2, #646a73);">
+              <span>选择圈子：</span>
+              <select class="wecom-juejin-topic-select" style="padding:4px 8px;border-radius:4px;border:1px solid var(--wc-border);background:var(--wc-bg-2, #fff);color:var(--wc-text);font-size:13px;outline:none;">
+                <option value="6824710203301167112">上班摸鱼</option>
+                <option value="6824710203112423437">代码人生</option>
+                <option value="6824710203108229134">掘友求助</option>
+                <option value="6824710203204698126">树洞吐槽</option>
+                <option value="6819970850532360206">下班打卡</option>
+                <option value="">(不选圈子)</option>
+              </select>
+            </div>
+            <span class="wecom-juejin-char-count" style="font-size:12px;color:var(--wc-text-3, #8F959E);">0 / 1000</span>
+          </div>
+        </div>
+        <div class="wecom-edit-dialog-actions" style="margin-top:14px;">
+          <button type="button" class="wecom-juejin-publish-cancel">取消</button>
+          <button type="button" class="wecom-edit-save wecom-juejin-publish-submit">立即发布</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(dialog);
+
+    const textarea = dialog.querySelector(".wecom-juejin-publish-input");
+    const charCount = dialog.querySelector(".wecom-juejin-char-count");
+    const select = dialog.querySelector(".wecom-juejin-topic-select");
+    const submitBtn = dialog.querySelector(".wecom-juejin-publish-submit");
+    const cancelBtn = dialog.querySelector(".wecom-juejin-publish-cancel");
+    const closeBtn = dialog.querySelector(".wecom-edit-dialog-close");
+
+    textarea?.focus();
+
+    textarea?.addEventListener("input", () => {
+      if (charCount) charCount.textContent = `${textarea.value.length} / 1000`;
+    });
+
+    const close = () => closeJuejinPublishModal();
+    cancelBtn?.addEventListener("click", close);
+    closeBtn?.addEventListener("click", close);
+
+    dialog.addEventListener("click", (e) => {
+      if (e.target === dialog) close();
+    });
+
+    const onKeydown = (e) => {
+      if (e.key === "Escape") {
+        close();
+        document.removeEventListener("keydown", onKeydown);
+      } else if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        submitBtn?.click();
+      }
+    };
+    document.addEventListener("keydown", onKeydown);
+
+    submitBtn?.addEventListener("click", async () => {
+      const text = textarea?.value?.trim();
+      if (!text) {
+        showWecomToast("请输入沸点内容", "warning");
+        textarea?.focus();
+        return;
+      }
+      submitBtn.disabled = true;
+      submitBtn.textContent = "发布中…";
+      const topicId = select?.value || "";
+      try {
+        await publishJuejinPin(text, topicId);
+        showWecomToast("沸点发布成功！", "success");
+        close();
+        loadList(listState.apiPath || "/pins/recommended", true);
+      } catch (err) {
+        showWecomToast(`发布失败：${err.message || "请先登录掘金"}`, "warning");
+        submitBtn.disabled = false;
+        submitBtn.textContent = "立即发布";
+      }
+    });
+  }
+
   function openNewTopic() {
     if (IS_JUEJIN) {
-      window.open("https://juejin.cn/pins/recommended", "_blank", "noopener,noreferrer");
+      openJuejinPublishModal();
       return;
     }
     if (IS_V2EX) {
@@ -15774,7 +16800,11 @@
         if (action === "new-topic") {
           openNewTopic();
         } else if (action === "nav") {
-          setNav2Open(!isNav2Open());
+          if (IS_JUEJIN) {
+            setListNavOpen(!listNavOpen);
+          } else {
+            setNav2Open(!isNav2Open());
+          }
         }
         return;
       }
@@ -15853,7 +16883,7 @@
         }
         // 如果是通知列表项或带有通知/回复特征，消除头像通知角标
         const isNotifItem = (
-          (typeof listState !== "undefined" && typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications")) ||
+          (typeof listState !== "undefined" && typeof listState.apiPath === "string" && (listState.apiPath.startsWith("/notifications") || listState.apiPath.startsWith("/notification"))) ||
           conv.classList.contains("is-notif") ||
           Boolean(conv.dataset.targetReplyId || conv.dataset.targetFloor || conv.dataset.targetAnchor) ||
           Boolean(conv.querySelector(".wecom-notif-tag")) ||
@@ -15866,6 +16896,13 @@
         }
         const rawTopicId = conv.dataset.topicId || topicIdFromPath(href);
         const topicId = IS_JUEJIN ? String(rawTopicId || "") : Number(rawTopicId);
+        if (IS_JUEJIN && String(topicId).startsWith("notif_")) {
+          const matched = listState.topics.find((t) => String(t.id) === String(topicId));
+          if (matched?.open_url) {
+            window.open(matched.open_url, "_blank", "noopener,noreferrer");
+            return;
+          }
+        }
         if (!topicId) {
           navigateInApp(href);
           return;
@@ -15988,6 +17025,8 @@
           <button type="button" class="wecom-chip" data-chip="hot">热门</button>
           <button type="button" class="wecom-chip" data-chip="topic_6824710203301167112">上班摸鱼</button>
           <button type="button" class="wecom-chip" data-chip="topic_6824710203112423437">代码人生</button>
+          <button type="button" class="wecom-chip" data-chip="topic_6824710203108229134">掘友求助</button>
+          <button type="button" class="wecom-chip" data-chip="topic_6824710203204698126">树洞吐槽</button>
         `
       : (IS_V2EX
       ? `
@@ -16125,7 +17164,13 @@
     }
     let v2exAuthor = topic.v2ex_author || (IS_V2EX ? topic.last_poster_username : "");
     if (v2exAuthor === "楼主") v2exAuthor = "";
-    const authorAttr = v2exAuthor ? ` data-user-card="${escapeHtml(v2exAuthor)}" role="button" tabindex="0" title="查看 ${escapeHtml(v2exAuthor)} 的资料"` : "";
+    let authorAttr = v2exAuthor ? ` data-user-card="${escapeHtml(v2exAuthor)}" role="button" tabindex="0" title="查看 ${escapeHtml(v2exAuthor)} 的资料"` : "";
+    if (IS_JUEJIN && topic.last_poster_username) {
+      const jAuthor = topic.last_poster_username;
+      const jUid = topic.user_id || topic.author_info?.user_id;
+      const uidAttr = jUid ? ` data-user-id="${escapeHtml(String(jUid))}"` : "";
+      authorAttr = ` data-user-card="${escapeHtml(jAuthor)}" role="button" tabindex="0" title="查看 ${escapeHtml(jAuthor)} 的资料"${uidAttr}`;
+    }
     if (topic.v2ex_avatar) {
       return `<span class="wecom-conv-avatar"${authorAttr}><img src="${escapeHtml(fullAvatarUrl(topic.v2ex_avatar))}" alt="" loading="lazy"></span>`;
     }
@@ -16167,7 +17212,7 @@
       topic.notification_text ||
       topic.node_name === "通知" ||
       topic.notif_type ||
-      (typeof listState !== "undefined" && typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications"))
+      (typeof listState !== "undefined" && typeof listState.apiPath === "string" && (listState.apiPath.startsWith("/notifications") || listState.apiPath.startsWith("/notification")))
     );
     let notifText = topic.notification_text || "";
     if (notifText && topic.last_poster_username && topic.last_poster_username !== "楼主") {
@@ -16291,7 +17336,7 @@
     const body = document.querySelector(".wecom-list-body");
     if (!body) return;
     const usersById = listState.usersById || {};
-    const isNotifs = typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications");
+    const isNotifs = typeof listState.apiPath === "string" && (listState.apiPath.startsWith("/notifications") || listState.apiPath.startsWith("/notification"));
     const emptyNotice = isNotifs
       ? (listState.topics.length ? "没有更多提醒了" : "暂无未读提醒")
       : (listState.topics.length ? "没有更多了" : "");
@@ -16312,7 +17357,7 @@
     const body = document.querySelector(".wecom-list-body");
     if (!body) return;
     const usersById = listState.usersById || {};
-    const isNotifs = typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications");
+    const isNotifs = typeof listState.apiPath === "string" && (listState.apiPath.startsWith("/notifications") || listState.apiPath.startsWith("/notification"));
     const emptyNotice = isNotifs
       ? (listState.topics.length ? "没有更多提醒了" : "暂无未读提醒")
       : (listState.topics.length ? "没有更多了" : "");
@@ -16758,7 +17803,9 @@
         statusEl.classList.remove("is-clickable");
       }
       try {
-        const res = await fetchJuejinPinsList(listState.apiPath, listState.juejinCursor);
+        const res = listState.apiPath.startsWith("/notification")
+          ? await fetchJuejinNotificationsList(listState.juejinCursor)
+          : await fetchJuejinPinsList(listState.apiPath, listState.juejinCursor);
         if (requestSerial !== listState.requestSerial) return;
         const existing = new Set(listState.topics.map((t) => String(t.id)));
         const fresh = res.topics.filter((t) => !existing.has(String(t.id)));
@@ -18271,7 +19318,11 @@
         <div class="wecom-chat-tools">
           <button type="button" class="wecom-icon-btn wecom-chat-avatar-toggle${isHideChatAvatar() ? " is-active" : ""}" title="${isHideChatAvatar() ? "显示对话头像" : "隐藏对话头像"}" aria-label="隐藏对话头像" aria-pressed="${isHideChatAvatar() ? "true" : "false"}">${ICONS.userOff}</button>
           <button type="button" class="wecom-icon-btn wecom-chat-members-toggle" title="群成员与详情">${ICONS.users}</button>
+          ${IS_JUEJIN ? `
+          <button type="button" class="wecom-icon-btn wecom-open-pin-web" title="在原站打开沸点 ↗" aria-label="在原站打开沸点">${ICONS.external}</button>
+          ` : `
           <button type="button" class="wecom-icon-btn wecom-topic-bookmark" title="收藏话题" aria-label="收藏话题" aria-pressed="false">${ICONS.bookmark}</button>
+          `}
           <button type="button" class="wecom-icon-btn wecom-watermark-settings" title="背景水印设置" aria-label="背景水印设置" aria-expanded="false" aria-pressed="false">${ICONS.watermark}</button>
           <div class="wecom-platform-switcher">
             <button type="button" class="wecom-icon-btn wecom-platform-btn" aria-haspopup="true" aria-expanded="false" title="切换社区平台">
@@ -18933,8 +19984,18 @@
       location.reload();
       return true;
     }
+    if (event.target.closest(".wecom-open-pin-web")) {
+      consumeClick(event);
+      if (chatState.topicId) {
+        window.open(`https://juejin.cn/pin/${chatState.topicId}`, "_blank", "noopener,noreferrer");
+      } else {
+        showWecomToast("当前未打开任何沸点", "info");
+      }
+      return true;
+    }
     if (event.target.closest(".wecom-topic-bookmark")) {
       consumeClick(event);
+      if (IS_JUEJIN) return true;
       if (IS_V2EX) {
         const wasFavorited = Boolean(chatState.v2exTopicFavorited);
         toggleV2exTopicFavorite().catch((error) => {
@@ -20679,7 +21740,7 @@
     const panel = button?.closest(".wecom-chat-panel");
     const input = panel?.querySelector(".wecom-chat-compose");
     if (action === "emoji") {
-      if (IS_V2EX) {
+      if (IS_V2EX || IS_JUEJIN) {
         toggleV2exEmojiPicker(button);
         return;
       }
@@ -20999,6 +22060,7 @@
   }
 
   function getEmberOwner() {
+    if (IS_V2EX || IS_JUEJIN) return null;
     try {
       if (window.Discourse?.__container__) return window.Discourse.__container__;
 
@@ -21053,7 +22115,7 @@
   function syncUserCardElement(selector, user) {
     const element = document.querySelector(selector);
     if (!element) return;
-    for (const attribute of ["data-user-card", "role", "tabindex", "aria-label", "title"]) {
+    for (const attribute of ["data-user-card", "role", "tabindex", "aria-label", "title", "data-user-id"]) {
       element.removeAttribute(attribute);
     }
     const identity = userCardIdentity(user);
@@ -21063,6 +22125,10 @@
     element.tabIndex = 0;
     element.setAttribute("aria-label", identity.label);
     element.title = identity.label;
+    const uid = user?.user_id ?? user?.id;
+    if (uid) {
+      element.dataset.userId = String(uid);
+    }
   }
 
   function openOriginalUserCard(trigger, event) {
@@ -21075,12 +22141,21 @@
       throw new Error("用户头像缺少 data-user-card");
     }
     if (IS_JUEJIN) {
-      const uid = trigger.dataset.userId;
-      if (uid) {
-        window.open(`https://juejin.cn/user/${uid}`, "_blank");
-      } else {
-        showWecomToast(`掘友：${username}`, "info");
+      let uid = trigger?.dataset?.userId;
+      if (!uid) {
+        const msg = trigger?.closest?.(".wecom-msg");
+        if (msg) {
+          const postNumber = Number(msg.dataset?.postNumber);
+          const post = chatState.postsByNumber?.get(postNumber);
+          if (post?.user_id) uid = String(post.user_id);
+        }
       }
+      if (!uid && chatState.juejinPin?.author_user_info?.user_id) {
+        if (chatState.juejinPin.author_user_info.user_name === username) {
+          uid = String(chatState.juejinPin.author_user_info.user_id);
+        }
+      }
+      openJuejinMemberCard(username, uid, trigger, event);
       return;
     }
     if (IS_V2EX) {
@@ -23527,11 +24602,107 @@
     return chatState.stream.findIndex((candidate) => String(candidate) === String(id));
   }
 
+  /**
+   * 视口无感锚定：捕获当前视口内可见的首个消息气泡作为基准锚点
+   * 当轮询或后台在前面/中间插入新回复时，精确计算锚点位移并同步补偿，实现 0 偏移无感阅读
+   */
+  function captureChatScrollAnchor(body) {
+    if (!body) return null;
+    const containerRect = body.getBoundingClientRect();
+    const prevScrollTop = body.scrollTop;
+    const prevScrollHeight = body.scrollHeight;
+    const clientHeight = body.clientHeight;
+    const wasNearBottom = clientHeight > 0 && (prevScrollHeight - (prevScrollTop + clientHeight) <= 32);
+
+    const messages = body.querySelectorAll(".wecom-msg");
+    let anchorEl = null;
+    let anchorOffsetTop = 0;
+    let anchorPostNumber = null;
+    let anchorPostId = "";
+
+    for (const msg of messages) {
+      const r = msg.getBoundingClientRect();
+      if (r.bottom > containerRect.top + 1) {
+        anchorEl = msg;
+        anchorOffsetTop = r.top - containerRect.top;
+        anchorPostNumber = Number(msg.dataset.postNumber) || null;
+        anchorPostId = String(msg.dataset.postId || "");
+        break;
+      }
+    }
+
+    return {
+      prevScrollTop,
+      prevScrollHeight,
+      clientHeight,
+      wasNearBottom,
+      containerRectTop: containerRect.top,
+      anchorEl,
+      anchorOffsetTop,
+      anchorPostNumber,
+      anchorPostId
+    };
+  }
+
+  /**
+   * 视口无感锚定恢复：无论新回复插入在前面还是后面，确保用户眼前的阅读目标精确停留在原像素位置
+   */
+  function restoreChatScrollAnchor(body, anchor, options = {}) {
+    if (!body || !anchor) return;
+    const prevScrollTop = anchor.prevScrollTop;
+
+    let targetAnchor = anchor.anchorEl;
+    if (!targetAnchor || !targetAnchor.isConnected) {
+      if (anchor.anchorPostNumber) {
+        targetAnchor = body.querySelector(`.wecom-msg[data-post-number="${anchor.anchorPostNumber}"]`);
+      }
+      if (!targetAnchor && anchor.anchorPostId) {
+        targetAnchor = body.querySelector(`.wecom-msg[data-post-id="${anchor.anchorPostId}"]`);
+      }
+    }
+
+    let expectedScrollTop = prevScrollTop;
+    const applyAnchor = () => {
+      if (!body.isConnected) return;
+      const currentContainerRect = body.getBoundingClientRect();
+      if (targetAnchor && targetAnchor.isConnected) {
+        const newRect = targetAnchor.getBoundingClientRect();
+        const currentOffsetTop = newRect.top - currentContainerRect.top;
+        const drift = currentOffsetTop - anchor.anchorOffsetTop;
+        if (Math.abs(drift) >= 0.5) {
+          body.scrollTop += drift;
+          expectedScrollTop = body.scrollTop;
+        }
+      } else {
+        body.scrollTop = prevScrollTop;
+        expectedScrollTop = body.scrollTop;
+      }
+    };
+
+    applyAnchor();
+
+    // 双重保证：在下一帧（DOM/图片排版稳定后）若用户未主动滚动，进行微调以消除异步渲染跳动
+    requestAnimationFrame(() => {
+      if (Math.abs(body.scrollTop - expectedScrollTop) <= 1.5) {
+        applyAnchor();
+      }
+    });
+  }
+
   function appendFreshPosts(posts, body, options = {}) {
     if (!body || !Array.isArray(posts) || !posts.length) return 0;
     if (body.dataset.topicId && chatState.topicId && (IS_JUEJIN ? String(body.dataset.topicId) !== String(chatState.topicId) : Number(body.dataset.topicId) !== Number(chatState.topicId))) {
       return 0;
     }
+
+    const prevScrollTop = body.scrollTop;
+    const prevScrollHeight = body.scrollHeight;
+    // 判定用户此前是否已经在最底部附近（32px 以内），以此判断是否应该跟随最新回复
+    const wasNearBottom = body.clientHeight > 0 && (prevScrollHeight - (prevScrollTop + body.clientHeight) <= 32);
+
+    // 关键：在任何 DOM 修改（包括引用卡片同步、气泡插入、图片排版）前捕获视口锚点
+    const anchor = captureChatScrollAnchor(body);
+
     rememberChatPosts(posts);
     syncRenderedReplyReferences(posts, body);
     const renderedNumbers = new Set(
@@ -23546,26 +24717,23 @@
       })
       .sort((a, b) => postNumberOf(a) - postNumberOf(b));
     if (!fresh.length) {
+      restoreChatScrollAnchor(body, anchor, options);
       syncRenderedWindow(body);
       return 0;
     }
 
-    const prevScrollTop = body.scrollTop;
-    const prevScrollHeight = body.scrollHeight;
-    // 判定用户此前是否已经在最底部附近（32px 以内），以此判断是否应该跟随最新回复
-    const wasNearBottom = body.clientHeight > 0 && (prevScrollHeight - (prevScrollTop + body.clientHeight) <= 32);
-
     body.querySelector(".wecom-chat-empty")?.remove();
     const currentMax = Math.max(...renderedNumbers, 0);
     const moreBar = body.querySelector(".wecom-v2ex-more-bar");
-    let insertedAbove = false;
 
     if (isThreadViewEnabled() && !options.flat) {
       rememberChatPosts(fresh);
       rerenderCurrentChatMessages();
       const shouldScroll = options.scroll === true || (options.scroll !== false && wasNearBottom);
-      if (shouldScroll) {
+      if (shouldScroll && (options.scroll === true || !options.isPolling)) {
         body.scrollTop = body.scrollHeight;
+      } else {
+        restoreChatScrollAnchor(body, anchor, options);
       }
       return fresh.length;
     }
@@ -23583,9 +24751,6 @@
         const html = bubbleHtml(post, getCurrentUsername());
         if (target) {
           target.insertAdjacentHTML("beforebegin", html);
-          if (target.offsetTop <= prevScrollTop + body.clientHeight) {
-            insertedAbove = true;
-          }
         } else if (moreBar) {
           moreBar.insertAdjacentHTML("beforebegin", html);
         } else {
@@ -23596,25 +24761,14 @@
     hydrateChatImages(body);
     syncRenderedWindow(body);
 
-    // 仅当用户主动发帖（options.scroll === true）或此前已在最底部跟随时滚动至底部；
+    // 仅当用户主动发帖（options.scroll === true）或此前已在最底部且非轮询跟随时滚动至底部；
     // 轮询追加或明确禁止滚动的场景（options.isPolling 或 options.scroll === false）：严格锁定滚动条位置，绝不改变当前视口；
     // 用户在浏览上方历史楼层时，绝对禁止自动跳跃到底部，保护阅读进度与体验。
     const shouldScroll = options.scroll === true || (options.scroll !== false && wasNearBottom);
-    if (shouldScroll) {
+    if (shouldScroll && (options.scroll === true || !options.isPolling)) {
       body.scrollTop = body.scrollHeight;
-    } else if (insertedAbove && !wasNearBottom) {
-      const heightDiff = body.scrollHeight - prevScrollHeight;
-      if (heightDiff > 0) {
-        body.scrollTop = prevScrollTop + heightDiff;
-      }
     } else {
-      // 轮询或保持视口场景：锁定当前滚动条位置不变，阅读体验不被打断
-      body.scrollTop = prevScrollTop;
-      requestAnimationFrame(() => {
-        if (body.scrollTop !== prevScrollTop) {
-          body.scrollTop = prevScrollTop;
-        }
-      });
+      restoreChatScrollAnchor(body, anchor, options);
     }
     if (chatState.topicId && fresh.length) {
       const conv = document.querySelector(`.wecom-conv[data-topic-id="${chatState.topicId}"]`);
@@ -23956,7 +25110,7 @@
       }
       setCachedTopic(topicId, latestData);
       syncV2exPaginationFooter(currentBody, false);
-      if (currentBody.scrollTop !== prevScrollTop) {
+      if (totalAppended === 0 && currentBody.scrollTop !== prevScrollTop) {
         currentBody.scrollTop = prevScrollTop;
       }
 
@@ -24096,7 +25250,7 @@
         setCachedTopic(topicId, cached);
       }
 
-      if (currentBody.scrollTop !== prevScrollTop) {
+      if (totalAppended === 0 && currentBody.scrollTop !== prevScrollTop) {
         currentBody.scrollTop = prevScrollTop;
       }
 
@@ -24408,6 +25562,8 @@
     document.querySelector(".wecom-v2ex-nav2")?.remove();
     closeV2exUserPopover();
     closeV2exMemberCard();
+    closeJuejinMemberCard();
+    closeJuejinPublishModal();
     closeBase64InsertDialog();
     closeLinuxDoConnectModal();
     stopV2exTopicPolling();
@@ -24573,7 +25729,7 @@
   function isModalOrViewerOpen() {
     return Boolean(
       document.querySelector(
-        ".wecom-base64-insert-dialog:not([hidden]), .wecom-image-viewer:not([hidden]), .wecom-edit-dialog:not([hidden]), .wecom-watermark-dialog:not([hidden]), .wecom-boost-popover:not([hidden]), .wecom-base64-popover:not([hidden]), .wecom-v2ex-emoji-picker:not([hidden]), .dialog-holder, #discourse-modal-container .modal.show, #discourse-modal-container .modal.in, .d-modal"
+        ".wecom-v2ex-member-card:not([hidden]), .wecom-juejin-member-card:not([hidden]), .wecom-juejin-publish-dialog:not([hidden]), .wecom-base64-insert-dialog:not([hidden]), .wecom-image-viewer:not([hidden]), .wecom-edit-dialog:not([hidden]), .wecom-watermark-dialog:not([hidden]), .wecom-boost-popover:not([hidden]), .wecom-base64-popover:not([hidden]), .wecom-v2ex-emoji-picker:not([hidden]), .dialog-holder, #discourse-modal-container .modal.show, #discourse-modal-container .modal.in, .d-modal"
       )
     );
   }
@@ -24662,7 +25818,7 @@
       });
     }
 
-    const WECOM_UI_SEL = ".wecom-toast-container, .wecom-confirm-dialog, .wecom-connect-overlay, .wecom-connect-modal, .wecom-base64-insert-dialog, .wecom-v2ex-user-popover, .wecom-v2ex-member-card, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-rail-resizer, .wecom-list-resizer, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
+    const WECOM_UI_SEL = ".wecom-toast-container, .wecom-confirm-dialog, .wecom-connect-overlay, .wecom-connect-modal, .wecom-base64-insert-dialog, .wecom-v2ex-user-popover, .wecom-v2ex-member-card, .wecom-juejin-member-card, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-rail-resizer, .wecom-list-resizer, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
     const NATIVE_BRIDGE_SEL = "#reply-control, .dialog-holder, .dialog-container, #discourse-modal-container, .d-modal, .bootbox, .autocomplete, .autocomplete-container, .d-editor-popup, [data-identifier='emoji-picker'], .tag-chooser";
 
     function isWecomOrBridgeNode(node) {
