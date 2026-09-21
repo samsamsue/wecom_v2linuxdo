@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.67
+// @version      0.7.68
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -11282,7 +11282,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.67";
+  const SCRIPT_VERSION = "0.7.68";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -21853,8 +21853,15 @@
       if (IS_JUEJIN) {
         await submitJuejinComment(chatState.topicId, raw);
         completeComposerSubmission(input);
-        await loadTopic(chatState.topicId, true);
         const chatBody = document.querySelector(".wecom-chat-body");
+        let appended = await pollJuejinCurrentTopicOnce();
+        if (!appended) {
+          await delay(600);
+          appended = await pollJuejinCurrentTopicOnce();
+        }
+        if (!appended) {
+          await loadTopic(chatState.topicId, true);
+        }
         if (chatBody) {
           setTimeout(() => {
             chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: "smooth" });
@@ -23996,6 +24003,146 @@
     }
   }
 
+  /* ============================== 掘金 · 沸点 话题详情轮询与无感追加 ============================== */
+
+  let juejinTopicPollTimer = null;
+  let juejinTopicPollInFlight = false;
+  let juejinLastPollTime = 0;
+  const JUEJIN_TOPIC_POLL_INTERVAL_MS = 10000;
+
+  async function pollJuejinCurrentTopicOnce() {
+    if (!IS_JUEJIN) return 0;
+    const topicId = chatState.topicId;
+    if (!topicId || chatState.loading) return 0;
+    if (juejinTopicPollInFlight) return 0;
+    if (document.visibilityState !== "visible") return 0;
+    if (getViewMode() === "native" || otherThemeActive()) return 0;
+    const body = document.querySelector(".wecom-chat-body");
+    if (!body || body.querySelector(".wecom-chat-loading, .wecom-chat-error")) return 0;
+    if (body.dataset.topicId && !isSameTopic(body.dataset.topicId, topicId)) return 0;
+
+    juejinTopicPollInFlight = true;
+    juejinLastPollTime = Date.now();
+
+    try {
+      const commentResp = await juejinApi("/interact_api/v1/comment/list", {
+        item_id: String(topicId),
+        item_type: 4,
+        cursor: "0",
+        limit: 50,
+        client_type: 2608
+      });
+      if (!isSameTopic(chatState.topicId, topicId)) return 0;
+
+      const currentBody = document.querySelector(".wecom-chat-body");
+      if (!currentBody || !isSameTopic(currentBody.dataset.topicId, topicId)) return 0;
+      const prevScrollTop = currentBody.scrollTop;
+
+      const renderedPostIds = new Set(
+        [...currentBody.querySelectorAll(".wecom-msg[data-post-id]")]
+          .map((node) => String(node.dataset.postId))
+          .filter(Boolean)
+      );
+
+      const rawComments = commentResp?.data || [];
+      const freshRaw = rawComments.filter((c) => {
+        const cid = String(c?.comment_info?.comment_id || "");
+        return cid && !renderedPostIds.has(cid);
+      });
+
+      if (!freshRaw.length) return 0;
+      if (!isSameTopic(chatState.topicId, topicId)) return 0;
+
+      // 保持时间正序
+      freshRaw.sort((a, b) => Number(a?.comment_info?.ctime || 0) - Number(b?.comment_info?.ctime || 0));
+
+      const existingFloors = [...currentBody.querySelectorAll(".wecom-msg[data-post-number]")]
+        .map((node) => Number(node.dataset.postNumber))
+        .filter((n) => Number.isFinite(n) && n > 0);
+      const maxFloor = existingFloors.length ? Math.max(...existingFloors) : 1;
+
+      const freshPosts = freshRaw.map((c, i) => mapJuejinCommentToPost(c, maxFloor + 1 + i));
+
+      for (const post of freshPosts) {
+        if (!chatState.stream.includes(post.id)) {
+          chatState.stream.push(post.id);
+        }
+      }
+
+      const totalAppended = appendFreshPosts(freshPosts, currentBody, { isPolling: true, scroll: false });
+
+      const totalCount = Number(commentResp?.count) || ((chatState.replyTotal || 0) + freshPosts.length);
+      if (totalCount > (chatState.replyTotal || 0)) {
+        chatState.replyTotal = totalCount;
+        const sub = document.querySelector(".wecom-chat-sub");
+        if (sub) {
+          const maskDetail = isMaskTitleDetail();
+          if (maskDetail) {
+            sub.textContent = `企业内部群 · ${totalCount} 条消息`;
+          } else {
+            sub.textContent = `掘金 · 沸点 · ${totalCount} 条回复`;
+          }
+        }
+      }
+
+      const cached = getCachedTopic(topicId);
+      if (cached && cached.post_stream) {
+        if (!Array.isArray(cached.post_stream.posts)) cached.post_stream.posts = [];
+        cached.post_stream.posts.push(...freshPosts);
+        if (!Array.isArray(cached.post_stream.stream)) cached.post_stream.stream = [];
+        cached.post_stream.stream.push(...freshPosts.map((p) => p.id));
+        cached.reply_count = Math.max(cached.reply_count || 0, totalCount);
+        cached.posts_count = cached.reply_count + 1;
+        setCachedTopic(topicId, cached);
+      }
+
+      if (currentBody.scrollTop !== prevScrollTop) {
+        currentBody.scrollTop = prevScrollTop;
+      }
+
+      if (totalAppended > 0) {
+        const conv = document.querySelector(`.wecom-conv[data-topic-id="${topicId}"]`);
+        if (conv) {
+          const lastPost = freshPosts[freshPosts.length - 1];
+          const msgEl = conv.querySelector(".wecom-conv-msg");
+          if (msgEl && lastPost) {
+            const snippet = (lastPost.cooked || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+            msgEl.textContent = `${lastPost.username}: ${snippet.slice(0, 50)}`;
+          }
+          const timeEl = conv.querySelector(".wecom-conv-time");
+          if (timeEl) {
+            const postTimeMs = parseTimestamp(lastPost?.created_at) || Date.now();
+            timeEl.dataset.time = String(postTimeMs);
+            timeEl.textContent = formatTime(postTimeMs);
+          }
+        }
+      }
+
+      return totalAppended;
+    } catch (e) {
+      console.warn("[juejin-wecom] poll comments failed", e);
+      return 0;
+    } finally {
+      juejinTopicPollInFlight = false;
+    }
+  }
+
+  function startJuejinTopicPolling() {
+    if (juejinTopicPollTimer) clearInterval(juejinTopicPollTimer);
+    juejinTopicPollTimer = setInterval(() => {
+      if (IS_JUEJIN && chatState.topicId && document.visibilityState === "visible") {
+        pollJuejinCurrentTopicOnce();
+      }
+    }, JUEJIN_TOPIC_POLL_INTERVAL_MS);
+  }
+
+  function stopJuejinTopicPolling() {
+    if (juejinTopicPollTimer) {
+      clearInterval(juejinTopicPollTimer);
+      juejinTopicPollTimer = null;
+    }
+  }
+
   /* ============================== V2EX 未读通知后台静默轮询 ============================== */
 
   let v2exNotifPollTimer = null;
@@ -24265,6 +24412,7 @@
     closeLinuxDoConnectModal();
     stopV2exTopicPolling();
     stopV2exNotificationPolling();
+    stopJuejinTopicPolling();
     stopRelativeTimeRefresh();
     document.querySelector(".wecom-toast-container")?.remove();
     document.querySelector(".wecom-connect-overlay, .wecom-connect-modal")?.remove();
@@ -24505,6 +24653,11 @@
               pollV2exCurrentTopicOnce();
             }
           }
+          if (IS_JUEJIN) {
+            if (chatState.topicId && Date.now() - juejinLastPollTime >= 5000) {
+              pollJuejinCurrentTopicOnce();
+            }
+          }
         }
       });
     }
@@ -24623,6 +24776,10 @@
       }, 800);
       startV2exTopicPolling();
       startV2exNotificationPolling();
+    }
+
+    if (IS_JUEJIN) {
+      startJuejinTopicPolling();
     }
 
     // ⌘/Ctrl+K → 会话栏搜索（并同步原生 welcome-banner）

@@ -6992,3 +6992,37 @@ test("Test 98: Bubble hover tools isolation: Boost, bookmark, and edit tools res
   );
 });
 
+test("Test 99: Juejin Pins background comment polling and seamless fresh reply appending (v0.7.68)", () => {
+  assert.ok(
+    scriptContent.includes("async function pollJuejinCurrentTopicOnce()"),
+    "must define pollJuejinCurrentTopicOnce"
+  );
+  assert.ok(
+    scriptContent.includes("function startJuejinTopicPolling()"),
+    "must define startJuejinTopicPolling"
+  );
+  assert.ok(
+    scriptContent.includes("function stopJuejinTopicPolling()"),
+    "must define stopJuejinTopicPolling"
+  );
+  assert.ok(
+    scriptContent.includes("JUEJIN_TOPIC_POLL_INTERVAL_MS = 10000"),
+    "must define JUEJIN_TOPIC_POLL_INTERVAL_MS as 10000"
+  );
+  assert.ok(
+    scriptContent.includes("let appended = await pollJuejinCurrentTopicOnce();"),
+    "submitComposer must poll for newly submitted Juejin comment"
+  );
+  assert.ok(
+    scriptContent.includes("stopJuejinTopicPolling();"),
+    "cleanup must stop Juejin polling timer"
+  );
+  assert.ok(
+    scriptContent.includes("startJuejinTopicPolling();"),
+    "bootstrap must start Juejin polling timer"
+  );
+  assert.ok(
+    scriptContent.includes("pollJuejinCurrentTopicOnce();"),
+    "visibilitychange must trigger Juejin topic polling"
+  );
+});
