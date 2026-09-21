@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.64
+// @version      0.7.65
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -1099,7 +1099,7 @@
 
   function isHomePath(pathname) {
     if (IS_JUEJIN) {
-      return pathname === "/" || /^\/pins\b/.test(pathname) || /^\/pin\b/.test(pathname);
+      return !isTopicPath(pathname);
     }
     if (IS_V2EX) {
       return pathname === "/" || /^\/(recent|changes|notifications)\b/.test(pathname) || /^\/go\//.test(pathname);
@@ -2956,10 +2956,13 @@
     .${ROOT_CLASS}.${LOCK_CLASS} #Rightbar,
     .${ROOT_CLASS}.${LOCK_CLASS} #__nuxt,
     .${ROOT_CLASS}.${LOCK_CLASS} #juejin,
+    .${ROOT_CLASS}.${LOCK_CLASS} .pin_container,
+    .${ROOT_CLASS}.${LOCK_CLASS} .view-container,
     .${ROOT_CLASS}.${LOCK_CLASS} .main-header,
     .${ROOT_CLASS}.${LOCK_CLASS} .main-container,
     .${ROOT_CLASS}.${LOCK_CLASS} .global-component-box,
     .${ROOT_CLASS}.${LOCK_CLASS} .suspension-panel {
+      display: none !important;
       visibility: hidden !important;
       height: 0 !important;
       overflow: hidden !important;
@@ -11277,7 +11280,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.64";
+  const SCRIPT_VERSION = "0.7.65";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -12919,8 +12922,25 @@
 
   /* ============================== 掘金 · 沸点 (Pins) API 模块 ============================== */
 
+  function getJuejinUuid() {
+    try {
+      let uid = localStorage.getItem("wecom_juejin_uuid");
+      if (!uid) {
+        uid = String(Date.now()) + String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
+        localStorage.setItem("wecom_juejin_uuid", uid);
+      }
+      return uid;
+    } catch {
+      return "7000000000000000000";
+    }
+  }
+
   async function juejinApi(endpoint, body = null, options = {}) {
-    const url = endpoint.startsWith("http") ? endpoint : `https://api.juejin.cn${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
+    const sep = endpoint.includes("?") ? "&" : "?";
+    const fullEndpoint = endpoint.includes("aid=")
+      ? endpoint
+      : `${endpoint}${sep}aid=2608&uuid=${getJuejinUuid()}`;
+    const url = fullEndpoint.startsWith("http") ? fullEndpoint : `https://api.juejin.cn${fullEndpoint.startsWith("/") ? "" : "/"}${fullEndpoint}`;
     const opts = {
       method: body ? "POST" : "GET",
       credentials: "include",
@@ -24522,7 +24542,16 @@
     window.addEventListener("popstate", scheduleApply);
     window.addEventListener("hashchange", scheduleApply);
     window.addEventListener("beforeunload", saveCurrentTopicReadingPosition);
-    document.addEventListener("DOMContentLoaded", scheduleApply, { once: true });
+    if (document.readyState === "interactive" || document.readyState === "complete") {
+      scheduleApply();
+    } else {
+      document.addEventListener("DOMContentLoaded", scheduleApply, { once: true });
+    }
+    if (IS_JUEJIN) {
+      setTimeout(scheduleApply, 50);
+      setTimeout(scheduleApply, 300);
+      setTimeout(scheduleApply, 1000);
+    }
     document.addEventListener("turbo:load", scheduleApply);
     document.addEventListener("page:changed", scheduleApply);
     scheduleScriptUpdateCheck();
