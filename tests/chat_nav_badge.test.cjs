@@ -6888,10 +6888,71 @@ test("Test 96: list pagination incremental append to avoid innerHTML redraw (app
   assert.ok(inserted[0].html.includes("第二页新增话题 B"));
 });
 
+test("Test 97: Juejin Pins (掘金 · 沸点) platform support, 64-bit ID string safety, routing, and conversation mappings", () => {
+  // 1. Metadata matches and host detection
+  assert.ok(scriptContent.includes("// @match        *://juejin.cn/*"), "metadata must declare @match for juejin.cn");
+  assert.ok(scriptContent.includes("// @match        https://juejin.cn/*"), "metadata must declare @match https for juejin.cn");
+  assert.ok(scriptContent.includes("// @connect      api.juejin.cn"), "metadata must declare @connect api.juejin.cn");
+  assert.ok(scriptContent.includes("const IS_JUEJIN = /(?:^|\\.)juejin\\.cn$/i.test(CURRENT_HOST);"), "must define IS_JUEJIN regex");
+  assert.ok(scriptContent.includes('const CURRENT_PLATFORM = IS_JUEJIN ? "juejin" : (IS_V2EX ? "v2ex" : "linuxdo");'), "must include juejin in CURRENT_PLATFORM");
 
+  // Host regex simulation
+  const juejinRegex = /(?:^|\.)juejin\.cn$/i;
+  assert.ok(juejinRegex.test("juejin.cn"));
+  assert.ok(juejinRegex.test("www.juejin.cn"));
+  assert.ok(juejinRegex.test("api.juejin.cn"));
+  assert.ok(!juejinRegex.test("linux.do"));
+  assert.ok(!juejinRegex.test("v2ex.com"));
 
+  // 2. CSS suppression for Juejin elements
+  assert.ok(
+    scriptContent.includes(".${ROOT_CLASS}.${LOCK_CLASS} #juejin,") &&
+    scriptContent.includes(".${ROOT_CLASS}.${LOCK_CLASS} .main-container,") &&
+    scriptContent.includes(".${ROOT_CLASS}.${LOCK_CLASS} .global-component-box,") &&
+    scriptContent.includes(".${ROOT_CLASS}.${LOCK_CLASS} .suspension-panel"),
+    "must suppress Juejin DOM containers under WeCom theme"
+  );
 
+  // 3. 64-bit ID precision preservation
+  const testPinId = "7687440193650475014";
+  assert.strictEqual(Number(testPinId).toString(), "7687440193650475000", "sanity: Number loses precision for 19-digit IDs");
 
+  // topicRouteFromPath simulation
+  function simTopicRouteFromPath(pathname, isJuejin) {
+    if (isJuejin) {
+      const m = String(pathname || "").match(/\/pin\/([0-9a-zA-Z_-]+)/);
+      if (m) return { topicId: m[1], postNumber: 0, slug: "" };
+      return { topicId: null, postNumber: 0, slug: "" };
+    }
+    const parts = String(pathname || "").split("/").filter(Boolean);
+    if (parts[0] === "t") return { topicId: Number(parts[2] || parts[1]), postNumber: 0, slug: "" };
+    return { topicId: null, postNumber: 0, slug: "" };
+  }
 
+  const routeRes = simTopicRouteFromPath("/pin/" + testPinId, true);
+  assert.strictEqual(routeRes.topicId, testPinId, "must preserve string ID for 64-bit pin ID");
 
+  // isSameTopic simulation
+  function simIsSameTopic(id1, id2, isJuejin) {
+    if (id1 == null || id2 == null) return false;
+    if (isJuejin) return String(id1) === String(id2);
+    return Number(id1) === Number(id2);
+  }
+  assert.ok(simIsSameTopic(testPinId, testPinId, true));
+  assert.ok(!simIsSameTopic(testPinId, "7687440193650475000", true));
 
+  // 4. Data mapping functions
+  assert.ok(scriptContent.includes("function mapJuejinPinToTopic(item)"), "must define mapJuejinPinToTopic");
+  assert.ok(scriptContent.includes("function mapJuejinPinToPost(pin)"), "must define mapJuejinPinToPost");
+  assert.ok(scriptContent.includes("function mapJuejinCommentToPost(c, postNumber)"), "must define mapJuejinCommentToPost");
+  assert.ok(scriptContent.includes("async function fetchJuejinPinsList("), "must define fetchJuejinPinsList");
+  assert.ok(scriptContent.includes("async function fetchJuejinPinData("), "must define fetchJuejinPinData");
+  assert.ok(scriptContent.includes("async function submitJuejinComment("), "must define submitJuejinComment");
+
+  // 5. UI integrations
+  assert.ok(scriptContent.includes('const searchPlaceholder = IS_JUEJIN ? "搜索掘金沸点" :'), "search placeholder for Juejin");
+  assert.ok(scriptContent.includes('data-target-platform="juejin"'), "platform switcher includes juejin option");
+  assert.ok(scriptContent.includes('window.location.href = "https://juejin.cn/pins"'), "platform switcher redirects to juejin pins");
+  assert.ok(scriptContent.includes('endpoint = isLiked ? "/interact_api/v1/digg/cancel" : "/interact_api/v1/digg/save"'), "toggleLike hooks juejin digg save/cancel");
+  assert.ok(scriptContent.includes('submitJuejinComment(chatState.topicId, raw)'), "submitComposer hooks submitJuejinComment");
+});

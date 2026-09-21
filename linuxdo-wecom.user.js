@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.63
+// @version      0.7.64
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -10,9 +10,14 @@
 // @match        https://*.v2ex.com/*
 // @match        *://v2ex.com/*
 // @match        https://v2ex.com/*
+// @match        *://juejin.cn/*
+// @match        https://juejin.cn/*
+// @match        *://*.juejin.cn/*
+// @match        https://*.juejin.cn/*
 // @connect      api.imgur.com
 // @connect      imgur.com
 // @connect      connect.linux.do
+// @connect      api.juejin.cn
 // @icon         https://linux.do/favicon.ico
 // @homepageURL  https://github.com/samsamsue/wecom_v2linuxdo
 // @updateURL    https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js
@@ -44,12 +49,19 @@
   const TITLEBAR_HEIGHT = 0; // 企业微信经典布局无全局顶栏
   const CURRENT_HOST = typeof location !== "undefined" ? location.hostname : "";
   const IS_V2EX = /(?:^|\.)v2ex\.com$/i.test(CURRENT_HOST);
-  const IS_LINUXDO = !IS_V2EX;
-  const CURRENT_PLATFORM = IS_V2EX ? "v2ex" : "linuxdo";
+  const IS_JUEJIN = /(?:^|\.)juejin\.cn$/i.test(CURRENT_HOST);
+  const IS_LINUXDO = !IS_V2EX && !IS_JUEJIN;
+  const CURRENT_PLATFORM = IS_JUEJIN ? "juejin" : (IS_V2EX ? "v2ex" : "linuxdo");
+
+  function isSameTopic(id1, id2) {
+    if (id1 == null || id2 == null) return false;
+    if (IS_JUEJIN) return String(id1) === String(id2);
+    return Number(id1) === Number(id2);
+  }
 
   const WATERMARK_ENABLED_KEY = "linuxdo-wecom-watermark-enabled";
   const WATERMARK_TEXT_KEY = "linuxdo-wecom-watermark-text";
-  const DEFAULT_WATERMARK_TEXT = IS_V2EX ? "v2ex.com · 内部资料" : "linux.do · 内部资料";
+  const DEFAULT_WATERMARK_TEXT = IS_JUEJIN ? "juejin.cn · 内部资料" : (IS_V2EX ? "v2ex.com · 内部资料" : "linux.do · 内部资料");
   const WATERMARK_MAX_LENGTH = 48;
   const WATERMARK_TILE_WIDTH = 300;
   const WATERMARK_TILE_HEIGHT = 160;
@@ -272,8 +284,10 @@
   function userCardAttributes(user) {
     const identity = userCardIdentity(user);
     if (!identity) return "";
+    const uid = user?.user_id ?? user?.id;
+    const uidAttr = uid ? ` data-user-id="${escapeHtml(String(uid))}"` : "";
     return ` data-user-card="${escapeHtml(identity.username)}" role="button" tabindex="0"` +
-      ` aria-label="${escapeHtml(identity.label)}" title="${escapeHtml(identity.label)}"`;
+      ` aria-label="${escapeHtml(identity.label)}" title="${escapeHtml(identity.label)}"${uidAttr}`;
   }
 
   /* ---------- 左上角侧栏伪装头像（企业高管/职员商务剪影） ---------- */
@@ -864,6 +878,18 @@
 
   function getCurrentUserIdentity() {
     if (cachedUsername || cachedUserId) return { username: cachedUsername, id: cachedUserId };
+    if (IS_JUEJIN) {
+      const userLink = document.querySelector(".avatar-wrapper a[href*='/user/'], .user-dropdown a[href*='/user/'], a.user-link[href*='/user/'], .nav-item a[href*='/user/']");
+      if (userLink) {
+        const match = (userLink.getAttribute("href") || "").match(/\/user\/([^/?#]+)/);
+        if (match && match[1]) {
+          const img = userLink.querySelector("img");
+          const name = img?.alt || "";
+          rememberCurrentUser({ username: name || match[1], id: match[1] });
+          return { username: cachedUsername, id: cachedUserId };
+        }
+      }
+    }
     if (IS_V2EX) {
       const memberLink = document.querySelector("#Rightbar a[href^='/member/'], #Top a[href^='/member/']");
       if (memberLink) {
@@ -945,11 +971,17 @@
   }
 
   function isTopicPath(pathname) {
+    if (IS_JUEJIN) return /^\/pin\//.test(pathname);
     return /^\/t\//.test(pathname);
   }
 
   /** /t/:slug/:id(/:post) 或 /t/:id(/:post) */
   function topicRouteFromPath(pathname) {
+    if (IS_JUEJIN) {
+      const m = String(pathname || "").match(/\/pin\/([0-9a-zA-Z_-]+)/);
+      if (m) return { topicId: m[1], postNumber: 0, slug: "" };
+      return { topicId: null, postNumber: 0, slug: "" };
+    }
     const parts = String(pathname || "").split("/").filter(Boolean);
     if (parts[0] !== "t" || parts.length < 2) return { topicId: null, postNumber: 0, slug: "" };
     const postOf = (value) => (/^\d+$/.test(value || "") ? Number(value) : 0);
@@ -1066,6 +1098,9 @@
   }
 
   function isHomePath(pathname) {
+    if (IS_JUEJIN) {
+      return pathname === "/" || /^\/pins\b/.test(pathname) || /^\/pin\b/.test(pathname);
+    }
     if (IS_V2EX) {
       return pathname === "/" || /^\/(recent|changes|notifications)\b/.test(pathname) || /^\/go\//.test(pathname);
     }
@@ -1096,6 +1131,14 @@
   }
 
   function listApiForPath(pathname, search = "") {
+    if (IS_JUEJIN) {
+      if (pathname.includes("/pins/hot")) return "hot";
+      if (pathname.includes("/pins/topic/")) {
+        const m = pathname.match(/\/pins\/topic\/([^/?#]+)/);
+        return m ? "topic_" + m[1] : "recommend";
+      }
+      return "recommend";
+    }
     if (IS_V2EX) {
       const query = String(search || "");
       if (query.includes("tab=hot")) return "/api/topics/hot.json";
@@ -2910,7 +2953,13 @@
     .${ROOT_CLASS}.${LOCK_CLASS} #Wrapper,
     .${ROOT_CLASS}.${LOCK_CLASS} #Bottom,
     .${ROOT_CLASS}.${LOCK_CLASS} #Main,
-    .${ROOT_CLASS}.${LOCK_CLASS} #Rightbar {
+    .${ROOT_CLASS}.${LOCK_CLASS} #Rightbar,
+    .${ROOT_CLASS}.${LOCK_CLASS} #__nuxt,
+    .${ROOT_CLASS}.${LOCK_CLASS} #juejin,
+    .${ROOT_CLASS}.${LOCK_CLASS} .main-header,
+    .${ROOT_CLASS}.${LOCK_CLASS} .main-container,
+    .${ROOT_CLASS}.${LOCK_CLASS} .global-component-box,
+    .${ROOT_CLASS}.${LOCK_CLASS} .suspension-panel {
       visibility: hidden !important;
       height: 0 !important;
       overflow: hidden !important;
@@ -11228,7 +11277,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.63";
+  const SCRIPT_VERSION = "0.7.64";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -11414,12 +11463,12 @@
   const ORG_ICON_KEY = "linuxdo-wecom-org-icon";
 
   function getOrgName() {
-    const defaultOrg = IS_V2EX ? "v2ex.com" : "linux.do";
+    const defaultOrg = IS_JUEJIN ? "稀土掘金" : (IS_V2EX ? "v2ex.com" : "linux.do");
     try { return localStorage.getItem(ORG_NAME_KEY) || defaultOrg; } catch { return defaultOrg; }
   }
 
   function getOrgIcon() {
-    const defaultIcon = IS_V2EX ? "v2" : "do";
+    const defaultIcon = IS_JUEJIN ? "掘金" : (IS_V2EX ? "v2" : "do");
     try { return localStorage.getItem(ORG_ICON_KEY) || defaultIcon; } catch { return defaultIcon; }
   }
 
@@ -11919,7 +11968,7 @@
       avatarEl.setAttribute("title", `当前头像：${disguisePreset.name}（右键切换伪装头像样式）`);
     } else {
       // 原生头像兜底（若选择 native）
-      const img = document.querySelector(IS_V2EX ? "#Rightbar .avatar, #Top .avatar, #current-user img" : "#current-user img");
+      const img = document.querySelector(IS_JUEJIN ? ".avatar-wrapper img, .user-dropdown img, .nav-item .avatar, img[src*='user-avatar']" : (IS_V2EX ? "#Rightbar .avatar, #Top .avatar, #current-user img" : "#current-user img"));
       const name = getCurrentUsername();
       if (img && img.src) {
         if (avatarEl.dataset.bound !== img.src) {
@@ -12858,6 +12907,221 @@
   let listNavOpen = (() => {
     try { return localStorage.getItem(LIST_NAV_KEY) === "1"; } catch { return false; }
   })();
+
+  const DEFAULT_JUEJIN_LIST_NAV = [
+    { href: "/pins/recommended", label: "推荐" },
+    { href: "/pins/hot", label: "热门" },
+    { href: "/pins/topic/6824710203301167112", label: "上班摸鱼" },
+    { href: "/pins/topic/6824710203112423437", label: "代码人生" },
+    { href: "/pins/topic/7091610245012815879", label: "掘金相亲角" },
+    { href: "/pins/topic/6819970850532360206", label: "下班打卡" }
+  ];
+
+  /* ============================== 掘金 · 沸点 (Pins) API 模块 ============================== */
+
+  async function juejinApi(endpoint, body = null, options = {}) {
+    const url = endpoint.startsWith("http") ? endpoint : `https://api.juejin.cn${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
+    const opts = {
+      method: body ? "POST" : "GET",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        ...(body ? { "Content-Type": "application/json" } : {}),
+        ...(options.headers || {})
+      },
+      ...options
+    };
+    if (body) {
+      opts.body = typeof body === "string" ? body : JSON.stringify(body);
+    }
+    const resp = await fetch(url, opts);
+    if (!resp.ok) throw new Error(`Juejin API HTTP ${resp.status}`);
+    const data = await resp.json();
+    if (data.err_no !== 0) {
+      throw new Error(data.err_msg || `Juejin error ${data.err_no}`);
+    }
+    return data;
+  }
+
+  function mapJuejinPinToTopic(item) {
+    const info = item.msg_Info || {};
+    const author = item.author_user_info || {};
+    const topic = item.topic || {};
+    const msgId = String(item.msg_id || info.msg_id);
+    return {
+      id: msgId,
+      title: info.content ? info.content.slice(0, 80) : "沸点动态",
+      raw_content: info.content || "",
+      last_poster_username: author.user_name || "掘友",
+      v2ex_author: author.user_name || "掘友",
+      v2ex_avatar: author.avatar_large || "",
+      avatar_template: author.avatar_large || "",
+      node_name: topic.title || "沸点",
+      topic_id: topic.topic_id,
+      posts_count: (info.comment_count || 0) + 1,
+      reply_count: info.comment_count || 0,
+      bumped_at: info.ctime ? Number(info.ctime) * 1000 : Date.now(),
+      created_at: info.ctime ? Number(info.ctime) * 1000 : Date.now(),
+      digg_count: info.digg_count || 0,
+      pic_list: info.pic_list || [],
+      is_digg: Boolean(item.user_interact?.is_digg),
+      author_info: author
+    };
+  }
+
+  function formatJuejinCookedContent(content, picList, topic) {
+    let text = escapeHtml(content || "").replace(/\n/g, "<br>");
+    let topicTag = "";
+    if (topic && topic.title) {
+      topicTag = `<span class="wecom-conv-tag is-ext" style="margin-bottom:6px;display:inline-block;">#${escapeHtml(topic.title)}#</span><br>`;
+    }
+    let picsHtml = "";
+    if (Array.isArray(picList) && picList.length > 0) {
+      picsHtml = `<div class="wecom-msg-images" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">${picList.map((src) => `<img src="${escapeHtml(src)}" alt="" style="max-width:160px;max-height:160px;border-radius:4px;object-fit:cover;" loading="lazy">`).join("")}</div>`;
+    }
+    return `<div class="wecom-msg-body">${topicTag}<p>${text}</p>${picsHtml}</div>`;
+  }
+
+  function mapJuejinPinToPost(pin) {
+    const info = pin.msg_Info || {};
+    const author = pin.author_user_info || {};
+    const msgId = String(pin.msg_id || info.msg_id);
+    return {
+      id: msgId,
+      post_number: 1,
+      username: author.user_name || "沸点作者",
+      name: author.user_name || "沸点作者",
+      avatar_template: author.avatar_large || "",
+      cooked: formatJuejinCookedContent(info.content, info.pic_list, pin.topic),
+      created_at: new Date(Number(info.ctime || Date.now() / 1000) * 1000).toISOString(),
+      like_count: Number(info.digg_count) || 0,
+      liked: Boolean(pin.user_interact?.is_digg),
+      user_id: author.user_id,
+      is_op: true
+    };
+  }
+
+  function mapJuejinCommentToPost(c, postNumber) {
+    const cInfo = c.comment_info || {};
+    const uInfo = c.user_info || {};
+    const commentId = String(cInfo.comment_id || postNumber);
+    const content = cInfo.comment_content || "";
+    let pics = [];
+    if (cInfo.comment_pics && Array.isArray(cInfo.comment_pics)) {
+      pics = cInfo.comment_pics.map((p) => p.pic_url || p);
+    }
+    return {
+      id: commentId,
+      post_number: postNumber,
+      username: uInfo.user_name || "掘友",
+      name: uInfo.user_name || "掘友",
+      avatar_template: uInfo.avatar_large || "",
+      cooked: formatJuejinCookedContent(content, pics, null),
+      created_at: new Date(Number(cInfo.ctime || Date.now() / 1000) * 1000).toISOString(),
+      like_count: Number(cInfo.digg_count) || 0,
+      liked: Boolean(cInfo.is_digg || c.user_interact?.is_digg),
+      user_id: uInfo.user_id,
+      reply_count: Number(cInfo.reply_count) || 0
+    };
+  }
+
+  async function fetchJuejinPinsList(categoryPath, cursor = "0") {
+    const cat = String(categoryPath || "recommend");
+    let endpoint = "/recommend_api/v1/short_msg/recommend";
+    let body = { id_type: 4, sort_type: 300, cursor: cursor || "0", limit: 20 };
+    if (cat === "hot") {
+      endpoint = "/recommend_api/v1/short_msg/hot";
+      body = { id_type: 4, sort_type: 200, cursor: cursor || "0", limit: 20 };
+    } else if (cat.startsWith("topic_")) {
+      endpoint = "/recommend_api/v1/short_msg/topic";
+      body = { id_type: 4, sort_type: 200, cursor: cursor || "0", limit: 20, topic_id: cat.replace("topic_", "") };
+    }
+    const data = await juejinApi(endpoint, body);
+    const rawList = data.data || [];
+    const topics = rawList.map(mapJuejinPinToTopic);
+    return {
+      topics,
+      cursor: data.cursor || "0",
+      hasMore: Boolean(data.has_more)
+    };
+  }
+
+  async function fetchJuejinPinData(pinId, signal) {
+    const detailResp = await juejinApi("/content_api/v1/short_msg/detail", { msg_id: String(pinId) }, { signal });
+    const pin = detailResp.data;
+    if (!pin || !pin.msg_Info) throw new Error("沸点不存在或已被删除");
+    let comments = [];
+    let commentCursor = "0";
+    let commentHasMore = false;
+    try {
+      const commentResp = await juejinApi("/interact_api/v1/comment/list", {
+        item_id: String(pinId),
+        item_type: 4,
+        cursor: "0",
+        limit: 50,
+        client_type: 2608
+      }, { signal });
+      comments = commentResp.data || [];
+      commentCursor = commentResp.cursor || "0";
+      commentHasMore = Boolean(commentResp.has_more);
+    } catch (e) {
+      console.warn("[juejin-wecom] fetch comments failed", e);
+    }
+    const opPost = mapJuejinPinToPost(pin);
+    const commentPosts = comments.map((c, i) => mapJuejinCommentToPost(c, i + 2));
+    const allPosts = [opPost, ...commentPosts];
+    const stream = [String(pinId), ...commentPosts.map((p) => String(p.id))];
+    return {
+      id: String(pinId),
+      title: pin.author_user_info?.user_name ? `${pin.author_user_info.user_name} 的沸点` : "沸点详情",
+      slug: "pin",
+      posts_count: allPosts.length,
+      reply_count: Math.max(0, allPosts.length - 1),
+      juejin_pin: pin,
+      juejin_cursor: commentCursor,
+      juejin_has_more: commentHasMore,
+      post_stream: { stream, posts: allPosts }
+    };
+  }
+
+  async function loadJuejinList(apiPath, force) {
+    if (!force && listState.loadedApiPath === apiPath && Array.isArray(listState.topics) && listState.topics.length) {
+      syncListActive();
+      return;
+    }
+    if (!force && listState.loading && listState.apiPath === apiPath) return;
+    const requestSerial = ++listState.requestSerial;
+    listState.loading = true;
+    listState.apiPath = apiPath;
+    try {
+      const res = await fetchJuejinPinsList(apiPath, "0");
+      if (requestSerial !== listState.requestSerial) return;
+      listState.topics = res.topics;
+      listState.juejinCursor = res.cursor;
+      listState.juejinHasMore = res.hasMore;
+      listState.moreUrl = res.hasMore ? `juejin_cursor_${res.cursor}` : null;
+      renderListRows();
+      syncRail();
+      listState.loadedApiPath = apiPath;
+    } catch (error) {
+      if (requestSerial !== listState.requestSerial) return;
+      console.error("[juejin-wecom] list load failed", error);
+      const body = document.querySelector(".wecom-list-body");
+      if (body) body.innerHTML = `<div class="wecom-list-status">掘金沸点加载失败：${escapeHtml(error.message)}</div>`;
+    } finally {
+      if (requestSerial === listState.requestSerial) listState.loading = false;
+    }
+  }
+
+  async function submitJuejinComment(pinId, content) {
+    const body = {
+      item_id: String(pinId),
+      item_type: 4,
+      comment_content: String(content || "").trim(),
+      client_type: 2608
+    };
+    return juejinApi("/interact_api/v1/comment/publish", body);
+  }
 
   const DEFAULT_LIST_NAV = [
     { href: "/latest", label: "最新" },
@@ -15145,6 +15409,13 @@
       });
       if (deduped.length) return deduped;
     }
+    if (IS_JUEJIN) {
+      const path = location.pathname.replace(/\/$/, "") || "/";
+      return DEFAULT_JUEJIN_LIST_NAV.map((it) => ({
+        ...it,
+        active: path === it.href || (it.href === "/pins/recommended" && (path === "/pins" || path === "/pins/recommended" || path === "/"))
+      }));
+    }
     const path = location.pathname.replace(/\/$/, "") || "/";
     return DEFAULT_LIST_NAV.map((it) => ({
       ...it,
@@ -15359,6 +15630,10 @@
   }
 
   function openNewTopic() {
+    if (IS_JUEJIN) {
+      window.open("https://juejin.cn/pins/recommended", "_blank", "noopener,noreferrer");
+      return;
+    }
     if (IS_V2EX) {
       window.open("https://v2ex.com/new", "_blank", "noopener,noreferrer");
       return;
@@ -15566,7 +15841,8 @@
         } else if (convBadge) {
           decrementNotificationBadge();
         }
-        const topicId = Number(conv.dataset.topicId || topicIdFromPath(href));
+        const rawTopicId = conv.dataset.topicId || topicIdFromPath(href);
+        const topicId = IS_JUEJIN ? String(rawTopicId || "") : Number(rawTopicId);
         if (!topicId) {
           navigateInApp(href);
           return;
@@ -15577,7 +15853,7 @@
         document.documentElement.classList.add("wecom-topic-open");
         ensureChatPanel();
         const body = document.querySelector(".wecom-chat-body");
-        const isSame = Number(chatState.topicId) === topicId;
+        const isSame = isSameTopic(chatState.topicId, topicId);
         const hasRendered = isSame && Boolean(
           body &&
           Number(body.dataset.topicId) === topicId &&
@@ -15682,8 +15958,15 @@
     }
     panel = document.createElement("div");
     panel.className = "wecom-list-panel";
-    const searchPlaceholder = IS_V2EX ? "搜索 V2EX 话题" : "搜索";
-    const chipsHtml = IS_V2EX
+    const searchPlaceholder = IS_JUEJIN ? "搜索掘金沸点" : (IS_V2EX ? "搜索 V2EX 话题" : "搜索");
+    const chipsHtml = IS_JUEJIN
+      ? `
+          <button type="button" class="wecom-chip active" data-chip="recommend">推荐</button>
+          <button type="button" class="wecom-chip" data-chip="hot">热门</button>
+          <button type="button" class="wecom-chip" data-chip="topic_6824710203301167112">上班摸鱼</button>
+          <button type="button" class="wecom-chip" data-chip="topic_6824710203112423437">代码人生</button>
+        `
+      : (IS_V2EX
       ? `
           <button type="button" class="wecom-chip active" data-chip="all">消息<span class="n"></span></button>
           <button type="button" class="wecom-chip" data-chip="hot">最热</button>
@@ -15694,12 +15977,12 @@
       : `
           <button type="button" class="wecom-chip active" data-chip="all">消息<span class="n"></span></button>
           <button type="button" class="wecom-chip" data-chip="unread">未读<span class="n"></span></button>
-        `;
+        `);
     panel.innerHTML = `
       <div class="wecom-list-search">
-        <form action="${IS_V2EX ? "https://www.google.com/search" : "/search"}" method="get"${IS_V2EX ? ' target="_blank"' : ""} role="search">
+        <form action="${IS_JUEJIN ? "https://juejin.cn/search" : (IS_V2EX ? "https://www.google.com/search" : "/search")}" method="get"${(IS_V2EX || IS_JUEJIN) ? ' target="_blank"' : ""} role="search">
           ${ICONS.search}
-          <input type="search" name="q" placeholder="${searchPlaceholder}" autocomplete="off" enterkeyhint="search" aria-label="搜索话题">
+          <input type="search" name="${IS_JUEJIN ? "query" : "q"}" placeholder="${searchPlaceholder}" autocomplete="off" enterkeyhint="search" aria-label="搜索话题">
         </form>
         <div class="wecom-list-add-wrap">
           <button type="button" class="wecom-list-add wecom-list-add-btn" title="新建与导航" aria-label="新建与导航" aria-haspopup="menu" aria-expanded="false">${ICONS.plus}</button>
@@ -15742,7 +16025,17 @@
       chip.addEventListener("click", () => {
         panel.querySelectorAll(".wecom-chip").forEach((c) => c.classList.remove("active"));
         chip.classList.add("active");
-        if (IS_V2EX) {
+        if (IS_JUEJIN) {
+          const chipKey = chip.dataset.chip;
+          let targetPath = "/pins/recommended";
+          if (chipKey === "hot") targetPath = "/pins/hot";
+          else if (chipKey.startsWith("topic_")) targetPath = `/pins/topic/${chipKey.replace("topic_", "")}`;
+          if (location.pathname !== targetPath) {
+            navigateInApp(targetPath);
+          } else {
+            loadList(chipKey, true);
+          }
+        } else if (IS_V2EX) {
           const chipKey = chip.dataset.chip;
           let targetPath = "/?tab=all";
           if (chipKey === "all" || chipKey === "latest") targetPath = "/?tab=all";
@@ -15777,6 +16070,9 @@
   }
 
   function topicHref(topic) {
+    if (IS_JUEJIN) {
+      return `/pin/${topic.id}`;
+    }
     if (IS_V2EX) {
       let targetPage = topic.target_page;
       let targetAnchor = topic.target_anchor;
@@ -15826,6 +16122,12 @@
   }
 
   function convCategoryTag(topic) {
+    if (IS_JUEJIN) {
+      if (topic.node_name) {
+        return `<span class="wecom-conv-tag is-ext">@${escapeHtml(topic.node_name)}</span>`;
+      }
+      return "";
+    }
     if (!categoriesCache || !topic.category_id) return "";
     const cat = categoryById(topic.category_id);
     if (!cat) return "";
@@ -16034,6 +16336,18 @@
       const n = listState.topics.reduce((sum, t) => sum + (t.unread || 0) + (t.new_posts || 0), 0);
       unreadN.textContent = n > 0 ? String(n > 99 ? "99+" : n) : "";
     }
+    if (IS_JUEJIN) {
+      const p = location.pathname;
+      let activeChip = "recommend";
+      if (p.includes("/pins/hot")) activeChip = "hot";
+      else if (p.includes("/pins/topic/")) {
+        const m = p.match(/\/pins\/topic\/([^/?#]+)/);
+        if (m) activeChip = "topic_" + m[1];
+      }
+      document.querySelectorAll(".wecom-list-panel .wecom-chip").forEach((c) => {
+        c.classList.toggle("active", c.dataset.chip === activeChip);
+      });
+    }
     if (IS_V2EX) {
       const isNotifs = (typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications")) || location.pathname === "/notifications";
       if (isNotifs) {
@@ -16045,7 +16359,7 @@
   function syncListActive() {
     const currentId = topicIdFromPath(location.pathname);
     for (const row of document.querySelectorAll(".wecom-conv")) {
-      row.classList.toggle("active", currentId != null && Number(row.dataset.topicId) === currentId);
+      row.classList.toggle("active", currentId != null && isSameTopic(row.dataset.topicId, currentId));
     }
   }
 
@@ -16271,6 +16585,10 @@
 
   async function loadList(apiPath, force) {
     if (!apiPath) return;
+    if (IS_JUEJIN) {
+      await loadJuejinList(apiPath, force);
+      return;
+    }
     if (IS_V2EX) {
       if (!force && listState.loadedApiPath === apiPath && Array.isArray(listState.topics)) {
         syncListActive();
@@ -16408,6 +16726,41 @@
 
   async function loadMoreList() {
     if (!listState.moreUrl || listState.loading) return;
+    if (IS_JUEJIN) {
+      const requestSerial = ++listState.requestSerial;
+      listState.loading = true;
+      const statusEl = document.querySelector(".wecom-list-status");
+      if (statusEl) {
+        statusEl.textContent = "正在加载更多…";
+        statusEl.classList.remove("is-clickable");
+      }
+      try {
+        const res = await fetchJuejinPinsList(listState.apiPath, listState.juejinCursor);
+        if (requestSerial !== listState.requestSerial) return;
+        const existing = new Set(listState.topics.map((t) => String(t.id)));
+        const fresh = res.topics.filter((t) => !existing.has(String(t.id)));
+        if (fresh.length > 0) {
+          listState.topics = listState.topics.concat(fresh);
+        }
+        listState.juejinCursor = res.cursor;
+        listState.juejinHasMore = res.hasMore;
+        listState.moreUrl = res.hasMore ? `juejin_cursor_${res.cursor}` : null;
+        appendListRows(fresh);
+        syncRail();
+      } catch (error) {
+        if (requestSerial === listState.requestSerial) {
+          console.error("[juejin-wecom] load more pins failed", error);
+          const statusEl = document.querySelector(".wecom-list-status");
+          if (statusEl) {
+            statusEl.textContent = "加载失败，点击重试";
+            statusEl.classList.add("is-clickable");
+          }
+        }
+      } finally {
+        if (requestSerial === listState.requestSerial) listState.loading = false;
+      }
+      return;
+    }
     if (IS_V2EX) {
       const requestSerial = ++listState.requestSerial;
       const pageUrl = listState.moreUrl;
@@ -17919,6 +18272,14 @@
                 </div>
                 ${IS_V2EX ? '<span class="wecom-platform-item-check">✓</span>' : ""}
               </div>
+              <div class="wecom-platform-item${IS_JUEJIN ? " is-active" : ""}" data-target-platform="juejin">
+                <span class="wecom-platform-item-icon">💎</span>
+                <div class="wecom-platform-item-info">
+                  <div class="wecom-platform-item-name">掘金 · 沸点</div>
+                  <div class="wecom-platform-item-desc">juejin.cn · 开发者摸鱼动态</div>
+                </div>
+                ${IS_JUEJIN ? '<span class="wecom-platform-item-check">✓</span>' : ""}
+              </div>
             </div>
           </div>
           <button type="button" class="wecom-icon-btn wecom-chat-scroll-top" title="回到顶部" aria-label="回到顶部">${ICONS.scrollTop}</button>
@@ -18497,10 +18858,12 @@
         const btn = switcher.querySelector(".wecom-platform-btn");
         if (btn) btn.setAttribute("aria-expanded", "false");
       }
-      if (target === "linuxdo" && IS_V2EX) {
+      if (target === "linuxdo" && !IS_LINUXDO) {
         window.location.href = "https://linux.do/";
       } else if (target === "v2ex" && !IS_V2EX) {
         window.location.href = "https://www.v2ex.com/";
+      } else if (target === "juejin" && !IS_JUEJIN) {
+        window.location.href = "https://juejin.cn/pins";
       }
       return true;
     }
@@ -20340,6 +20703,28 @@
     if (activeLikingPosts.has(postId) || activeConfirmingPosts.has(postId)) return;
 
     try {
+      if (IS_JUEJIN) {
+        const isOp = Number(msg?.dataset?.postNumber) === 1;
+        const targetId = isOp ? String(chatState.topicId || postId) : String(postId);
+        const itemType = isOp ? 4 : 5;
+        const isLiked = btn.classList.contains("liked");
+        const endpoint = isLiked ? "/interact_api/v1/digg/cancel" : "/interact_api/v1/digg/save";
+        try {
+          await juejinApi(endpoint, { item_id: targetId, item_type: itemType, client_type: 2608 });
+          if (isLiked) {
+            btn.classList.remove("liked");
+            likedPosts.delete(targetId);
+            showWecomToast("已取消点赞", "info", 1500);
+          } else {
+            btn.classList.add("liked");
+            likedPosts.add(targetId);
+            showWecomToast("点赞成功", "success", 1500);
+          }
+        } catch (err) {
+          showWecomToast("点赞失败：" + (err.message || "网络异常"), "error", 2000);
+        }
+        return;
+      }
       if (IS_V2EX) {
         const wasLiked = likedPosts.has(postId);
         if (wasLiked) {
@@ -20652,6 +21037,15 @@
         return;
       }
       throw new Error("用户头像缺少 data-user-card");
+    }
+    if (IS_JUEJIN) {
+      const uid = trigger.dataset.userId;
+      if (uid) {
+        window.open(`https://juejin.cn/user/${uid}`, "_blank");
+      } else {
+        showWecomToast(`掘友：${username}`, "info");
+      }
+      return;
     }
     if (IS_V2EX) {
       openV2exMemberCard(username, trigger, event);
@@ -21419,6 +21813,18 @@
     const raw = input.value;
     const replyTo = composerBridgeState.replyToPostNumber;
     try {
+      if (IS_JUEJIN) {
+        await submitJuejinComment(chatState.topicId, raw);
+        completeComposerSubmission(input);
+        await loadTopic(chatState.topicId, true);
+        const chatBody = document.querySelector(".wecom-chat-body");
+        if (chatBody) {
+          setTimeout(() => {
+            chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: "smooth" });
+          }, 100);
+        }
+        return;
+      }
       if (IS_V2EX) {
         await submitV2exReply(chatState.topicId, raw);
         completeComposerSubmission(input);
@@ -22242,6 +22648,16 @@
   }
 
   async function fetchTopicJson(topicId, postNumber, force, signal, targetPage = 1) {
+    if (IS_JUEJIN) {
+      const pinId = String(topicId);
+      if (!force) {
+        const cached = getCachedTopic(pinId);
+        if (cached) return cached;
+      }
+      const data = await fetchJuejinPinData(pinId, signal);
+      setCachedTopic(pinId, data);
+      return data;
+    }
     const id = Number(topicId);
     if (IS_V2EX) {
       const page = targetPage || 1;
@@ -22529,7 +22945,7 @@
   let topicAbortController = null;
 
   async function loadTopic(topicId, force = false, targetOption = null) {
-    const numericTopicId = Number(topicId);
+    const numericTopicId = IS_JUEJIN ? String(topicId) : Number(topicId);
     if (!numericTopicId) return;
     topicId = numericTopicId;
     removeLoadingSliderDom();
@@ -22553,12 +22969,12 @@
     const initialBody = document.querySelector(".wecom-chat-body");
     const hasRenderedMsgs = Boolean(
       initialBody &&
-      Number(initialBody.dataset.topicId) === topicId &&
+      isSameTopic(initialBody.dataset.topicId, topicId) &&
       initialBody.querySelector(".wecom-msg") &&
       !initialBody.querySelector(".wecom-chat-loading, .wecom-chat-error, .wecom-chat-empty")
     );
-    if (!force && chatState.loading && Number(chatState.topicId) === topicId) return;
-    if (!force && Number(chatState.topicId) === topicId && chatState.renderedLastIdx >= 0 && hasRenderedMsgs) {
+    if (!force && chatState.loading && isSameTopic(chatState.topicId, topicId)) return;
+    if (!force && isSameTopic(chatState.topicId, topicId) && chatState.renderedLastIdx >= 0 && hasRenderedMsgs) {
       syncListActive();
       return;
     }
@@ -22570,7 +22986,7 @@
     topicAbortController = controller;
     const signal = controller.signal;
 
-    const sameTopic = Number(chatState.topicId) === topicId;
+    const sameTopic = isSameTopic(chatState.topicId, topicId);
     if (!sameTopic) {
       saveCurrentTopicReadingPosition();
       chatState.postsByNumber = new Map();
@@ -22604,7 +23020,7 @@
     try {
       const targetPage = (IS_V2EX && target && target.page) ? target.page : 1;
       let data = await fetchTopicJson(topicId, requestedPost, force, signal, targetPage);
-      if (signal.aborted || Number(chatState.topicId) !== topicId) return; // 路由已切走或已取消
+      if (signal.aborted || !isSameTopic(chatState.topicId, topicId)) return; // 路由已切走或已取消
       if (IS_V2EX) {
         data = await loadInitialV2exThreadPages(topicId, data, force, signal, targetPage);
         if (signal.aborted || Number(chatState.topicId) !== topicId) return;
@@ -22646,9 +23062,13 @@
       chatState.hasOlder = chatState.renderedFirstIdx > 0;
       chatState.v2exPage = Number(data.v2ex_page) || 1;
       chatState.v2exHasMore = Boolean(data.v2ex_has_more);
-      chatState.hasNewer = IS_V2EX
-        ? chatState.v2exHasMore
-        : (chatState.renderedLastIdx >= 0 && chatState.renderedLastIdx < chatState.stream.length - 1);
+      chatState.juejinCursor = data.juejin_cursor;
+      chatState.juejinHasMore = Boolean(data.juejin_has_more);
+      chatState.hasNewer = IS_JUEJIN
+        ? chatState.juejinHasMore
+        : (IS_V2EX
+          ? chatState.v2exHasMore
+          : (chatState.renderedLastIdx >= 0 && chatState.renderedLastIdx < chatState.stream.length - 1));
       chatState.title = data.title || "";
       chatState.categoryId = data.category_id || null;
       if (IS_V2EX) {
@@ -22693,7 +23113,7 @@
         ? data.total_replies
         : (data.posts_count || posts.length);
       chatState.replyTotal = replyTotal;
-      const orgName = IS_V2EX ? (data.node_title || data.node_name || "v2ex.com") : "linux.do";
+      const orgName = IS_JUEJIN ? (data.juejin_pin?.topic?.title ? `#${data.juejin_pin.topic.title}#` : "稀土掘金 · 沸点") : (IS_V2EX ? (data.node_title || data.node_name || "v2ex.com") : "linux.do");
       if (sub) {
         sub.textContent = maskDetail
           ? `企业内部群 · ${replyTotal} 条消息`
@@ -22956,7 +23376,9 @@
   /** 向下滚动加载更新的帖子（话题很长时不能只留首屏一页） */
   async function loadNewerPosts() {
     if (chatState.loading || !chatState.topicId) return;
-    if (IS_V2EX) {
+    if (IS_JUEJIN) {
+      if (!chatState.juejinHasMore) return;
+    } else if (IS_V2EX) {
       if (!chatState.v2exHasMore) return;
     } else {
       if (!chatState.hasNewer) return;
@@ -22964,6 +23386,34 @@
     if (Date.now() < rateLimitCooldownUntil) return;
     if (Date.now() - lastPaginationTime < PAGINATION_THROTTLE_MS) return;
     lastPaginationTime = Date.now();
+    if (IS_JUEJIN) {
+      const body = document.querySelector(".wecom-chat-body");
+      chatState.loading = true;
+      try {
+        const commentRes = await juejinApi("/interact_api/v1/comment/list", {
+          item_id: String(chatState.topicId),
+          item_type: 4,
+          cursor: chatState.juejinCursor || "0",
+          limit: 20,
+          client_type: 2608
+        });
+        const comments = commentRes.data || [];
+        const currentMaxNumber = Math.max(...[...chatState.postsByNumber.keys()], 1);
+        const freshPosts = comments.map((c, i) => mapJuejinCommentToPost(c, currentMaxNumber + i + 1));
+        if (freshPosts.length) {
+          chatState.stream = chatState.stream.concat(freshPosts.map((p) => p.id));
+          appendFreshPosts(freshPosts, body, { scroll: false, flat: true });
+        }
+        chatState.juejinCursor = commentRes.cursor;
+        chatState.juejinHasMore = Boolean(commentRes.has_more);
+        chatState.hasNewer = chatState.juejinHasMore;
+      } catch (err) {
+        console.warn("[juejin-wecom] load newer comments failed", err);
+      } finally {
+        chatState.loading = false;
+      }
+      return;
+    }
     if (IS_V2EX) {
       const body = document.querySelector(".wecom-chat-body");
       const nextPage = (Number(chatState.v2exPage) || 1) + 1;
@@ -23876,11 +24326,11 @@
       if (listState.topics.length && listState.apiPath) {
         syncListActive();
       } else {
-        loadList(listState.apiPath || (IS_V2EX ? "/?tab=all" : "/latest.json"), false);
+        loadList(listState.apiPath || (IS_JUEJIN ? "/pins/recommended" : (IS_V2EX ? "/?tab=all" : "/latest.json")), false);
       }
       const targetTopicId = topicIdFromPath(pathname);
       if (targetTopicId) {
-        if (Number(chatState.topicId) === Number(targetTopicId) && chatState.loading) {
+        if (IS_JUEJIN ? (String(chatState.topicId) === String(targetTopicId) && chatState.loading) : (Number(chatState.topicId) === Number(targetTopicId) && chatState.loading)) {
           // 当前话题正在加载中，避免重复触发 loadTopic 并打断请求
         } else {
           loadTopic(targetTopicId);
