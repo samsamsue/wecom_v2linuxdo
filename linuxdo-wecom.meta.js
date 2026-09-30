@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.75
+// @version      0.7.76
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -14,6 +14,8 @@
 // @match        https://juejin.cn/*
 // @match        *://*.juejin.cn/*
 // @match        https://*.juejin.cn/*
+// @match        *://credit.linux.do/*
+// @match        https://credit.linux.do/*
 // @connect      api.imgur.com
 // @connect      imgur.com
 // @connect      connect.linux.do

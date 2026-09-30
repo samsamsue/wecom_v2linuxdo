@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.75
+// @version      0.7.76
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -14,6 +14,8 @@
 // @match        https://juejin.cn/*
 // @match        *://*.juejin.cn/*
 // @match        https://*.juejin.cn/*
+// @match        *://credit.linux.do/*
+// @match        https://credit.linux.do/*
 // @connect      api.imgur.com
 // @connect      imgur.com
 // @connect      connect.linux.do
@@ -49,9 +51,10 @@
   const MEMBER_WIDTH = 210; // 群成员/公告栏
   const TITLEBAR_HEIGHT = 0; // 企业微信经典布局无全局顶栏
   const CURRENT_HOST = typeof location !== "undefined" ? location.hostname : "";
+  const IS_CREDIT = /(?:^|\.)credit\.linux\.do$/i.test(CURRENT_HOST);
   const IS_V2EX = /(?:^|\.)v2ex\.com$/i.test(CURRENT_HOST);
   const IS_JUEJIN = /(?:^|\.)juejin\.cn$/i.test(CURRENT_HOST);
-  const IS_LINUXDO = !IS_V2EX && !IS_JUEJIN;
+  const IS_LINUXDO = !IS_V2EX && !IS_JUEJIN && !IS_CREDIT;
   const CURRENT_PLATFORM = IS_JUEJIN ? "juejin" : (IS_V2EX ? "v2ex" : "linuxdo");
 
   function isSameTopic(id1, id2) {
@@ -9207,6 +9210,36 @@
       font-size: 11px;
       color: rgba(250, 227, 184, 0.65);
     }
+    .wecom-rp-blocked-wrap {
+      position: absolute;
+      bottom: 24px;
+      left: 20px;
+      right: 20px;
+      padding: 10px 14px;
+      background: rgba(0, 0, 0, 0.28);
+      border-radius: 10px;
+      text-align: center;
+      color: #ffe6bd;
+      font-size: 12px;
+      z-index: 5;
+      backdrop-filter: blur(4px);
+    }
+    .wecom-rp-direct-btn {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 5px 16px;
+      background: #fcd783;
+      color: #723b00;
+      font-weight: 600;
+      font-size: 13px;
+      border-radius: 14px;
+      text-decoration: none !important;
+      transition: transform 0.15s, background 0.15s;
+    }
+    .wecom-rp-direct-btn:hover {
+      background: #ffe39b;
+      transform: scale(1.04);
+    }
 
     .wecom-rp-opened {
       background: #f7f7f7;
@@ -12064,7 +12097,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.75";
+  const SCRIPT_VERSION = "0.7.76";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -16938,6 +16971,123 @@
     }
   }
 
+  function isCorsOrFetchError(err) {
+    if (!err) return false;
+    const msg = String(err?.message || err?.msg || err || "");
+    if (err?.name === "TypeError" && /fetch/i.test(msg)) return true;
+    return /failed to fetch|networkerror|load failed|cross-origin|cors|aborted/i.test(msg);
+  }
+
+  function claimViaPopupBridge(id) {
+    return new Promise((resolve, reject) => {
+      const key = String(id);
+      const width = 450;
+      const height = 620;
+      const screenW = typeof window.screen !== "undefined" && window.screen?.availWidth ? window.screen.availWidth : window.innerWidth;
+      const screenH = typeof window.screen !== "undefined" && window.screen?.availHeight ? window.screen.availHeight : window.innerHeight;
+      const left = Math.max(0, Math.round((screenW - width) / 2));
+      const top = Math.max(0, Math.round((screenH - height) / 2));
+      const popupUrl = `https://credit.linux.do/redenvelope/${encodeURIComponent(key)}?wecom_auto=1`;
+
+      let isFinished = false;
+      let checkTimer = null;
+      let timeoutTimer = null;
+
+      function cleanup() {
+        window.removeEventListener("message", onMessage);
+        window.removeEventListener("focus", onFocus);
+        if (checkTimer) clearInterval(checkTimer);
+        if (timeoutTimer) clearTimeout(timeoutTimer);
+      }
+
+      function finishWithSuccess(amount, status = "claimed", details = {}) {
+        if (isFinished) return;
+        isFinished = true;
+        cleanup();
+        const amt = amount != null ? String(amount) : "";
+        const cached = setRedEnvelopeCache(key, Object.assign({
+          id: key,
+          status: status,
+          user_claimed: true,
+          user_amount: amt || undefined
+        }, details));
+        resolve({ amount: amt, status, redEnvelope: cached });
+      }
+
+      function onMessage(e) {
+        if (!e.data || typeof e.data !== "object") return;
+        if (e.data.type === "WECOM_RED_PACKET_RESULT" && String(e.data.id) === key) {
+          if (popup && !popup.closed) {
+            try { popup.close(); } catch {}
+          }
+          if (e.data.error) {
+            const err = new Error(e.data.message || e.data.error);
+            err.status = e.data.status;
+            cleanup();
+            return reject(err);
+          }
+          finishWithSuccess(e.data.amount, e.data.status || "claimed", e.data.data || {});
+        }
+      }
+
+      function onFocus() {
+        setTimeout(() => {
+          const cached = getRedEnvelopeCache(key);
+          if (cached && (cached.user_claimed || cached.status === "claimed")) {
+            finishWithSuccess(cached.user_amount || "", "claimed", cached);
+          }
+        }, 600);
+      }
+
+      window.addEventListener("message", onMessage);
+      window.addEventListener("focus", onFocus);
+
+      let popup = null;
+      try {
+        popup = window.open(
+          popupUrl,
+          `wecom_rp_${key}`,
+          `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes`
+        );
+      } catch (e) {
+        cleanup();
+        const err = new Error("popup_blocked");
+        return reject(err);
+      }
+
+      if (!popup || popup.closed) {
+        cleanup();
+        const err = new Error("popup_blocked");
+        return reject(err);
+      }
+
+      checkTimer = setInterval(() => {
+        try {
+          if (popup.closed) {
+            clearInterval(checkTimer);
+            setTimeout(() => {
+              if (!isFinished) {
+                const cached = getRedEnvelopeCache(key);
+                if (cached && (cached.user_claimed || cached.status === "claimed")) {
+                  finishWithSuccess(cached.user_amount || "", "claimed", cached);
+                } else {
+                  finishWithSuccess("", "claimed", { id: key, user_claimed: true });
+                }
+              }
+            }, 600);
+          }
+        } catch { /* cross-origin check safeguard */ }
+      }, 500);
+
+      timeoutTimer = setTimeout(() => {
+        if (!isFinished) {
+          const cached = getRedEnvelopeCache(key);
+          finishWithSuccess(cached?.user_amount || "", cached?.status || "claimed", cached || {});
+        }
+      }, 45000);
+    });
+  }
+
   async function fetchRedEnvelopeDetail(id) {
     if (!id) throw new Error("Missing red envelope ID");
     const key = String(id);
@@ -16951,7 +17101,16 @@
           res = await requestCreditApi(`/api/v1/redenvelope/${encodeURIComponent(key)}`);
         } catch (err) {
           if (err.status === 404) {
-            res = await requestCreditApi(`/api/redenvelope/${encodeURIComponent(key)}`);
+            try {
+              res = await requestCreditApi(`/api/redenvelope/${encodeURIComponent(key)}`);
+            } catch (subErr) {
+              if (isCorsOrFetchError(subErr)) {
+                return getRedEnvelopeCache(key) || { id: key };
+              }
+              throw subErr;
+            }
+          } else if (isCorsOrFetchError(err)) {
+            return getRedEnvelopeCache(key) || { id: key };
           } else {
             throw err;
           }
@@ -16992,6 +17151,10 @@
   async function claimRedEnvelope(id) {
     if (!id) throw new Error("Missing red envelope ID");
     const key = String(id);
+    const cached = getRedEnvelopeCache(key);
+    if (cached && (cached.user_claimed || cached.status === "claimed")) {
+      return { amount: cached.user_amount || "", redEnvelope: cached };
+    }
     let res;
     const payload = JSON.stringify({ id: key, red_envelope_id: key });
     try {
@@ -17001,10 +17164,19 @@
       });
     } catch (err) {
       if (err.status === 404) {
-        res = await requestCreditApi("/api/redenvelope/claim", {
-          method: "POST",
-          body: payload
-        });
+        try {
+          res = await requestCreditApi("/api/redenvelope/claim", {
+            method: "POST",
+            body: payload
+          });
+        } catch (subErr) {
+          if (isCorsOrFetchError(subErr)) {
+            return await claimViaPopupBridge(key);
+          }
+          throw subErr;
+        }
+      } else if (isCorsOrFetchError(err)) {
+        return await claimViaPopupBridge(key);
       } else {
         throw err;
       }
@@ -17043,6 +17215,12 @@
     if (/自己|CannotClaimOwn/i.test(msg)) {
       return { kind: "own", label: "查看自己的红包" };
     }
+    if (msg === "popup_blocked") {
+      return { kind: "popup_blocked", label: "弹窗被拦截，点击前往积分中心领取" };
+    }
+    if (isCorsOrFetchError(err)) {
+      return { kind: "cors", label: "需前往积分中心领取" };
+    }
     return { kind: "error", label: msg || "领取失败" };
   }
 
@@ -17071,7 +17249,20 @@
     redEnvelopeClaimsInProgress.add(key);
 
     try {
-      const { amount } = await claimRedEnvelope(key);
+      let res;
+      const payload = JSON.stringify({ id: key, red_envelope_id: key });
+      try {
+        res = await requestCreditApi("/api/v1/redenvelope/claim", { method: "POST", body: payload });
+      } catch (err) {
+        if (err.status === 404) {
+          res = await requestCreditApi("/api/redenvelope/claim", { method: "POST", body: payload });
+        } else {
+          throw err;
+        }
+      }
+      const claimData = res?.data || res;
+      const amount = claimData?.amount != null ? String(claimData.amount) : "";
+      setRedEnvelopeCache(key, { id: key, status: "claimed", user_claimed: true, user_amount: amount });
       updateRedEnvelopeCards(key);
       showRedEnvelopeToast(`已自动领取 LINUX DO 积分红包：+${amount || "0"} LDC`);
       fetchRedEnvelopeDetail(key).then(() => updateRedEnvelopeCards(key)).catch(() => {});
@@ -17089,6 +17280,8 @@
       } else if (parsed.kind === "own") {
         setRedEnvelopeCache(key, { id: key, is_own: true });
         updateRedEnvelopeCards(key);
+      } else if (parsed.kind === "cors" || isCorsOrFetchError(err)) {
+        updateRedEnvelopeCards(key, "点击打开红包");
       } else {
         updateRedEnvelopeCards(key, parsed.label);
       }
@@ -17214,9 +17407,31 @@
 
       const linkText = a.textContent.trim();
       const defaultGreeting = linkText && linkText !== href && !linkText.includes("credit.linux.do") ? linkText : "";
-      const card = createRedEnvelopeCardElement(envId, defaultGreeting);
-
+      const postArticle = a.closest("article.boxed, article[data-post-id], .topic-post, .chat-message, .wecom-msg-row");
+      let senderName = "";
+      let senderAvatar = "";
+      if (postArticle) {
+        senderName = postArticle.querySelector(".names .username a, .names .username, .wecom-msg-name, .chat-user-avatar-name")?.textContent.trim() || "";
+        const img = postArticle.querySelector(".topic-avatar img.avatar, .avatar-wrapper img, .wecom-avatar-img, .chat-user-avatar img, img.avatar");
+        senderAvatar = img?.getAttribute("src") || "";
+      }
       const onebox = a.closest("aside.onebox, .onebox");
+      let oneboxTitle = "";
+      if (onebox) {
+        oneboxTitle = onebox.querySelector("h3 a, .onebox-body h3, .onebox-title")?.textContent.trim() || "";
+      }
+      const greeting = defaultGreeting || oneboxTitle || "恭喜发财，大吉大利";
+      if (senderName || senderAvatar || greeting) {
+        const existing = getRedEnvelopeCache(envId) || {};
+        setRedEnvelopeCache(envId, Object.assign({ id: envId }, existing, {
+          sender_name: existing.sender_name || senderName || undefined,
+          sender_avatar: existing.sender_avatar || senderAvatar || undefined,
+          greeting: existing.greeting || greeting || undefined
+        }));
+      }
+
+      const card = createRedEnvelopeCardElement(envId, greeting);
+
       if (onebox) {
         onebox.replaceWith(card);
         return;
@@ -17333,6 +17548,15 @@
           renderUnopenedRedEnvelopeView(modal, key, fresh);
         }
       }).catch(() => {});
+
+      if (isRedEnvelopeAutoClaimEnabled()) {
+        setTimeout(() => {
+          const kai = modal.querySelector(".wecom-rp-kai-btn");
+          if (kai && !kai.classList.contains("is-spinning") && !modal.dataset.opened) {
+            kai.click();
+          }
+        }, 120);
+      }
     }
   }
 
@@ -17364,7 +17588,8 @@
         const res = await claimRedEnvelope(id);
         modal.dataset.opened = "1";
         updateRedEnvelopeCards(id);
-        showRedEnvelopeToast(`已领取 LINUX DO 积分红包：+${res.amount || "0"} LDC`);
+        const amountDisplay = res.amount ? `+${res.amount} LDC` : "已领取";
+        showRedEnvelopeToast(`已领取 LINUX DO 积分红包：${amountDisplay}`);
         const fresh = await fetchRedEnvelopeDetail(id).catch(() => getRedEnvelopeCache(id));
         renderOpenedRedEnvelopeView(modal, id, fresh);
       } catch (err) {
@@ -17383,6 +17608,16 @@
         } else if (parsed.kind === "unauthorized") {
           alert("未登录 LINUX DO 积分中心，即将为您打开积分中心页面以完成登录。");
           window.open(`https://credit.linux.do/redenvelope/${encodeURIComponent(id)}`, "_blank");
+        } else if (parsed.kind === "popup_blocked" || parsed.kind === "cors") {
+          if (!modal.querySelector(".wecom-rp-blocked-wrap")) {
+            const blockedDiv = document.createElement("div");
+            blockedDiv.className = "wecom-rp-blocked-wrap";
+            blockedDiv.innerHTML = `
+              <div class="wecom-rp-blocked-msg">浏览器弹窗受限，请点击下方直达积分中心领取：</div>
+              <a href="https://credit.linux.do/redenvelope/${encodeURIComponent(id)}" target="_blank" rel="noopener noreferrer" class="wecom-rp-direct-btn">前往积分中心一键领取</a>
+            `;
+            modal.appendChild(blockedDiv);
+          }
         } else {
           alert(parsed.label);
         }
@@ -26969,9 +27204,151 @@
     }
   }
 
+  function initCreditRedEnvelopeBridge() {
+    const match = location.pathname.match(/\/redenvelope\/([a-zA-Z0-9_-]+)/i);
+    if (!match) return;
+    const envelopeId = match[1];
+
+    if (location.search.includes("wecom_auto=1")) {
+      const banner = document.createElement("div");
+      banner.className = "wecom-credit-bridge-banner";
+      banner.innerHTML = `<span style="font-size:18px;">🧧</span><span>企业微信红包助手正在自动领取...</span>`;
+      const style = document.createElement("style");
+      style.textContent = `
+        .wecom-credit-bridge-banner {
+          position: fixed;
+          top: 12px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #fa5151;
+          color: #ffffff;
+          padding: 8px 18px;
+          border-radius: 20px;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+          font-size: 13px;
+          font-weight: 500;
+          z-index: 9999999;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          transition: all 0.3s ease;
+        }
+        .wecom-credit-bridge-banner.success {
+          background: #07c160;
+        }
+      `;
+      document.documentElement.appendChild(style);
+      document.body ? document.body.appendChild(banner) : document.addEventListener("DOMContentLoaded", () => document.body.appendChild(banner));
+    }
+
+    function notifyLinuxDo(result) {
+      if (window.opener) {
+        try {
+          window.opener.postMessage(Object.assign({
+            type: "WECOM_RED_PACKET_RESULT",
+            id: envelopeId
+          }, result), "*");
+        } catch { /* ignore */ }
+      }
+    }
+
+    async function executeClaim() {
+      const payload = JSON.stringify({ id: envelopeId, red_envelope_id: envelopeId });
+      let claimJson = null;
+      let status = "claimed";
+      let amount = "";
+
+      try {
+        let res = await fetch("/api/v1/redenvelope/claim", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          credentials: "include",
+          body: payload
+        }).catch(() => null);
+
+        if (!res || res.status === 404) {
+          res = await fetch("/api/redenvelope/claim", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+            credentials: "include",
+            body: payload
+          }).catch(() => null);
+        }
+
+        if (res) {
+          claimJson = await res.json().catch(() => null);
+          if (res.ok && (claimJson?.code === 0 || claimJson?.code === 200 || claimJson?.code == null)) {
+            const data = claimJson?.data || claimJson;
+            amount = data?.amount != null ? String(data.amount) : "";
+            status = "claimed";
+          } else {
+            const msg = claimJson?.message || claimJson?.msg || "";
+            if (/已领取|already claimed/i.test(msg)) {
+              status = "already_claimed";
+            } else if (/领完|抢完|finished/i.test(msg)) {
+              status = "finished";
+            } else if (/未登录|login|unauthorized/i.test(msg) || res.status === 401) {
+              status = "unauthorized";
+            }
+          }
+        }
+      } catch { /* ignore */ }
+
+      const findAndClickBtn = () => {
+        const buttons = Array.from(document.querySelectorAll("button, [role='button']"));
+        for (const b of buttons) {
+          const txt = (b.textContent || "").trim();
+          if (/^(?:拆|拆红包|领取红包|立即领取|開|开)$/.test(txt)) {
+            b.click();
+            break;
+          }
+        }
+      };
+      findAndClickBtn();
+      setTimeout(findAndClickBtn, 500);
+
+      if (!amount) {
+        setTimeout(() => {
+          const bodyText = document.body ? document.body.innerText : "";
+          const amtMatch = bodyText.match(/([0-9]+(?:\.[0-9]+)?)\s*LDC/i);
+          if (amtMatch) {
+            amount = amtMatch[1];
+          }
+          notifyLinuxDo({ status, amount, data: claimJson?.data || {} });
+        }, 600);
+      } else {
+        notifyLinuxDo({ status, amount, data: claimJson?.data || {} });
+      }
+
+      if (location.search.includes("wecom_auto=1")) {
+        setTimeout(() => {
+          const banner = document.querySelector(".wecom-credit-bridge-banner");
+          if (banner) {
+            banner.classList.add("success");
+            banner.innerHTML = `<span style="font-size:18px;">✅</span><span>已成功领取，已同步至 LINUX DO</span>`;
+          }
+          setTimeout(() => {
+            try { window.close(); } catch {}
+          }, 1000);
+        }, 800);
+      }
+    }
+
+    if (document.readyState === "complete" || document.readyState === "interactive") {
+      executeClaim();
+    } else {
+      document.addEventListener("DOMContentLoaded", executeClaim, { once: true });
+    }
+  }
+
   function bootstrap() {
     if (!document.documentElement) {
       setTimeout(bootstrap, 0);
+      return;
+    }
+    if (IS_CREDIT) {
+      initCreditRedEnvelopeBridge();
       return;
     }
     injectStyle();

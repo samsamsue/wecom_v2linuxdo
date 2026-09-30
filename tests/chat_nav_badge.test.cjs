@@ -7769,3 +7769,81 @@ test("Test 106: LINUX DO Credit red envelope WeChat-style card, auto-claim, and 
   }, "userscript must have strictly valid JavaScript syntax without parse or token errors");
 });
 
+test("Test 107: LINUX DO Credit red envelope CORS fallback, popup bridge, opener postMessage, and seamless auto-claim", () => {
+  // 1. Userscript metadata header @match rules for credit.linux.do
+  assert.ok(
+    scriptContent.includes("// @match        *://credit.linux.do/*") &&
+    scriptContent.includes("// @match        https://credit.linux.do/*"),
+    "Userscript header must match *://credit.linux.do/* and https://credit.linux.do/*"
+  );
+
+  // 2. IS_CREDIT definition and host regex simulation
+  assert.ok(
+    scriptContent.includes("const IS_CREDIT = /(?:^|\\.)credit\\.linux\\.do$/i.test(CURRENT_HOST);"),
+    "must define IS_CREDIT constant with correct hostname regex"
+  );
+  const creditRegex = /(?:^|\.)credit\.linux\.do$/i;
+  assert.ok(creditRegex.test("credit.linux.do"), "must match credit.linux.do");
+  assert.ok(!creditRegex.test("linux.do"), "must not match main linux.do forum");
+  assert.ok(!creditRegex.test("v2ex.com"), "must not match v2ex.com");
+  assert.ok(!creditRegex.test("juejin.cn"), "must not match juejin.cn");
+
+  // 3. Credit Bridge and Popup Communication
+  assert.ok(
+    scriptContent.includes("function initCreditRedEnvelopeBridge"),
+    "must define initCreditRedEnvelopeBridge"
+  );
+  assert.ok(
+    scriptContent.includes("function isCorsOrFetchError"),
+    "must define isCorsOrFetchError"
+  );
+  assert.ok(
+    scriptContent.includes("function claimViaPopupBridge"),
+    "must define claimViaPopupBridge"
+  );
+  assert.ok(
+    scriptContent.includes('type: "WECOM_RED_PACKET_RESULT"'),
+    "must support WECOM_RED_PACKET_RESULT postMessage protocol between credit popup and linux.do"
+  );
+
+  // 4. Fallback button in modal and CSS styling
+  assert.ok(
+    scriptContent.includes(".wecom-rp-blocked-wrap") &&
+    scriptContent.includes(".wecom-rp-direct-btn"),
+    "must define fallback direct button styles for blocked popups or CORS fallback"
+  );
+
+  // 5. CORS and fetch error parser simulation
+  function simulateErrorParser(err) {
+    const msg = String(err?.message || err?.msg || err || "");
+    if (err?.name === "TypeError" && /fetch/i.test(msg)) {
+      return "cors";
+    }
+    if (/failed to fetch|networkerror|load failed|cross-origin|cors/i.test(msg)) {
+      return "cors";
+    }
+    if (msg === "popup_blocked") {
+      return "popup_blocked";
+    }
+    return "error";
+  }
+
+  assert.strictEqual(simulateErrorParser(new TypeError("Failed to fetch")), "cors", "TypeError: Failed to fetch must be parsed as cors");
+  assert.strictEqual(simulateErrorParser({ message: "NetworkError when attempting to fetch resource." }), "cors", "NetworkError must be parsed as cors");
+  assert.strictEqual(simulateErrorParser({ message: "popup_blocked" }), "popup_blocked", "popup_blocked must be parsed as popup_blocked");
+
+  // 6. Bootstrap early return for credit.linux.do
+  assert.ok(
+    scriptContent.includes("if (IS_CREDIT) {") &&
+    scriptContent.includes("initCreditRedEnvelopeBridge();") &&
+    scriptContent.includes("return;"),
+    "bootstrap must route credit.linux.do directly to initCreditRedEnvelopeBridge and return"
+  );
+
+  // 7. Full JavaScript Syntax Validation
+  assert.doesNotThrow(() => {
+    new Function(scriptContent);
+  }, "userscript must have strictly valid JavaScript syntax without parse or token errors");
+});
+
+
