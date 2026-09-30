@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.74
+// @version      0.7.75
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -17,6 +17,7 @@
 // @connect      api.imgur.com
 // @connect      imgur.com
 // @connect      connect.linux.do
+// @connect      credit.linux.do
 // @connect      api.juejin.cn
 // @icon         https://linux.do/favicon.ico
 // @homepageURL  https://github.com/samsamsue/wecom_v2linuxdo
@@ -68,6 +69,8 @@
   const AVATAR_SOURCE_SIZE = 96;
   const THEME_MODE_KEY = "linuxdo-wecom-theme-mode";
   const BOOST_ENABLED_KEY = "linuxdo-wecom-boost-enabled";
+  const RED_ENVELOPE_AUTOCLAIM_KEY = "linuxdo-wecom-redenvelope-autoclaim";
+  const RED_ENVELOPE_CACHE_PREFIX = "wecom_redenvelope_";
   const HIDE_CHAT_AVATAR_KEY = "linuxdo-wecom-hide-chat-avatar";
   const HIDE_UNUSED_UI_KEY = "linuxdo-wecom-hide-unused-ui";
   const THREAD_VIEW_KEY = "linuxdo-wecom-thread-view";
@@ -143,6 +146,7 @@
     summary: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M16 19a1 1 0 0 1 0 -2a1 1 0 0 0 1 -1c0 -1.333 2 -1.333 2 0a1 1 0 0 0 1 1c1.333 0 1.333 2 0 2a1 1 0 0 0 -1 1c0 1.333 -2 1.333 -2 0a1 1 0 0 0 -1 -1" /><path d="M3 11a5 5 0 0 0 5 -5c0 -1.333 2 -1.333 2 0a5 5 0 0 0 5 5c1.333 0 1.333 2 0 2a5 5 0 0 0 -5 5a1 1 0 0 1 -2 0a5 5 0 0 0 -5 -5c-1.333 0 -1.333 -2 0 -2" /><path d="M16 7a1 1 0 0 1 0 -2a1 1 0 0 0 1 -1c0 -1.333 2 -1.333 2 0a1 1 0 0 0 1 1c1.333 0 1.333 2 0 2a1 1 0 0 0 -1 1c0 1.333 -2 1.333 -2 0a1 1 0 0 0 -1 -1" /></svg>`,
     advanced: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M20.894 13.553a1 1 0 0 1 -.447 1.341l-8 4a1 1 0 0 1 -.894 0l-8 -4a1 1 0 0 1 .894 -1.788l7.553 3.774l7.554 -3.775a1 1 0 0 1 1.341 .447m-8.887 -8.552q .056 0 .111 .007l.111 .02l.086 .024l.012 .006l.012 .002l.029 .014l.05 .019l.016 .009l.012 .005l8 4a1 1 0 0 1 0 1.788l-8 4a1 1 0 0 1 -.894 0l-8 -4a1 1 0 0 1 0 -1.788l8 -4l.011 -.005l.018 -.01l.078 -.032l.011 -.002l.013 -.006l.086 -.024l.11 -.02l.056 -.005z" /></svg>`,
     group: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M9 3a1 1 0 0 1 .608 .206l.1 .087l2.706 2.707h6.586a3 3 0 0 1 2.995 2.824l.005 .176v8a3 3 0 0 1 -2.824 2.995l-.176 .005h-14a3 3 0 0 1 -2.995 -2.824l-.005 -.176v-11a3 3 0 0 1 2.824 -2.995l.176 -.005h4z" /></svg>`,
+    redpacket: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M5 4a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-16z" /><path d="M5 4c0 1.657 3.134 3 7 3s7 -1.343 7 -3" fill="none" stroke="currentColor" stroke-width="1.5" /><circle cx="12" cy="11" r="2.5" fill="#fcd783" /></svg>`,
     pin: `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M16 3a1 1 0 0 1 .117 1.993l-.117 .007v4.764l1.894 3.789a1 1 0 0 1 .1 .331l.006 .116v2a1 1 0 0 1 -.883 .993l-.117 .007h-4v4a1 1 0 0 1 -1.993 .117l-.007 -.117v-4h-4a1 1 0 0 1 -.993 -.883l-.007 -.117v-2a1 1 0 0 1 .06 -.34l.046 -.107l1.894 -3.791v-4.762a1 1 0 0 1 -.117 -1.993l.117 -.007h8z" /></svg>`,
     gear: `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M14.647 4.081a.724 .724 0 0 0 1.08 .448c2.439 -1.485 5.23 1.305 3.745 3.744a.724 .724 0 0 0 .447 1.08c2.775 .673 2.775 4.62 0 5.294a.724 .724 0 0 0 -.448 1.08c1.485 2.439 -1.305 5.23 -3.744 3.745a.724 .724 0 0 0 -1.08 .447c-.673 2.775 -4.62 2.775 -5.294 0a.724 .724 0 0 0 -1.08 -.448c-2.439 1.485 -5.23 -1.305 -3.745 -3.744a.724 .724 0 0 0 -.447 -1.08c-2.775 -.673 -2.775 -4.62 0 -5.294a.724 .724 0 0 0 .448 -1.08c-1.485 -2.439 1.305 -5.23 3.744 -3.745a.722 .722 0 0 0 1.08 -.447c.673 -2.775 4.62 -2.775 5.294 0zm-2.647 4.919a3 3 0 1 0 0 6a3 3 0 0 0 0 -6" /></svg>`,
     moon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M12 1.992a10 10 0 1 0 9.236 13.838c.341 -.82 -.476 -1.644 -1.298 -1.31a6.5 6.5 0 0 1 -6.864 -10.787l.077 -.08c.551 -.63 .113 -1.653 -.758 -1.653h-.266l-.068 -.006l-.06 -.002z" /></svg>`,
@@ -8926,6 +8930,472 @@
       flex-shrink: 0 !important;
       white-space: nowrap !important;
     }
+
+    /* ============================== 微信风格积分红包卡片与弹窗 ============================== */
+    .wecom-redpacket-card {
+      display: inline-flex;
+      flex-direction: column;
+      width: 240px;
+      min-width: 220px;
+      height: 84px;
+      background: linear-gradient(135deg, #fa9d3b 0%, #f15b43 100%);
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(241, 91, 67, 0.28);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      user-select: none;
+      vertical-align: middle;
+      margin: 6px 0;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.2s ease;
+      box-sizing: border-box;
+      text-decoration: none !important;
+    }
+    .wecom-redpacket-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(241, 91, 67, 0.38);
+    }
+    .wecom-redpacket-card:active {
+      transform: translateY(0);
+    }
+    .wecom-redpacket-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 38px;
+      border-bottom-left-radius: 50% 16px;
+      border-bottom-right-radius: 50% 16px;
+      background: rgba(0, 0, 0, 0.04);
+      pointer-events: none;
+    }
+    .wecom-rp-card-body {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px 6px;
+      gap: 10px;
+      flex: 1;
+      position: relative;
+      z-index: 1;
+    }
+    .wecom-rp-icon {
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wecom-rp-svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+    }
+    .wecom-rp-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .wecom-rp-greeting {
+      font-size: 14px;
+      font-weight: 500;
+      color: #ffffff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.3;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+    }
+    .wecom-rp-status {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.85);
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .wecom-rp-card-footer {
+      padding: 3px 12px 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 1;
+    }
+    .wecom-rp-type {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.72);
+      line-height: 1;
+    }
+    .wecom-redpacket-card.wecom-rp-claimed,
+    .wecom-redpacket-card.wecom-rp-finished,
+    .wecom-redpacket-card.wecom-rp-expired {
+      background: linear-gradient(135deg, #f5a983 0%, #ea8573 100%);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+      opacity: 0.92;
+    }
+    .wecom-redpacket-card.wecom-rp-claimed .wecom-rp-status,
+    .wecom-redpacket-card.wecom-rp-finished .wecom-rp-status,
+    .wecom-redpacket-card.wecom-rp-expired .wecom-rp-status {
+      color: #fff0e6;
+    }
+
+    .wecom-redpacket-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100050;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: wecom-fade-in 0.2s ease-out;
+    }
+    .wecom-redpacket-overlay.fade-out {
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .wecom-redpacket-modal {
+      position: relative;
+      width: 320px;
+      min-height: 440px;
+      max-height: 88vh;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+      display: flex;
+      flex-direction: column;
+      animation: wecom-scale-in 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+      user-select: none;
+      box-sizing: border-box;
+    }
+
+    .wecom-rp-unopened {
+      background: linear-gradient(180deg, #d94e38 0%, #c93b26 100%);
+      color: #ffffff;
+      height: 460px;
+      text-align: center;
+    }
+    .wecom-rp-flap {
+      position: absolute;
+      top: 0;
+      left: -20px;
+      right: -20px;
+      height: 260px;
+      background: linear-gradient(180deg, #e45842 0%, #d84a34 100%);
+      border-bottom-left-radius: 50% 90px;
+      border-bottom-right-radius: 50% 90px;
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.22);
+    }
+    .wecom-rp-close-btn {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      z-index: 10;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.15);
+      color: #ffffff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      line-height: 1;
+      transition: background 0.15s ease;
+    }
+    .wecom-rp-close-btn:hover {
+      background: rgba(0, 0, 0, 0.3);
+    }
+    .wecom-rp-sender-wrap {
+      position: relative;
+      z-index: 2;
+      margin-top: 48px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .wecom-rp-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 235, 190, 0.6);
+      overflow: hidden;
+      background: #f5f5f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: bold;
+      color: #d94e38;
+    }
+    .wecom-rp-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .wecom-rp-sender-name {
+      margin-top: 8px;
+      font-size: 15px;
+      font-weight: 500;
+      color: #fae3b8;
+    }
+    .wecom-rp-subhint {
+      margin-top: 2px;
+      font-size: 11px;
+      color: rgba(250, 227, 184, 0.75);
+    }
+    .wecom-rp-greeting-large {
+      margin-top: 18px;
+      font-size: 19px;
+      font-weight: 600;
+      color: #fae3b8;
+      padding: 0 20px;
+      line-height: 1.4;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    }
+    .wecom-rp-kai-btn {
+      position: absolute;
+      top: 218px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 3;
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 30%, #ffebb3 0%, #ebca88 55%, #cfa455 100%);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.5);
+      border: 2px solid #ecd399;
+      color: #3a2007;
+      font-size: 38px;
+      font-weight: 700;
+      font-family: "PingFang SC", "Microsoft YaHei", serif, sans-serif;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s ease;
+      outline: none;
+    }
+    .wecom-rp-kai-btn:hover {
+      transform: translateX(-50%) scale(1.05);
+    }
+    .wecom-rp-kai-btn:active {
+      transform: translateX(-50%) scale(0.96);
+    }
+    @keyframes wecom-kai-spin {
+      0% { transform: translateX(-50%) rotateY(0deg); }
+      100% { transform: translateX(-50%) rotateY(360deg); }
+    }
+    .wecom-rp-kai-btn.is-spinning {
+      animation: wecom-kai-spin 0.6s linear infinite;
+      pointer-events: none;
+    }
+    .wecom-rp-bottom-note {
+      position: absolute;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 11px;
+      color: rgba(250, 227, 184, 0.65);
+    }
+
+    .wecom-rp-opened {
+      background: #f7f7f7;
+      color: #333333;
+      min-height: 420px;
+      max-height: 540px;
+    }
+    .wecom-rp-opened-header {
+      position: relative;
+      background: linear-gradient(180deg, #d94e38 0%, #c93b26 100%);
+      color: #ffffff;
+      padding: 34px 16px 24px;
+      text-align: center;
+      border-bottom-left-radius: 50% 24px;
+      border-bottom-right-radius: 50% 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+      flex-shrink: 0;
+    }
+    .wecom-rp-opened-header .wecom-rp-sender-wrap {
+      margin-top: 0;
+    }
+    .wecom-rp-greeting-mid {
+      margin-top: 4px;
+      font-size: 13px;
+      color: #fae3b8;
+    }
+    .wecom-rp-big-amount {
+      margin-top: 10px;
+      font-size: 40px;
+      font-weight: 700;
+      color: #fae3b8;
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 4px;
+      line-height: 1;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .wecom-rp-unit {
+      font-size: 16px;
+      font-weight: 500;
+      color: #fae3b8;
+    }
+    .wecom-rp-status-tag {
+      font-size: 12px;
+      color: rgba(250, 227, 184, 0.85);
+      margin-top: 6px;
+    }
+    .wecom-rp-empty-title {
+      font-size: 16px;
+      font-weight: 500;
+      color: #fae3b8;
+      margin-top: 12px;
+    }
+    .wecom-rp-summary-bar {
+      padding: 10px 18px 6px;
+      font-size: 11px;
+      color: #8c8c8c;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .wecom-rp-claims-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 16px 8px;
+      max-height: 190px;
+    }
+    .wecom-rp-claim-row {
+      display: flex;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    .wecom-rp-claim-row:last-child {
+      border-bottom: none;
+    }
+    .wecom-rp-claim-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: #e8e8e8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: #666666;
+      flex-shrink: 0;
+    }
+    .wecom-rp-claim-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .wecom-rp-claim-info {
+      flex: 1;
+      min-width: 0;
+      margin-left: 10px;
+      display: flex;
+      flex-direction: column;
+    }
+    .wecom-rp-claim-user {
+      font-size: 13px;
+      font-weight: 500;
+      color: #333333;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .wecom-rp-claim-time {
+      font-size: 10px;
+      color: #999999;
+      margin-top: 1px;
+    }
+    .wecom-rp-claim-right {
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+    .wecom-rp-claim-amount {
+      font-size: 13px;
+      font-weight: 600;
+      color: #333333;
+    }
+    .wecom-rp-claim-best {
+      font-size: 10px;
+      color: #d9822b;
+      margin-top: 1px;
+      font-weight: 500;
+    }
+    .wecom-rp-no-claims {
+      text-align: center;
+      color: #999999;
+      font-size: 12px;
+      padding: 24px 0;
+    }
+    .wecom-rp-opened-footer {
+      padding: 8px 16px 12px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .wecom-rp-external-link {
+      font-size: 11px;
+      color: #d94e38;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .wecom-rp-external-link:hover {
+      text-decoration: underline;
+    }
+
+    .wecom-rp-toast {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100060;
+      background: rgba(30, 32, 35, 0.9);
+      color: #ffffff;
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 13px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: wecom-toast-slide 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+      pointer-events: none;
+    }
+    .wecom-rp-toast.fade-out {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-8px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    @keyframes wecom-toast-slide {
+      0% { opacity: 0; transform: translateX(-50%) translateY(-16px); }
+      100% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    @keyframes wecom-fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes wecom-scale-in {
+      from { opacity: 0; transform: scale(0.85); }
+      to { opacity: 1; transform: scale(1); }
+    }
   `;
 
   /* 深色主题配色微调 */
@@ -10285,6 +10755,52 @@
       background: #267EF0 !important;
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
     }
+
+    /* 暗色主题下的红包与弹窗适配 */
+    html.${ROOT_CLASS}.wecom-dark .wecom-redpacket-card,
+    html.wecom-dark .wecom-redpacket-card,
+    body.wecom-dark .wecom-redpacket-card {
+      background: linear-gradient(135deg, #d37322 0%, #c43f2a 100%);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-redpacket-card.wecom-rp-claimed,
+    html.${ROOT_CLASS}.wecom-dark .wecom-redpacket-card.wecom-rp-finished,
+    html.${ROOT_CLASS}.wecom-dark .wecom-redpacket-card.wecom-rp-expired,
+    html.wecom-dark .wecom-redpacket-card.wecom-rp-claimed,
+    html.wecom-dark .wecom-redpacket-card.wecom-rp-finished,
+    html.wecom-dark .wecom-redpacket-card.wecom-rp-expired,
+    body.wecom-dark .wecom-redpacket-card.wecom-rp-claimed,
+    body.wecom-dark .wecom-redpacket-card.wecom-rp-finished,
+    body.wecom-dark .wecom-redpacket-card.wecom-rp-expired {
+      background: linear-gradient(135deg, #965324 0%, #873629 100%);
+      opacity: 0.85;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-rp-opened,
+    html.wecom-dark .wecom-rp-opened,
+    body.wecom-dark .wecom-rp-opened {
+      background: #1C1E22;
+      color: #E0E4E8;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-rp-claim-user,
+    html.wecom-dark .wecom-rp-claim-user,
+    body.wecom-dark .wecom-rp-claim-user {
+      color: #D8DCE0;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-rp-claim-amount,
+    html.wecom-dark .wecom-rp-claim-amount,
+    body.wecom-dark .wecom-rp-claim-amount {
+      color: #E8ECF0;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-rp-claim-row,
+    html.wecom-dark .wecom-rp-claim-row,
+    body.wecom-dark .wecom-rp-claim-row {
+      border-bottom-color: rgba(255, 255, 255, 0.06);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-rp-external-link,
+    html.wecom-dark .wecom-rp-external-link,
+    body.wecom-dark .wecom-rp-external-link {
+      color: #F16B54;
+    }
   `;
 
   /* ============================== 基础设施 ============================== */
@@ -11183,6 +11699,18 @@
       }
     }
 
+    const redpacketBtn = menu.querySelector(".wecom-menu-toggle-redpacket-autoclaim");
+    if (redpacketBtn) {
+      const on = isRedEnvelopeAutoClaimEnabled();
+      redpacketBtn.classList.remove("is-active");
+      redpacketBtn.setAttribute("aria-checked", on ? "true" : "false");
+      const badge = redpacketBtn.querySelector(".wecom-menu-state-badge");
+      if (badge) {
+        badge.textContent = on ? "已开启" : "已关闭";
+        badge.className = `wecom-menu-state-badge ${on ? "is-on" : "is-off"}`;
+      }
+    }
+
     const threadViewBtn = menu.querySelector(".wecom-menu-toggle-thread-view");
     if (threadViewBtn) {
       const on = isThreadViewEnabled();
@@ -11331,7 +11859,9 @@
       `<div class="wecom-theme-menu-title wecom-theme-menu-divider">消息功能</div>` +
       (IS_LINUXDO ?
         `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-boost" aria-checked="true">` +
-        `${ICONS.boost}<span class="wecom-menu-label">显示消息 Boost</span><span class="wecom-menu-state-badge is-on">已开启</span></button>` : "") +
+        `${ICONS.boost}<span class="wecom-menu-label">显示消息 Boost</span><span class="wecom-menu-state-badge is-on">已开启</span></button>` +
+        `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-redpacket-autoclaim" aria-checked="true">` +
+        `${ICONS.redpacket}<span class="wecom-menu-label">积分红包自动领取</span><span class="wecom-menu-state-badge is-on">已开启</span></button>` : "") +
       `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-thread-view" aria-checked="true">` +
       `${ICONS.thread}<span class="wecom-menu-label">对话楼层关系</span><span class="wecom-menu-state-badge is-on">已开启</span></button>` +
       `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-base64" aria-checked="true">` +
@@ -11416,6 +11946,13 @@
         event.preventDefault();
         event.stopPropagation();
         setBoostEnabled(!isBoostEnabled());
+        return;
+      }
+      const redpacketBtn = event.target.closest(".wecom-menu-toggle-redpacket-autoclaim");
+      if (redpacketBtn) {
+        event.preventDefault();
+        event.stopPropagation();
+        setRedEnvelopeAutoClaimEnabled(!isRedEnvelopeAutoClaimEnabled());
         return;
       }
       const threadViewBtn = event.target.closest(".wecom-menu-toggle-thread-view");
@@ -11527,7 +12064,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.74";
+  const SCRIPT_VERSION = "0.7.75";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -16274,6 +16811,671 @@
       .catch((err) => renderConnectModalContent(modal, null, err.message || "请求失败"));
   }
 
+  /* ============================== LINUX DO Credit 积分红包模块 ============================== */
+
+  const redEnvelopeMemoryCache = new Map();
+  const redEnvelopeClaimsInProgress = new Set();
+  const redEnvelopeDetailsInProgress = new Map();
+
+  function isRedEnvelopeAutoClaimEnabled() {
+    try {
+      return localStorage.getItem(RED_ENVELOPE_AUTOCLAIM_KEY) !== "0";
+    } catch {
+      return true;
+    }
+  }
+
+  function setRedEnvelopeAutoClaimEnabled(enabled) {
+    try {
+      localStorage.setItem(RED_ENVELOPE_AUTOCLAIM_KEY, enabled ? "1" : "0");
+    } catch { /* ignore */ }
+    syncThemeControls();
+  }
+
+  function getRedEnvelopeCache(id) {
+    if (!id) return null;
+    const key = String(id);
+    if (redEnvelopeMemoryCache.has(key)) {
+      return redEnvelopeMemoryCache.get(key);
+    }
+    try {
+      const raw = localStorage.getItem(RED_ENVELOPE_CACHE_PREFIX + key);
+      if (raw) {
+        const data = JSON.parse(raw);
+        redEnvelopeMemoryCache.set(key, data);
+        return data;
+      }
+    } catch { /* ignore */ }
+    return null;
+  }
+
+  function setRedEnvelopeCache(id, data) {
+    if (!id || !data) return null;
+    const key = String(id);
+    const prev = getRedEnvelopeCache(key) || {};
+    const merged = Object.assign({}, prev, data, { updatedAt: Date.now() });
+    redEnvelopeMemoryCache.set(key, merged);
+    try {
+      localStorage.setItem(RED_ENVELOPE_CACHE_PREFIX + key, JSON.stringify(merged));
+    } catch { /* ignore */ }
+    return merged;
+  }
+
+  async function requestCreditApi(endpoint, options = {}) {
+    const url = `https://credit.linux.do${endpoint}`;
+    const method = options.method || "GET";
+    const body = options.body;
+    const headers = Object.assign({
+      "Accept": "application/json, text/plain, */*",
+      "X-Requested-With": "XMLHttpRequest"
+    }, options.headers || {});
+    if (body && !headers["Content-Type"]) {
+      headers["Content-Type"] = "application/json";
+    }
+
+    const tryGm = () => new Promise((resolve, reject) => {
+      const gmXhr = (typeof GM_xmlhttpRequest === "function" ? GM_xmlhttpRequest : null)
+        || (typeof GM !== "undefined" && typeof GM.xmlHttpRequest === "function" ? GM.xmlHttpRequest : null);
+      if (!gmXhr) return reject(new Error("GM unavailable"));
+      try {
+        gmXhr({
+          method,
+          url,
+          headers,
+          data: body,
+          withCredentials: true,
+          timeout: 10000,
+          onload: (res) => {
+            let json = null;
+            try { json = JSON.parse(res.responseText); } catch {}
+            if (res.status >= 200 && res.status < 300) {
+              if (json && (json.code === 0 || json.code === 200 || json.code == null)) {
+                return resolve(json);
+              }
+            }
+            const msg = json?.message || json?.msg || `HTTP ${res.status}`;
+            const err = new Error(msg);
+            err.status = res.status;
+            err.data = json;
+            reject(err);
+          },
+          onerror: (err) => reject(err),
+          ontimeout: () => reject(new Error("Credit request timeout"))
+        });
+      } catch (e) {
+        reject(e);
+      }
+    });
+
+    try {
+      return await tryGm();
+    } catch (gmErr) {
+      if (gmErr.status && gmErr.status !== 404) throw gmErr;
+      const fetchOpts = {
+        method,
+        headers,
+        credentials: "include"
+      };
+      if (body) fetchOpts.body = body;
+      const res = await fetch(url, fetchOpts);
+      let json = null;
+      try {
+        json = await res.json();
+      } catch {
+        const text = await res.text().catch(() => "");
+        const err = new Error(text || `HTTP ${res.status}`);
+        err.status = res.status;
+        throw err;
+      }
+      if (!res.ok || (json && json.code !== 0 && json.code !== 200 && json.code != null)) {
+        const msg = json?.message || json?.msg || `HTTP ${res.status}`;
+        const err = new Error(msg);
+        err.status = res.status;
+        err.data = json;
+        throw err;
+      }
+      return json;
+    }
+  }
+
+  async function fetchRedEnvelopeDetail(id) {
+    if (!id) throw new Error("Missing red envelope ID");
+    const key = String(id);
+    if (redEnvelopeDetailsInProgress.has(key)) {
+      return await redEnvelopeDetailsInProgress.get(key);
+    }
+    const promise = (async () => {
+      try {
+        let res;
+        try {
+          res = await requestCreditApi(`/api/v1/redenvelope/${encodeURIComponent(key)}`);
+        } catch (err) {
+          if (err.status === 404) {
+            res = await requestCreditApi(`/api/redenvelope/${encodeURIComponent(key)}`);
+          } else {
+            throw err;
+          }
+        }
+        const data = res?.data || res;
+        const redEnvelope = data?.red_envelope || data;
+        const claims = Array.isArray(data?.claims) ? data.claims : [];
+        const userClaimed = Boolean(data?.user_claimed || redEnvelope?.user_claimed);
+        let userAmount = data?.user_amount || data?.amount || null;
+        if (!userAmount && claims.length > 0) {
+          const myName = getCurrentUsername();
+          const found = claims.find((c) => normalizeUsername(c.username) === normalizeUsername(myName));
+          if (found) userAmount = found.amount;
+        }
+        const updated = setRedEnvelopeCache(key, {
+          id: key,
+          sender_name: redEnvelope?.username || "LINUX DO 坛友",
+          sender_avatar: redEnvelope?.avatar_url || "",
+          greeting: redEnvelope?.greeting || "恭喜发财，大吉大利",
+          total_amount: redEnvelope?.total_amount != null ? redEnvelope.total_amount : 0,
+          total_count: redEnvelope?.total_count != null ? redEnvelope.total_count : 0,
+          claimed_amount: redEnvelope?.claimed_amount != null ? redEnvelope.claimed_amount : 0,
+          claimed_count: redEnvelope?.claimed_count != null ? redEnvelope.claimed_count : 0,
+          status: redEnvelope?.status || "normal",
+          user_claimed: userClaimed,
+          user_amount: userAmount != null ? String(userAmount) : null,
+          claims
+        });
+        return updated;
+      } finally {
+        redEnvelopeDetailsInProgress.delete(key);
+      }
+    })();
+    redEnvelopeDetailsInProgress.set(key, promise);
+    return await promise;
+  }
+
+  async function claimRedEnvelope(id) {
+    if (!id) throw new Error("Missing red envelope ID");
+    const key = String(id);
+    let res;
+    const payload = JSON.stringify({ id: key, red_envelope_id: key });
+    try {
+      res = await requestCreditApi("/api/v1/redenvelope/claim", {
+        method: "POST",
+        body: payload
+      });
+    } catch (err) {
+      if (err.status === 404) {
+        res = await requestCreditApi("/api/redenvelope/claim", {
+          method: "POST",
+          body: payload
+        });
+      } else {
+        throw err;
+      }
+    }
+    const claimData = res?.data || res;
+    const amount = claimData?.amount != null ? String(claimData.amount) : "";
+    const redEnvelope = claimData?.red_envelope || {};
+    const cacheObj = {
+      id: key,
+      status: "claimed",
+      user_claimed: true,
+      user_amount: amount || undefined,
+      greeting: redEnvelope.greeting || undefined,
+      sender_name: redEnvelope.username || undefined,
+      sender_avatar: redEnvelope.avatar_url || undefined
+    };
+    setRedEnvelopeCache(key, cacheObj);
+    return { amount, redEnvelope };
+  }
+
+  function parseClaimError(err) {
+    const msg = String(err?.message || err?.msg || "");
+    const status = err?.status;
+    if (status === 401 || /未登录|Unauthorized|login/i.test(msg)) {
+      return { kind: "unauthorized", label: "未登录积分中心 (点击登录)" };
+    }
+    if (/已领取|AlreadyClaimed|already claimed/i.test(msg)) {
+      return { kind: "already_claimed", label: "已领取红包" };
+    }
+    if (/领完|抢完|Finished|finished/i.test(msg)) {
+      return { kind: "finished", label: "手慢了，红包已被领完" };
+    }
+    if (/过期|Expired|expired/i.test(msg)) {
+      return { kind: "expired", label: "红包已过期" };
+    }
+    if (/自己|CannotClaimOwn/i.test(msg)) {
+      return { kind: "own", label: "查看自己的红包" };
+    }
+    return { kind: "error", label: msg || "领取失败" };
+  }
+
+  function showRedEnvelopeToast(text) {
+    const existing = document.querySelector(".wecom-rp-toast");
+    if (existing) existing.remove();
+    const toast = document.createElement("div");
+    toast.className = "wecom-rp-toast";
+    toast.innerHTML = `<span class="wecom-rp-toast-icon">🧧</span><span class="wecom-rp-toast-text">${escapeHtml(text)}</span>`;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.classList.add("fade-out");
+      setTimeout(() => toast.remove(), 300);
+    }, 3200);
+  }
+
+  async function triggerRedEnvelopeAutoClaim(id) {
+    if (!id) return;
+    const key = String(id);
+    const cached = getRedEnvelopeCache(key);
+    if (cached && (cached.status === "claimed" || cached.status === "finished" || cached.status === "expired" || cached.user_claimed)) {
+      updateRedEnvelopeCards(key);
+      return;
+    }
+    if (redEnvelopeClaimsInProgress.has(key)) return;
+    redEnvelopeClaimsInProgress.add(key);
+
+    try {
+      const { amount } = await claimRedEnvelope(key);
+      updateRedEnvelopeCards(key);
+      showRedEnvelopeToast(`已自动领取 LINUX DO 积分红包：+${amount || "0"} LDC`);
+      fetchRedEnvelopeDetail(key).then(() => updateRedEnvelopeCards(key)).catch(() => {});
+    } catch (err) {
+      const parsed = parseClaimError(err);
+      if (parsed.kind === "already_claimed") {
+        setRedEnvelopeCache(key, { id: key, status: "claimed", user_claimed: true });
+        fetchRedEnvelopeDetail(key).then(() => updateRedEnvelopeCards(key)).catch(() => updateRedEnvelopeCards(key));
+      } else if (parsed.kind === "finished") {
+        setRedEnvelopeCache(key, { id: key, status: "finished" });
+        updateRedEnvelopeCards(key);
+      } else if (parsed.kind === "expired") {
+        setRedEnvelopeCache(key, { id: key, status: "expired" });
+        updateRedEnvelopeCards(key);
+      } else if (parsed.kind === "own") {
+        setRedEnvelopeCache(key, { id: key, is_own: true });
+        updateRedEnvelopeCards(key);
+      } else {
+        updateRedEnvelopeCards(key, parsed.label);
+      }
+    } finally {
+      redEnvelopeClaimsInProgress.delete(key);
+    }
+  }
+
+  function updateRedEnvelopeCards(id, customStatus) {
+    const key = String(id);
+    const cached = getRedEnvelopeCache(key);
+    const cards = document.querySelectorAll(`.wecom-redpacket-card[data-redenvelope-id="${key}"]`);
+    cards.forEach((card) => {
+      const greetingEl = card.querySelector(".wecom-rp-greeting");
+      const statusEl = card.querySelector(".wecom-rp-status");
+
+      if (cached?.greeting && greetingEl) {
+        greetingEl.textContent = cached.greeting;
+      }
+
+      card.classList.remove("wecom-rp-claimed", "wecom-rp-finished", "wecom-rp-expired");
+
+      if (cached?.user_claimed || cached?.status === "claimed") {
+        card.classList.add("wecom-rp-claimed");
+        if (statusEl) {
+          statusEl.textContent = cached.user_amount ? `已领取 ${cached.user_amount} LDC` : "已领取红包";
+        }
+      } else if (cached?.status === "finished") {
+        card.classList.add("wecom-rp-finished");
+        if (statusEl) statusEl.textContent = "手慢了，红包已被领完";
+      } else if (cached?.status === "expired") {
+        card.classList.add("wecom-rp-expired");
+        if (statusEl) statusEl.textContent = "红包已过期";
+      } else if (cached?.is_own) {
+        if (statusEl) statusEl.textContent = "查看自己的红包";
+      } else if (customStatus && statusEl) {
+        statusEl.textContent = customStatus;
+      } else if (statusEl) {
+        statusEl.textContent = "点击打开红包";
+      }
+    });
+  }
+
+  function createRedEnvelopeCardElement(id, defaultGreeting) {
+    const card = document.createElement("div");
+    card.className = "wecom-redpacket-card";
+    card.dataset.redenvelopeId = String(id);
+    card.dataset.redenvelopeHydrated = "1";
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.title = "点击查看微信红包详情";
+
+    const cached = getRedEnvelopeCache(id);
+    const greeting = cached?.greeting || defaultGreeting || "恭喜发财，大吉大利";
+    let statusText = "点击打开红包";
+    let extraClass = "";
+
+    if (cached?.user_claimed || cached?.status === "claimed") {
+      statusText = cached.user_amount ? `已领取 ${cached.user_amount} LDC` : "已领取红包";
+      extraClass = " wecom-rp-claimed";
+    } else if (cached?.status === "finished") {
+      statusText = "手慢了，红包已被领完";
+      extraClass = " wecom-rp-finished";
+    } else if (cached?.status === "expired") {
+      statusText = "红包已过期";
+      extraClass = " wecom-rp-expired";
+    } else if (cached?.is_own) {
+      statusText = "查看自己的红包";
+    } else if (isRedEnvelopeAutoClaimEnabled()) {
+      statusText = "正在自动领取...";
+    }
+
+    if (extraClass) card.className += extraClass;
+
+    card.innerHTML = `
+      <div class="wecom-rp-card-body">
+        <div class="wecom-rp-icon">
+          <svg viewBox="0 0 48 48" class="wecom-rp-svg">
+            <path d="M7 10a4 4 0 0 1 4-4h26a4 4 0 0 1 4 4v28a4 4 0 0 1-4 4H11a4 4 0 0 1-4-4V10z" fill="#ea583f"/>
+            <path d="M7 10c0-2.2 1.8-4 4-4h26c2.2 0 4 1.8 4 4v7c-6 8-13 12-17 12s-11-4-17-12v-7z" fill="#f2694f"/>
+            <circle cx="24" cy="25" r="5" fill="#fcd783" stroke="#e0aa40" stroke-width="1"/>
+            <path d="M22 25h4M24 23v4" stroke="#c08226" stroke-width="1" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="wecom-rp-info">
+          <div class="wecom-rp-greeting">${escapeHtml(greeting)}</div>
+          <div class="wecom-rp-status">${escapeHtml(statusText)}</div>
+        </div>
+      </div>
+      <div class="wecom-rp-card-footer">
+        <span class="wecom-rp-type">LINUX DO 积分红包</span>
+      </div>
+    `;
+
+    card.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openRedEnvelopeModal(id);
+    });
+    card.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        e.stopPropagation();
+        openRedEnvelopeModal(id);
+      }
+    });
+
+    return card;
+  }
+
+  function hydrateRedEnvelopes(root) {
+    if (!root) return;
+    const envLinks = root.querySelectorAll('a[href*="credit.linux.do/redenvelope/"]');
+    const foundIds = new Set();
+
+    envLinks.forEach((a) => {
+      if (a.dataset.redenvelopeHydrated) return;
+      const href = a.getAttribute("href") || "";
+      const m = href.match(/credit\.linux\.do\/redenvelope\/([a-zA-Z0-9_-]+)/i);
+      if (!m) return;
+      const envId = m[1];
+      foundIds.add(envId);
+
+      const linkText = a.textContent.trim();
+      const defaultGreeting = linkText && linkText !== href && !linkText.includes("credit.linux.do") ? linkText : "";
+      const card = createRedEnvelopeCardElement(envId, defaultGreeting);
+
+      const onebox = a.closest("aside.onebox, .onebox");
+      if (onebox) {
+        onebox.replaceWith(card);
+        return;
+      }
+
+      const p = a.closest("p");
+      if (p && p.textContent.trim() === linkText && p.children.length === 1) {
+        p.replaceWith(card);
+        return;
+      }
+
+      a.replaceWith(card);
+    });
+
+    // Also scan text nodes in .wecom-msg-body
+    const msgBodies = root.classList.contains("wecom-msg-body") ? [root] : root.querySelectorAll(".wecom-msg-body");
+    msgBodies.forEach((body) => {
+      const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, null, false);
+      const nodesToReplace = [];
+      let textNode;
+      while ((textNode = walker.nextNode())) {
+        if (textNode.parentNode && textNode.parentNode.closest(".wecom-redpacket-card, a, code, pre")) continue;
+        if (/credit\.linux\.do\/redenvelope\/([a-zA-Z0-9_-]+)/i.test(textNode.nodeValue)) {
+          nodesToReplace.push(textNode);
+        }
+      }
+      nodesToReplace.forEach((node) => {
+        const parent = node.parentNode;
+        if (!parent) return;
+        const text = node.nodeValue;
+        const regex = /(https?:\/\/credit\.linux\.do\/redenvelope\/([a-zA-Z0-9_-]+))/gi;
+        let lastIndex = 0;
+        let match;
+        const frag = document.createDocumentFragment();
+        while ((match = regex.exec(text)) !== null) {
+          if (match.index > lastIndex) {
+            frag.appendChild(document.createTextNode(text.substring(lastIndex, match.index)));
+          }
+          const envId = match[2];
+          foundIds.add(envId);
+          frag.appendChild(createRedEnvelopeCardElement(envId));
+          lastIndex = regex.lastIndex;
+        }
+        if (lastIndex < text.length) {
+          frag.appendChild(document.createTextNode(text.substring(lastIndex)));
+        }
+        parent.replaceChild(frag, node);
+      });
+    });
+
+    if (isRedEnvelopeAutoClaimEnabled()) {
+      foundIds.forEach((envId) => {
+        triggerRedEnvelopeAutoClaim(envId);
+      });
+    } else {
+      foundIds.forEach((envId) => {
+        const cached = getRedEnvelopeCache(envId);
+        if (!cached) {
+          fetchRedEnvelopeDetail(envId).then(() => updateRedEnvelopeCards(envId)).catch(() => {});
+        }
+      });
+    }
+  }
+
+  function closeRedEnvelopeModal() {
+    const overlay = document.querySelector(".wecom-redpacket-overlay");
+    if (!overlay) return;
+    overlay.classList.add("fade-out");
+    setTimeout(() => overlay.remove(), 200);
+  }
+
+  async function openRedEnvelopeModal(id) {
+    if (!id) return;
+    closeRedEnvelopeModal();
+
+    const key = String(id);
+    const overlay = document.createElement("div");
+    overlay.className = "wecom-redpacket-overlay";
+
+    const modal = document.createElement("div");
+    modal.className = "wecom-redpacket-modal";
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-label", "LINUX DO 积分红包");
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) closeRedEnvelopeModal();
+    });
+
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") {
+        closeRedEnvelopeModal();
+        document.removeEventListener("keydown", onKeyDown);
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+
+    let cached = getRedEnvelopeCache(key);
+
+    if (cached?.user_claimed || cached?.status === "claimed" || cached?.status === "finished" || cached?.is_own) {
+      renderOpenedRedEnvelopeView(modal, key, cached);
+      fetchRedEnvelopeDetail(key).then((fresh) => {
+        if (document.body.contains(modal)) {
+          renderOpenedRedEnvelopeView(modal, key, fresh);
+        }
+      }).catch(() => {});
+    } else {
+      renderUnopenedRedEnvelopeView(modal, key, cached);
+      fetchRedEnvelopeDetail(key).then((fresh) => {
+        if (document.body.contains(modal) && !modal.dataset.opened) {
+          renderUnopenedRedEnvelopeView(modal, key, fresh);
+        }
+      }).catch(() => {});
+    }
+  }
+
+  function renderUnopenedRedEnvelopeView(modal, id, data) {
+    const sender = data?.sender_name || "LINUX DO 坛友";
+    const avatar = data?.sender_avatar ? `<img src="${escapeHtml(data.sender_avatar)}" alt="" />` : (sender[0] || "?");
+    const greeting = data?.greeting || "恭喜发财，大吉大利";
+
+    modal.className = "wecom-redpacket-modal wecom-rp-unopened";
+    modal.innerHTML = `
+      <div class="wecom-rp-flap"></div>
+      <button type="button" class="wecom-rp-close-btn" aria-label="关闭" title="关闭">✕</button>
+      <div class="wecom-rp-sender-wrap">
+        <div class="wecom-rp-avatar">${avatar}</div>
+        <div class="wecom-rp-sender-name">${escapeHtml(sender)}</div>
+        <div class="wecom-rp-subhint">给你发了一个红包</div>
+        <div class="wecom-rp-greeting-large">${escapeHtml(greeting)}</div>
+      </div>
+      <button type="button" class="wecom-rp-kai-btn" aria-label="開" title="開">開</button>
+      <div class="wecom-rp-bottom-note">LINUX DO Credit 积分红包</div>
+    `;
+
+    modal.querySelector(".wecom-rp-close-btn")?.addEventListener("click", closeRedEnvelopeModal);
+
+    const kaiBtn = modal.querySelector(".wecom-rp-kai-btn");
+    kaiBtn?.addEventListener("click", async () => {
+      kaiBtn.classList.add("is-spinning");
+      try {
+        const res = await claimRedEnvelope(id);
+        modal.dataset.opened = "1";
+        updateRedEnvelopeCards(id);
+        showRedEnvelopeToast(`已领取 LINUX DO 积分红包：+${res.amount || "0"} LDC`);
+        const fresh = await fetchRedEnvelopeDetail(id).catch(() => getRedEnvelopeCache(id));
+        renderOpenedRedEnvelopeView(modal, id, fresh);
+      } catch (err) {
+        kaiBtn.classList.remove("is-spinning");
+        const parsed = parseClaimError(err);
+        if (parsed.kind === "already_claimed" || parsed.kind === "finished" || parsed.kind === "own") {
+          modal.dataset.opened = "1";
+          if (parsed.kind === "already_claimed") {
+            setRedEnvelopeCache(id, { id, status: "claimed", user_claimed: true });
+          } else if (parsed.kind === "finished") {
+            setRedEnvelopeCache(id, { id, status: "finished" });
+          }
+          updateRedEnvelopeCards(id);
+          const fresh = await fetchRedEnvelopeDetail(id).catch(() => getRedEnvelopeCache(id));
+          renderOpenedRedEnvelopeView(modal, id, fresh);
+        } else if (parsed.kind === "unauthorized") {
+          alert("未登录 LINUX DO 积分中心，即将为您打开积分中心页面以完成登录。");
+          window.open(`https://credit.linux.do/redenvelope/${encodeURIComponent(id)}`, "_blank");
+        } else {
+          alert(parsed.label);
+        }
+      }
+    });
+  }
+
+  function renderOpenedRedEnvelopeView(modal, id, data) {
+    modal.className = "wecom-redpacket-modal wecom-rp-opened";
+    modal.dataset.opened = "1";
+
+    const sender = data?.sender_name || "LINUX DO 坛友";
+    const avatar = data?.sender_avatar ? `<img src="${escapeHtml(data.sender_avatar)}" alt="" />` : (sender[0] || "?");
+    const greeting = data?.greeting || "恭喜发财，大吉大利";
+    const userAmount = data?.user_amount || data?.amount || null;
+    const isFinished = data?.status === "finished";
+    const totalAmount = data?.total_amount != null ? Number(data.total_amount).toFixed(2) : "0.00";
+    const claimedCount = data?.claimed_count != null ? data.claimed_count : (data?.claims ? data.claims.length : 0);
+    const totalCount = data?.total_count != null ? data.total_count : claimedCount;
+    const claims = Array.isArray(data?.claims) ? data.claims : [];
+
+    let maxAmount = 0;
+    claims.forEach((c) => {
+      const val = Number(c.amount) || 0;
+      if (val > maxAmount) maxAmount = val;
+    });
+
+    let amountHtml = "";
+    if (userAmount != null) {
+      amountHtml = `
+        <div class="wecom-rp-big-amount">${Number(userAmount).toFixed(2)} <span class="wecom-rp-unit">LDC</span></div>
+        <div class="wecom-rp-status-tag">已存入 LINUX DO 钱包</div>
+      `;
+    } else if (isFinished) {
+      amountHtml = `
+        <div class="wecom-rp-empty-title">手慢了，红包已被领完</div>
+      `;
+    } else if (data?.is_own) {
+      amountHtml = `
+        <div class="wecom-rp-status-tag">您发出的红包</div>
+      `;
+    } else {
+      amountHtml = `
+        <div class="wecom-rp-big-amount">0.00 <span class="wecom-rp-unit">LDC</span></div>
+      `;
+    }
+
+    const claimsHtml = claims.length > 0 ? claims.map((c) => {
+      const cAvatar = c.avatar_url ? `<img src="${escapeHtml(c.avatar_url)}" alt="" />` : (c.username ? c.username[0] : "?");
+      const isBest = claims.length > 1 && (Number(c.amount) === maxAmount && maxAmount > 0);
+      const timeStr = c.created_at ? formatTime(c.created_at) : "";
+      return `
+        <div class="wecom-rp-claim-row">
+          <div class="wecom-rp-claim-avatar">${cAvatar}</div>
+          <div class="wecom-rp-claim-info">
+            <div class="wecom-rp-claim-user">${escapeHtml(c.username || "坛友")}</div>
+            <div class="wecom-rp-claim-time">${escapeHtml(timeStr)}</div>
+          </div>
+          <div class="wecom-rp-claim-right">
+            <div class="wecom-rp-claim-amount">${Number(c.amount || 0).toFixed(2)} LDC</div>
+            ${isBest ? '<div class="wecom-rp-claim-best">👑 手气最佳</div>' : ""}
+          </div>
+        </div>
+      `;
+    }).join("") : '<div class="wecom-rp-no-claims">暂无领取记录</div>';
+
+    modal.innerHTML = `
+      <div class="wecom-rp-opened-header">
+        <button type="button" class="wecom-rp-close-btn" aria-label="关闭" title="关闭">✕</button>
+        <div class="wecom-rp-sender-wrap">
+          <div class="wecom-rp-avatar">${avatar}</div>
+          <div class="wecom-rp-sender-name">${escapeHtml(sender)} 的红包</div>
+          <div class="wecom-rp-greeting-mid">${escapeHtml(greeting)}</div>
+        </div>
+        ${amountHtml}
+      </div>
+      <div class="wecom-rp-summary-bar">
+        <span>已领取 ${claimedCount}/${totalCount} 个</span>
+        <span>共 ${totalAmount} LDC</span>
+      </div>
+      <div class="wecom-rp-claims-list">
+        ${claimsHtml}
+      </div>
+      <div class="wecom-rp-opened-footer">
+        <a href="https://credit.linux.do/redenvelope/${encodeURIComponent(id)}" target="_blank" rel="noopener noreferrer" class="wecom-rp-external-link">
+          在 LINUX DO 积分中心查看完整详情 &rarr;
+        </a>
+      </div>
+    `;
+
+    modal.querySelector(".wecom-rp-close-btn")?.addEventListener("click", closeRedEnvelopeModal);
+  }
+
 
   function applyListNavDom() {
     const panel = document.querySelector(".wecom-list-panel");
@@ -18489,7 +19691,7 @@
   function isNodeVisuallyEmpty(node) {
     if (!node) return true;
     if (node.textContent.replace(/[\s\u200B\u00A0]+/g, "").length > 0) return false;
-    const meaningful = node.querySelector("img, svg, iframe, video, audio, table, pre, code, input, hr, canvas, object, embed, aside.onebox, .onebox, .poll, details, .wecom-msg-images, .wecom-msg-thumb");
+    const meaningful = node.querySelector("img, svg, iframe, video, audio, table, pre, code, input, hr, canvas, object, embed, aside.onebox, .onebox, .poll, details, .wecom-msg-images, .wecom-msg-thumb, .wecom-redpacket-card");
     return !meaningful;
   }
 
@@ -18896,6 +20098,7 @@
   function hydrateChatImages(root) {
     if (!root) return;
     hydrateChatLinks(root);
+    hydrateRedEnvelopes(root);
     if (isImageAutoLayoutEnabled()) {
       applyImageAutoLayout(root);
     }

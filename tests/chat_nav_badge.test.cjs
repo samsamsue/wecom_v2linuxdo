@@ -7584,3 +7584,188 @@ test("Test 105: LINUX DO Connect modal anti-compression and full content uncropp
   assert.strictEqual(result.totalContentHeight, 578, "total height should match sum of natural heights");
   assert.strictEqual(result.renderedHeights[3], 168, "section 1 must remain 168px high");
 });
+
+test("Test 106: LINUX DO Credit red envelope WeChat-style card, auto-claim, and modal (v0.7.75)", () => {
+  // 1. Userscript connect permissions
+  assert.ok(
+    scriptContent.includes("// @connect      credit.linux.do"),
+    "Userscript header must declare @connect credit.linux.do"
+  );
+
+  // 2. Constants and Key Functions
+  assert.ok(
+    scriptContent.includes('const RED_ENVELOPE_AUTOCLAIM_KEY = "linuxdo-wecom-redenvelope-autoclaim";'),
+    "must define RED_ENVELOPE_AUTOCLAIM_KEY"
+  );
+  assert.ok(
+    scriptContent.includes('const RED_ENVELOPE_CACHE_PREFIX = "wecom_redenvelope_";'),
+    "must define RED_ENVELOPE_CACHE_PREFIX"
+  );
+  assert.ok(
+    scriptContent.includes("function isRedEnvelopeAutoClaimEnabled"),
+    "must define isRedEnvelopeAutoClaimEnabled"
+  );
+  assert.ok(
+    scriptContent.includes("function setRedEnvelopeAutoClaimEnabled"),
+    "must define setRedEnvelopeAutoClaimEnabled"
+  );
+  assert.ok(
+    scriptContent.includes("function getRedEnvelopeCache"),
+    "must define getRedEnvelopeCache"
+  );
+  assert.ok(
+    scriptContent.includes("function setRedEnvelopeCache"),
+    "must define setRedEnvelopeCache"
+  );
+  assert.ok(
+    scriptContent.includes("async function requestCreditApi"),
+    "must define requestCreditApi"
+  );
+  assert.ok(
+    scriptContent.includes("async function fetchRedEnvelopeDetail"),
+    "must define fetchRedEnvelopeDetail"
+  );
+  assert.ok(
+    scriptContent.includes("async function claimRedEnvelope"),
+    "must define claimRedEnvelope"
+  );
+  assert.ok(
+    scriptContent.includes("function parseClaimError"),
+    "must define parseClaimError"
+  );
+  assert.ok(
+    scriptContent.includes("function showRedEnvelopeToast"),
+    "must define showRedEnvelopeToast"
+  );
+  assert.ok(
+    scriptContent.includes("async function triggerRedEnvelopeAutoClaim"),
+    "must define triggerRedEnvelopeAutoClaim"
+  );
+  assert.ok(
+    scriptContent.includes("function updateRedEnvelopeCards"),
+    "must define updateRedEnvelopeCards"
+  );
+  assert.ok(
+    scriptContent.includes("function createRedEnvelopeCardElement"),
+    "must define createRedEnvelopeCardElement"
+  );
+  assert.ok(
+    scriptContent.includes("function hydrateRedEnvelopes"),
+    "must define hydrateRedEnvelopes"
+  );
+  assert.ok(
+    scriptContent.includes("function openRedEnvelopeModal"),
+    "must define openRedEnvelopeModal"
+  );
+  assert.ok(
+    scriptContent.includes("function closeRedEnvelopeModal"),
+    "must define closeRedEnvelopeModal"
+  );
+  assert.ok(
+    scriptContent.includes("function renderUnopenedRedEnvelopeView"),
+    "must define renderUnopenedRedEnvelopeView"
+  );
+  assert.ok(
+    scriptContent.includes("function renderOpenedRedEnvelopeView"),
+    "must define renderOpenedRedEnvelopeView"
+  );
+
+  // 3. Hydration Hook in hydrateChatImages
+  assert.ok(
+    scriptContent.includes("hydrateRedEnvelopes(root);"),
+    "hydrateChatImages must invoke hydrateRedEnvelopes(root)"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-redpacket-card"),
+    "isNodeVisuallyEmpty meaningful selector must include .wecom-redpacket-card"
+  );
+
+  // 4. WeChat Red Envelope UI Styles
+  assert.ok(
+    scriptContent.includes(".wecom-redpacket-card {") &&
+    scriptContent.includes("linear-gradient(135deg, #fa9d3b 0%, #f15b43 100%)"),
+    "must style red packet card with WeChat warm gradient"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-redpacket-modal {") &&
+    scriptContent.includes("width: 320px;"),
+    "must define 320px WeChat-style red packet modal"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-rp-kai-btn {") &&
+    scriptContent.includes("@keyframes wecom-kai-spin"),
+    "must define golden '開' button with 3D rotation animation"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-rp-claimed") &&
+    scriptContent.includes(".wecom-rp-finished") &&
+    scriptContent.includes(".wecom-rp-expired"),
+    "must support claimed, finished, and expired card states"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-rp-toast {") &&
+    scriptContent.includes("@keyframes wecom-toast-slide"),
+    "must define subtle red envelope toast notifications"
+  );
+
+  // 5. Dark Mode Compatibility
+  assert.ok(
+    scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-redpacket-card,") ||
+    scriptContent.includes("wecom-dark .wecom-redpacket-card"),
+    "must include dark theme rules for red packet cards"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-dark .wecom-rp-opened") ||
+    scriptContent.includes(".wecom-rp-opened") && scriptContent.includes("#1C1E22"),
+    "must adapt opened red packet detail view to dark theme"
+  );
+
+  // 6. Settings Menu Toggle
+  assert.ok(
+    scriptContent.includes("wecom-menu-toggle-redpacket-autoclaim"),
+    "must add auto-claim toggle button to settings menu"
+  );
+  assert.ok(
+    scriptContent.includes("setRedEnvelopeAutoClaimEnabled(!isRedEnvelopeAutoClaimEnabled())"),
+    "settings menu must toggle red envelope auto claim state"
+  );
+
+  // 7. Regex and URL Extraction Simulation
+  const sampleUrl = "https://credit.linux.do/redenvelope/109929605904728064";
+  const regex = /https?:\/\/credit\.linux\.do\/redenvelope\/([a-zA-Z0-9_-]+)/i;
+  const match = sampleUrl.match(regex);
+  assert.ok(match, "must match standard Linux DO credit envelope URL");
+  assert.strictEqual(match[1], "109929605904728064", "must extract 64-bit snowflake ID correctly");
+
+  // 8. Error Parsing Simulation
+  function simulateErrorParser(msg, status) {
+    if (status === 401 || /未登录|Unauthorized|login/i.test(msg)) {
+      return "unauthorized";
+    }
+    if (/已领取|AlreadyClaimed|already claimed/i.test(msg)) {
+      return "already_claimed";
+    }
+    if (/领完|抢完|Finished|finished/i.test(msg)) {
+      return "finished";
+    }
+    if (/过期|Expired|expired/i.test(msg)) {
+      return "expired";
+    }
+    if (/自己|CannotClaimOwn/i.test(msg)) {
+      return "own";
+    }
+    return "error";
+  }
+
+  assert.strictEqual(simulateErrorParser("红包已领取", 400), "already_claimed");
+  assert.strictEqual(simulateErrorParser("手慢了，红包已被领完", 400), "finished");
+  assert.strictEqual(simulateErrorParser("红包已过期", 400), "expired");
+  assert.strictEqual(simulateErrorParser("不能领取自己的红包", 400), "own");
+  assert.strictEqual(simulateErrorParser("未登录", 401), "unauthorized");
+
+  // 9. Full Script Syntax Validation
+  assert.doesNotThrow(() => {
+    new Function(scriptContent);
+  }, "userscript must have strictly valid JavaScript syntax without parse or token errors");
+});
+
