@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.76
+// @version      0.7.77
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -12097,7 +12097,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.76";
+  const SCRIPT_VERSION = "0.7.77";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -16887,6 +16887,10 @@
     const key = String(id);
     const prev = getRedEnvelopeCache(key) || {};
     const merged = Object.assign({}, prev, data, { updatedAt: Date.now() });
+    if (data.status === "finished" && !data.user_claimed) {
+      merged.user_claimed = false;
+      merged.user_amount = null;
+    }
     redEnvelopeMemoryCache.set(key, merged);
     try {
       localStorage.setItem(RED_ENVELOPE_CACHE_PREFIX + key, JSON.stringify(merged));
@@ -16987,7 +16991,8 @@
       const screenH = typeof window.screen !== "undefined" && window.screen?.availHeight ? window.screen.availHeight : window.innerHeight;
       const left = Math.max(0, Math.round((screenW - width) / 2));
       const top = Math.max(0, Math.round((screenH - height) / 2));
-      const popupUrl = `https://credit.linux.do/redenvelope/${encodeURIComponent(key)}?wecom_auto=1`;
+      const myUsername = getCurrentUsername() || "";
+      const popupUrl = `https://credit.linux.do/redenvelope/${encodeURIComponent(key)}?wecom_auto=1&wecom_user=${encodeURIComponent(myUsername)}`;
 
       let isFinished = false;
       let checkTimer = null;
@@ -17005,13 +17010,27 @@
         isFinished = true;
         cleanup();
         const amt = amount != null ? String(amount) : "";
+        const isUserClaimed = status === "claimed" || status === "already_claimed" || Boolean(amt);
         const cached = setRedEnvelopeCache(key, Object.assign({
           id: key,
           status: status,
-          user_claimed: true,
+          user_claimed: isUserClaimed,
           user_amount: amt || undefined
         }, details));
-        resolve({ amount: amt, status, redEnvelope: cached });
+        resolve({ amount: amt, status, redEnvelope: cached, isAlready: status === "already_claimed" });
+      }
+
+      function finishWithError(status, message, details = {}) {
+        if (isFinished) return;
+        isFinished = true;
+        cleanup();
+        if (details && typeof details === "object") {
+          setRedEnvelopeCache(key, Object.assign({ id: key, status: status }, details));
+        }
+        const err = new Error(message || (status === "finished" ? "红包已被领完" : "领取失败"));
+        err.kind = status;
+        err.status = status;
+        reject(err);
       }
 
       function onMessage(e) {
@@ -17020,13 +17039,11 @@
           if (popup && !popup.closed) {
             try { popup.close(); } catch {}
           }
-          if (e.data.error) {
-            const err = new Error(e.data.message || e.data.error);
-            err.status = e.data.status;
-            cleanup();
-            return reject(err);
+          const st = e.data.status || "claimed";
+          if (st === "finished" || st === "expired" || st === "unauthorized" || st === "own" || e.data.error) {
+            return finishWithError(st, e.data.message || e.data.error, e.data.data);
           }
-          finishWithSuccess(e.data.amount, e.data.status || "claimed", e.data.data || {});
+          finishWithSuccess(e.data.amount, st, e.data.data || {});
         }
       }
 
@@ -17034,7 +17051,9 @@
         setTimeout(() => {
           const cached = getRedEnvelopeCache(key);
           if (cached && (cached.user_claimed || cached.status === "claimed")) {
-            finishWithSuccess(cached.user_amount || "", "claimed", cached);
+            finishWithSuccess(cached.user_amount || "", cached.status || "claimed", cached);
+          } else if (cached && cached.status === "finished") {
+            finishWithError("finished", "红包已被领完", cached);
           }
         }, 600);
       }
@@ -17052,12 +17071,14 @@
       } catch (e) {
         cleanup();
         const err = new Error("popup_blocked");
+        err.kind = "popup_blocked";
         return reject(err);
       }
 
       if (!popup || popup.closed) {
         cleanup();
         const err = new Error("popup_blocked");
+        err.kind = "popup_blocked";
         return reject(err);
       }
 
@@ -17069,20 +17090,28 @@
               if (!isFinished) {
                 const cached = getRedEnvelopeCache(key);
                 if (cached && (cached.user_claimed || cached.status === "claimed")) {
-                  finishWithSuccess(cached.user_amount || "", "claimed", cached);
+                  finishWithSuccess(cached.user_amount || "", cached.status || "claimed", cached);
+                } else if (cached && cached.status === "finished") {
+                  finishWithError("finished", "红包已被领完", cached);
                 } else {
-                  finishWithSuccess("", "claimed", { id: key, user_claimed: true });
+                  finishWithError("popup_closed", "popup_closed");
                 }
               }
             }, 600);
           }
-        } catch { /* cross-origin check safeguard */ }
+        } catch {}
       }, 500);
 
       timeoutTimer = setTimeout(() => {
         if (!isFinished) {
           const cached = getRedEnvelopeCache(key);
-          finishWithSuccess(cached?.user_amount || "", cached?.status || "claimed", cached || {});
+          if (cached && (cached.user_claimed || cached.status === "claimed")) {
+            finishWithSuccess(cached?.user_amount || "", cached?.status || "claimed", cached || {});
+          } else if (cached && cached.status === "finished") {
+            finishWithError("finished", "红包已被领完", cached || {});
+          } else {
+            finishWithError("timeout", "请求超时，请重试");
+          }
         }
       }, 45000);
     });
@@ -17200,23 +17229,27 @@
   function parseClaimError(err) {
     const msg = String(err?.message || err?.msg || "");
     const status = err?.status;
-    if (status === 401 || /未登录|Unauthorized|login/i.test(msg)) {
+    const kind = err?.kind;
+    if (kind === "popup_closed" || msg === "popup_closed") {
+      return { kind: "popup_closed", label: "已取消" };
+    }
+    if (kind === "popup_blocked" || msg === "popup_blocked") {
+      return { kind: "popup_blocked", label: "弹窗被拦截，点击前往积分中心领取" };
+    }
+    if (kind === "unauthorized" || status === 401 || /未登录|Unauthorized|login/i.test(msg)) {
       return { kind: "unauthorized", label: "未登录积分中心 (点击登录)" };
     }
-    if (/已领取|AlreadyClaimed|already claimed/i.test(msg)) {
+    if (kind === "already_claimed" || /已领取|AlreadyClaimed|already claimed/i.test(msg)) {
       return { kind: "already_claimed", label: "已领取红包" };
     }
-    if (/领完|抢完|Finished|finished/i.test(msg)) {
+    if (kind === "finished" || /领完|抢完|Finished|finished/i.test(msg)) {
       return { kind: "finished", label: "手慢了，红包已被领完" };
     }
-    if (/过期|Expired|expired/i.test(msg)) {
+    if (kind === "expired" || /过期|Expired|expired/i.test(msg)) {
       return { kind: "expired", label: "红包已过期" };
     }
-    if (/自己|CannotClaimOwn/i.test(msg)) {
+    if (kind === "own" || /自己|CannotClaimOwn/i.test(msg)) {
       return { kind: "own", label: "查看自己的红包" };
-    }
-    if (msg === "popup_blocked") {
-      return { kind: "popup_blocked", label: "弹窗被拦截，点击前往积分中心领取" };
     }
     if (isCorsOrFetchError(err)) {
       return { kind: "cors", label: "需前往积分中心领取" };
@@ -17595,12 +17628,15 @@
       } catch (err) {
         kaiBtn.classList.remove("is-spinning");
         const parsed = parseClaimError(err);
+        if (parsed.kind === "popup_closed") {
+          return;
+        }
         if (parsed.kind === "already_claimed" || parsed.kind === "finished" || parsed.kind === "own") {
           modal.dataset.opened = "1";
           if (parsed.kind === "already_claimed") {
             setRedEnvelopeCache(id, { id, status: "claimed", user_claimed: true });
           } else if (parsed.kind === "finished") {
-            setRedEnvelopeCache(id, { id, status: "finished" });
+            setRedEnvelopeCache(id, { id, status: "finished", user_claimed: false });
           }
           updateRedEnvelopeCards(id);
           const fresh = await fetchRedEnvelopeDetail(id).catch(() => getRedEnvelopeCache(id));
@@ -27209,8 +27245,64 @@
     if (!match) return;
     const envelopeId = match[1];
 
-    if (location.search.includes("wecom_auto=1")) {
-      const banner = document.createElement("div");
+    const urlParams = new URLSearchParams(location.search);
+    const isAuto = urlParams.get("wecom_auto") === "1";
+    const targetUsername = urlParams.get("wecom_user") || "";
+
+    let capturedClaim = null;
+    let capturedDetail = null;
+
+    // 1. Hook fetch and XMLHttpRequest at document-start to capture Next.js client requests and server responses
+    try {
+      const origFetch = window.fetch;
+      if (typeof origFetch === "function") {
+        window.fetch = async function(...args) {
+          const res = await origFetch.apply(this, args);
+          try {
+            const url = typeof args[0] === "string" ? args[0] : (args[0]?.url || "");
+            if (/redenvelope/i.test(url)) {
+              const clone = res.clone();
+              clone.json().then((json) => {
+                if (/claim/i.test(url)) {
+                  capturedClaim = { status: res.status, ok: res.ok, json };
+                } else {
+                  capturedDetail = json;
+                }
+              }).catch(() => {});
+            }
+          } catch {}
+          return res;
+        };
+      }
+    } catch {}
+
+    try {
+      const origXhrOpen = XMLHttpRequest.prototype.open;
+      const origXhrSend = XMLHttpRequest.prototype.send;
+      XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+        this._wecom_url = typeof url === "string" ? url : "";
+        return origXhrOpen.call(this, method, url, ...rest);
+      };
+      XMLHttpRequest.prototype.send = function(...args) {
+        this.addEventListener("load", function() {
+          try {
+            if (this._wecom_url && /redenvelope/i.test(this._wecom_url)) {
+              const json = JSON.parse(this.responseText);
+              if (/claim/i.test(this._wecom_url)) {
+                capturedClaim = { status: this.status, ok: this.status >= 200 && this.status < 300, json };
+              } else {
+                capturedDetail = json;
+              }
+            }
+          } catch {}
+        });
+        return origXhrSend.apply(this, args);
+      };
+    } catch {}
+
+    let banner = null;
+    if (isAuto) {
+      banner = document.createElement("div");
       banner.className = "wecom-credit-bridge-banner";
       banner.innerHTML = `<span style="font-size:18px;">🧧</span><span>企业微信红包助手正在自动领取...</span>`;
       const style = document.createElement("style");
@@ -27237,9 +27329,26 @@
         .wecom-credit-bridge-banner.success {
           background: #07c160;
         }
+        .wecom-credit-bridge-banner.finished {
+          background: #e6a23c;
+        }
+        .wecom-credit-bridge-banner.error {
+          background: #fa5151;
+        }
       `;
       document.documentElement.appendChild(style);
-      document.body ? document.body.appendChild(banner) : document.addEventListener("DOMContentLoaded", () => document.body.appendChild(banner));
+      if (document.body) {
+        document.body.appendChild(banner);
+      } else {
+        document.addEventListener("DOMContentLoaded", () => document.body.appendChild(banner), { once: true });
+      }
+    }
+
+    function updateBanner(text, type = "success") {
+      if (!banner) return;
+      banner.className = `wecom-credit-bridge-banner ${type}`;
+      const icon = type === "success" ? "✅" : (type === "finished" ? "🧧" : "⚠️");
+      banner.innerHTML = `<span style="font-size:18px;">${icon}</span><span>${escapeHtml(text)}</span>`;
     }
 
     function notifyLinuxDo(result) {
@@ -27253,92 +27362,300 @@
       }
     }
 
-    async function executeClaim() {
-      const payload = JSON.stringify({ id: envelopeId, red_envelope_id: envelopeId });
-      let claimJson = null;
-      let status = "claimed";
-      let amount = "";
-
+    function parseNextData() {
       try {
-        let res = await fetch("/api/v1/redenvelope/claim", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Accept": "application/json" },
-          credentials: "include",
-          body: payload
-        }).catch(() => null);
+        const el = document.getElementById("__NEXT_DATA__");
+        if (!el || !el.textContent) return null;
+        return JSON.parse(el.textContent);
+      } catch {
+        return null;
+      }
+    }
 
-        if (!res || res.status === 404) {
-          res = await fetch("/api/redenvelope/claim", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Accept": "application/json" },
-            credentials: "include",
-            body: payload
-          }).catch(() => null);
-        }
+    async function callCreditApi(endpoint, options = {}) {
+      try {
+        const res = await fetch(endpoint, Object.assign({
+          headers: { "Accept": "application/json", "Content-Type": "application/json" },
+          credentials: "include"
+        }, options));
+        const json = await res.json().catch(() => null);
+        return { ok: res.ok, status: res.status, json };
+      } catch {
+        return null;
+      }
+    }
 
-        if (res) {
-          claimJson = await res.json().catch(() => null);
-          if (res.ok && (claimJson?.code === 0 || claimJson?.code === 200 || claimJson?.code == null)) {
-            const data = claimJson?.data || claimJson;
-            amount = data?.amount != null ? String(data.amount) : "";
-            status = "claimed";
-          } else {
-            const msg = claimJson?.message || claimJson?.msg || "";
-            if (/已领取|already claimed/i.test(msg)) {
-              status = "already_claimed";
-            } else if (/领完|抢完|finished/i.test(msg)) {
-              status = "finished";
-            } else if (/未登录|login|unauthorized/i.test(msg) || res.status === 401) {
-              status = "unauthorized";
+    function extractFromDom(username) {
+      const root = document.querySelector("main, #__next, body");
+      if (!root) return null;
+      const clone = root.cloneNode(true);
+      // Remove all headers, navs, footers, balance / wallet bars to avoid reading account balances
+      const excludes = clone.querySelectorAll("header, nav, footer, aside, [class*='header'], [class*='navbar'], [class*='balance'], [class*='wallet'], [class*='user-menu'], [id*='header'], [id*='nav']");
+      excludes.forEach((el) => el.remove());
+
+      const text = clone.innerText || "";
+      let status = "claimed";
+      if (/手慢了|领完|抢光|已被领完|已抢完/i.test(text)) {
+        status = "finished";
+      } else if (/已过期/i.test(text)) {
+        status = "expired";
+      } else if (/未登录|请登录|请先登录/i.test(text)) {
+        status = "unauthorized";
+      } else if (/查看自己的红包|发出的红包/i.test(text)) {
+        status = "own";
+      }
+
+      let amount = "";
+      if (status !== "finished" && status !== "expired" && status !== "unauthorized") {
+        if (username) {
+          const rows = clone.querySelectorAll("tr, li, div");
+          for (const row of rows) {
+            if (row.children.length > 0 && row.children.length < 8) {
+              const rowText = row.innerText || "";
+              if (rowText.includes(username) && !rowText.includes("的红包")) {
+                const m = rowText.match(/([0-9]+(?:\.[0-9]+)?)\s*LDC/i) || rowText.match(/([0-9]+(?:\.[0-9]+)?)/);
+                if (m && Number(m[1]) > 0) {
+                  amount = m[1];
+                  status = "already_claimed";
+                  break;
+                }
+              }
             }
           }
         }
-      } catch { /* ignore */ }
-
-      const findAndClickBtn = () => {
-        const buttons = Array.from(document.querySelectorAll("button, [role='button']"));
-        for (const b of buttons) {
-          const txt = (b.textContent || "").trim();
-          if (/^(?:拆|拆红包|领取红包|立即领取|開|开)$/.test(txt)) {
-            b.click();
-            break;
+        if (!amount) {
+          const bigAmtEl = clone.querySelector("[class*='amount'], [class*='money'], [class*='reward'], [class*='number'], [class*='val'], [class*='text-4xl'], [class*='text-5xl'], [class*='text-3xl']");
+          if (bigAmtEl) {
+            const m = (bigAmtEl.innerText || "").match(/([0-9]+(?:\.[0-9]+)?)/);
+            if (m && Number(m[1]) > 0) {
+              amount = m[1];
+            }
           }
         }
-      };
-      findAndClickBtn();
-      setTimeout(findAndClickBtn, 500);
-
-      if (!amount) {
-        setTimeout(() => {
-          const bodyText = document.body ? document.body.innerText : "";
-          const amtMatch = bodyText.match(/([0-9]+(?:\.[0-9]+)?)\s*LDC/i);
-          if (amtMatch) {
-            amount = amtMatch[1];
-          }
-          notifyLinuxDo({ status, amount, data: claimJson?.data || {} });
-        }, 600);
-      } else {
-        notifyLinuxDo({ status, amount, data: claimJson?.data || {} });
       }
 
-      if (location.search.includes("wecom_auto=1")) {
-        setTimeout(() => {
-          const banner = document.querySelector(".wecom-credit-bridge-banner");
-          if (banner) {
-            banner.classList.add("success");
-            banner.innerHTML = `<span style="font-size:18px;">✅</span><span>已成功领取，已同步至 LINUX DO</span>`;
+      return { status, amount };
+    }
+
+    function findAndClickKaiButton() {
+      const buttons = Array.from(document.querySelectorAll("button, [role='button'], .btn, a.btn"));
+      for (const b of buttons) {
+        const txt = (b.textContent || "").trim();
+        if (/^(?:拆|拆红包|领取红包|立即领取|開|开)$/.test(txt)) {
+          b.click();
+          return true;
+        }
+      }
+      return false;
+    }
+
+    async function executeBridge() {
+      // 1. Initial parse of Next.js SSR data
+      const nextData = parseNextData();
+      const pageProps = nextData?.props?.pageProps || {};
+      let envelope = pageProps.redEnvelope || pageProps.red_envelope || pageProps.envelope || pageProps.data?.redEnvelope || pageProps.data?.red_envelope || pageProps.data || {};
+      let claims = Array.isArray(pageProps.claims) ? pageProps.claims : (Array.isArray(envelope?.claims) ? envelope.claims : (Array.isArray(pageProps.data?.claims) ? pageProps.data.claims : []));
+      const currentUser = pageProps.user || pageProps.currentUser || pageProps.session?.user || null;
+      const effectiveUser = targetUsername || currentUser?.username || "";
+
+      let status = "claimed";
+      let amount = "";
+
+      // 2. Perform same-origin claim request
+      const claimPayload = JSON.stringify({ id: envelopeId, red_envelope_id: envelopeId });
+      let claimResult = await callCreditApi("/api/v1/redenvelope/claim", { method: "POST", body: claimPayload });
+      if (!claimResult || claimResult.status === 404) {
+        claimResult = await callCreditApi("/api/redenvelope/claim", { method: "POST", body: claimPayload });
+      }
+
+      // Check claim response
+      if (claimResult) {
+        if (claimResult.ok) {
+          const d = claimResult.json?.data || claimResult.json;
+          if (d?.amount != null) {
+            amount = String(d.amount);
+            status = "claimed";
           }
+        } else {
+          const msg = String(claimResult.json?.message || claimResult.json?.msg || claimResult.json?.error || "");
+          if (/已领取|already claimed|alreadyclaimed/i.test(msg)) {
+            status = "already_claimed";
+          } else if (/领完|抢完|finished/i.test(msg)) {
+            status = "finished";
+          } else if (/未登录|unauthorized|login/i.test(msg) || claimResult.status === 401) {
+            status = "unauthorized";
+          } else if (/过期|expired/i.test(msg)) {
+            status = "expired";
+          } else if (/自己|own/i.test(msg)) {
+            status = "own";
+          }
+        }
+      }
+
+      // 3. If unopened and button present, click it
+      if (status !== "already_claimed" && status !== "finished" && status !== "expired" && status !== "unauthorized" && !amount) {
+        const clicked = findAndClickKaiButton();
+        if (clicked) {
+          await new Promise((r) => setTimeout(r, 450));
+        }
+      }
+
+      // 4. If network interceptor captured claim response, merge it
+      if (capturedClaim) {
+        if (capturedClaim.ok) {
+          const d = capturedClaim.json?.data || capturedClaim.json;
+          if (d?.amount != null) {
+            amount = String(d.amount);
+            status = "claimed";
+          }
+        } else {
+          const msg = String(capturedClaim.json?.message || capturedClaim.json?.msg || capturedClaim.json?.error || "");
+          if (/已领取|already claimed/i.test(msg)) status = "already_claimed";
+          else if (/领完|抢完|finished/i.test(msg)) status = "finished";
+          else if (/未登录|unauthorized|login/i.test(msg) || capturedClaim.status === 401) status = "unauthorized";
+          else if (/过期|expired/i.test(msg)) status = "expired";
+          else if (/自己|own/i.test(msg)) status = "own";
+        }
+      }
+
+      // 5. Fetch fresh envelope detail and claims list
+      let freshDetail = await callCreditApi(`/api/v1/redenvelope/${encodeURIComponent(envelopeId)}`);
+      if (!freshDetail || !freshDetail.ok) {
+        freshDetail = await callCreditApi(`/api/redenvelope/${encodeURIComponent(envelopeId)}`);
+      }
+      if (freshDetail?.json) {
+        const d = freshDetail.json.data || freshDetail.json;
+        if (d?.red_envelope || d?.redEnvelope) {
+          envelope = Object.assign({}, envelope, d.red_envelope || d.redEnvelope);
+        } else if (d?.id) {
+          envelope = Object.assign({}, envelope, d);
+        }
+        if (Array.isArray(d?.claims)) {
+          claims = d.claims;
+        }
+      } else if (capturedDetail) {
+        const d = capturedDetail.data || capturedDetail;
+        if (d?.red_envelope || d?.redEnvelope) {
+          envelope = Object.assign({}, envelope, d.red_envelope || d.redEnvelope);
+        }
+        if (Array.isArray(d?.claims)) {
+          claims = d.claims;
+        }
+      }
+
+      // Check envelope totals / finished state
+      const totalCount = envelope?.total_count != null ? envelope.total_count : 0;
+      const claimedCount = envelope?.claimed_count != null ? envelope.claimed_count : (claims.length || 0);
+      const totalAmount = envelope?.total_amount != null ? envelope.total_amount : 0;
+      const claimedAmount = envelope?.claimed_amount != null ? envelope.claimed_amount : 0;
+
+      if (envelope?.status === "finished" || (totalCount > 0 && claimedCount >= totalCount)) {
+        if (status !== "claimed" && status !== "already_claimed") {
+          status = "finished";
+        }
+      }
+      if (envelope?.status === "expired") {
+        status = "expired";
+      }
+
+      // 6. Match user claim from claims list to obtain 100% real amount
+      if (!amount && claims.length > 0 && effectiveUser) {
+        const matched = claims.find((c) => {
+          const u = c.username || c.user?.username || "";
+          return normalizeUsername(u) === normalizeUsername(effectiveUser);
+        });
+        if (matched && matched.amount != null) {
+          amount = String(matched.amount);
+          if (status !== "claimed") status = "already_claimed";
+        }
+      }
+
+      // If user claimed just now and claims array lacks user claim, append it
+      if (amount && status === "claimed" && effectiveUser) {
+        const exists = claims.some((c) => normalizeUsername(c.username) === normalizeUsername(effectiveUser));
+        if (!exists) {
+          claims.unshift({
+            username: effectiveUser,
+            amount: amount,
+            created_at: new Date().toISOString()
+          });
+        }
+      }
+
+      // 7. Fallback to clean DOM extraction if still no amount or status unclear
+      if (!amount || status === "claimed" && !amount) {
+        const domData = extractFromDom(effectiveUser);
+        if (domData) {
+          if (domData.status && (status === "claimed" || status === "normal")) {
+            status = domData.status;
+          }
+          if (domData.amount && !amount) {
+            amount = domData.amount;
+          }
+        }
+      }
+
+      // 8. Assemble full detail package
+      const senderName = envelope?.username || envelope?.sender_name || "LINUX DO 坛友";
+      const senderAvatar = envelope?.avatar_url || envelope?.sender_avatar || "";
+      const greeting = envelope?.greeting || envelope?.title || "恭喜发财，大吉大利";
+      const isUserClaimed = status === "claimed" || status === "already_claimed" || Boolean(amount);
+
+      const packetData = {
+        id: envelopeId,
+        sender_name: senderName,
+        sender_avatar: senderAvatar,
+        greeting: greeting,
+        total_amount: totalAmount,
+        total_count: totalCount,
+        claimed_amount: claimedAmount,
+        claimed_count: claimedCount,
+        status: status === "finished" ? "finished" : (status === "expired" ? "expired" : "normal"),
+        user_claimed: isUserClaimed,
+        user_amount: amount ? String(amount) : undefined,
+        is_own: status === "own",
+        claims: claims
+      };
+
+      // 9. Notify LINUX DO opener
+      notifyLinuxDo({
+        status: status,
+        amount: amount || "",
+        data: packetData
+      });
+
+      // 10. Update Banner and handle auto close
+      if (isAuto) {
+        if (status === "claimed" || status === "already_claimed") {
+          updateBanner(`已成功领取${amount ? "：+" + amount + " LDC" : ""}，已同步至 LINUX DO`, "success");
+          setTimeout(() => {
+            try { window.close(); } catch {}
+          }, 900);
+        } else if (status === "finished") {
+          updateBanner("手慢了，红包已被领完，已同步至 LINUX DO", "finished");
+          setTimeout(() => {
+            try { window.close(); } catch {}
+          }, 1100);
+        } else if (status === "unauthorized") {
+          updateBanner("未登录积分中心，请在此页面登录", "error");
+        } else if (status === "own") {
+          updateBanner("这是您发出的红包，已同步至 LINUX DO", "finished");
           setTimeout(() => {
             try { window.close(); } catch {}
           }, 1000);
-        }, 800);
+        } else {
+          updateBanner("红包状态已同步至 LINUX DO", "success");
+          setTimeout(() => {
+            try { window.close(); } catch {}
+          }, 1000);
+        }
       }
     }
 
     if (document.readyState === "complete" || document.readyState === "interactive") {
-      executeClaim();
+      executeBridge();
     } else {
-      document.addEventListener("DOMContentLoaded", executeClaim, { once: true });
+      document.addEventListener("DOMContentLoaded", executeBridge, { once: true });
     }
   }
 

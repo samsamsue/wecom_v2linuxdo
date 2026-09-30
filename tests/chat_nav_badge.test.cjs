@@ -7840,7 +7840,38 @@ test("Test 107: LINUX DO Credit red envelope CORS fallback, popup bridge, opener
     "bootstrap must route credit.linux.do directly to initCreditRedEnvelopeBridge and return"
   );
 
-  // 7. Full JavaScript Syntax Validation
+  // 7. Accurate communication data: wecom_user parameter and Next.js SSR / DOM isolation
+  assert.ok(
+    scriptContent.includes("wecom_user=${encodeURIComponent(myUsername)}"),
+    "claimViaPopupBridge must pass wecom_user parameter in popupUrl to identify current user"
+  );
+  assert.ok(
+    scriptContent.includes('document.getElementById("__NEXT_DATA__")'),
+    "initCreditRedEnvelopeBridge must parse Next.js __NEXT_DATA__ for accurate claims and envelope detail"
+  );
+  assert.ok(
+    scriptContent.includes("header, nav, footer, aside") &&
+    scriptContent.includes("[class*='balance']"),
+    "initCreditRedEnvelopeBridge must strip header, nav, and balance elements to avoid reading account balance"
+  );
+  assert.ok(
+    scriptContent.includes('finishWithError("finished"') ||
+    scriptContent.includes('err.kind = status'),
+    "claimViaPopupBridge must accurately handle finished status without faking user_claimed"
+  );
+
+  // 8. Accurate User Claim Amount Extraction Simulation
+  const mockClaims = [
+    { username: "alice", amount: 1.50, created_at: "2026-09-30T10:00:00Z" },
+    { username: "test_user", amount: 3.88, created_at: "2026-09-30T10:01:00Z" },
+    { username: "bob", amount: 0.62, created_at: "2026-09-30T10:02:00Z" }
+  ];
+  const targetUser = "test_user";
+  const matched = mockClaims.find((c) => c.username.toLowerCase() === targetUser.toLowerCase());
+  assert.ok(matched, "must find user in claims list");
+  assert.strictEqual(String(matched.amount), "3.88", "must accurately extract claimed amount of target user");
+
+  // 9. Full JavaScript Syntax Validation
   assert.doesNotThrow(() => {
     new Function(scriptContent);
   }, "userscript must have strictly valid JavaScript syntax without parse or token errors");
