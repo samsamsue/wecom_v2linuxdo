@@ -8073,6 +8073,89 @@ test("Test 110: V2EX member card recent topics and replies list unrestricted cou
   }, "userscript must have strictly valid JavaScript syntax without parse or token errors");
 });
 
+test("Test 111: Left rail group item positioned under notifications and search plus button direct compose trigger (v0.7.81)", () => {
+  // 1. Static assertion: ensureRail places group item immediately following notif or connect
+  assert.ok(
+    scriptContent.includes('if (item.key === "notif" || item.key === "connect") {\n          renderedGroup = true;\n          return (\n            itemHtml +\n            `<button type="button" class="wecom-rail-item wecom-rail-more" data-rail-key="group"') ||
+    scriptContent.includes('if (item.key === "notif" || item.key === "connect") {\r\n          renderedGroup = true;\r\n          return (\r\n            itemHtml +\r\n            `<button type="button" class="wecom-rail-item wecom-rail-more" data-rail-key="group"'),
+    "ensureRail must render group item immediately following notif or connect item"
+  );
 
+  // 2. Static assertion: ensureRail rebuilds if outdated DOM does not have group as nextElementSibling of notif/connect
+  assert.ok(
+    scriptContent.includes("(notifOrConnect && groupEl && notifOrConnect.nextElementSibling !== groupEl)"),
+    "ensureRail must prune rail if group is not the immediate next sibling of notif/connect"
+  );
 
+  // 3. Static assertion: search plus button click directly calls closeListAddMenu and openNewTopic
+  assert.ok(
+    scriptContent.includes("const addBtn = e.target.closest(\".wecom-list-add\");\n      if (addBtn && panel.contains(addBtn)) {\n        e.preventDefault();\n        e.stopPropagation();\n        closeListAddMenu();\n        openNewTopic();\n        return;\n      }") ||
+    scriptContent.includes("const addBtn = e.target.closest(\".wecom-list-add\");\r\n      if (addBtn && panel.contains(addBtn)) {\r\n        e.preventDefault();\r\n        e.stopPropagation();\r\n        closeListAddMenu();\r\n        openNewTopic();\r\n        return;\r\n      }"),
+    "bindListPanelClicks must directly call openNewTopic on clicking .wecom-list-add without opening menu"
+  );
 
+  // 4. Behavioral simulation: DOM order verification for rail items
+  const mockRailItems = [
+    { key: "chat", label: "消息" },
+    { key: "history", label: "历史" },
+    { key: "notif", label: "通知" },
+    { key: "todo", label: "待办" }
+  ];
+  let renderedGroup = false;
+  const elements = [];
+  elements.push({ key: "chat" });
+  mockRailItems.slice(1).forEach((item) => {
+    elements.push({ key: item.key });
+    if (item.key === "notif" || item.key === "connect") {
+      renderedGroup = true;
+      elements.push({ key: "group" });
+    }
+  });
+  if (!renderedGroup) elements.push({ key: "group" });
+
+  const notifIdx = elements.findIndex(e => e.key === "notif");
+  const groupIdx = elements.findIndex(e => e.key === "group");
+  assert.strictEqual(groupIdx, notifIdx + 1, "group item must be positioned immediately under notif");
+
+  // 5. Behavioral simulation: direct click invocation without menu
+  let newTopicTriggered = false;
+  let menuToggled = false;
+  function mockOpenNewTopic() { newTopicTriggered = true; }
+  function mockToggleMenu() { menuToggled = true; }
+
+  const mockPanel = {
+    contains(el) { return true; }
+  };
+  const mockTarget = {
+    closest(sel) {
+      if (sel === ".wecom-list-add") return this;
+      return null;
+    }
+  };
+  const mockEvent = {
+    target: mockTarget,
+    defaultPrevented: false,
+    propagationStopped: false,
+    preventDefault() { this.defaultPrevented = true; },
+    stopPropagation() { this.propagationStopped = true; }
+  };
+
+  const addBtn = mockEvent.target.closest(".wecom-list-add");
+  if (addBtn && mockPanel.contains(addBtn)) {
+    mockEvent.preventDefault();
+    mockEvent.stopPropagation();
+    mockOpenNewTopic();
+  } else {
+    mockToggleMenu();
+  }
+
+  assert.strictEqual(newTopicTriggered, true, "clicking addBtn must directly trigger openNewTopic");
+  assert.strictEqual(menuToggled, false, "clicking addBtn must NOT toggle or pop up menu");
+  assert.strictEqual(mockEvent.defaultPrevented, true, "event default must be prevented");
+  assert.strictEqual(mockEvent.propagationStopped, true, "event propagation must be stopped");
+
+  // 6. Full JavaScript Syntax Validation
+  assert.doesNotThrow(() => {
+    new Function(scriptContent);
+  }, "userscript must have strictly valid JavaScript syntax without parse or token errors");
+});

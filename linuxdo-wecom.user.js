@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.80
+// @version      0.7.81
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -12198,7 +12198,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.80";
+  const SCRIPT_VERSION = "0.7.81";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -12647,9 +12647,19 @@
     }
     let rail = rails[0] || null;
     // 重建为企业微信 56px 垂直标准停靠栏
-    if (rail && (!rail.querySelector("[data-rail-key='group']") || !rail.querySelector("[data-rail-key='history']") || rail.querySelector(".wecom-rail-groups") || (IS_V2EX && rail.querySelector("[data-rail-key='cal']")))) {
-      rail.remove();
-      rail = null;
+    if (rail) {
+      const notifOrConnect = rail.querySelector("[data-rail-key='notif'], [data-rail-key='connect']");
+      const groupEl = rail.querySelector("[data-rail-key='group']");
+      if (
+        !groupEl ||
+        !rail.querySelector("[data-rail-key='history']") ||
+        rail.querySelector(".wecom-rail-groups") ||
+        (IS_V2EX && rail.querySelector("[data-rail-key='cal']")) ||
+        (notifOrConnect && groupEl && notifOrConnect.nextElementSibling !== groupEl)
+      ) {
+        rail.remove();
+        rail = null;
+      }
     }
     if (rail) {
       bindRailAvatarNotif(rail);
@@ -12674,21 +12684,35 @@
 
     const items = document.createElement("div");
     items.className = "wecom-rail-items";
+    let renderedGroup = false;
     items.innerHTML =
       `<button type="button" class="wecom-rail-item active" data-rail-key="chat" title="消息">` +
       `<div class="wecom-rail-icon">${ICONS.msg}</div>` +
       `<span class="wecom-rail-label">消息</span>` +
       `<span class="wecom-rail-badge" style="display:none"></span></button>` +
-      RAIL_DECO_ITEMS.map((item) =>
-        `<button type="button" class="wecom-rail-item" data-rail-key="${item.key}" title="${item.label}">` +
-        `<div class="wecom-rail-icon">${ICONS[item.icon] || ""}</div>` +
-        `<span class="wecom-rail-label">${item.label}</span>` +
-        `${item.key === "notif" ? '<span class="wecom-rail-badge" style="display:none"></span>' : ""}` +
-        `${item.dot ? '<i class="wecom-rail-dot"></i>' : ""}</button>`
-      ).join("") +
-      `<button type="button" class="wecom-rail-item wecom-rail-more" data-rail-key="group" title="展开/收起话题导航" aria-expanded="false">` +
-      `<div class="wecom-rail-icon">${ICONS.group}</div>` +
-      `<span class="wecom-rail-label">分组</span></button>`;
+      RAIL_DECO_ITEMS.map((item) => {
+        const itemHtml =
+          `<button type="button" class="wecom-rail-item" data-rail-key="${item.key}" title="${item.label}">` +
+          `<div class="wecom-rail-icon">${ICONS[item.icon] || ""}</div>` +
+          `<span class="wecom-rail-label">${item.label}</span>` +
+          `${item.key === "notif" ? '<span class="wecom-rail-badge" style="display:none"></span>' : ""}` +
+          `${item.dot ? '<i class="wecom-rail-dot"></i>' : ""}</button>`;
+        if (item.key === "notif" || item.key === "connect") {
+          renderedGroup = true;
+          return (
+            itemHtml +
+            `<button type="button" class="wecom-rail-item wecom-rail-more" data-rail-key="group" title="展开/收起话题导航" aria-expanded="false">` +
+            `<div class="wecom-rail-icon">${ICONS.group}</div>` +
+            `<span class="wecom-rail-label">分组</span></button>`
+          );
+        }
+        return itemHtml;
+      }).join("") +
+      (!renderedGroup
+        ? `<button type="button" class="wecom-rail-item wecom-rail-more" data-rail-key="group" title="展开/收起话题导航" aria-expanded="false">` +
+          `<div class="wecom-rail-icon">${ICONS.group}</div>` +
+          `<span class="wecom-rail-label">分组</span></button>`
+        : "");
     rail.appendChild(items);
 
     const bottom = document.createElement("div");
@@ -18483,6 +18507,12 @@
   function updateListAddMenuTexts(menu) {
     if (!menu) return;
     const isMask = isMaskTitleList();
+    const addBtn = document.querySelector(".wecom-list-add");
+    if (addBtn) {
+      const btnTitle = isMask ? "发起新项目群" : "发布新主题";
+      addBtn.title = btnTitle;
+      addBtn.setAttribute("aria-label", btnTitle);
+    }
     const newTopicItem = menu.querySelector('[data-add-action="new-topic"]');
     if (newTopicItem) {
       const textEl = newTopicItem.querySelector(".wecom-list-add-item-text");
@@ -18528,16 +18558,17 @@
   }
 
   function bindListPanelClicks(panel) {
-    // v5：含新建菜单与话题导航下拉，并支持站内发帖器；旧面板需重绑
-    if (!panel || panel.dataset.linkBound === "5") return;
-    panel.dataset.linkBound = "5";
+    // v6：点击搜索后面的加号按钮直接发帖，无需弹出菜单
+    if (!panel || panel.dataset.linkBound === "6") return;
+    panel.dataset.linkBound = "6";
     ensureListAddOutsideClose();
     panel.addEventListener("click", (e) => {
       const addBtn = e.target.closest(".wecom-list-add");
       if (addBtn && panel.contains(addBtn)) {
         e.preventDefault();
         e.stopPropagation();
-        toggleListAddMenu(panel);
+        closeListAddMenu();
+        openNewTopic();
         return;
       }
 
@@ -18769,6 +18800,7 @@
     panel = document.createElement("div");
     panel.className = "wecom-list-panel";
     const searchPlaceholder = IS_JUEJIN ? "搜索掘金沸点" : (IS_V2EX ? "搜索 V2EX 话题" : "搜索");
+    const addBtnTitle = isMaskTitleList() ? "发起新项目群" : "发布新主题";
     const chipsHtml = IS_JUEJIN
       ? `
           <button type="button" class="wecom-chip active" data-chip="recommend">推荐</button>
@@ -18797,7 +18829,7 @@
           <input type="search" name="${IS_JUEJIN ? "query" : "q"}" placeholder="${searchPlaceholder}" autocomplete="off" enterkeyhint="search" aria-label="搜索话题">
         </form>
         <div class="wecom-list-add-wrap">
-          <button type="button" class="wecom-list-add wecom-list-add-btn" title="新建与导航" aria-label="新建与导航" aria-haspopup="menu" aria-expanded="false">${ICONS.plus}</button>
+          <button type="button" class="wecom-list-add wecom-list-add-btn" title="${addBtnTitle}" aria-label="${addBtnTitle}">${ICONS.plus}</button>
           <div class="wecom-list-add-menu" hidden role="menu">
             <button type="button" class="wecom-list-add-item" data-add-action="new-topic" role="menuitem">
               <span class="wecom-list-add-item-icon">${ICONS.compose}</span>
