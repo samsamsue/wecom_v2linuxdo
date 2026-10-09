@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.78
+// @version      0.7.79
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -2999,6 +2999,34 @@
       margin: 0 !important;
       padding: 0 !important;
       border: 0 !important;
+    }
+
+    /* ---------- V2EX /new 创作新主题页面：隐藏左侧边栏（停靠栏与二级导航）并确保正常滚动 ---------- */
+    html.wecom-v2ex-new-page .wecom-rail,
+    html.${ROOT_CLASS}.wecom-v2ex-new-page .wecom-rail,
+    html.wecom-v2ex-new-page .wecom-v2ex-nav2,
+    html.${ROOT_CLASS}.wecom-v2ex-new-page .wecom-v2ex-nav2,
+    html.wecom-v2ex-new-page .wecom-strip,
+    html.${ROOT_CLASS}.wecom-v2ex-new-page .wecom-strip,
+    html.wecom-v2ex-new-page .wecom-rail-resizer,
+    html.${ROOT_CLASS}.wecom-v2ex-new-page .wecom-rail-resizer,
+    html:has(form[action^="/new"]) .wecom-rail,
+    html:has(form[action^="/new"]) .wecom-v2ex-nav2,
+    html:has(form[action^="/new"]) .wecom-strip,
+    html:has(form[action^="/new"]) .wecom-rail-resizer {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+    html.wecom-v2ex-new-page,
+    html.${ROOT_CLASS}.wecom-v2ex-new-page {
+      --wc-nav: 0px !important;
+      --wc-nav2w: 0px !important;
+      --wc-strip: 0px !important;
+    }
+    html.wecom-v2ex-new-page body,
+    html.${ROOT_CLASS}.wecom-v2ex-new-page body {
+      overflow-y: auto !important;
     }
 
     /* ---------- 中栏右边缘拖拽柄 ---------- */
@@ -6555,12 +6583,17 @@
       --wc-font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif;
     }
 
-    /* 保证布局根节点三栏固定定位 */
-    html.${ROOT_CLASS} body {
+    /* 保证布局根节点三栏固定定位（仅三栏锁定态截断页面滚动；非锁定页正常保留纵向滚动条） */
+    html.${ROOT_CLASS}.${LOCK_CLASS} body {
       overflow: hidden !important;
+    }
+    html.${ROOT_CLASS} body {
       font-family: var(--wc-font);
       background: var(--wc-chat-bg);
       color: var(--wc-text);
+    }
+    html.${ROOT_CLASS}:not(.${LOCK_CLASS}) body {
+      overflow-y: auto !important;
     }
 
     /* 1. 最左侧 56px 垂直停靠栏 */
@@ -12129,7 +12162,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.78";
+  const SCRIPT_VERSION = "0.7.79";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -27299,12 +27332,28 @@
     ensureModeFab();
     if (!document.body) return;
 
+    const pathname = location.pathname;
+    const isV2exNew = IS_V2EX && (pathname === "/new" || pathname.startsWith("/new/"));
+    document.documentElement.classList.toggle("wecom-v2ex-new-page", isV2exNew);
+
+    if (isV2exNew) {
+      document.querySelector(".wecom-rail")?.remove();
+      document.querySelector(".wecom-v2ex-nav2")?.remove();
+      document.querySelector(".wecom-strip")?.remove();
+      document.querySelector(".wecom-rail-resizer")?.remove();
+      document.querySelector(".wecom-list-panel")?.remove();
+      document.querySelector(".wecom-chat-panel")?.remove();
+      document.querySelector(".wecom-member-panel")?.remove();
+      document.querySelector(".wecom-list-resizer")?.remove();
+      document.documentElement.classList.remove(LOCK_CLASS, "wecom-members-open");
+      return;
+    }
+
     ensureRail();
     ensureStrip();
     ensureRailResizer();
     applyRailWidth(getRailWidth());
 
-    const pathname = location.pathname;
     const isTopic = isTopicPath(pathname);
     const isHome = isHomePath(pathname);
     const supported = isTopic || isHome;
@@ -27853,6 +27902,9 @@
       return;
     }
     if (IS_V2EX) {
+      if (location.pathname === "/new" || location.pathname.startsWith("/new/")) {
+        document.documentElement.classList.add("wecom-v2ex-new-page");
+      }
       fixV2exComposeDraft();
     }
     if (IS_CREDIT) {

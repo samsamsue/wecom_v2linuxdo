@@ -7939,4 +7939,62 @@ test("Test 108: V2EX /new compose draft syntax guard and Select2 node selection 
   }, "userscript must have strictly valid JavaScript syntax without parse or token errors");
 });
 
+test("Test 109: V2EX /new left sidebar hiding and global non-locked pages body scrollbar restoration (v0.7.79)", () => {
+  // 1. CSS rules for hiding left rail, nav2, strip, resizer on V2EX /new
+  assert.ok(
+    scriptContent.includes("html.wecom-v2ex-new-page .wecom-rail") &&
+    scriptContent.includes("html.wecom-v2ex-new-page .wecom-v2ex-nav2") &&
+    scriptContent.includes("html.wecom-v2ex-new-page .wecom-strip") &&
+    scriptContent.includes("html.wecom-v2ex-new-page .wecom-rail-resizer"),
+    "must hide WeCom left sidebar elements on V2EX /new"
+  );
+
+  // 2. CSS variables reset for V2EX /new
+  assert.ok(
+    scriptContent.includes("--wc-nav: 0px !important;") &&
+    scriptContent.includes("--wc-nav2w: 0px !important;") &&
+    scriptContent.includes("--wc-strip: 0px !important;"),
+    "must reset left sidebar width CSS variables to 0px on V2EX /new"
+  );
+
+  // 3. Early document-start tag in bootstrap
+  assert.ok(
+    scriptContent.includes('if (location.pathname === "/new" || location.pathname.startsWith("/new/")) {') &&
+    scriptContent.includes('document.documentElement.classList.add("wecom-v2ex-new-page");'),
+    "bootstrap must tag wecom-v2ex-new-page early at document-start"
+  );
+
+  // 4. Early exit and DOM cleanup in _applyTheme
+  assert.ok(
+    scriptContent.includes('const isV2exNew = IS_V2EX && (pathname === "/new" || pathname.startsWith("/new/"));') &&
+    scriptContent.includes('document.documentElement.classList.toggle("wecom-v2ex-new-page", isV2exNew);') &&
+    scriptContent.includes('document.querySelector(".wecom-rail")?.remove();') &&
+    scriptContent.includes('document.querySelector(".wecom-v2ex-nav2")?.remove();'),
+    "_applyTheme must clean up left sidebar elements and exit early for V2EX /new"
+  );
+
+  // 5. Global body overflow-y: auto for non-locked pages (fixes missing scrollbars)
+  assert.ok(
+    scriptContent.includes("html.${ROOT_CLASS}.${LOCK_CLASS} body {\n      overflow: hidden !important;\n    }") ||
+    scriptContent.includes("html.${ROOT_CLASS}.${LOCK_CLASS} body {\r\n      overflow: hidden !important;\r\n    }"),
+    "overflow: hidden must be strictly scoped to LOCK_CLASS"
+  );
+  assert.ok(
+    scriptContent.includes("html.${ROOT_CLASS}:not(.${LOCK_CLASS}) body {\n      overflow-y: auto !important;\n    }") ||
+    scriptContent.includes("html.${ROOT_CLASS}:not(.${LOCK_CLASS}) body {\r\n      overflow-y: auto !important;\r\n    }"),
+    "non-locked pages must have overflow-y: auto !important to ensure vertical scrollbar is present"
+  );
+  assert.ok(
+    scriptContent.includes("html.wecom-v2ex-new-page body,\n    html.${ROOT_CLASS}.wecom-v2ex-new-page body {\n      overflow-y: auto !important;\n    }") ||
+    scriptContent.includes("html.wecom-v2ex-new-page body,\r\n    html.${ROOT_CLASS}.wecom-v2ex-new-page body {\r\n      overflow-y: auto !important;\r\n    }"),
+    "V2EX /new body must explicitly have overflow-y: auto !important"
+  );
+
+  // 6. Full JavaScript Syntax Validation
+  assert.doesNotThrow(() => {
+    new Function(scriptContent);
+  }, "userscript must have strictly valid JavaScript syntax without parse or token errors");
+});
+
+
 
