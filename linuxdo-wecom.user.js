@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.77
+// @version      0.7.78
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -10764,6 +10764,38 @@
       border-top-color: #26292E !important;
       color: #959CA6 !important;
     }
+    /* V2EX /new 节点选择器 (Select2) 暗色适配 */
+    html.wecom-dark .select2-container--default .select2-selection--single {
+      background-color: #1C1E22 !important;
+      border-color: #282C33 !important;
+      color: #ECEFF4 !important;
+    }
+    html.wecom-dark .select2-container--default .select2-selection--single .select2-selection__rendered {
+      color: #ECEFF4 !important;
+    }
+    html.wecom-dark .select2-container--default .select2-selection--single .select2-selection__arrow b {
+      border-color: #8A919E transparent transparent transparent !important;
+    }
+    html.wecom-dark .select2-dropdown {
+      background-color: #1C1E22 !important;
+      border-color: #282C33 !important;
+      color: #ECEFF4 !important;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+    }
+    html.wecom-dark .select2-search--dropdown .select2-search__field {
+      background-color: #141619 !important;
+      border-color: #282C33 !important;
+      color: #ECEFF4 !important;
+    }
+    html.wecom-dark .select2-results__option {
+      background-color: transparent !important;
+      color: #ECEFF4 !important;
+    }
+    html.wecom-dark .select2-container--default .select2-results__option--highlighted[aria-selected],
+    html.wecom-dark .select2-container--default .select2-results__option[aria-selected="true"] {
+      background-color: #26292E !important;
+      color: #FFFFFF !important;
+    }
     html.wecom-dark .topic_content,
     html.wecom-dark .reply_content {
       color: #ECEFF4 !important;
@@ -12097,7 +12129,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.77";
+  const SCRIPT_VERSION = "0.7.78";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -15757,6 +15789,162 @@
 
   function openV2exMemberProfilePage(username) {
     window.open(`/member/${encodeURIComponent(username)}`, "_blank");
+  }
+
+  /* ============================== V2EX 发帖草稿与节点选择器安全守护 ============================== */
+
+  function fixV2exComposeDraft() {
+    if (!IS_V2EX) return;
+
+    function ensureSyntaxEl() {
+      // 检查是否已有选中的 syntax radio
+      let checked = document.querySelector('input[name="syntax"]:checked');
+      if (checked) return checked;
+
+      // 1. 若有 input[name="syntax"] 单选框但没有任何一个被选中，默认选中第一个
+      const anyRadio = document.querySelector('input[name="syntax"]');
+      if (anyRadio) {
+        anyRadio.checked = true;
+        return anyRadio;
+      }
+
+      // 2. 若存在 select 下拉框（如 #select_syntax 或 select[name="syntax"]），获取其当前值
+      const selectEl = document.querySelector('#select_syntax, select[name="syntax"]');
+      const val = selectEl?.value || "0";
+
+      // 3. 注入/更新隐藏的单选框 shim，确保 document.querySelector('input[name="syntax"]:checked') 永远能读到有效 .value
+      let dummy = document.querySelector('input[name="syntax"].wecom-syntax-shim');
+      if (!dummy) {
+        dummy = document.createElement("input");
+        dummy.type = "radio";
+        dummy.name = "syntax";
+        dummy.className = "wecom-syntax-shim";
+        dummy.style.display = "none";
+        const formOrParent = selectEl?.parentNode || document.querySelector("form#compose, form[action='/new'], form") || document.body;
+        if (formOrParent) formOrParent.appendChild(dummy);
+      }
+      dummy.value = val;
+      dummy.checked = true;
+
+      if (selectEl && !selectEl.dataset.wecomSynced) {
+        selectEl.dataset.wecomSynced = "1";
+        selectEl.addEventListener("change", () => {
+          dummy.value = selectEl.value || "0";
+          dummy.checked = true;
+        });
+      }
+
+      return dummy;
+    }
+
+    function safeSaveComposeDraft(originalFn, memberId) {
+      ensureSyntaxEl();
+      if (typeof originalFn === "function") {
+        try {
+          return originalFn(memberId);
+        } catch (err) {
+          console.warn("[linuxdo-wecom] V2EX 原生 saveComposeDraft 执行异常，已启用安全草稿保存兜底:", err);
+        }
+      }
+
+      // 安全草稿保存兜底
+      try {
+        if (typeof lscache !== "undefined" && typeof lscache.set === "function") {
+          const contentId = "topic:compose:by:" + memberId;
+          const draft_title = (typeof $ !== "undefined" ? $("#topic_title").val() : document.querySelector("#topic_title")?.value) || "";
+          let draft_content = "";
+          try {
+            if (typeof editor !== "undefined" && typeof editor.getValue === "function") {
+              draft_content = editor.getValue();
+            } else {
+              draft_content = document.querySelector("#topic_content, textarea")?.value || "";
+            }
+          } catch {}
+          const draft_node = (typeof $ !== "undefined" ? $("#nodes").val() : document.querySelector("#nodes")?.value) || "";
+          const syntaxEl = ensureSyntaxEl();
+          const draft_syntax = syntaxEl ? syntaxEl.value : "0";
+
+          lscache.set(contentId, {
+            title: draft_title,
+            content: draft_content,
+            node: draft_node,
+            syntax: draft_syntax
+          }, 525600);
+          console.log("[linuxdo-wecom] 已安全保存会员 " + memberId + " 的发帖草稿");
+        }
+      } catch (fallbackErr) {
+        console.warn("[linuxdo-wecom] safeSaveComposeDraft 兜底保存失败:", fallbackErr);
+      }
+    }
+
+    // 劫持 window.saveComposeDraft
+    let realSaveFn = window.saveComposeDraft;
+    try {
+      Object.defineProperty(window, "saveComposeDraft", {
+        configurable: true,
+        enumerable: true,
+        get() {
+          return function(memberId) {
+            return safeSaveComposeDraft(realSaveFn, memberId);
+          };
+        },
+        set(newFn) {
+          realSaveFn = newFn;
+        }
+      });
+    } catch (e) {
+      window.saveComposeDraft = function(memberId) {
+        return safeSaveComposeDraft(realSaveFn, memberId);
+      };
+    }
+
+    // 劫持 window.loadComposeDraft 防止加载草稿时报错
+    let realLoadFn = window.loadComposeDraft;
+    try {
+      Object.defineProperty(window, "loadComposeDraft", {
+        configurable: true,
+        enumerable: true,
+        get() {
+          return function(memberId) {
+            try {
+              if (typeof realLoadFn === "function") {
+                return realLoadFn(memberId);
+              }
+            } catch (err) {
+              console.warn("[linuxdo-wecom] V2EX 原生 loadComposeDraft 执行异常，已安全忽略:", err);
+            }
+          };
+        },
+        set(newFn) {
+          realLoadFn = newFn;
+        }
+      });
+    } catch (e) {
+      if (typeof realLoadFn === "function") {
+        window.loadComposeDraft = function(memberId) {
+          try { return realLoadFn(memberId); } catch {}
+        };
+      }
+    }
+
+    // DOM 事件监听：当点击或聚焦节点选择框时，预先确保 syntax 元素就绪
+    document.addEventListener("focusin", (e) => {
+      if (e.target && (e.target.id === "nodes" || e.target.closest?.(".select2-container, #select2-nodes-container, form#compose, form[action='/new']"))) {
+        ensureSyntaxEl();
+      }
+    }, true);
+
+    document.addEventListener("pointerdown", (e) => {
+      if (e.target && (e.target.id === "nodes" || e.target.closest?.(".select2-container, #select2-nodes-container, form#compose, form[action='/new']"))) {
+        ensureSyntaxEl();
+      }
+    }, true);
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", ensureSyntaxEl, { once: true });
+    } else {
+      ensureSyntaxEl();
+    }
   }
 
   /* ============================== 掘金 · 沸点 用户资料卡弹窗 ============================== */
@@ -27663,6 +27851,9 @@
     if (!document.documentElement) {
       setTimeout(bootstrap, 0);
       return;
+    }
+    if (IS_V2EX) {
+      fixV2exComposeDraft();
     }
     if (IS_CREDIT) {
       initCreditRedEnvelopeBridge();

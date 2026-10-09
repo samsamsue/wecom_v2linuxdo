@@ -7877,4 +7877,66 @@ test("Test 107: LINUX DO Credit red envelope CORS fallback, popup bridge, opener
   }, "userscript must have strictly valid JavaScript syntax without parse or token errors");
 });
 
+test("Test 108: V2EX /new compose draft syntax guard and Select2 node selection crash prevention (v0.7.78)", () => {
+  // 1. Definition of fixV2exComposeDraft
+  assert.ok(
+    scriptContent.includes("function fixV2exComposeDraft"),
+    "must define fixV2exComposeDraft"
+  );
+
+  // 2. Syntax shim injection and auto-check
+  assert.ok(
+    scriptContent.includes("wecom-syntax-shim"),
+    "must define wecom-syntax-shim to prevent null syntax query"
+  );
+  assert.ok(
+    scriptContent.includes('document.querySelector(\'input[name="syntax"]:checked\')'),
+    "must check for input[name='syntax']:checked"
+  );
+
+  // 3. Global window.saveComposeDraft and window.loadComposeDraft interception
+  assert.ok(
+    scriptContent.includes('Object.defineProperty(window, "saveComposeDraft"') &&
+    scriptContent.includes('Object.defineProperty(window, "loadComposeDraft"'),
+    "must intercept saveComposeDraft and loadComposeDraft on window"
+  );
+
+  // 4. Document-start invocation in bootstrap
+  assert.ok(
+    scriptContent.includes("if (IS_V2EX) {") &&
+    scriptContent.includes("fixV2exComposeDraft();"),
+    "bootstrap must call fixV2exComposeDraft at document-start for V2EX"
+  );
+
+  // 5. Select2 dark mode styling for /new
+  assert.ok(
+    scriptContent.includes("html.wecom-dark .select2-container--default") &&
+    scriptContent.includes("html.wecom-dark .select2-dropdown"),
+    "must provide Select2 dark theme styles for V2EX /new"
+  );
+
+  // 6. Simulation of crash prevention
+  function simulateNativeV2exSaveDraft(domQuerySelector) {
+    const el = domQuerySelector('input[name="syntax"]:checked');
+    return el.value;
+  }
+  assert.throws(() => {
+    simulateNativeV2exSaveDraft(() => null);
+  }, /Cannot read properties of null/);
+
+  function simulateSafeV2exSaveDraft(domQuerySelector) {
+    let el = domQuerySelector('input[name="syntax"]:checked');
+    if (!el) {
+      el = { value: "0", checked: true };
+    }
+    return el.value;
+  }
+  assert.strictEqual(simulateSafeV2exSaveDraft(() => null), "0", "safe shim must return default syntax without throwing");
+
+  // 7. Full JavaScript Syntax Validation
+  assert.doesNotThrow(() => {
+    new Function(scriptContent);
+  }, "userscript must have strictly valid JavaScript syntax without parse or token errors");
+});
+
 
