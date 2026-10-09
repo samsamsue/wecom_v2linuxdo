@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.79
+// @version      0.7.80
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -1989,6 +1989,12 @@
       border-top: 1px solid #EBEDF0;
       padding-top: 8px;
     }
+    .wecom-member-topics-list {
+      max-height: 140px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-right: 2px;
+    }
     .wecom-member-topics-title {
       font-size: 11px;
       font-weight: 600;
@@ -2013,6 +2019,12 @@
       margin: 0 16px 10px;
       border-top: 1px solid #EBEDF0;
       padding-top: 8px;
+    }
+    .wecom-member-replies-list {
+      max-height: 160px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-right: 2px;
     }
     .wecom-member-reply-item {
       padding: 3px 0;
@@ -7072,6 +7084,8 @@
     .wecom-msg-content pre,
     #discourse-modal-container .modal-body,
     .d-modal__body,
+    .wecom-member-topics-list,
+    .wecom-member-replies-list,
     .wecom-v2ex-member-card,
     .wecom-v2ex-user-popover {
       scrollbar-width: thin !important;
@@ -7099,6 +7113,8 @@
     .wecom-msg-content pre::-webkit-scrollbar,
     #discourse-modal-container .modal-body::-webkit-scrollbar,
     .d-modal__body::-webkit-scrollbar,
+    .wecom-member-topics-list::-webkit-scrollbar,
+    .wecom-member-replies-list::-webkit-scrollbar,
     .wecom-v2ex-member-card::-webkit-scrollbar,
     .wecom-v2ex-user-popover::-webkit-scrollbar {
       width: 6px !important;
@@ -7126,6 +7142,8 @@
     .wecom-msg-content pre::-webkit-scrollbar-track,
     #discourse-modal-container .modal-body::-webkit-scrollbar-track,
     .d-modal__body::-webkit-scrollbar-track,
+    .wecom-member-topics-list::-webkit-scrollbar-track,
+    .wecom-member-replies-list::-webkit-scrollbar-track,
     .wecom-v2ex-member-card::-webkit-scrollbar-track,
     .wecom-v2ex-user-popover::-webkit-scrollbar-track {
       background: transparent !important;
@@ -7152,6 +7170,8 @@
     .wecom-msg-content pre::-webkit-scrollbar-thumb,
     #discourse-modal-container .modal-body::-webkit-scrollbar-thumb,
     .d-modal__body::-webkit-scrollbar-thumb,
+    .wecom-member-topics-list::-webkit-scrollbar-thumb,
+    .wecom-member-replies-list::-webkit-scrollbar-thumb,
     .wecom-v2ex-member-card::-webkit-scrollbar-thumb,
     .wecom-v2ex-user-popover::-webkit-scrollbar-thumb {
       background: transparent !important;
@@ -7198,6 +7218,12 @@
     #discourse-modal-container .modal.show .modal-body:hover::-webkit-scrollbar-thumb,
     .d-modal__container:hover .d-modal__body::-webkit-scrollbar-thumb,
     .d-modal__body:hover::-webkit-scrollbar-thumb,
+    .wecom-member-topics-box:hover .wecom-member-topics-list::-webkit-scrollbar-thumb,
+    .wecom-member-topics-list:hover::-webkit-scrollbar-thumb,
+    .wecom-member-topics-list.is-scrolling::-webkit-scrollbar-thumb,
+    .wecom-member-replies-box:hover .wecom-member-replies-list::-webkit-scrollbar-thumb,
+    .wecom-member-replies-list:hover::-webkit-scrollbar-thumb,
+    .wecom-member-replies-list.is-scrolling::-webkit-scrollbar-thumb,
     .wecom-v2ex-member-card.is-scrolling::-webkit-scrollbar-thumb,
     .wecom-v2ex-member-card:hover::-webkit-scrollbar-thumb,
     .wecom-v2ex-user-popover:hover::-webkit-scrollbar-thumb {
@@ -7225,6 +7251,8 @@
     .wecom-msg-content pre::-webkit-scrollbar-thumb:hover,
     #discourse-modal-container .modal-body::-webkit-scrollbar-thumb:hover,
     .d-modal__body::-webkit-scrollbar-thumb:hover,
+    .wecom-member-topics-list::-webkit-scrollbar-thumb:hover,
+    .wecom-member-replies-list::-webkit-scrollbar-thumb:hover,
     .wecom-v2ex-member-card::-webkit-scrollbar-thumb:hover,
     .wecom-v2ex-user-popover::-webkit-scrollbar-thumb:hover {
       background: rgba(0, 0, 0, 0.35) !important;
@@ -10660,6 +10688,12 @@
     html.${ROOT_CLASS}.wecom-dark #discourse-modal-container .modal.show .modal-body:hover::-webkit-scrollbar-thumb,
     html.${ROOT_CLASS}.wecom-dark .d-modal__container:hover .d-modal__body::-webkit-scrollbar-thumb,
     html.${ROOT_CLASS}.wecom-dark .d-modal__body:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-topics-box:hover .wecom-member-topics-list::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-topics-list:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-topics-list.is-scrolling::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-replies-box:hover .wecom-member-replies-list::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-replies-list:hover::-webkit-scrollbar-thumb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-replies-list.is-scrolling::-webkit-scrollbar-thumb,
     html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-member-card.is-scrolling::-webkit-scrollbar-thumb,
     html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-member-card:hover::-webkit-scrollbar-thumb,
     html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-user-popover:hover::-webkit-scrollbar-thumb {
@@ -10688,7 +10722,9 @@
     html.${ROOT_CLASS}.wecom-dark #discourse-modal-container .modal-body::-webkit-scrollbar-thumb:hover,
     html.${ROOT_CLASS}.wecom-dark .d-modal__body::-webkit-scrollbar-thumb:hover,
     html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-member-card::-webkit-scrollbar-thumb:hover,
-    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-user-popover::-webkit-scrollbar-thumb:hover {
+    html.${ROOT_CLASS}.wecom-dark .wecom-v2ex-user-popover::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-topics-list::-webkit-scrollbar-thumb:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-replies-list::-webkit-scrollbar-thumb:hover {
       background: rgba(255, 255, 255, 0.38) !important;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-list-panel:hover .wecom-list-body,
@@ -12162,7 +12198,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.79";
+  const SCRIPT_VERSION = "0.7.80";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -15289,21 +15325,21 @@
       }
     }
 
-    // Recent topics (up to 2)
+    // Recent topics (不限制条数，解析页面全部最近主题)
     const topicRegex = /<span\s+class=["']item_title["']>\s*<a\s+href=["'](\/t\/\d+[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
     let tMatch;
-    while ((tMatch = topicRegex.exec(html)) !== null && profile.recentTopics.length < 2) {
+    while ((tMatch = topicRegex.exec(html)) !== null && profile.recentTopics.length < 50) {
       profile.recentTopics.push({
         url: tMatch[1],
         title: tMatch[2].replace(/<[^>]+>/g, "").trim()
       });
     }
 
-    // Recent replies (up to 2)
+    // Recent replies (不限制条数，解析页面全部最近回复)
     profile.recentReplies = [];
     const replyRegex = /<div\s+class=["']dock_area["']>[\s\S]*?<a\s+href=["'](\/t\/\d+[^"']*)["'][^>]*>([\s\S]*?)<\/a>[\s\S]*?<div\s+class=["']reply_content["']>([\s\S]*?)<\/div>/gi;
     let rMatch;
-    while ((rMatch = replyRegex.exec(html)) !== null && profile.recentReplies.length < 2) {
+    while ((rMatch = replyRegex.exec(html)) !== null && profile.recentReplies.length < 50) {
       profile.recentReplies.push({
         url: rMatch[1],
         topicTitle: rMatch[2].replace(/<[^>]+>/g, "").trim(),
@@ -15790,8 +15826,18 @@
         const listHtml = profile.recentTopics.map((t) =>
           `<a class="wecom-member-topic-item" href="${escapeHtml(t.url)}" target="_blank">· ${escapeHtml(t.title)}</a>`
         ).join("");
-        topicsBox.innerHTML = `<div class="wecom-member-topics-title">最近创建的主题</div>${listHtml}`;
+        topicsBox.innerHTML = `<div class="wecom-member-topics-title">最近创建的主题</div><div class="wecom-member-topics-list">${listHtml}</div>`;
         topicsBox.style.display = "block";
+
+        const topicsListEl = topicsBox.querySelector(".wecom-member-topics-list");
+        let topicsScrollTimer = null;
+        topicsListEl?.addEventListener("scroll", () => {
+          topicsListEl.classList.add("is-scrolling");
+          clearTimeout(topicsScrollTimer);
+          topicsScrollTimer = setTimeout(() => {
+            topicsListEl.classList.remove("is-scrolling");
+          }, 800);
+        }, { passive: true });
       }
 
       const repliesBox = card.querySelector(".wecom-member-replies-box");
@@ -15802,8 +15848,18 @@
             <div class="wecom-member-reply-text">${escapeHtml(r.content)}</div>
           </div>`
         ).join("");
-        repliesBox.innerHTML = `<div class="wecom-member-topics-title">最近回复</div>${listHtml}`;
+        repliesBox.innerHTML = `<div class="wecom-member-topics-title">最近回复</div><div class="wecom-member-replies-list">${listHtml}</div>`;
         repliesBox.style.display = "block";
+
+        const repliesListEl = repliesBox.querySelector(".wecom-member-replies-list");
+        let repliesScrollTimer = null;
+        repliesListEl?.addEventListener("scroll", () => {
+          repliesListEl.classList.add("is-scrolling");
+          clearTimeout(repliesScrollTimer);
+          repliesScrollTimer = setTimeout(() => {
+            repliesListEl.classList.remove("is-scrolling");
+          }, 800);
+        }, { passive: true });
       }
 
       // Re-check card position to ensure it fits in the viewport

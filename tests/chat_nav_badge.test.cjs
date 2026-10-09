@@ -7996,5 +7996,83 @@ test("Test 109: V2EX /new left sidebar hiding and global non-locked pages body s
   }, "userscript must have strictly valid JavaScript syntax without parse or token errors");
 });
 
+test("Test 110: V2EX member card recent topics and replies list unrestricted count and auto-hiding scrollbar (v0.7.80)", () => {
+  // 1. Parsing without artificial < 2 restriction
+  assert.ok(
+    !scriptContent.includes("profile.recentTopics.length < 2") &&
+    !scriptContent.includes("profile.recentReplies.length < 2"),
+    "must not artificially restrict recent topics and replies to 2 items"
+  );
+  assert.ok(
+    scriptContent.includes("profile.recentTopics.length < 50") &&
+    scriptContent.includes("profile.recentReplies.length < 50"),
+    "must allow parsing all recent topics and replies up to safe ceiling"
+  );
+
+  // 2. Scrollable containers rendered in openV2exMemberCard
+  assert.ok(
+    scriptContent.includes('class="wecom-member-topics-list"') &&
+    scriptContent.includes('class="wecom-member-replies-list"'),
+    "openV2exMemberCard must wrap topic and reply items in dedicated list containers"
+  );
+
+  // 3. Scroll listeners for auto-hiding is-scrolling class
+  assert.ok(
+    scriptContent.includes('topicsListEl?.addEventListener("scroll"') &&
+    scriptContent.includes('repliesListEl?.addEventListener("scroll"'),
+    "must bind scroll event listeners to add is-scrolling on scroll"
+  );
+
+  // 4. CSS rules for scrollable lists with max-height and auto scroll
+  assert.ok(
+    scriptContent.includes(".wecom-member-topics-list {\n      max-height: 140px;\n      overflow-y: auto;") ||
+    scriptContent.includes(".wecom-member-topics-list {\r\n      max-height: 140px;\r\n      overflow-y: auto;"),
+    "must specify max-height and overflow-y: auto on .wecom-member-topics-list"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-member-replies-list {\n      max-height: 160px;\n      overflow-y: auto;") ||
+    scriptContent.includes(".wecom-member-replies-list {\r\n      max-height: 160px;\r\n      overflow-y: auto;"),
+    "must specify max-height and overflow-y: auto on .wecom-member-replies-list"
+  );
+
+  // 5. Inclusion in unified 6px auto-hiding scrollbar system
+  assert.ok(
+    scriptContent.includes(".wecom-member-topics-list::-webkit-scrollbar") &&
+    scriptContent.includes(".wecom-member-replies-list::-webkit-scrollbar"),
+    "must include topics and replies lists in 6px scrollbar definitions"
+  );
+
+  // 6. Test parsing simulation with > 2 topics and replies
+  const manyHtml = `
+    <span class="item_title"><a href="/t/1">主题 1</a></span>
+    <span class="item_title"><a href="/t/2">主题 2</a></span>
+    <span class="item_title"><a href="/t/3">主题 3</a></span>
+    <span class="item_title"><a href="/t/4">主题 4</a></span>
+    <div class="dock_area"><a href="/t/10">回复 1</a></div><div class="reply_content">内容 1</div>
+    <div class="dock_area"><a href="/t/11">回复 2</a></div><div class="reply_content">内容 2</div>
+    <div class="dock_area"><a href="/t/12">回复 3</a></div><div class="reply_content">内容 3</div>
+  `;
+
+  const topicRegex = /<span\s+class=["']item_title["']>\s*<a\s+href=["'](\/t\/\d+[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  const replyRegex = /<div\s+class=["']dock_area["']>[\s\S]*?<a\s+href=["'](\/t\/\d+[^"']*)["'][^>]*>([\s\S]*?)<\/a>[\s\S]*?<div\s+class=["']reply_content["']>([\s\S]*?)<\/div>/gi;
+  const topics = [];
+  const replies = [];
+  let tm, rm;
+  while ((tm = topicRegex.exec(manyHtml)) !== null && topics.length < 50) {
+    topics.push({ url: tm[1], title: tm[2] });
+  }
+  while ((rm = replyRegex.exec(manyHtml)) !== null && replies.length < 50) {
+    replies.push({ url: rm[1], topicTitle: rm[2], content: rm[3] });
+  }
+  assert.strictEqual(topics.length, 4, "must parse all 4 topics without artificial 2 item limit");
+  assert.strictEqual(replies.length, 3, "must parse all 3 replies without artificial 2 item limit");
+
+  // 7. Full JavaScript Syntax Validation
+  assert.doesNotThrow(() => {
+    new Function(scriptContent);
+  }, "userscript must have strictly valid JavaScript syntax without parse or token errors");
+});
+
+
 
 
