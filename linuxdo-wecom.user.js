@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.82
+// @version      0.7.83
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -214,9 +214,10 @@
     phoneReceiver: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2" /></svg>`,
     appsGrid: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5" /><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5" /><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5" /><line x1="14" y1="15.5" x2="20" y2="15.5" /><line x1="14" y1="19" x2="20" y2="19" /></svg>`,
     historySearch: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19v-11a3 3 0 0 1 3 -3h10a3 3 0 0 1 3 3v4" /><path d="M4 19l3 -2h4" /><circle cx="8" cy="11" r=".6" fill="currentColor" /><circle cx="12" cy="11" r=".6" fill="currentColor" /><circle cx="16" cy="11" r=".6" fill="currentColor" /><circle cx="15.5" cy="15.5" r="3" /><line x1="17.8" y1="17.8" x2="20.5" y2="20.5" /></svg>`,
-    scrollTop: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6" /><path d="M6 12l6-6 6 6" /><path d="M4 3h16" /></svg>`,
+    scrollTop: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11l5 -5l5 5" /><path d="M7 17l5 -5l5 5" /></svg>`,
     scrollBottom: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v13" /><path d="M18 12l-6 6-6-6" /></svg>`,
     backPos: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4 -4l4 -4" /><path d="M5 10h11a4 4 0 1 1 0 8h-1" /></svg>`,
+    timeline: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 4v4" /><circle cx="8.5" cy="10.2" r="2.2" /><path d="M8.5 12.4V20" /><path d="M15.5 4v7.6" /><circle cx="15.5" cy="13.8" r="2.2" /><path d="M15.5 16v4" /></svg>`,
     platformSwitch: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16m-4 -4l4 4l-4 4" /><path d="M20 15h-16m4 -4l-4 4l4 4" /></svg>`,
     winMin: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"><line x1="1.5" y1="6" x2="10.5" y2="6" /></svg>`,
     winMax: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="1.5" y="1.5" width="9" height="9" rx="1.5" /></svg>`,
@@ -227,7 +228,13 @@
     userOff: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.18 4.171a4 4 0 0 1 5.649 5.66m-1.829 2.169a4 4 0 0 1 -3.82 -3.83" /><path d="M6 21v-2a4 4 0 0 1 4 -4h4c.412 0 .81 .062 1.183 .178m2.633 2.642c.12 .38 .184 .785 .184 1.18v2" /><path d="M3 3l18 18" /></svg>`,
     copy: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 8m0 2a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2z" /><path d="M16 8v-2a2 2 0 0 0 -2 -2h-8a2 2 0 0 0 -2 2v8a2 2 0 0 0 2 2h2" /></svg>`,
     code: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8l-4 4l4 4" /><path d="M17 8l4 4l-4 4" /><path d="M14 4l-4 16" /></svg>`,
-    base64: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z" /><path d="M7 8h2.5a1.5 1.5 0 0 1 1.5 1.5v0a1.5 1.5 0 0 1 -1.5 1.5h-2.5h2.5a1.5 1.5 0 0 1 1.5 1.5v0a1.5 1.5 0 0 1 -1.5 1.5h-2.5v-6" /><path d="M14 8h2a1.5 1.5 0 0 1 1.5 1.5v5a1.5 1.5 0 0 1 -1.5 1.5h-2a1.5 1.5 0 0 1 -1.5 -1.5v-2a1.5 1.5 0 0 1 1.5 -1.5h3.5" /></svg>`
+    base64: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z" /><path d="M7 8h2.5a1.5 1.5 0 0 1 1.5 1.5v0a1.5 1.5 0 0 1 -1.5 1.5h-2.5h2.5a1.5 1.5 0 0 1 1.5 1.5v0a1.5 1.5 0 0 1 -1.5 1.5h-2.5v-6" /><path d="M14 8h2a1.5 1.5 0 0 1 1.5 1.5v5a1.5 1.5 0 0 1 -1.5 1.5h-2a1.5 1.5 0 0 1 -1.5 -1.5v-2a1.5 1.5 0 0 1 1.5 -1.5h3.5" /></svg>`,
+    trash: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>`,
+    share: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="3" /><circle cx="18" cy="6" r="3" /><circle cx="18" cy="18" r="3" /><line x1="8.7" y1="10.7" x2="15.3" y2="7.3" /><line x1="8.7" y1="13.3" x2="15.3" y2="16.7" /></svg>`,
+    flag: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5a5 5 0 0 1 7 0a5 5 0 0 0 7 0v9a5 5 0 0 1 -7 0a5 5 0 0 0 -7 0v-9z" /><path d="M5 21v-7" /></svg>`,
+    checkCircle: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M9 12l2 2l4 -4" /></svg>`,
+    lock: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2" /><circle cx="12" cy="16" r="1" /><path d="M8 11v-4a4 4 0 0 1 8 0v4" /></svg>`,
+    quote: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v6c0 2.667-1.333 4.333-4 5" /><path d="M20 11h-4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v6c0 2.667-1.333 4.333-4 5" /></svg>`
   };
   ICONS.chat = ICONS.msg;
   ICONS.list = ICONS.msg;
@@ -991,9 +998,17 @@
       if (m) return { topicId: m[1], postNumber: 0, slug: "" };
       return { topicId: null, postNumber: 0, slug: "" };
     }
-    const parts = String(pathname || "").split("/").filter(Boolean);
+    const raw = String(pathname || "");
+    const cleanPath = raw.replace(/^https?:\/\/[^/]+/i, "").split(/[?#]/)[0];
+    const parts = cleanPath.split("/").filter(Boolean);
     if (parts[0] !== "t" || parts.length < 2) return { topicId: null, postNumber: 0, slug: "" };
-    const postOf = (value) => (/^\d+$/.test(value || "") ? Number(value) : 0);
+    let fallbackPost = 0;
+    const hashPostMatch = raw.match(/#post_(\d+)\b/i) || raw.match(/[?&]post_number=(\d+)\b/i);
+    if (hashPostMatch) fallbackPost = Number(hashPostMatch[1]) || 0;
+    const postOf = (value) => (/^\d+$/.test(value || "") ? Number(value) : fallbackPost);
+    if (parts.length >= 4 && /^\d+$/.test(parts[2] || "")) {
+      return { topicId: Number(parts[2]), postNumber: postOf(parts[3]), slug: parts[1] };
+    }
     if (/^\d+$/.test(parts[1])) {
       return { topicId: Number(parts[1]), postNumber: postOf(parts[2]), slug: "" };
     }
@@ -2058,6 +2073,36 @@
       background: #F7F8FA;
       padding: 4px 8px;
       border-radius: 4px;
+      cursor: pointer;
+      user-select: text;
+      transition: background 0.15s ease;
+    }
+    .wecom-member-reply-text:hover {
+      background: #EFF0F3;
+    }
+    .wecom-member-reply-text.is-expanded {
+      display: block;
+      -webkit-line-clamp: unset;
+      overflow: visible;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+    .wecom-member-list-status {
+      text-align: center;
+      font-size: 10px;
+      color: #8F959E;
+      padding: 6px 0 2px;
+      user-select: none;
+    }
+    .wecom-member-list-status.is-loading {
+      color: #1664FF;
+    }
+    .wecom-member-list-status.is-end {
+      color: #8F959E;
+    }
+    .wecom-member-list-status.is-error {
+      color: #F53F3F;
+      cursor: pointer;
     }
     .wecom-member-card-footer {
       padding: 10px 16px;
@@ -3606,10 +3651,10 @@
     }
     .wecom-msg-reply-indicator .wecom-msg-reply-indicator-user {
       font-weight: 500;
-      color: var(--wc-accent);
+      color: inherit;
     }
     .wecom-msg-reply-indicator .wecom-msg-reply-indicator-floor {
-      color: var(--wc-text-3);
+      color: inherit;
     }
     .wecom-msg-bubble {
       padding: 10px 14px;
@@ -7930,6 +7975,267 @@
       color: #8C99AA;
     }
 
+    /* 页码/楼层进度滑块浮层 (保留 Linux DO 经典 timeline slide 结构，采用 WeCom 毛玻璃卡片风格) */
+    .wecom-chat-tools .wecom-chat-timeline-toggle.is-active {
+      background: rgba(38, 126, 240, 0.12) !important;
+      color: var(--wc-blue, #267EF0) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-tools .wecom-chat-timeline-toggle.is-active {
+      background: rgba(91, 162, 255, 0.2) !important;
+      color: #5BA2FF !important;
+    }
+    .wecom-timeline-popover {
+      position: absolute;
+      top: 52px;
+      right: 14px;
+      min-width: 112px;
+      width: max-content;
+      max-width: 156px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(18px) saturate(160%);
+      -webkit-backdrop-filter: blur(18px) saturate(160%);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.05);
+      z-index: 480;
+      box-sizing: border-box;
+      font-family: var(--wc-font);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0;
+      user-select: none;
+      animation: wecom-popover-in 0.15s ease-out;
+    }
+    .wecom-timeline-popover[hidden] {
+      display: none !important;
+    }
+    .wecom-timeline-date {
+      border: none;
+      background: transparent;
+      padding: 2px 0;
+      margin: 0;
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--wc-text-3, #8F959E);
+      cursor: pointer;
+      text-align: left;
+      line-height: 1.4;
+      font-variant-numeric: tabular-nums;
+      transition: color 0.15s ease;
+    }
+    .wecom-timeline-date:hover {
+      color: var(--wc-blue, #267EF0);
+    }
+    .wecom-timeline-scrollarea {
+      position: relative;
+      width: 100%;
+      min-width: 84px;
+      height: 210px;
+      margin: 6px 0;
+      padding-left: 20px;
+      box-sizing: border-box;
+      cursor: pointer;
+      touch-action: none;
+    }
+    .wecom-timeline-track {
+      position: absolute;
+      left: 4px;
+      top: 0;
+      bottom: 0;
+      width: 1.5px;
+      border-radius: 999px;
+      background: rgba(38, 126, 240, 0.28);
+      overflow: hidden;
+    }
+    .wecom-timeline-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 0%;
+      background: rgba(38, 126, 240, 0.45);
+      border-radius: 999px;
+      transition: height 0.06s linear;
+    }
+    .wecom-timeline-scroller {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0%;
+      transform: translateY(calc(-1 * var(--tl-pct, 0%)));
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: grab;
+      transition: top 0.06s linear, transform 0.06s linear;
+    }
+    .wecom-timeline-popover.is-dragging .wecom-timeline-scroller,
+    .wecom-timeline-popover.is-dragging .wecom-timeline-fill {
+      transition: none !important;
+      cursor: grabbing;
+    }
+    .wecom-timeline-handle {
+      width: 10px;
+      height: 34px;
+      border-radius: 999px;
+      background: var(--wc-blue, #267EF0);
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.94);
+      flex-shrink: 0;
+      transition: background 0.12s ease;
+    }
+    .wecom-timeline-scrollarea:hover .wecom-timeline-handle,
+    .wecom-timeline-popover.is-dragging .wecom-timeline-handle {
+      background: #1B6FE0;
+    }
+    .wecom-timeline-info {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
+      line-height: 1.25;
+      padding: 0;
+      background: transparent;
+      cursor: pointer;
+    }
+    .wecom-timeline-replies {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--wc-text, #1F2329);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      transition: color 0.15s ease;
+    }
+    .wecom-timeline-info:hover .wecom-timeline-replies {
+      color: var(--wc-blue, #267EF0);
+    }
+    .wecom-timeline-ago {
+      font-size: 12px;
+      color: var(--wc-text-3, #8F959E);
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .wecom-timeline-jump-row {
+      display: flex;
+      align-items: center;
+      width: 118px;
+      gap: 4px;
+      margin-top: 8px;
+      padding: 2px 3px 2px 7px;
+      border-radius: 7px;
+      background: rgba(15, 23, 42, 0.04);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      box-sizing: border-box;
+      transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+    }
+    .wecom-timeline-jump-row[hidden] {
+      display: none !important;
+    }
+    .wecom-timeline-jump-row:focus-within {
+      background: rgba(255, 255, 255, 0.95);
+      border-color: rgba(38, 126, 240, 0.45);
+      box-shadow: 0 0 0 2px rgba(38, 126, 240, 0.12);
+    }
+    .wecom-timeline-jump-input {
+      flex: 1;
+      min-width: 0;
+      height: 22px;
+      padding: 0;
+      border: none;
+      font-size: 12px;
+      background: transparent;
+      color: var(--wc-text, #1F2329);
+      outline: none;
+      font-variant-numeric: tabular-nums;
+      box-sizing: border-box;
+      -moz-appearance: textfield;
+    }
+    .wecom-timeline-jump-input::placeholder {
+      color: #A0A7B4;
+      font-size: 11px;
+    }
+    .wecom-timeline-jump-input::-webkit-outer-spin-button,
+    .wecom-timeline-jump-input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    .wecom-timeline-jump-btn {
+      height: 20px;
+      padding: 0 7px;
+      border: none;
+      border-radius: 5px;
+      background: rgba(38, 126, 240, 0.12);
+      color: var(--wc-blue, #267EF0);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .wecom-timeline-jump-btn:hover {
+      background: var(--wc-blue, #267EF0);
+      color: #FFFFFF;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-timeline-popover {
+      background: rgba(28, 32, 40, 0.94);
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.48);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-timeline-date {
+      color: #8C99AA;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-timeline-date:hover {
+      color: #5BA2FF;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-timeline-track {
+      background: rgba(91, 162, 255, 0.3);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-timeline-fill {
+      background: rgba(91, 162, 255, 0.55);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-timeline-handle {
+      background: #4C98FF;
+      box-shadow: 0 0 0 3px rgba(28, 32, 40, 0.94);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-timeline-info {
+      background: transparent;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-timeline-replies {
+      color: #E6EDF5;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-timeline-info:hover .wecom-timeline-replies {
+      color: #5BA2FF;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-timeline-ago {
+      color: #8C99AA;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-timeline-jump-row {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-timeline-jump-row:focus-within {
+      background: rgba(18, 21, 26, 0.85);
+      border-color: rgba(91, 162, 255, 0.5);
+      box-shadow: 0 0 0 2px rgba(91, 162, 255, 0.15);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-timeline-jump-input {
+      color: #E6EDF5;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-timeline-jump-input::placeholder {
+      color: #6E7A8A;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-timeline-jump-btn {
+      background: rgba(91, 162, 255, 0.16);
+      color: #5BA2FF;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-timeline-jump-btn:hover {
+      background: #4C98FF;
+      color: #FFFFFF;
+    }
+
     /* 背景水印设置浮层卡片 (企业微信原生规范) */
     .wecom-watermark-panel {
       position: absolute;
@@ -8771,6 +9077,16 @@
     .wecom-reply-target[hidden] {
       display: none !important;
     }
+    .wecom-reply-target span {
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      white-space: nowrap !important;
+      flex: 1 1 auto !important;
+      margin-right: 8px !important;
+    }
+    .wecom-reply-target span b {
+      font-weight: 600 !important;
+    }
     .wecom-reply-cancel {
       background: transparent !important;
       border: none !important;
@@ -8779,6 +9095,7 @@
       cursor: pointer !important;
       padding: 0 4px !important;
       line-height: 1 !important;
+      flex-shrink: 0 !important;
     }
 
     /* 文本输入区：无边框无底色，与企微原生完全一致 */
@@ -9696,6 +10013,596 @@
       from { opacity: 0; transform: scale(0.85); }
       to { opacity: 1; transform: scale(1); }
     }
+
+    /* ==================== Discourse 投票 (Poll) 卡片样式 ==================== */
+    .wecom-poll-card {
+      background: #F7F8FA;
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 8px 0;
+      max-width: 100%;
+      box-sizing: border-box;
+      user-select: text;
+    }
+    .wecom-msg-me .wecom-poll-card {
+      background: #FFFFFF;
+      border-color: #DDE2E8;
+    }
+    .wecom-poll-header {
+      margin-bottom: 10px;
+    }
+    .wecom-poll-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .wecom-poll-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 4px;
+      line-height: 1.4;
+    }
+    .wecom-poll-badge.is-open {
+      background: #E8F7ED;
+      color: #07C160;
+    }
+    .wecom-poll-badge.is-closed {
+      background: #F0F2F5;
+      color: #8F959E;
+    }
+    .wecom-poll-type {
+      font-size: 12px;
+      color: #8F959E;
+    }
+    .wecom-poll-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1F2329;
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+    .wecom-poll-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .wecom-poll-result-item {
+      position: relative;
+      border-radius: 6px;
+      overflow: hidden;
+      background: #FFFFFF;
+      border: 1px solid #E5E7EB;
+      min-height: 38px;
+      display: flex;
+      align-items: center;
+    }
+    .wecom-poll-result-item.is-chosen {
+      border-color: #07C160;
+    }
+    .wecom-poll-result-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      background: rgba(7, 193, 96, 0.15);
+      border-radius: 5px 0 0 5px;
+      transition: width 0.35s ease;
+      pointer-events: none;
+    }
+    .wecom-poll-result-item.is-chosen .wecom-poll-result-bar {
+      background: rgba(7, 193, 96, 0.28);
+    }
+    .wecom-poll-result-content {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      box-sizing: border-box;
+      gap: 12px;
+    }
+    .wecom-poll-result-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #1F2329;
+      word-break: break-word;
+      flex: 1;
+    }
+    .wecom-poll-chosen-badge {
+      color: #07C160;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .wecom-poll-option-text {
+      line-height: 1.4;
+    }
+    .wecom-poll-result-stats {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #8F959E;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .wecom-poll-result-item.is-chosen .wecom-poll-result-stats {
+      color: #07C160;
+      font-weight: 500;
+    }
+    .wecom-poll-choice-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background: #FFFFFF;
+      border: 1px solid #E5E7EB;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 13px;
+      color: #1F2329;
+      box-sizing: border-box;
+    }
+    .wecom-poll-choice-item:hover {
+      border-color: #07C160;
+      background: #F8FDF9;
+    }
+    .wecom-poll-choice-item.is-selected {
+      border-color: #07C160;
+      background: #E8F7ED;
+    }
+    .wecom-poll-choice-item input[type="radio"],
+    .wecom-poll-choice-item input[type="checkbox"] {
+      accent-color: #07C160;
+      margin: 0;
+      cursor: pointer;
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+    .wecom-poll-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid #EBECEF;
+      font-size: 12px;
+      color: #8F959E;
+    }
+    .wecom-poll-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .wecom-poll-btn {
+      font-size: 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      line-height: 1.4;
+    }
+    .wecom-poll-btn-primary {
+      background: #07C160;
+      color: #FFFFFF;
+      border: none;
+      padding: 5px 14px;
+      font-weight: 500;
+    }
+    .wecom-poll-btn-primary:hover:not(:disabled) {
+      background: #06AD56;
+    }
+    .wecom-poll-btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .wecom-poll-btn-subtle {
+      background: transparent;
+      color: #646A73;
+      border: 1px solid #D0D3D6;
+      padding: 4px 10px;
+    }
+    .wecom-poll-btn-subtle:hover:not(:disabled) {
+      color: #07C160;
+      border-color: #07C160;
+    }
+    .wecom-poll-btn-subtle:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ==================== 消息撤回 / 点赞人员 / 举报 / 解决方案 / 状态 / @ 联想 ==================== */
+    .wecom-msg-recalled {
+      font-size: 12px;
+      color: #8F959E;
+      background: rgba(0, 0, 0, 0.04);
+      padding: 4px 12px;
+      border-radius: 12px;
+      margin: 6px auto;
+      text-align: center;
+      display: inline-block;
+    }
+    .wecom-msg-recalled a {
+      color: var(--wc-blue, #267EF0);
+      margin-left: 4px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .wecom-msg-recalled a:hover {
+      text-decoration: underline;
+    }
+    .wecom-msg-system-notice {
+      align-self: center !important;
+      width: 100% !important;
+      text-align: center !important;
+      margin: 6px 0 !important;
+    }
+
+    /* 点赞人员浮层 */
+    .wecom-msg-likes {
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .wecom-msg-likes:hover {
+      background: rgba(255, 77, 79, 0.12);
+    }
+    .wecom-msg-likes.is-static {
+      cursor: default !important;
+      pointer-events: none !important;
+      background: transparent !important;
+    }
+    .wecom-likes-popover {
+      position: fixed;
+      width: 220px;
+      max-height: 260px;
+      background: #FFFFFF;
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      z-index: 100030;
+      display: flex;
+      flex-direction: column;
+      font-size: 13px;
+      overflow: hidden;
+      user-select: none;
+    }
+    .wecom-likes-popover-title {
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #8F959E;
+      border-bottom: 1px solid #EBECEF;
+    }
+    .wecom-likes-popover-body {
+      padding: 4px 0;
+      overflow-y: auto;
+      max-height: 220px;
+    }
+    .wecom-likes-loading,
+    .wecom-likes-empty {
+      padding: 16px;
+      text-align: center;
+      color: #8F959E;
+      font-size: 12px;
+    }
+    .wecom-likes-user-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
+    }
+    .wecom-likes-user-row:hover {
+      background: #F2F3F5;
+    }
+    .wecom-likes-avatar {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: #E5E7EB;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+    }
+    .wecom-likes-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .wecom-likes-name {
+      font-size: 13px;
+      color: #1F2329;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+    .wecom-likes-username {
+      font-size: 11px;
+      color: #8F959E;
+      max-width: 60px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* 举报弹窗 */
+    .wecom-dialog-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100050;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wecom-flag-dialog {
+      background: #FFFFFF;
+      width: 360px;
+      max-width: 90vw;
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .wecom-dialog-header {
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #EBECEF;
+      font-weight: 600;
+      font-size: 14px;
+      color: #1F2329;
+    }
+    .wecom-dialog-close {
+      background: transparent;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: #8F959E;
+    }
+    .wecom-dialog-body {
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .wecom-flag-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .wecom-flag-radio {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      color: #1F2329;
+    }
+    .wecom-flag-message {
+      width: 100%;
+      border: 1px solid #D0D3D6;
+      border-radius: 6px;
+      padding: 8px;
+      font-size: 12px;
+      box-sizing: border-box;
+      resize: vertical;
+      outline: none;
+    }
+    .wecom-flag-message:focus {
+      border-color: #267EF0;
+    }
+    .wecom-dialog-footer {
+      padding: 10px 16px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      border-top: 1px solid #EBECEF;
+    }
+    .wecom-btn {
+      padding: 5px 14px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      border: 1px solid #D0D3D6;
+      background: #FFFFFF;
+    }
+    .wecom-btn-primary {
+      background: #267EF0;
+      color: #FFFFFF;
+      border-color: #267EF0;
+    }
+    .wecom-btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* 解决方案采纳横幅与状态 */
+    .wecom-solved-banner {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      margin-bottom: 6px;
+      border-radius: 4px;
+      background: #E8F7ED;
+      color: #07C160;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .wecom-solved-banner svg {
+      flex-shrink: 0;
+    }
+    .wecom-chat-chip.is-solved {
+      background: #E8F7ED !important;
+      color: #07C160 !important;
+      font-weight: 500;
+    }
+    .wecom-chat-chip.is-locked {
+      background: #F0F2F5 !important;
+      color: #8F959E !important;
+    }
+    .wecom-chat-chip.is-slowmode {
+      background: #FEF3D6 !important;
+      color: #C28200 !important;
+    }
+    .wecom-msg-tool.is-solved-tool {
+      color: #07C160 !important;
+    }
+
+    /* 锁定状态输入框 */
+    .wecom-composer-card.is-locked {
+      background: #F5F6F7 !important;
+      opacity: 0.85;
+    }
+    .wecom-composer-card.is-locked textarea {
+      cursor: not-allowed;
+      color: #8F959E;
+    }
+
+    /* 输入框 @ 成员联想下拉 */
+    .wecom-mention-popup {
+      position: fixed;
+      width: 260px;
+      max-height: 240px;
+      background: #FFFFFF;
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
+      z-index: 100060;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+      animation: wecomFadeIn 0.12s ease-out;
+    }
+    .wecom-mention-title {
+      padding: 6px 10px;
+      font-size: 11px;
+      color: #8F959E;
+      border-bottom: 1px solid #EBECEF;
+      font-weight: 600;
+    }
+    .wecom-mention-list {
+      overflow-y: auto;
+      max-height: 200px;
+    }
+    .wecom-mention-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .wecom-mention-item.is-active,
+    .wecom-mention-item:hover {
+      background: #E8F3FF;
+    }
+    .wecom-mention-avatar {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: #E5E7EB;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+    }
+    .wecom-mention-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .wecom-mention-name {
+      font-size: 13px;
+      color: #1F2329;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .wecom-mention-username {
+      font-size: 11px;
+      color: #8F959E;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .wecom-mention-op-tag {
+      font-size: 10px;
+      padding: 1px 4px;
+      border-radius: 3px;
+      background: #E8F7ED;
+      color: #07C160;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    /* 快捷 Toast 提示 */
+    .wecom-mini-toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.75);
+      color: #ffffff;
+      padding: 6px 16px;
+      border-radius: 16px;
+      font-size: 13px;
+      z-index: 100060;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .wecom-mini-toast.is-visible {
+      opacity: 1;
+    }
+
+    /* 文字划选引用浮层 */
+    .wecom-quote-tooltip {
+      position: fixed;
+      z-index: 100050;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 6px;
+      background: #FFFFFF;
+      color: #1F2329;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+      cursor: pointer;
+      user-select: none;
+      animation: wecomFadeIn 0.12s ease-out;
+    }
+    .wecom-quote-tooltip:hover {
+      background: #F2F3F5;
+      color: #267EF0;
+    }
+    .wecom-quote-tooltip svg {
+      width: 13px;
+      height: 13px;
+      color: #267EF0;
+      flex-shrink: 0;
+    }
   `;
 
   /* 深色主题配色微调 */
@@ -9981,6 +10888,21 @@
     html.${ROOT_CLASS}.wecom-dark .wecom-member-reply-text {
       background: #23272E;
       color: #8C8C8C;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-reply-text:hover {
+      background: #2D323B;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-list-status {
+      color: #5C6370;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-list-status.is-loading {
+      color: #4096FF;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-list-status.is-end {
+      color: #5C6370;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-member-list-status.is-error {
+      color: #E05656;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-member-card-footer {
       background: #181A1F;
@@ -11141,6 +12063,236 @@
     body.wecom-dark .wecom-rp-external-link {
       color: #F16B54;
     }
+
+    /* ==================== 投票卡片深色模式 ==================== */
+    html.${ROOT_CLASS}.wecom-dark .wecom-poll-card,
+    html.wecom-dark .wecom-poll-card {
+      background: #252930 !important;
+      border-color: #383D47 !important;
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-me .wecom-poll-card,
+    html.wecom-dark .wecom-msg-me .wecom-poll-card {
+      background: #20242B !important;
+      border-color: #383D47 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-poll-badge.is-open,
+    html.wecom-dark .wecom-poll-badge.is-open {
+      background: rgba(7, 193, 96, 0.2) !important;
+      color: #28D07C !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-poll-badge.is-closed,
+    html.wecom-dark .wecom-poll-badge.is-closed {
+      background: #333842 !important;
+      color: #9AA0A6 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-poll-title,
+    html.wecom-dark .wecom-poll-title {
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-poll-type,
+    html.wecom-dark .wecom-poll-type,
+    html.${ROOT_CLASS}.wecom-dark .wecom-poll-voters-count,
+    html.wecom-dark .wecom-poll-voters-count {
+      color: #9AA0A6 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-poll-result-item,
+    html.wecom-dark .wecom-poll-result-item {
+      background: #1C2026 !important;
+      border-color: #383D47 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-poll-result-item.is-chosen,
+    html.wecom-dark .wecom-poll-result-item.is-chosen {
+      border-color: #28D07C !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-poll-result-bar,
+    html.wecom-dark .wecom-poll-result-bar {
+      background: rgba(7, 193, 96, 0.22) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-poll-result-item.is-chosen .wecom-poll-result-bar,
+    html.wecom-dark .wecom-poll-result-item.is-chosen .wecom-poll-result-bar {
+      background: rgba(7, 193, 96, 0.38) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-poll-result-label,
+    html.wecom-dark .wecom-poll-result-label {
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-poll-result-stats,
+    html.wecom-dark .wecom-poll-result-stats {
+      color: #9AA0A6 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-poll-result-item.is-chosen .wecom-poll-result-stats,
+    html.wecom-dark .wecom-poll-result-item.is-chosen .wecom-poll-result-stats,
+    html.${ROOT_CLASS}.wecom-dark .wecom-poll-chosen-badge,
+    html.wecom-dark .wecom-poll-chosen-badge {
+      color: #28D07C !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-poll-choice-item,
+    html.wecom-dark .wecom-poll-choice-item {
+      background: #1C2026 !important;
+      border-color: #383D47 !important;
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-poll-choice-item:hover,
+    html.wecom-dark .wecom-poll-choice-item:hover {
+      border-color: #28D07C !important;
+      background: #202722 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-poll-choice-item.is-selected,
+    html.wecom-dark .wecom-poll-choice-item.is-selected {
+      border-color: #28D07C !important;
+      background: rgba(7, 193, 96, 0.16) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-poll-footer,
+    html.wecom-dark .wecom-poll-footer {
+      border-top-color: #383D47 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-poll-btn-subtle,
+    html.wecom-dark .wecom-poll-btn-subtle {
+      color: #C0C4CC !important;
+      border-color: #4A505B !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-poll-btn-subtle:hover:not(:disabled),
+    html.wecom-dark .wecom-poll-btn-subtle:hover:not(:disabled) {
+      color: #28D07C !important;
+      border-color: #28D07C !important;
+    }
+
+    /* 消息撤回 / 点赞浮层 / 举报 / 解决方案 / @ 联想 深色模式 */
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-recalled,
+    html.wecom-dark .wecom-msg-recalled {
+      background: rgba(255, 255, 255, 0.08) !important;
+      color: #9AA0A6 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-likes-popover,
+    html.wecom-dark .wecom-likes-popover {
+      background: #252930 !important;
+      border-color: #383D47 !important;
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-likes-popover-title,
+    html.wecom-dark .wecom-likes-popover-title {
+      border-bottom-color: #383D47 !important;
+      color: #9AA0A6 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-likes-user-row:hover,
+    html.wecom-dark .wecom-likes-user-row:hover {
+      background: #2D323B !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-likes-name,
+    html.wecom-dark .wecom-likes-name {
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-flag-dialog,
+    html.wecom-dark .wecom-flag-dialog {
+      background: #252930 !important;
+      border-color: #383D47 !important;
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-dialog-header,
+    html.wecom-dark .wecom-dialog-header,
+    html.${ROOT_CLASS}.wecom-dark .wecom-dialog-footer,
+    html.wecom-dark .wecom-dialog-footer {
+      border-color: #383D47 !important;
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-flag-radio,
+    html.wecom-dark .wecom-flag-radio {
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-flag-message,
+    html.wecom-dark .wecom-flag-message {
+      background: #1C2026 !important;
+      border-color: #383D47 !important;
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-btn,
+    html.wecom-dark .wecom-btn {
+      background: #252930 !important;
+      border-color: #383D47 !important;
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-btn-primary,
+    html.wecom-dark .wecom-btn-primary {
+      background: #267EF0 !important;
+      border-color: #267EF0 !important;
+      color: #FFFFFF !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-solved-banner,
+    html.wecom-dark .wecom-solved-banner {
+      background: rgba(7, 193, 96, 0.2) !important;
+      color: #28D07C !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-composer-card.is-locked,
+    html.wecom-dark .wecom-composer-card.is-locked {
+      background: #1E2024 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-likes-popover,
+    html.wecom-dark .wecom-likes-popover {
+      background: #25282F !important;
+      border-color: #383D47 !important;
+      color: #ECEFF4 !important;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-likes-popover-title,
+    html.wecom-dark .wecom-likes-popover-title {
+      border-bottom-color: #383D47 !important;
+      color: #9AA0A6 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-likes-user-row:hover,
+    html.wecom-dark .wecom-likes-user-row:hover {
+      background: #2E323A !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-likes-name,
+    html.wecom-dark .wecom-likes-name {
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-likes-username,
+    html.wecom-dark .wecom-likes-username {
+      color: #8F959E !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-likes-avatar,
+    html.wecom-dark .wecom-likes-avatar {
+      background: #383D47 !important;
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-mention-popup,
+    html.wecom-dark .wecom-mention-popup {
+      background: #252930 !important;
+      border-color: #383D47 !important;
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-mention-title,
+    html.wecom-dark .wecom-mention-title {
+      border-bottom-color: #383D47 !important;
+      color: #9AA0A6 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-mention-item.is-active,
+    html.${ROOT_CLASS}.wecom-dark .wecom-mention-item:hover,
+    html.wecom-dark .wecom-mention-item.is-active,
+    html.wecom-dark .wecom-mention-item:hover {
+      background: #2D323B !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-mention-name,
+    html.wecom-dark .wecom-mention-name {
+      color: #ECEFF4 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-quote-tooltip,
+    html.wecom-dark .wecom-quote-tooltip {
+      background: #25282F !important;
+      color: #ECEFF4 !important;
+      border-color: #383D47 !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-quote-tooltip:hover,
+    html.wecom-dark .wecom-quote-tooltip:hover {
+      background: #2E323A !important;
+      color: #4B9BFF !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-quote-tooltip svg,
+    html.wecom-dark .wecom-quote-tooltip svg {
+      color: #4B9BFF !important;
+    }
   `;
 
   /* ============================== 基础设施 ============================== */
@@ -11344,6 +12496,72 @@
     try {
       localStorage.setItem(VIEW_KEY, mode);
     } catch { /* ignore */ }
+  }
+
+  function setup403ErrorSuppression() {
+    if (typeof window === "undefined") return;
+
+    // 1. 拦截原生 window.alert
+    if (!window.__wecomAlertPatched) {
+      window.__wecomAlertPatched = true;
+      const origAlert = window.alert;
+      window.alert = function (msg) {
+        const text = String(msg || "");
+        if (/403\s*(error|forbidden)?/i.test(text) && getViewMode() !== "native") {
+          console.warn("[linuxdo-wecom] Suppressed 403 window.alert:", text);
+          return;
+        }
+        return origAlert.apply(this, arguments);
+      };
+    }
+
+    // 2. 拦截 Discourse 原生 bootbox.alert
+    if (window.bootbox && typeof window.bootbox.alert === "function" && !window.bootbox.__wecomPatched) {
+      window.bootbox.__wecomPatched = true;
+      const origBootboxAlert = window.bootbox.alert;
+      window.bootbox.alert = function (options, callback) {
+        const msg = typeof options === "string" ? options : (options?.message || "");
+        if (/403\s*(error|forbidden)?/i.test(String(msg || "")) && getViewMode() !== "native") {
+          console.warn("[linuxdo-wecom] Suppressed 403 bootbox.alert:", msg);
+          if (typeof callback === "function") callback();
+          return;
+        }
+        return origBootboxAlert.apply(this, arguments);
+      };
+    }
+
+    // 3. 拦截 Discourse Ember service:dialog.alert
+    try {
+      const owner = getEmberOwner();
+      const dialogService = owner ? safeLookup(owner, "service:dialog") : null;
+      if (dialogService && typeof dialogService.alert === "function" && !dialogService.__wecomPatched) {
+        dialogService.__wecomPatched = true;
+        const origDialogAlert = dialogService.alert.bind(dialogService);
+        dialogService.alert = function (options) {
+          const msg = typeof options === "string" ? options : (options?.message || "");
+          if (/403\s*(error|forbidden)?/i.test(String(msg || "")) && getViewMode() !== "native") {
+            console.warn("[linuxdo-wecom] Suppressed 403 dialog.alert:", msg);
+            return Promise.resolve();
+          }
+          return origDialogAlert.apply(this, arguments);
+        };
+      }
+    } catch {}
+  }
+
+  function dismiss403ModalsIfAny() {
+    if (typeof document === "undefined" || getViewMode() === "native") return;
+    const candidates = document.querySelectorAll(
+      ".bootbox, .dialog-holder, #discourse-modal-container .d-modal, .modal.in, .modal.show"
+    );
+    candidates.forEach((modal) => {
+      const text = modal.textContent || "";
+      if (/403\s*(error|forbidden)?/i.test(text)) {
+        modal.remove();
+        document.querySelectorAll(".modal-backdrop, .dialog-overlay").forEach((b) => b.remove());
+        document.body?.classList?.remove("modal-open");
+      }
+    });
   }
 
   /** 与仓库内其他外观脚本互斥避让 */
@@ -12407,7 +13625,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.82";
+  const SCRIPT_VERSION = "0.7.83";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -13818,43 +15036,96 @@
     }
   }
 
+  function handleNotifMenuClick(e, menu) {
+    if (!e || !menu || e.__wecomNotifHandled) return;
+    const target = e.target;
+    if (!target || typeof target.closest !== "function") return;
+    const actionable = target.closest("a[href], button, .notification, .user-menu-item, .quick-access-panel li, [data-notification-id]");
+    if (!actionable || !menu.contains(actionable)) return;
+    e.__wecomNotifHandled = true;
+
+    // 如果点击的是菜单顶部的分类 Tab（通知/书签/消息等），不收起菜单，不改角标，放行原生切换
+    if (isUserMenuTab(actionable)) {
+      setTimeout(() => ensureStickyDismissButton(menu), 50);
+      setTimeout(() => ensureStickyDismissButton(menu), 200);
+      return;
+    }
+
+    notifIgnoreHoverUntil = Date.now() + 500;
+    const isDismissAll = isDismissAllTarget(actionable) || Boolean(actionable.closest(".btn-dismiss-read, .dismiss-notification, [data-action='dismiss-all']"));
+    const linkEl = target.closest("a[href]") ||
+      (actionable.tagName === "A" && actionable.getAttribute?.("href") ? actionable : null) ||
+      actionable.closest?.("a[href]") ||
+      actionable.querySelector?.("a[href]");
+    const rawHref = linkEl?.getAttribute?.("href") || actionable.getAttribute?.("href") || "";
+    const route = topicRouteFromPath(rawHref);
+
+    if (actionable) {
+      if (isDismissAll) {
+        dismissAllDiscourseNotifications();
+        clearNotificationBadge();
+        } else {
+          decrementNotificationBadge();
+        const notifRow = actionable.closest?.(".notification, [data-notification-id], .user-menu-item, li") || actionable;
+        notifRow?.classList?.remove?.("unread");
+        notifRow?.classList?.add?.("read");
+        const notifId = actionable.dataset?.notificationId || notifRow?.dataset?.notificationId;
+        if (notifId) markDiscourseNotificationRead(notifId);
+        closeNotifMenu();
+      }
+    }
+    if (isDismissAll) return;
+
+    if (route.topicId && isPlainClick(e)) {
+      e.preventDefault();
+      e.stopPropagation();
+      const targetPost = route.postNumber > 0 ? route.postNumber : 1;
+      const cleanSlug = route.slug || "topic";
+      let inAppHref = String(rawHref || "").replace(/^https?:\/\/[^/]+/i, "");
+      if (!inAppHref.startsWith("/")) {
+        inAppHref = targetPost > 1
+          ? `/t/${cleanSlug}/${route.topicId}/${targetPost}`
+          : `/t/${cleanSlug}/${route.topicId}`;
+      }
+      rememberTopicPost(route.topicId, targetPost);
+      if (location.pathname + location.search + location.hash !== inAppHref) {
+        suppressHistoryApply = true;
+        try {
+          history.pushState({}, "", inAppHref);
+        } finally {
+          suppressHistoryApply = false;
+        }
+      }
+      document.documentElement.classList.add(LOCK_CLASS, "wecom-topic-open");
+      ensureListPanel();
+      ensureChatPanel();
+      loadTopic(route.topicId, true, { postNumber: targetPost });
+    }
+  }
+
   function bindNotifMenuEvents(menu) {
     if (!menu || menu.dataset.wecomBound === "1") return;
     menu.dataset.wecomBound = "1";
     ensureStickyDismissButton(menu);
     menu.addEventListener("mouseenter", clearNotifLeaveTimer);
     menu.addEventListener("mouseleave", scheduleCloseNotifMenu);
-    menu.addEventListener("click", (e) => {
-      const actionable = e.target.closest("a[href], button, .notification, [data-notification-id]");
-      if (actionable && menu.contains(actionable)) {
-        // 如果点击的是菜单顶部的分类 Tab（通知/书签/消息等），不收起菜单，不改角标，放行原生切换
-        if (isUserMenuTab(actionable)) {
-          setTimeout(() => ensureStickyDismissButton(menu), 50);
-          setTimeout(() => ensureStickyDismissButton(menu), 200);
-          return;
-        }
-
-        notifIgnoreHoverUntil = Date.now() + 500;
-        const isDismissAll = isDismissAllTarget(actionable) || Boolean(actionable.closest(".btn-dismiss-read, .dismiss-notification, [data-action='dismiss-all']"));
-        if (isDismissAll) {
-          dismissAllDiscourseNotifications();
-          clearNotificationBadge();
-        } else {
-          decrementNotificationBadge();
-          const notifId = actionable.dataset?.notificationId || actionable.closest("[data-notification-id]")?.dataset?.notificationId;
-          if (notifId) markDiscourseNotificationRead(notifId);
-          closeNotifMenu();
-        }
-      }
-    }, true);
+    menu.addEventListener("click", (e) => handleNotifMenuClick(e, menu), true);
   }
 
-  // 全局兜底：任何位置点击「全部忽略 / 忽略」按钮时，均同步调用后端 mark-read API 并清除角标
+  // 全局兜底：任何位置点击「全部忽略 / 忽略」按钮或未绑定通知菜单项时，同步处理
   if (!window.__wecomDismissAllBound) {
     window.__wecomDismissAllBound = true;
     document.addEventListener("click", (e) => {
       if (isDismissAllTarget(e.target)) {
         dismissAllDiscourseNotifications();
+        return;
+      }
+      if (!IS_V2EX && !IS_JUEJIN && getViewMode() !== "native" && !otherThemeActive()) {
+        const menu = e.target?.closest?.(".user-menu");
+        if (menu) {
+          bindNotifMenuEvents(menu);
+          handleNotifMenuClick(e, menu);
+        }
       }
     }, true);
   }
@@ -15580,6 +16851,19 @@
       });
     }
 
+    profile.hasMoreTopics = Boolean(
+      html.includes(`/member/${encodeURIComponent(username)}/topics`) ||
+      html.includes(`/member/${username}/topics`) ||
+      /More topics by/i.test(html) ||
+      profile.recentTopics.length >= 10
+    );
+    profile.hasMoreReplies = Boolean(
+      html.includes(`/member/${encodeURIComponent(username)}/replies`) ||
+      html.includes(`/member/${username}/replies`) ||
+      /More replies by/i.test(html) ||
+      profile.recentReplies.length >= 4
+    );
+
     // Follow / Unfollow
     const followMatch = html.match(/location\.href\s*=\s*['"](\/(?:follow|unfollow)\/\d+\?once=\d+)['"]/i) ||
                         html.match(/href=['"](\/(?:follow|unfollow)\/\d+\?once=\d+)['"]/i);
@@ -15688,6 +16972,77 @@
         isError: true,
         message: err?.message || "网络异常"
       };
+    }
+  }
+
+  async function fetchV2exMemberTopicsPage(username, page) {
+    if (!username) return { topics: [], maxPage: 1 };
+    try {
+      const resp = await fetch(`/member/${encodeURIComponent(username)}/topics?p=${page}`, { credentials: "include" });
+      if (!resp.ok) return { topics: [], maxPage: 1, error: true };
+      const html = await resp.text();
+      const topics = [];
+      const topicRegex = /<span\s+class=["']item_title["']>\s*<a\s+href=["'](\/t\/\d+[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
+      let match;
+      while ((match = topicRegex.exec(html)) !== null) {
+        topics.push({
+          url: match[1],
+          title: match[2].replace(/<[^>]+>/g, "").trim()
+        });
+      }
+      let maxPage = 1;
+      const pageInputMatch = html.match(/class=["']page_input["'][^>]*max=["'](\d+)["']/i);
+      if (pageInputMatch) {
+        maxPage = parseInt(pageInputMatch[1], 10);
+      } else {
+        const pageMatches = html.match(/(?:\?p=|\/topics\?p=)(\d+)/gi);
+        if (pageMatches) {
+          for (const m of pageMatches) {
+            const num = parseInt(m.replace(/\D/g, ""), 10);
+            if (num > maxPage) maxPage = num;
+          }
+        }
+      }
+      return { topics, maxPage };
+    } catch (err) {
+      console.warn("[linuxdo-wecom] Failed to fetch member topics page:", username, page, err);
+      return { topics: [], maxPage: 1, error: true };
+    }
+  }
+
+  async function fetchV2exMemberRepliesPage(username, page) {
+    if (!username) return { replies: [], maxPage: 1 };
+    try {
+      const resp = await fetch(`/member/${encodeURIComponent(username)}/replies?p=${page}`, { credentials: "include" });
+      if (!resp.ok) return { replies: [], maxPage: 1, error: true };
+      const html = await resp.text();
+      const replies = [];
+      const replyRegex = /<div\s+class=["']dock_area["']>[\s\S]*?<a\s+href=["'](\/t\/\d+[^"']*)["'][^>]*>([\s\S]*?)<\/a>[\s\S]*?<div\s+class=["']reply_content["']>([\s\S]*?)<\/div>/gi;
+      let match;
+      while ((match = replyRegex.exec(html)) !== null) {
+        replies.push({
+          url: match[1],
+          topicTitle: match[2].replace(/<[^>]+>/g, "").trim(),
+          content: match[3].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+        });
+      }
+      let maxPage = 1;
+      const pageInputMatch = html.match(/class=["']page_input["'][^>]*max=["'](\d+)["']/i);
+      if (pageInputMatch) {
+        maxPage = parseInt(pageInputMatch[1], 10);
+      } else {
+        const pageMatches = html.match(/(?:\?p=|\/replies\?p=)(\d+)/gi);
+        if (pageMatches) {
+          for (const m of pageMatches) {
+            const num = parseInt(m.replace(/\D/g, ""), 10);
+            if (num > maxPage) maxPage = num;
+          }
+        }
+      }
+      return { replies, maxPage };
+    } catch (err) {
+      console.warn("[linuxdo-wecom] Failed to fetch member replies page:", username, page, err);
+      return { replies: [], maxPage: 1, error: true };
     }
   }
 
@@ -16064,12 +17419,100 @@
 
         const topicsListEl = topicsBox.querySelector(".wecom-member-topics-list");
         let topicsScrollTimer = null;
+
+        // 触底翻页状态
+        const seenTopicUrls = new Set(profile.recentTopics.map((t) => t.url.split("#")[0]));
+        let topicsPage = 1;
+        let topicsMaxPage = 1;
+        let hasMoreTopics = Boolean(profile.hasMoreTopics !== false);
+        let isLoadingTopics = false;
+
+        let topicsStatusEl = null;
+        const ensureTopicsStatus = () => {
+          if (!topicsStatusEl) {
+            topicsStatusEl = document.createElement("div");
+            topicsStatusEl.className = "wecom-member-list-status";
+            topicsListEl.appendChild(topicsStatusEl);
+          }
+          return topicsStatusEl;
+        };
+
+        const loadMoreTopics = async () => {
+          if (isLoadingTopics || !hasMoreTopics || !card.isConnected) return;
+          isLoadingTopics = true;
+          const status = ensureTopicsStatus();
+          status.className = "wecom-member-list-status is-loading";
+          status.textContent = "正在加载更多主题…";
+
+          try {
+            const result = await fetchV2exMemberTopicsPage(username, topicsPage);
+            if (!card.isConnected) return;
+            if (result.error) {
+              status.className = "wecom-member-list-status is-error";
+              status.textContent = "加载失败，点击重试";
+              status.onclick = () => {
+                status.onclick = null;
+                loadMoreTopics();
+              };
+              isLoadingTopics = false;
+              return;
+            }
+
+            topicsMaxPage = result.maxPage || 1;
+            const newItems = (result.topics || []).filter((t) => {
+              const base = t.url.split("#")[0];
+              if (seenTopicUrls.has(base)) return false;
+              seenTopicUrls.add(base);
+              return true;
+            });
+
+            if (newItems.length > 0) {
+              const fragment = document.createDocumentFragment();
+              for (const t of newItems) {
+                const a = document.createElement("a");
+                a.className = "wecom-member-topic-item";
+                a.href = t.url;
+                a.target = "_blank";
+                a.textContent = `· ${t.title}`;
+                fragment.appendChild(a);
+              }
+              topicsListEl.insertBefore(fragment, status);
+            }
+
+            if (topicsPage >= topicsMaxPage || (result.topics || []).length === 0) {
+              hasMoreTopics = false;
+              status.className = "wecom-member-list-status is-end";
+              status.textContent = "已加载全部主题";
+            } else {
+              topicsPage++;
+              status.remove();
+              topicsStatusEl = null;
+            }
+          } catch {
+            status.className = "wecom-member-list-status is-error";
+            status.textContent = "加载失败，点击重试";
+            status.onclick = () => {
+              status.onclick = null;
+              loadMoreTopics();
+            };
+          } finally {
+            isLoadingTopics = false;
+          }
+        };
+
         topicsListEl?.addEventListener("scroll", () => {
           topicsListEl.classList.add("is-scrolling");
           clearTimeout(topicsScrollTimer);
           topicsScrollTimer = setTimeout(() => {
             topicsListEl.classList.remove("is-scrolling");
           }, 800);
+
+          if (hasMoreTopics && !isLoadingTopics) {
+            const distanceToBottom = topicsListEl.scrollHeight - topicsListEl.scrollTop - topicsListEl.clientHeight;
+            if (distanceToBottom <= 20) {
+              loadMoreTopics();
+            }
+          }
         }, { passive: true });
       }
 
@@ -16078,7 +17521,7 @@
         const listHtml = profile.recentReplies.map((r) =>
           `<div class="wecom-member-reply-item">
             <a class="wecom-member-reply-topic" href="${escapeHtml(r.url)}" target="_blank">· ${escapeHtml(r.topicTitle)}</a>
-            <div class="wecom-member-reply-text">${escapeHtml(r.content)}</div>
+            <div class="wecom-member-reply-text" title="点击展开/收起完整回复">${escapeHtml(r.content)}</div>
           </div>`
         ).join("");
         repliesBox.innerHTML = `<div class="wecom-member-topics-title">最近回复</div><div class="wecom-member-replies-list">${listHtml}</div>`;
@@ -16086,12 +17529,109 @@
 
         const repliesListEl = repliesBox.querySelector(".wecom-member-replies-list");
         let repliesScrollTimer = null;
+
+        // 点击 wecom-member-reply-text 展开/收起显示全部
+        repliesBox.addEventListener("click", (e) => {
+          const textEl = e.target.closest(".wecom-member-reply-text");
+          if (!textEl) return;
+          if (window.getSelection && window.getSelection().toString().trim()) return;
+          textEl.classList.toggle("is-expanded");
+        });
+
+        // 触底翻页状态
+        const seenReplyKeys = new Set(profile.recentReplies.map((r) => r.url.split("#")[0] + "::" + r.content.slice(0, 30)));
+        let repliesPage = 1;
+        let repliesMaxPage = 1;
+        let hasMoreReplies = Boolean(profile.hasMoreReplies !== false);
+        let isLoadingReplies = false;
+
+        let repliesStatusEl = null;
+        const ensureRepliesStatus = () => {
+          if (!repliesStatusEl) {
+            repliesStatusEl = document.createElement("div");
+            repliesStatusEl.className = "wecom-member-list-status";
+            repliesListEl.appendChild(repliesStatusEl);
+          }
+          return repliesStatusEl;
+        };
+
+        const loadMoreReplies = async () => {
+          if (isLoadingReplies || !hasMoreReplies || !card.isConnected) return;
+          isLoadingReplies = true;
+          const status = ensureRepliesStatus();
+          status.className = "wecom-member-list-status is-loading";
+          status.textContent = "正在加载更多回复…";
+
+          try {
+            const result = await fetchV2exMemberRepliesPage(username, repliesPage);
+            if (!card.isConnected) return;
+            if (result.error) {
+              status.className = "wecom-member-list-status is-error";
+              status.textContent = "加载失败，点击重试";
+              status.onclick = () => {
+                status.onclick = null;
+                loadMoreReplies();
+              };
+              isLoadingReplies = false;
+              return;
+            }
+
+            repliesMaxPage = result.maxPage || 1;
+            const newItems = (result.replies || []).filter((r) => {
+              const key = r.url.split("#")[0] + "::" + r.content.slice(0, 30);
+              if (seenReplyKeys.has(key)) return false;
+              seenReplyKeys.add(key);
+              return true;
+            });
+
+            if (newItems.length > 0) {
+              const fragment = document.createDocumentFragment();
+              for (const r of newItems) {
+                const itemDiv = document.createElement("div");
+                itemDiv.className = "wecom-member-reply-item";
+                itemDiv.innerHTML = `
+                  <a class="wecom-member-reply-topic" href="${escapeHtml(r.url)}" target="_blank">· ${escapeHtml(r.topicTitle)}</a>
+                  <div class="wecom-member-reply-text" title="点击展开/收起完整回复">${escapeHtml(r.content)}</div>
+                `;
+                fragment.appendChild(itemDiv);
+              }
+              repliesListEl.insertBefore(fragment, status);
+            }
+
+            if (repliesPage >= repliesMaxPage || (result.replies || []).length === 0) {
+              hasMoreReplies = false;
+              status.className = "wecom-member-list-status is-end";
+              status.textContent = "已加载全部回复";
+            } else {
+              repliesPage++;
+              status.remove();
+              repliesStatusEl = null;
+            }
+          } catch {
+            status.className = "wecom-member-list-status is-error";
+            status.textContent = "加载失败，点击重试";
+            status.onclick = () => {
+              status.onclick = null;
+              loadMoreReplies();
+            };
+          } finally {
+            isLoadingReplies = false;
+          }
+        };
+
         repliesListEl?.addEventListener("scroll", () => {
           repliesListEl.classList.add("is-scrolling");
           clearTimeout(repliesScrollTimer);
           repliesScrollTimer = setTimeout(() => {
             repliesListEl.classList.remove("is-scrolling");
           }, 800);
+
+          if (hasMoreReplies && !isLoadingReplies) {
+            const distanceToBottom = repliesListEl.scrollHeight - repliesListEl.scrollTop - repliesListEl.clientHeight;
+            if (distanceToBottom <= 20) {
+              loadMoreReplies();
+            }
+          }
         }, { passive: true });
       }
 
@@ -18258,6 +19798,1177 @@
   }
 
 
+  /* ============================== Discourse 投票 (Poll) 卡片渲染与交互 ============================== */
+
+  const pollUiState = new Map();
+
+  function getPollUiKey(postId, pollName) {
+    return `${postId || 0}:${pollName || "poll"}`;
+  }
+
+  async function voteDiscoursePoll(postId, pollName, options) {
+    if (!postId) throw new Error("缺少帖子 ID");
+    const optionList = Array.isArray(options) ? options : [options];
+    if (!optionList.length) throw new Error("请先选择投票选项");
+
+    const discourseAjax = window.require?.("discourse/lib/ajax")?.ajax;
+    if (typeof discourseAjax === "function") {
+      try {
+        return await discourseAjax("/polls/vote", {
+          type: "PUT",
+          popupError: false,
+          data: {
+            post_id: Number(postId),
+            poll_name: String(pollName || "poll"),
+            options: optionList
+          }
+        });
+      } catch (err) {
+        const raw = err?.jqXHR?.responseText || err?.message || "";
+        if (/<html|<title>Just a moment|<!DOCTYPE/i.test(raw)) {
+          throw new Error("触发了安全人机验证（Cloudflare），请点击右上角原生视图完成验证");
+        }
+        const parsedError = err?.jqXHR?.responseJSON?.errors?.[0] || err?.message;
+        if (parsedError && !parsedError.includes("object Object")) {
+          throw new Error(parsedError);
+        }
+      }
+    }
+
+    const resp = await fetch("/polls/vote", {
+      method: "PUT",
+      credentials: "same-origin",
+      headers: bridgeHeaders("application/json"),
+      body: JSON.stringify({
+        post_id: Number(postId),
+        poll_name: String(pollName || "poll"),
+        options: optionList
+      })
+    });
+    const payload = await responsePayload(resp);
+    if (!resp.ok) {
+      throw new Error(payloadError(payload, `投票失败（HTTP ${resp.status}）`));
+    }
+    return payload;
+  }
+
+  async function removeDiscoursePollVote(postId, pollName) {
+    if (!postId) throw new Error("缺少帖子 ID");
+
+    const discourseAjax = window.require?.("discourse/lib/ajax")?.ajax;
+    if (typeof discourseAjax === "function") {
+      try {
+        return await discourseAjax("/polls/vote", {
+          type: "DELETE",
+          popupError: false,
+          data: {
+            post_id: Number(postId),
+            poll_name: String(pollName || "poll")
+          }
+        });
+      } catch (err) {
+        const raw = err?.jqXHR?.responseText || err?.message || "";
+        if (/<html|<title>Just a moment|<!DOCTYPE/i.test(raw)) {
+          throw new Error("触发了安全人机验证（Cloudflare），请点击右上角原生视图完成验证");
+        }
+        const parsedError = err?.jqXHR?.responseJSON?.errors?.[0] || err?.message;
+        if (parsedError && !parsedError.includes("object Object")) {
+          throw new Error(parsedError);
+        }
+      }
+    }
+
+    const resp = await fetch("/polls/vote", {
+      method: "DELETE",
+      credentials: "same-origin",
+      headers: bridgeHeaders("application/json"),
+      body: JSON.stringify({
+        post_id: Number(postId),
+        poll_name: String(pollName || "poll")
+      })
+    });
+    const payload = await responsePayload(resp);
+    if (!resp.ok) {
+      throw new Error(payloadError(payload, `撤销投票失败（HTTP ${resp.status}）`));
+    }
+    return payload;
+  }
+
+  function parsePollFromDom(pollEl) {
+    if (!pollEl) return null;
+    const pollName = pollEl.dataset.pollName || "poll";
+    const pollType = pollEl.dataset.pollType || "regular";
+    const pollStatus = pollEl.dataset.pollStatus || "open";
+    const pollResults = pollEl.dataset.pollResults || "always";
+    const options = [];
+    pollEl.querySelectorAll("li[data-poll-option-id]").forEach((li) => {
+      const id = li.dataset.pollOptionId;
+      if (id) {
+        options.push({
+          id,
+          html: li.innerHTML.trim(),
+          votes: 0
+        });
+      }
+    });
+    const infoNumber = pollEl.querySelector(".poll-info .info-number");
+    const voters = Number(infoNumber?.textContent?.trim()) || 0;
+    const title = pollEl.querySelector(".poll-title")?.textContent?.trim() || "";
+    return {
+      name: pollName,
+      type: pollType,
+      status: pollStatus,
+      results: pollResults,
+      options,
+      voters,
+      title
+    };
+  }
+
+  function renderPollCardElement(poll, userVotes = [], postId = 0, postNumber = 0) {
+    const card = document.createElement("div");
+    card.className = "wecom-poll-card";
+    card.dataset.pollName = poll.name || "poll";
+    if (postId) card.dataset.postId = String(postId);
+    if (postNumber) card.dataset.postNumber = String(postNumber);
+
+    updatePollCardContent(card, poll, userVotes, postId, postNumber);
+    return card;
+  }
+
+  function updatePollCardContent(card, poll, userVotes = [], postId = 0, postNumber = 0) {
+    const key = getPollUiKey(postId, poll.name);
+    let state = pollUiState.get(key);
+    if (!state) {
+      state = {
+        showResults: false,
+        selectedOptions: new Set(userVotes || []),
+        submitting: false
+      };
+      pollUiState.set(key, state);
+    }
+
+    const isClosed = poll.status === "closed";
+    const hasVoted = Array.isArray(userVotes) && userVotes.length > 0;
+    const showResults = hasVoted || isClosed || state.showResults;
+
+    const isMultiple = poll.type === "multiple";
+    let pollTypeLabel = isMultiple ? "多选" : "单选";
+    if (isMultiple && poll.max) {
+      pollTypeLabel = `多选（最多 ${poll.max} 项）`;
+    }
+
+    const options = Array.isArray(poll.options) ? poll.options : [];
+    const totalVoters = Number(poll.voters) || 0;
+    const totalVotes = options.reduce((sum, o) => sum + (Number(o.votes) || 0), 0);
+
+    let optionsHtml = "";
+    if (showResults) {
+      optionsHtml = options.map((opt) => {
+        const isChosen = Array.isArray(userVotes) && userVotes.includes(opt.id);
+        const votes = Number(opt.votes) || 0;
+        let percent = 0;
+        if (isMultiple) {
+          percent = totalVoters > 0 ? Math.round((votes / totalVoters) * 100) : 0;
+        } else {
+          percent = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+        }
+        percent = Math.min(Math.max(percent, 0), 100);
+
+        return `
+          <div class="wecom-poll-result-item${isChosen ? " is-chosen" : ""}" data-option-id="${escapeHtml(opt.id)}">
+            <div class="wecom-poll-result-bar" style="width: ${percent}%;"></div>
+            <div class="wecom-poll-result-content">
+              <div class="wecom-poll-result-label">
+                ${isChosen ? '<span class="wecom-poll-chosen-badge" title="已投票">✓</span>' : ""}
+                <span class="wecom-poll-option-text">${opt.html || escapeHtml(opt.id)}</span>
+              </div>
+              <div class="wecom-poll-result-stats">
+                <span class="wecom-poll-votes">${votes} 票</span>
+                <span class="wecom-poll-percent">${percent}%</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    } else {
+      optionsHtml = options.map((opt) => {
+        const isSelected = state.selectedOptions.has(opt.id);
+        const inputType = isMultiple ? "checkbox" : "radio";
+        const inputName = `poll_${postId}_${poll.name}`;
+
+        return `
+          <label class="wecom-poll-choice-item${isSelected ? " is-selected" : ""}" data-option-id="${escapeHtml(opt.id)}">
+            <input type="${inputType}" name="${escapeHtml(inputName)}" value="${escapeHtml(opt.id)}"${isSelected ? " checked" : ""}${state.submitting ? " disabled" : ""} />
+            <span class="wecom-poll-indicator"></span>
+            <span class="wecom-poll-option-text">${opt.html || escapeHtml(opt.id)}</span>
+          </label>
+        `;
+      }).join("");
+    }
+
+    const votersLabel = totalVoters > 0 ? `共 ${totalVoters} 人参与` : "暂无投票";
+    let actionsHtml = "";
+    if (!showResults) {
+      const canSubmit = state.selectedOptions.size > 0 && !state.submitting;
+      actionsHtml = `
+        <button type="button" class="wecom-poll-btn wecom-poll-btn-primary" data-action="vote"${!canSubmit ? " disabled" : ""}>
+          ${state.submitting ? "提交中…" : "投票"}
+        </button>
+        ${poll.results !== "on_vote" ? '<button type="button" class="wecom-poll-btn wecom-poll-btn-subtle" data-action="show-results">查看结果</button>' : ""}
+      `;
+    } else {
+      if (hasVoted && !isClosed) {
+        actionsHtml = `
+          <button type="button" class="wecom-poll-btn wecom-poll-btn-subtle" data-action="remove-vote"${state.submitting ? " disabled" : ""}>
+            ${state.submitting ? "处理中…" : "撤销投票"}
+          </button>
+        `;
+      } else if (!hasVoted && !isClosed) {
+        actionsHtml = `
+          <button type="button" class="wecom-poll-btn wecom-poll-btn-subtle" data-action="hide-results">返回投票</button>
+        `;
+      }
+    }
+
+    const titleHtml = poll.title ? `<div class="wecom-poll-title">${escapeHtml(poll.title)}</div>` : "";
+
+    card.innerHTML = `
+      <div class="wecom-poll-header">
+        <div class="wecom-poll-meta">
+          <span class="wecom-poll-badge ${isClosed ? "is-closed" : "is-open"}">${isClosed ? "已结束" : "进行中"}</span>
+          <span class="wecom-poll-type">${pollTypeLabel}</span>
+        </div>
+        ${titleHtml}
+      </div>
+      <div class="wecom-poll-options">
+        ${optionsHtml}
+      </div>
+      <div class="wecom-poll-footer">
+        <span class="wecom-poll-voters-count">${votersLabel}</span>
+        <div class="wecom-poll-actions">
+          ${actionsHtml}
+        </div>
+      </div>
+    `;
+
+    card.querySelectorAll(".wecom-poll-choice-item").forEach((label) => {
+      const input = label.querySelector("input");
+      if (!input) return;
+      input.addEventListener("change", () => {
+        const optId = input.value;
+        if (isMultiple) {
+          if (input.checked) {
+            if (poll.max && state.selectedOptions.size >= poll.max) {
+              input.checked = false;
+              alert(`最多只能选择 ${poll.max} 项`);
+              return;
+            }
+            state.selectedOptions.add(optId);
+          } else {
+            state.selectedOptions.delete(optId);
+          }
+        } else {
+          state.selectedOptions.clear();
+          if (input.checked) {
+            state.selectedOptions.add(optId);
+          }
+        }
+        updatePollCardContent(card, poll, userVotes, postId, postNumber);
+      });
+    });
+
+    const voteBtn = card.querySelector('[data-action="vote"]');
+    if (voteBtn) {
+      voteBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        if (state.submitting || state.selectedOptions.size === 0) return;
+        state.submitting = true;
+        updatePollCardContent(card, poll, userVotes, postId, postNumber);
+        try {
+          const res = await voteDiscoursePoll(postId, poll.name, Array.from(state.selectedOptions));
+          state.submitting = false;
+          state.showResults = true;
+          const post = postNumber ? chatState.postsByNumber?.get(postNumber) : null;
+          if (post && Array.isArray(post.polls)) {
+            const idx = post.polls.findIndex((p) => p.name === poll.name);
+            if (idx >= 0 && res.poll) {
+              post.polls[idx] = Object.assign({}, post.polls[idx], res.poll);
+            }
+          }
+          if (post) {
+            post.polls_votes = post.polls_votes || {};
+            post.polls_votes[poll.name] = res.vote || Array.from(state.selectedOptions);
+          }
+          const updatedPoll = res.poll || poll;
+          const updatedVotes = res.vote || Array.from(state.selectedOptions);
+          updatePollCardContent(card, updatedPoll, updatedVotes, postId, postNumber);
+        } catch (err) {
+          state.submitting = false;
+          updatePollCardContent(card, poll, userVotes, postId, postNumber);
+          alert(err.message || "投票失败，请重试");
+        }
+      });
+    }
+
+    const removeVoteBtn = card.querySelector('[data-action="remove-vote"]');
+    if (removeVoteBtn) {
+      removeVoteBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        if (state.submitting) return;
+        state.submitting = true;
+        updatePollCardContent(card, poll, userVotes, postId, postNumber);
+        try {
+          const res = await removeDiscoursePollVote(postId, poll.name);
+          state.submitting = false;
+          state.showResults = false;
+          state.selectedOptions.clear();
+          const post = postNumber ? chatState.postsByNumber?.get(postNumber) : null;
+          if (post && Array.isArray(post.polls)) {
+            const idx = post.polls.findIndex((p) => p.name === poll.name);
+            if (idx >= 0 && res.poll) {
+              post.polls[idx] = Object.assign({}, post.polls[idx], res.poll);
+            }
+          }
+          if (post && post.polls_votes) {
+            delete post.polls_votes[poll.name];
+          }
+          const updatedPoll = res.poll || poll;
+          updatePollCardContent(card, updatedPoll, [], postId, postNumber);
+        } catch (err) {
+          state.submitting = false;
+          updatePollCardContent(card, poll, userVotes, postId, postNumber);
+          alert(err.message || "撤销投票失败，请重试");
+        }
+      });
+    }
+
+    const showResultsBtn = card.querySelector('[data-action="show-results"]');
+    if (showResultsBtn) {
+      showResultsBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        state.showResults = true;
+        updatePollCardContent(card, poll, userVotes, postId, postNumber);
+      });
+    }
+
+    const hideResultsBtn = card.querySelector('[data-action="hide-results"]');
+    if (hideResultsBtn) {
+      hideResultsBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        state.showResults = false;
+        updatePollCardContent(card, poll, userVotes, postId, postNumber);
+      });
+    }
+  }
+
+  function hydratePolls(root) {
+    if (!root || !IS_LINUXDO) return;
+    const pollEls = root.querySelectorAll(".wecom-msg-bubble .poll, .wecom-msg-body .poll, .poll[data-poll-name], .poll");
+    pollEls.forEach((pollEl) => {
+      if (pollEl.dataset.wecomPollHydrated === "1" || pollEl.closest(".wecom-poll-card")) return;
+      pollEl.dataset.wecomPollHydrated = "1";
+
+      const msgEl = pollEl.closest(".wecom-msg");
+      const postNumber = Number(msgEl?.dataset.postNumber) || 0;
+      const postId = Number(msgEl?.dataset.postId) || 0;
+      const post = postNumber ? chatState.postsByNumber?.get(postNumber) : null;
+
+      const pollName = pollEl.dataset.pollName || "poll";
+      let pollData = Array.isArray(post?.polls)
+        ? (post.polls.find((p) => p.name === pollName) || post.polls[0])
+        : null;
+
+      if (!pollData) {
+        pollData = parsePollFromDom(pollEl);
+      }
+      if (!pollData || !Array.isArray(pollData.options) || pollData.options.length === 0) return;
+
+      const userVotes = post?.polls_votes?.[pollData.name] || [];
+      const card = renderPollCardElement(pollData, userVotes, postId || post?.id || 0, postNumber);
+
+      pollEl.style.display = "none";
+      pollEl.parentNode.insertBefore(card, pollEl);
+    });
+  }
+
+  /* ============================== 消息撤回 / 复制直达链接 / 点赞浮层 / 举报 / 解决方案 / @ 联想 ============================== */
+
+  let miniToastTimer = null;
+  function showMiniToast(text) {
+    let toast = document.querySelector(".wecom-mini-toast");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.className = "wecom-mini-toast";
+      document.body.appendChild(toast);
+    }
+    toast.textContent = text;
+    toast.classList.add("is-visible");
+    clearTimeout(miniToastTimer);
+    miniToastTimer = setTimeout(() => {
+      toast.classList.remove("is-visible");
+    }, 2000);
+  }
+
+  async function deletePostMessage(message, button) {
+    if (!message || !IS_LINUXDO) return;
+    const postId = Number(message.dataset.postId);
+    const postNumber = Number(message.dataset.postNumber);
+    if (!postId) return;
+
+    const ok = confirm(`确定要撤回 / 删除楼层 #${postNumber} 吗？`);
+    if (!ok) return;
+
+    if (button) button.disabled = true;
+    try {
+      const resp = await fetch(`/posts/${postId}.json`, {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: bridgeHeaders("application/json")
+      });
+      if (!resp.ok && resp.status !== 204 && resp.status !== 200) {
+        const payload = await responsePayload(resp);
+        throw new Error(payloadError(payload, `撤回失败（HTTP ${resp.status}）`));
+      }
+
+      chatState.postsByNumber?.delete(postNumber);
+      const rawText = message.querySelector(".wecom-msg-body")?.textContent?.trim() || "";
+      message.innerHTML = `
+        <div class="wecom-msg-recalled">
+          你撤回了一条消息${rawText ? ' <a href="#" class="wecom-reedit-link">重新编辑</a>' : ""}
+        </div>
+      `;
+      message.className = "wecom-msg wecom-msg-system-notice";
+      message.querySelector(".wecom-reedit-link")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        const input = document.querySelector(".wecom-chat-compose");
+        if (input) {
+          input.value = rawText;
+          input.focus();
+          updateComposeSendState();
+        }
+      });
+      showMiniToast("已撤回消息");
+    } catch (err) {
+      if (button) button.disabled = false;
+      alert(err.message || "撤回失败，请重试");
+    }
+  }
+
+  async function copyPostFloorLink(message) {
+    const postNumber = Number(message?.dataset.postNumber) || 1;
+    const href = replyPostHref(postNumber);
+    let fullUrl = href;
+    try { fullUrl = new URL(href, location.origin).href; } catch {}
+
+    try {
+      await navigator.clipboard.writeText(fullUrl);
+      showMiniToast("已复制楼层直达链接");
+    } catch {
+      const input = document.createElement("input");
+      input.value = fullUrl;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      input.remove();
+      showMiniToast("已复制楼层直达链接");
+    }
+  }
+
+  let activeLikesPopover = null;
+  function closeLikesPopover() {
+    if (activeLikesPopover) {
+      activeLikesPopover.remove();
+      activeLikesPopover = null;
+    }
+  }
+
+  async function openLikedUsersPopover(trigger, postId) {
+    closeLikesPopover();
+    if (!trigger || !IS_LINUXDO) return;
+
+    const popover = document.createElement("div");
+    popover.className = "wecom-likes-popover";
+    popover.innerHTML = `
+      <div class="wecom-likes-popover-title">点赞成员</div>
+      <div class="wecom-likes-popover-body">
+        <div class="wecom-likes-loading">加载中…</div>
+      </div>
+    `;
+    document.body.appendChild(popover);
+    activeLikesPopover = popover;
+
+    const rect = trigger.getBoundingClientRect();
+    let left = rect.left;
+    let top = rect.bottom + 6;
+    if (left + 230 > window.innerWidth) left = window.innerWidth - 240;
+    if (top + 180 > window.innerHeight) top = rect.top - 186;
+    popover.style.left = `${Math.max(10, left)}px`;
+    popover.style.top = `${Math.max(10, top)}px`;
+
+    if (!postId) {
+      popover.querySelector(".wecom-likes-popover-body").innerHTML = '<div class="wecom-likes-empty">无法获取该楼层 ID</div>';
+      return;
+    }
+
+    try {
+      let users = [];
+      // 1. Linux.do 使用了 Discourse Reactions 插件（custom-reactions），首选 reactions-users 接口
+      try {
+        const resp = await fetch(`/discourse-reactions/posts/${postId}/reactions-users.json`, {
+          headers: bridgeHeaders("application/json")
+        });
+        if (resp.ok) {
+          const data = await responsePayload(resp);
+          if (Array.isArray(data?.reaction_users)) {
+            for (const group of data.reaction_users) {
+              if (Array.isArray(group.users)) {
+                users.push(...group.users);
+              }
+            }
+          }
+        }
+      } catch {}
+
+      // 2. 若 reactions 接口为空或失败，回退至 Discourse 原生 post_action_users 接口
+      if (!users.length) {
+        try {
+          const resp = await fetch(`/post_action_users.json?id=${postId}&post_action_type_id=2`, {
+            headers: bridgeHeaders("application/json")
+          });
+          if (resp.ok) {
+            const data = await responsePayload(resp);
+            if (Array.isArray(data?.post_action_users)) {
+              users = data.post_action_users;
+            }
+          }
+        } catch {}
+      }
+
+      if (!document.body.contains(popover)) return;
+
+      const seen = new Set();
+      const uniqueUsers = [];
+      for (const u of users) {
+        const key = (u?.username || u?.id || "").toString().toLowerCase();
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        uniqueUsers.push(u);
+      }
+
+      if (!uniqueUsers.length) {
+        popover.querySelector(".wecom-likes-popover-body").innerHTML = '<div class="wecom-likes-empty">暂无点赞记录</div>';
+        return;
+      }
+
+      const usersHtml = uniqueUsers.map((u) => {
+        const dName = userDisplayName(u, u.username || "?");
+        const av = u.avatar_template ? fullAvatarUrl(u.avatar_template) : "";
+        const avHtml = av
+          ? `<img src="${escapeHtml(av)}" alt="" />`
+          : `<span>${escapeHtml(avatarLetter(dName))}</span>`;
+        return `
+          <div class="wecom-likes-user-row"${userCardAttributes(u)}>
+            <span class="wecom-likes-avatar">${avHtml}</span>
+            <span class="wecom-likes-name">${escapeHtml(dName)}</span>
+            <span class="wecom-likes-username">@${escapeHtml(u.username || "")}</span>
+          </div>
+        `;
+      }).join("");
+      popover.querySelector(".wecom-likes-popover-body").innerHTML = `<div class="wecom-likes-users-list">${usersHtml}</div>`;
+      bindUserCardEvents(popover);
+    } catch {
+      if (document.body.contains(popover)) {
+        popover.querySelector(".wecom-likes-popover-body").innerHTML = '<div class="wecom-likes-empty">加载失败</div>';
+      }
+    }
+  }
+
+  let activeFlagDialog = null;
+  function closeFlagDialog() {
+    if (activeFlagDialog) {
+      activeFlagDialog.remove();
+      activeFlagDialog = null;
+    }
+  }
+
+  function openFlagDialog(message) {
+    closeFlagDialog();
+    const postId = Number(message?.dataset.postId);
+    const postNumber = Number(message?.dataset.postNumber);
+    if (!postId) return;
+
+    const overlay = document.createElement("div");
+    overlay.className = "wecom-dialog-overlay";
+    overlay.innerHTML = `
+      <div class="wecom-dialog wecom-flag-dialog" role="dialog" aria-modal="true">
+        <div class="wecom-dialog-header">
+          <span class="wecom-dialog-title">举报楼层 #${postNumber}</span>
+          <button type="button" class="wecom-dialog-close" aria-label="关闭">×</button>
+        </div>
+        <div class="wecom-dialog-body">
+          <div class="wecom-flag-options">
+            <label class="wecom-flag-radio"><input type="radio" name="flag_reason" value="8" checked /> <span>垃圾广告 / 推广内容 (Spam)</span></label>
+            <label class="wecom-flag-radio"><input type="radio" name="flag_reason" value="4" /> <span>违规 / 不当言论 (Inappropriate)</span></label>
+            <label class="wecom-flag-radio"><input type="radio" name="flag_reason" value="3" /> <span>偏离主题 / 灌水跑题 (Off-topic)</span></label>
+            <label class="wecom-flag-radio"><input type="radio" name="flag_reason" value="7" /> <span>其他原因 / 联系管理员 (需填写理由)</span></label>
+          </div>
+          <textarea class="wecom-flag-message" placeholder="请简要补充举报理由（选择其他原因时必填）…" rows="3"></textarea>
+        </div>
+        <div class="wecom-dialog-footer">
+          <button type="button" class="wecom-btn wecom-btn-cancel">取消</button>
+          <button type="button" class="wecom-btn wecom-btn-primary wecom-flag-submit">提交举报</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    activeFlagDialog = overlay;
+
+    overlay.querySelector(".wecom-dialog-close")?.addEventListener("click", closeFlagDialog);
+    overlay.querySelector(".wecom-btn-cancel")?.addEventListener("click", closeFlagDialog);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) closeFlagDialog();
+    });
+
+    const submitBtn = overlay.querySelector(".wecom-flag-submit");
+    submitBtn?.addEventListener("click", async () => {
+      const checked = overlay.querySelector('input[name="flag_reason"]:checked');
+      const actionTypeId = Number(checked?.value) || 8;
+      const msg = overlay.querySelector(".wecom-flag-message")?.value?.trim() || "";
+      if (actionTypeId === 7 && !msg) {
+        alert("请填写具体的举报理由");
+        return;
+      }
+      submitBtn.disabled = true;
+      submitBtn.textContent = "提交中…";
+      try {
+        const resp = await fetch("/post_actions.json", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: bridgeHeaders("application/json"),
+          body: JSON.stringify({
+            id: postId,
+            post_action_type_id: actionTypeId,
+            message: msg || undefined
+          })
+        });
+        const payload = await responsePayload(resp);
+        if (!resp.ok) {
+          throw new Error(payloadError(payload, `举报失败（HTTP ${resp.status}）`));
+        }
+        closeFlagDialog();
+        showMiniToast("已提交举报，感谢你的反馈");
+      } catch (err) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "提交举报";
+        alert(err.message || "举报失败，请重试");
+      }
+    });
+  }
+
+  async function toggleSolution(message, button, accept) {
+    if (!IS_LINUXDO) return;
+    const postId = Number(message?.dataset.postId);
+    const postNumber = Number(message?.dataset.postNumber);
+    if (!postId || !postNumber) return;
+
+    if (button) button.disabled = true;
+    try {
+      const endpoint = accept ? "/solution/accept" : "/solution/unaccept";
+      const resp = await fetch(endpoint, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: bridgeHeaders("application/json"),
+        body: JSON.stringify({ id: postId })
+      });
+      const payload = await responsePayload(resp);
+      if (!resp.ok) {
+        throw new Error(payloadError(payload, `${accept ? "采纳" : "取消"}解决方案失败（HTTP ${resp.status}）`));
+      }
+      const post = chatState.postsByNumber?.get(postNumber);
+      if (post) {
+        post.accepted_answer = accept;
+      }
+      chatState.hasAcceptedAnswer = accept;
+      chatState.acceptedAnswerPostNumber = accept ? postNumber : null;
+
+      const banner = message.querySelector(".wecom-solved-banner");
+      if (accept) {
+        if (!banner) {
+          const bodyEl = message.querySelector(".wecom-msg-body");
+          const div = document.createElement("div");
+          div.className = "wecom-solved-banner";
+          div.innerHTML = `${ICONS.checkCircle}<span>已采纳为解决方案</span>`;
+          if (bodyEl) {
+            bodyEl.insertBefore(div, bodyEl.firstChild);
+          }
+        }
+      } else {
+        banner?.remove();
+      }
+
+      if (button) {
+        button.dataset.action = accept ? "unaccept-solution" : "accept-solution";
+        button.title = accept ? "取消采纳此回答" : "采纳此回答为解决方案";
+        button.classList.toggle("is-solved-tool", accept);
+      }
+
+      updateHeaderChips();
+      showMiniToast(accept ? "已采纳为解决方案" : "已取消采纳解决方案");
+    } catch (err) {
+      alert(err.message || "操作失败，请重试");
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  function updateHeaderChips() {
+    const chipsBox = document.querySelector(".wecom-chat-chips");
+    if (!chipsBox) return;
+    const existingSolved = chipsBox.querySelector(".is-solved");
+    if (chatState.hasAcceptedAnswer) {
+      if (!existingSolved) {
+        const solvedSpan = document.createElement("span");
+        solvedSpan.className = "wecom-chat-chip is-solved";
+        solvedSpan.innerHTML = `${ICONS.checkCircle} 已解决`;
+        chipsBox.appendChild(solvedSpan);
+      }
+    } else {
+      existingSolved?.remove();
+    }
+    const existingLocked = chipsBox.querySelector(".is-locked");
+    if (chatState.isClosed) {
+      if (!existingLocked) {
+        const lockedSpan = document.createElement("span");
+        lockedSpan.className = "wecom-chat-chip is-locked";
+        lockedSpan.innerHTML = `${ICONS.lock} 已锁定`;
+        chipsBox.appendChild(lockedSpan);
+      }
+    } else {
+      existingLocked?.remove();
+    }
+    const existingSlow = chipsBox.querySelector(".is-slowmode");
+    if (chatState.slowModeSeconds > 0) {
+      if (!existingSlow) {
+        const slowSpan = document.createElement("span");
+        slowSpan.className = "wecom-chat-chip is-slowmode";
+        slowSpan.textContent = `⏱ 慢速 (${chatState.slowModeSeconds}s)`;
+        chipsBox.appendChild(slowSpan);
+      }
+    } else {
+      existingSlow?.remove();
+    }
+  }
+
+  function syncComposerTopicState() {
+    const { input, send, card } = composeUi();
+    if (!input) return;
+    if (chatState.isClosed || chatState.canCreatePost === false) {
+      input.disabled = true;
+      input.placeholder = "该话题已锁定 / 关闭，无法回复";
+      if (send) send.disabled = true;
+      card?.classList.add("is-locked");
+      setComposeStatus("话题已锁定，不再接受新回复", "error", false);
+    } else {
+      input.disabled = false;
+      card?.classList.remove("is-locked");
+      if (chatState.slowModeSeconds > 0) {
+        setComposeStatus(`慢速模式已开启（间隔 ${chatState.slowModeSeconds} 秒）`, "info", false);
+      }
+    }
+  }
+
+  /* 输入框 @ 成员自动联想 */
+  let activeMentionPopup = null;
+  let activeMentionCandidates = [];
+  let activeMentionIndex = 0;
+  let activeMentionMatchStart = -1;
+  let mentionSearchTimer = null;
+  let mentionAbortController = null;
+
+  function closeMentionPopup() {
+    clearTimeout(mentionSearchTimer);
+    if (mentionAbortController) {
+      mentionAbortController.abort();
+      mentionAbortController = null;
+    }
+    if (activeMentionPopup) {
+      activeMentionPopup.remove();
+      activeMentionPopup = null;
+    }
+    activeMentionCandidates = [];
+    activeMentionIndex = 0;
+    activeMentionMatchStart = -1;
+  }
+
+  function handleMentionInput(textarea) {
+    if (!textarea) return;
+    const cursorPos = textarea.selectionStart;
+    const textBefore = textarea.value.slice(0, cursorPos);
+    const match = textBefore.match(/(?:^|\s)@([a-zA-Z0-9_\u4e00-\u9fa5\-]*)$/);
+    if (!match) {
+      closeMentionPopup();
+      return;
+    }
+    const query = match[1].toLowerCase();
+    activeMentionMatchStart = cursorPos - match[1].length - 1;
+
+    // 汇总当前话题成员数据（topicData 参与者、postsByNumber、以及当前会话 DOM 元素）
+    const rawList = [];
+    if (chatState.topicData?.details?.created_by) {
+      rawList.push(chatState.topicData.details.created_by);
+    }
+    if (Array.isArray(chatState.topicData?.details?.participants)) {
+      rawList.push(...chatState.topicData.details.participants);
+    }
+    if (chatState.postsByNumber) {
+      for (const p of chatState.postsByNumber.values()) {
+        if (p) rawList.push(p);
+      }
+    }
+    document.querySelectorAll(".wecom-msg").forEach((msg) => {
+      const uCard = msg.querySelector("[data-user-card]")?.dataset?.userCard;
+      const uName = msg.querySelector(".wecom-msg-name")?.textContent?.trim();
+      const avImg = msg.querySelector(".wecom-msg-avatar img")?.getAttribute("src");
+      const username = uCard || uName;
+      if (username) {
+        rawList.push({ username, name: uName, avatar_template: avImg });
+      }
+    });
+
+    const matched = [];
+    const seen = new Set();
+    const myName = (getCurrentUsername() || "").toLowerCase();
+
+    for (const p of rawList) {
+      const u = (p?.username || "").trim();
+      const n = (p?.name || "").trim();
+      const uLower = u.toLowerCase();
+      const nLower = n.toLowerCase();
+      if (!u || uLower === myName || seen.has(uLower)) continue;
+      if (!query || uLower.includes(query) || nLower.includes(query)) {
+        seen.add(uLower);
+        matched.push({
+          id: p.id || p.user_id,
+          username: u,
+          name: n || u,
+          avatar_template: p.avatar_template || ""
+        });
+        if (matched.length >= 8) break;
+      }
+    }
+
+    if (matched.length > 0) {
+      activeMentionCandidates = matched;
+      activeMentionIndex = 0;
+      renderMentionPopup(textarea);
+    } else {
+      closeMentionPopup();
+    }
+
+    if (IS_LINUXDO && query && query.length >= 1) {
+      fetchMentionRemote(query, textarea);
+    }
+  }
+
+  function fetchMentionRemote(query, textarea) {
+    clearTimeout(mentionSearchTimer);
+    mentionSearchTimer = setTimeout(async () => {
+      if (mentionAbortController) {
+        mentionAbortController.abort();
+      }
+      mentionAbortController = new AbortController();
+      try {
+        const topicId = chatState.topicId || "";
+        const resp = await fetch(`/u/search/users.json?term=${encodeURIComponent(query)}&topic_id=${topicId}`, {
+          headers: bridgeHeaders("application/json"),
+          signal: mentionAbortController.signal
+        });
+        if (!resp.ok) return;
+        const data = await responsePayload(resp);
+        const users = data?.users || [];
+        if (!users.length) return;
+
+        const cursorPos = textarea.selectionStart;
+        const textBefore = textarea.value.slice(0, cursorPos);
+        const currentMatch = textBefore.match(/(?:^|\s)@([a-zA-Z0-9_\u4e00-\u9fa5\-]*)$/);
+        if (!currentMatch || currentMatch[1].toLowerCase() !== query) return;
+
+        const myName = (getCurrentUsername() || "").toLowerCase();
+        const seen = new Set(activeMentionCandidates.map((c) => (c.username || "").toLowerCase()));
+        seen.add(myName);
+
+        for (const u of users) {
+          const uLower = (u?.username || "").toLowerCase();
+          if (!uLower || seen.has(uLower)) continue;
+          seen.add(uLower);
+          activeMentionCandidates.push({
+            id: u.id,
+            username: u.username,
+            name: u.name || u.username,
+            avatar_template: u.avatar_template || ""
+          });
+          if (activeMentionCandidates.length >= 8) break;
+        }
+
+        if (activeMentionCandidates.length > 0) {
+          renderMentionPopup(textarea);
+        }
+      } catch (err) {
+        if (err?.name === "AbortError") return;
+      }
+    }, 200);
+  }
+
+  function renderMentionPopup(textarea) {
+    if (!textarea || !textarea.isConnected) return;
+
+    if (!activeMentionPopup) {
+      activeMentionPopup = document.createElement("div");
+      activeMentionPopup.className = "wecom-mention-popup";
+      document.body.appendChild(activeMentionPopup);
+
+      activeMentionPopup.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+      });
+    }
+
+    const rect = textarea.getBoundingClientRect();
+    activeMentionPopup.style.left = `${Math.max(10, rect.left)}px`;
+    activeMentionPopup.style.bottom = `${window.innerHeight - rect.top + 6}px`;
+
+    const opUserId = chatState.topicData?.details?.created_by?.id ||
+      (chatState.postsByNumber?.get(1)?.user_id);
+
+    const itemsHtml = activeMentionCandidates.map((c, idx) => {
+      const dName = userDisplayName(c, c.username || "?");
+      const av = c.avatar_template ? fullAvatarUrl(c.avatar_template) : "";
+      const avHtml = av
+        ? `<img src="${escapeHtml(av)}" alt="" />`
+        : `<span>${escapeHtml(avatarLetter(dName))}</span>`;
+      const isOp = opUserId && Number(c.id || c.user_id) === Number(opUserId);
+      const isActive = idx === activeMentionIndex;
+
+      return `
+        <div class="wecom-mention-item${isActive ? " is-active" : ""}" data-index="${idx}">
+          <span class="wecom-mention-avatar">${avHtml}</span>
+          <span class="wecom-mention-name">${escapeHtml(dName)}</span>
+          <span class="wecom-mention-username">@${escapeHtml(c.username || "")}</span>
+          ${isOp ? '<span class="wecom-mention-op-tag">楼主</span>' : ""}
+        </div>
+      `;
+    }).join("");
+
+    activeMentionPopup.innerHTML = `
+      <div class="wecom-mention-title">选择要 @ 的成员 (↑↓ 切换，Enter 选中)</div>
+      <div class="wecom-mention-list">
+        ${itemsHtml}
+      </div>
+    `;
+
+    activeMentionPopup.querySelectorAll(".wecom-mention-item").forEach((item) => {
+      item.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const idx = Number(item.dataset.index);
+        if (activeMentionCandidates[idx]) {
+          selectMentionCandidate(textarea, activeMentionCandidates[idx]);
+        }
+      });
+    });
+  }
+
+  function updateMentionPopupActive() {
+    if (!activeMentionPopup) return;
+    activeMentionPopup.querySelectorAll(".wecom-mention-item").forEach((item, idx) => {
+      item.classList.toggle("is-active", idx === activeMentionIndex);
+    });
+  }
+
+  function selectMentionCandidate(textarea, candidate) {
+    if (!textarea || !candidate || activeMentionMatchStart < 0) return;
+    const u = candidate.username;
+    const before = textarea.value.slice(0, activeMentionMatchStart);
+    const after = textarea.value.slice(textarea.selectionStart);
+    textarea.value = `${before}@${u} ${after}`;
+    const newPos = activeMentionMatchStart + u.length + 2;
+    textarea.setSelectionRange(newPos, newPos);
+    textarea.focus();
+    closeMentionPopup();
+    handleComposerInput(textarea);
+  }
+
+  function handleMentionKeyDown(e, textarea) {
+    if (!activeMentionPopup || !activeMentionCandidates.length) return false;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      activeMentionIndex = (activeMentionIndex + 1) % activeMentionCandidates.length;
+      updateMentionPopupActive();
+      return true;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      activeMentionIndex = (activeMentionIndex - 1 + activeMentionCandidates.length) % activeMentionCandidates.length;
+      updateMentionPopupActive();
+      return true;
+    }
+    if (e.key === "Enter" || e.key === "Tab") {
+      e.preventDefault();
+      e.stopPropagation();
+      selectMentionCandidate(textarea, activeMentionCandidates[activeMentionIndex]);
+      return true;
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeMentionPopup();
+      return true;
+    }
+    return false;
+  }
+
+  /* 文字划选引用回复 */
+  let activeQuoteTooltip = null;
+  let activeQuoteData = null;
+
+  function closeQuoteTooltip() {
+    if (activeQuoteTooltip) {
+      activeQuoteTooltip.remove();
+      activeQuoteTooltip = null;
+    }
+    activeQuoteData = null;
+  }
+
+  function handleSelectionQuoteCheck() {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+      closeQuoteTooltip();
+      return;
+    }
+    const text = selection.toString().trim();
+    if (!text) {
+      closeQuoteTooltip();
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    const el = container.nodeType === Node.ELEMENT_NODE ? container : container.parentElement;
+    if (el?.closest("input, textarea, .wecom-composer-card, .wecom-dialog, .wecom-quote-tooltip, .wecom-msg-tools")) {
+      closeQuoteTooltip();
+      return;
+    }
+
+    const msg = el?.closest(".wecom-msg");
+    const msgBody = el?.closest(".wecom-msg-body, .wecom-msg-bubble");
+    if (!msg || !msgBody) {
+      closeQuoteTooltip();
+      return;
+    }
+
+    const rect = range.getBoundingClientRect();
+    if (!rect.width && !rect.height) {
+      closeQuoteTooltip();
+      return;
+    }
+
+    showQuoteTooltip(rect, text, msg);
+  }
+
+  function showQuoteTooltip(rect, text, msg) {
+    if (!activeQuoteTooltip) {
+      activeQuoteTooltip = document.createElement("button");
+      activeQuoteTooltip.type = "button";
+      activeQuoteTooltip.className = "wecom-quote-tooltip";
+      activeQuoteTooltip.innerHTML = `${ICONS.quote}<span>引用</span>`;
+      document.body.appendChild(activeQuoteTooltip);
+
+      activeQuoteTooltip.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+
+      activeQuoteTooltip.addEventListener("mouseup", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+
+      activeQuoteTooltip.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const data = activeQuoteData;
+        closeQuoteTooltip();
+        if (data) {
+          executeSelectionQuote(data.text, data.msg);
+        }
+      });
+    }
+
+    activeQuoteData = { text, msg };
+
+    const tooltipWidth = 64;
+    const tooltipHeight = 28;
+    let top = rect.top - tooltipHeight - 6;
+    let left = rect.left + rect.width / 2 - tooltipWidth / 2;
+
+    if (top < 10) {
+      top = rect.bottom + 6;
+    }
+    left = Math.max(10, Math.min(window.innerWidth - tooltipWidth - 10, left));
+
+    activeQuoteTooltip.style.top = `${Math.round(top)}px`;
+    activeQuoteTooltip.style.left = `${Math.round(left)}px`;
+  }
+
+  function executeSelectionQuote(text, msg) {
+    if (!text || !msg) return;
+    if (chatState.isClosed || chatState.canCreatePost === false) {
+      showMiniToast("话题已锁定，无法回复");
+      return;
+    }
+    const postNumber = Number(msg.dataset.postNumber) || 1;
+    const post = chatState.postsByNumber?.get(postNumber);
+    const username = post?.username ||
+      msg.querySelector("[data-user-card]")?.dataset?.userCard ||
+      msg.querySelector(".wecom-msg-name")?.textContent?.trim() || "";
+
+    showTargetedReply(postNumber, { text, username });
+
+    const { input } = composeUi();
+    if (IS_V2EX && input && username) {
+      const postObj = chatState.postsByNumber?.get(Number(postNumber));
+      const floor = postObj?.floor != null
+        ? Number(postObj.floor)
+        : (Number(msg.dataset.floor) || Math.max(0, Number(postNumber) - 1));
+      if (!input.value.includes(`@${username}`)) {
+        const floorPrefix = floor > 0 ? `@${username} #${floor} ` : `@${username} `;
+        input.value = floorPrefix + input.value;
+      }
+    }
+
+    try {
+      window.getSelection()?.removeAllRanges();
+    } catch { /* ignore */ }
+
+    const focusComposer = () => {
+      const { input: compInput } = composeUi();
+      if (compInput) {
+        compInput.focus();
+        try {
+          const len = compInput.value.length;
+          compInput.setSelectionRange(len, len);
+        } catch { /* ignore */ }
+      }
+    };
+
+    focusComposer();
+    requestAnimationFrame(focusComposer);
+    setTimeout(focusComposer, 0);
+    setTimeout(focusComposer, 30);
+    setTimeout(focusComposer, 100);
+
+    showMiniToast("已引用选中文字");
+  }
+
   function applyListNavDom() {
     const panel = document.querySelector(".wecom-list-panel");
     const nav = document.querySelector(".wecom-list-nav");
@@ -18912,6 +21623,10 @@
         );
 
         const target = parseV2exReplyTarget(conv.dataset.targetAnchor || href || location.hash);
+        if (!IS_V2EX && !IS_JUEJIN) {
+          const routeFromHref = topicRouteFromPath(href);
+          if (routeFromHref.postNumber > 0) target.postNumber = routeFromHref.postNumber;
+        }
         if (conv.dataset.targetFloor) target.floor = Number(conv.dataset.targetFloor);
         if (conv.dataset.targetReplyId) target.replyId = Number(conv.dataset.targetReplyId);
         if (conv.dataset.targetPage) target.page = Number(conv.dataset.targetPage);
@@ -19978,6 +22693,7 @@
     nativeTopicId: null,
     nativeReplyToPostNumber: null,
     replyToPostNumber: null,
+    quoteData: null,
     connecting: null,
     connectingTarget: null,
     connectionSerial: 0,
@@ -20060,6 +22776,7 @@
   }
 
   function openWatermarkSettings(panel) {
+    closeTimelinePopover();
     document.querySelectorAll(".wecom-platform-switcher.is-open").forEach((switcher) => {
       switcher.classList.remove("is-open");
       const dropdown = switcher.querySelector(".wecom-platform-dropdown");
@@ -20956,6 +23673,7 @@
     if (!root) return;
     hydrateChatLinks(root);
     hydrateRedEnvelopes(root);
+    hydratePolls(root);
     if (isImageAutoLayoutEnabled()) {
       applyImageAutoLayout(root);
     }
@@ -21379,13 +24097,17 @@
         </div>
         <div class="wecom-chat-tools">
           <button type="button" class="wecom-icon-btn wecom-chat-scroll-top" title="回到顶部" aria-label="回到顶部">${ICONS.scrollTop}</button>
-          <button type="button" class="wecom-icon-btn wecom-chat-refresh" title="刷新本话题">${ICONS.refresh}</button>
+          <button type="button" class="wecom-icon-btn wecom-chat-timeline-toggle" title="楼层与进度滑块" aria-label="楼层与进度滑块" aria-expanded="false">${ICONS.timeline}</button>
           <div class="wecom-platform-switcher">
             <button type="button" class="wecom-icon-btn wecom-platform-btn wecom-chat-more-btn" aria-haspopup="true" aria-expanded="false" title="更多" aria-label="更多">
               ${ICONS.dots}
             </button>
             <div class="wecom-platform-dropdown" hidden>
               <div class="wecom-chat-more-actions">
+                <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-chat-refresh" title="刷新本话题" aria-label="刷新本话题">
+                  <span class="wecom-chat-more-icon">${ICONS.refresh}</span>
+                  <span class="wecom-chat-more-label">刷新本话题</span>
+                </button>
                 <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-chat-avatar-toggle${isHideChatAvatar() ? " is-active" : ""}" title="${isHideChatAvatar() ? "显示对话头像" : "隐藏对话头像"}" aria-label="隐藏对话头像" aria-pressed="${isHideChatAvatar() ? "true" : "false"}">
                   <span class="wecom-chat-more-icon">${ICONS.userOff}</span>
                   <span class="wecom-chat-more-label">${isHideChatAvatar() ? "显示对话头像" : "隐藏对话头像"}</span>
@@ -21463,6 +24185,26 @@
           <button type="button" class="wecom-watermark-save">保存</button>
         </div>
       </section>
+      <aside class="wecom-timeline-popover" aria-label="楼层进度导航" hidden>
+        <button type="button" class="wecom-timeline-date wecom-timeline-date-top" title="跳至第 1 楼">1 楼</button>
+        <div class="wecom-timeline-scrollarea">
+          <div class="wecom-timeline-track">
+            <div class="wecom-timeline-fill"></div>
+          </div>
+          <div class="wecom-timeline-scroller" style="top: 0%; --tl-pct: 0%;">
+            <div class="wecom-timeline-handle"></div>
+            <div class="wecom-timeline-info">
+              <div class="wecom-timeline-replies" title="点击输入楼层跳转">1 / 1</div>
+              <div class="wecom-timeline-ago"></div>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="wecom-timeline-date wecom-timeline-date-bottom" title="跳至最新楼层">最新</button>
+        <div class="wecom-timeline-jump-row" hidden>
+          <input type="number" class="wecom-timeline-jump-input" min="1" step="1" placeholder="楼层 #" aria-label="跳转到指定楼层">
+          <button type="button" class="wecom-timeline-jump-btn">跳转</button>
+        </div>
+      </aside>
       <div class="wecom-pinned-banner" style="display:none">
         <span class="wecom-pinned-avatar"></span>
         <span class="wecom-pinned-content"></span>
@@ -21494,6 +24236,7 @@
     document.body.appendChild(panel);
     bindChatPanelEvents(panel);
     bindPlatformSwitcher();
+    bindTimelineSliderEvents(panel);
     bindUserCardEvents(panel);
     bindWatermarkSettings(panel);
     renderWatermark(getWatermarkSettings());
@@ -21676,7 +24419,20 @@
       event.stopPropagation();
       handleComposerInput(input);
     });
-    ["beforeinput", "keypress", "keyup", "compositionstart", "compositionupdate", "compositionend"].forEach((type) => {
+    input.addEventListener("compositionend", (event) => {
+      event.stopPropagation();
+      handleComposerInput(input);
+    });
+    input.addEventListener("click", () => {
+      handleMentionInput(input);
+    });
+    input.addEventListener("keyup", (event) => {
+      event.stopPropagation();
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "Backspace") {
+        handleMentionInput(input);
+      }
+    });
+    ["beforeinput", "keypress", "compositionstart", "compositionupdate"].forEach((type) => {
       input.addEventListener(type, (event) => event.stopPropagation());
     });
     input.addEventListener("keydown", handleComposerKeydown);
@@ -21946,6 +24702,362 @@
     event.stopPropagation();
   }
 
+  function getTopicTimelineMetrics(body) {
+    const chatBody = body || document.querySelector(".wecom-chat-body");
+    const streamLen = Array.isArray(chatState.stream) ? chatState.stream.length : 0;
+    const replyTotal = Number(chatState.replyTotal) || 0;
+    const total = IS_V2EX
+      ? Math.max(replyTotal + 1, streamLen, Number(chatState.renderedLastNumber) || 1, 1)
+      : Math.max(replyTotal, streamLen, Number(chatState.renderedLastNumber) || 1, 1);
+
+    let current = 1;
+    if (chatBody) {
+      const visible = visibleTopicPosts(chatBody);
+      const isAtBottom = chatBody.clientHeight > 0 &&
+        (chatBody.scrollHeight - (chatBody.scrollTop + chatBody.clientHeight) <= 20);
+      const isAtTop = chatBody.scrollTop <= 16 && !chatState.hasOlder;
+      if (isAtTop) {
+        current = 1;
+      } else if (isAtBottom && !chatState.hasNewer) {
+        current = total;
+      } else if (visible.length > 0) {
+        current = isAtBottom ? visible[visible.length - 1] : visible[0];
+      } else if (chatState.topicId) {
+        current = getRememberedPost(chatState.topicId) || 1;
+      }
+    }
+    current = Math.max(1, Math.min(total, Number(current) || 1));
+    const ratio = total <= 1 ? 0 : Math.max(0, Math.min(1, (current - 1) / (total - 1)));
+
+    const firstPost = chatState.postsByNumber?.get(1);
+    const currentPost = chatState.postsByNumber?.get(current);
+    const lastPost = chatState.postsByNumber?.get(total) ||
+      chatState.postsByNumber?.get(Number(chatState.renderedLastNumber) || 0);
+    const listTopic = Array.isArray(listState?.topics)
+      ? listState.topics.find((t) => isSameTopic(t.id, chatState.topicId))
+      : null;
+
+    const topRawTime = firstPost?.created_at || listTopic?.created_at || "";
+    const bottomRawTime = lastPost?.created_at || listTopic?.bumped_at || listTopic?.last_activity_at || "";
+    const currentRawTime = currentPost?.created_at || (current === 1 ? topRawTime : (current === total ? bottomRawTime : ""));
+
+    return {
+      current,
+      total,
+      ratio,
+      topLabel: topRawTime ? (formatTime(topRawTime) || "1 楼") : "1 楼",
+      bottomLabel: bottomRawTime ? (formatTime(bottomRawTime) || "最新") : "最新",
+      currentAgo: currentRawTime ? formatTime(currentRawTime) : ""
+    };
+  }
+
+  function syncTimelineSlider(body, previewFloor = 0) {
+    const panel = document.querySelector(".wecom-chat-panel");
+    if (!panel) return;
+    const popover = panel.querySelector(".wecom-timeline-popover");
+    if (!popover) return;
+    if (popover.classList.contains("is-dragging") && !previewFloor) return;
+
+    const metrics = getTopicTimelineMetrics(body);
+    const total = metrics.total;
+    const displayFloor = previewFloor > 0
+      ? Math.max(1, Math.min(total, Math.round(previewFloor)))
+      : metrics.current;
+    const ratio = total <= 1 ? 0 : Math.max(0, Math.min(1, (displayFloor - 1) / (total - 1)));
+    const pct = (ratio * 100).toFixed(2);
+
+    const scroller = popover.querySelector(".wecom-timeline-scroller");
+    const fill = popover.querySelector(".wecom-timeline-fill");
+    const repliesEl = popover.querySelector(".wecom-timeline-replies");
+    const agoEl = popover.querySelector(".wecom-timeline-ago");
+    const topBtn = popover.querySelector(".wecom-timeline-date-top");
+    const bottomBtn = popover.querySelector(".wecom-timeline-date-bottom");
+    const jumpInput = popover.querySelector(".wecom-timeline-jump-input");
+
+    if (scroller) {
+      scroller.style.top = `${pct}%`;
+      scroller.style.setProperty?.("--tl-pct", `${pct}%`);
+    }
+    if (fill) fill.style.height = `${pct}%`;
+    if (repliesEl) repliesEl.textContent = `${displayFloor} / ${total}`;
+    if (agoEl) {
+      if (previewFloor > 0) {
+        const previewPost = chatState.postsByNumber?.get(displayFloor);
+        agoEl.textContent = previewPost?.created_at ? formatTime(previewPost.created_at) : metrics.currentAgo;
+      } else {
+        agoEl.textContent = metrics.currentAgo;
+      }
+    }
+    if (topBtn) topBtn.textContent = metrics.topLabel;
+    if (bottomBtn) bottomBtn.textContent = metrics.bottomLabel;
+    if (jumpInput) {
+      jumpInput.max = String(total);
+      if (document.activeElement !== jumpInput) {
+        jumpInput.placeholder = `1 - ${total}`;
+      }
+    }
+  }
+
+  function closeTimelinePopover() {
+    const panel = document.querySelector(".wecom-chat-panel");
+    if (!panel) return;
+    const popover = panel.querySelector(".wecom-timeline-popover");
+    const btn = panel.querySelector(".wecom-chat-timeline-toggle");
+    if (popover) {
+      popover.hidden = true;
+      popover.classList.remove("is-open", "is-dragging");
+      const jumpRow = popover.querySelector(".wecom-timeline-jump-row");
+      if (jumpRow) jumpRow.hidden = true;
+    }
+    if (btn) {
+      btn.classList.remove("is-active");
+      btn.setAttribute("aria-expanded", "false");
+    }
+  }
+
+  function toggleTimelinePopover(forceOpen) {
+    const panel = document.querySelector(".wecom-chat-panel");
+    if (!panel) return;
+    const popover = panel.querySelector(".wecom-timeline-popover");
+    const btn = panel.querySelector(".wecom-chat-timeline-toggle");
+    if (!popover) return;
+    const nextOpen = typeof forceOpen === "boolean" ? forceOpen : popover.hidden;
+    if (nextOpen) {
+      closeAllPlatformDropdowns();
+      const watermarkDialog = panel.querySelector(".wecom-watermark-panel");
+      if (watermarkDialog && !watermarkDialog.hidden) {
+        closeWatermarkSettings(panel);
+      }
+      popover.hidden = false;
+      popover.classList.add("is-open");
+      if (btn) {
+        btn.classList.add("is-active");
+        btn.setAttribute("aria-expanded", "true");
+      }
+      syncTimelineSlider(panel.querySelector(".wecom-chat-body"));
+    } else {
+      closeTimelinePopover();
+    }
+  }
+
+  async function jumpChatToTimelinePost(targetPostNumber) {
+    const panel = document.querySelector(".wecom-chat-panel");
+    const body = panel?.querySelector(".wecom-chat-body") || document.querySelector(".wecom-chat-body");
+    if (!body || !chatState.topicId) return false;
+    const metrics = getTopicTimelineMetrics(body);
+    const postNum = Math.max(1, Math.min(metrics.total, Math.round(Number(targetPostNumber) || 1)));
+    const prevScrollTop = body.scrollTop;
+
+    const existingEl = body.querySelector(`.wecom-msg[data-post-number="${postNum}"], .wecom-msg[data-floor="${postNum - 1}"]`);
+    if (existingEl) {
+      const wasInView = isMessageInChatViewport(body, existingEl);
+      if (postNum === 1 && !chatState.hasOlder) {
+        chatState.pinnedPost = 0;
+        chatState.pinningScroll = false;
+        body.scrollTop = 0;
+        scrollChatToPost(body, 1);
+      } else if (IS_V2EX && postNum > 1) {
+        const target = { floor: postNum - 1, anchor: `reply${postNum - 1}` };
+        locateV2exReply(body, target);
+        keepChatAtV2exReply(body, target);
+      } else {
+        scrollChatToPost(body, postNum);
+        keepChatAtPost(body, postNum);
+      }
+      if (!wasInView) {
+        saveChatJumpPosition(body, prevScrollTop);
+      }
+      rememberTopicPost(chatState.topicId, postNum);
+      replaceTopicPostUrl(chatState.topicId, postNum);
+      syncTimelineSlider(body, postNum);
+      setTimeout(() => syncChatFloatNav(body), 180);
+      return true;
+    }
+
+    rememberTopicPost(chatState.topicId, postNum);
+    replaceTopicPostUrl(chatState.topicId, postNum);
+    if (IS_V2EX) {
+      const floor = Math.max(0, postNum - 1);
+      const page = floor > 100 ? Math.floor((floor - 1) / 100) + 1 : 1;
+      await loadTopic(chatState.topicId, true, {
+        floor,
+        page,
+        anchor: floor > 0 ? `reply${floor}` : ""
+      });
+      return true;
+    }
+    await loadTopic(chatState.topicId, true);
+    return true;
+  }
+
+  function bindTimelineSliderEvents(panel) {
+    if (!panel || panel.dataset.timelineBound === "1") return;
+    panel.dataset.timelineBound = "1";
+    const popover = panel.querySelector(".wecom-timeline-popover");
+    const scrollArea = popover?.querySelector(".wecom-timeline-scrollarea");
+    const topBtn = popover?.querySelector(".wecom-timeline-date-top");
+    const bottomBtn = popover?.querySelector(".wecom-timeline-date-bottom");
+    const infoEl = popover?.querySelector(".wecom-timeline-info");
+    const repliesEl = popover?.querySelector(".wecom-timeline-replies");
+    const jumpRow = popover?.querySelector(".wecom-timeline-jump-row");
+    const jumpInput = popover?.querySelector(".wecom-timeline-jump-input");
+    const jumpBtn = popover?.querySelector(".wecom-timeline-jump-btn");
+    if (!popover || !scrollArea) return;
+
+    let dragging = false;
+    let previewFloor = 1;
+
+    const floorFromClientY = (clientY) => {
+      const rect = scrollArea.getBoundingClientRect();
+      const height = Math.max(1, rect.height);
+      const ratio = Math.max(0, Math.min(1, (clientY - rect.top) / height));
+      const { total } = getTopicTimelineMetrics(panel.querySelector(".wecom-chat-body"));
+      return Math.max(1, Math.min(total, Math.round(1 + ratio * (total - 1))));
+    };
+
+    scrollArea.addEventListener("pointerdown", (e) => {
+      if (e.button != null && e.button !== 0) return;
+      if (e.target?.closest?.(".wecom-timeline-info, .wecom-timeline-replies")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dragging = true;
+      popover.classList.add("is-dragging");
+      try {
+        scrollArea.setPointerCapture?.(e.pointerId);
+      } catch { /* ignore */ }
+      previewFloor = floorFromClientY(e.clientY);
+      syncTimelineSlider(panel.querySelector(".wecom-chat-body"), previewFloor);
+    });
+
+    scrollArea.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      e.preventDefault();
+      previewFloor = floorFromClientY(e.clientY);
+      syncTimelineSlider(panel.querySelector(".wecom-chat-body"), previewFloor);
+    });
+
+    const finishDrag = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      popover.classList.remove("is-dragging");
+      try {
+        if (e?.pointerId != null) scrollArea.releasePointerCapture?.(e.pointerId);
+      } catch { /* ignore */ }
+      jumpChatToTimelinePost(previewFloor);
+    };
+
+    scrollArea.addEventListener("pointerup", finishDrag);
+    scrollArea.addEventListener("pointercancel", finishDrag);
+
+    topBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      jumpChatToTimelinePost(1);
+    });
+
+    bottomBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const { total } = getTopicTimelineMetrics(panel.querySelector(".wecom-chat-body"));
+      jumpChatToTimelinePost(total);
+    });
+
+    const toggleJumpRow = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (jumpRow) {
+        jumpRow.hidden = !jumpRow.hidden;
+        if (!jumpRow.hidden) {
+          jumpInput?.focus();
+          jumpInput?.select?.();
+        }
+      } else {
+        jumpInput?.focus();
+        jumpInput?.select?.();
+      }
+    };
+
+    (infoEl || repliesEl)?.addEventListener("click", toggleJumpRow);
+
+    const submitInputJump = () => {
+      const val = Number(jumpInput?.value);
+      if (!val || val < 1) return;
+      jumpInput.value = "";
+      if (jumpRow) jumpRow.hidden = true;
+      jumpChatToTimelinePost(val);
+    };
+
+    jumpBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      submitInputJump();
+    });
+
+    jumpInput?.addEventListener("keydown", (e) => {
+      e.stopPropagation();
+      if (e.key === "Enter") {
+        e.preventDefault();
+        submitInputJump();
+      } else if (e.key === "Escape") {
+        if (jumpRow && !jumpRow.hidden) {
+          jumpRow.hidden = true;
+        } else {
+          closeTimelinePopover();
+        }
+      }
+    });
+  }
+
+  function getMessageOwnBounds(el) {
+    if (!el || typeof el.getBoundingClientRect !== "function") return null;
+    const headerEl = el.querySelector?.(":scope > .wecom-msg-content > .wecom-msg-header") ||
+      el.querySelector?.(":scope > .wecom-msg-main > .wecom-msg-bubble > .wecom-msg-header") ||
+      el.querySelector?.(".wecom-msg-header");
+    const msgBodyEl = el.querySelector?.(":scope > .wecom-msg-content > .wecom-msg-bubble > .wecom-msg-body") ||
+      el.querySelector?.(":scope > .wecom-msg-main > .wecom-msg-bubble > .wecom-msg-body") ||
+      el.querySelector?.(".wecom-msg-body");
+    const topEl = headerEl || msgBodyEl || el;
+    const bottomEl = msgBodyEl || headerEl || el;
+    const topRect = topEl.getBoundingClientRect();
+    const bottomRect = bottomEl.getBoundingClientRect();
+    if (!topRect || !bottomRect) return null;
+    return {
+      top: topRect.top,
+      bottom: bottomRect.bottom,
+      height: Math.max(0, bottomRect.bottom - topRect.top)
+    };
+  }
+
+  function isMessageInChatViewport(body, el, margin = 12) {
+    if (!body || !el || typeof body.getBoundingClientRect !== "function") return false;
+    const bodyRect = body.getBoundingClientRect();
+    const msgRect = getMessageOwnBounds(el);
+    if (!bodyRect || !msgRect || bodyRect.height <= 0 || msgRect.height <= 0) return false;
+    const viewTop = bodyRect.top + margin;
+    const viewBottom = bodyRect.bottom - margin;
+    if (msgRect.height <= bodyRect.height * 0.75) {
+      return msgRect.top >= viewTop && msgRect.bottom <= viewBottom;
+    }
+    const visibleOverlap = Math.min(msgRect.bottom, viewBottom) - Math.max(msgRect.top, viewTop);
+    return visibleOverlap >= Math.min(120, bodyRect.height * 0.4);
+  }
+
+  function isJumpOutsideVisibleArea(body) {
+    const chatBody = body || document.querySelector(".wecom-chat-body");
+    if (!chatBody || chatState.lastJumpScrollTop == null || !Number.isFinite(chatState.lastJumpScrollTop)) {
+      return false;
+    }
+    if (chatState.lastJumpPostNumber > 0 && typeof chatBody.querySelector === "function") {
+      const originMsg = chatBody.querySelector(`.wecom-msg[data-post-number="${chatState.lastJumpPostNumber}"]`);
+      if (originMsg && isMessageInChatViewport(chatBody, originMsg)) {
+        return false;
+      }
+    }
+    const viewH = Number(chatBody.clientHeight) > 0 ? Number(chatBody.clientHeight) : 400;
+    const minDelta = Math.max(120, Math.min(260, Math.round(viewH * 0.45)));
+    return Math.abs((Number(chatBody.scrollTop) || 0) - chatState.lastJumpScrollTop) >= minDelta;
+  }
+
   function syncChatFloatNav(body) {
     const panel = document.querySelector(".wecom-chat-panel");
     if (!panel) return;
@@ -21965,22 +25077,32 @@
     }
 
     if (backPosBtn) {
-      if (isEmpty || chatState.lastJumpScrollTop == null) {
+      if (isEmpty || !isJumpOutsideVisibleArea(chatBody)) {
+        if (!chatState.pinningScroll && chatState.lastJumpScrollTop != null && !isEmpty && chatBody.clientHeight > 0) {
+          chatState.lastJumpScrollTop = null;
+          chatState.lastJumpPostNumber = 0;
+        }
         backPosBtn.hidden = true;
       } else {
         backPosBtn.hidden = false;
       }
     }
+
+    syncTimelineSlider(chatBody);
   }
 
   function saveChatJumpPosition(body, prevScrollTop, sourceEl = null) {
     const chatBody = body || document.querySelector(".wecom-chat-body");
     if (!chatBody) return;
-    chatState.lastJumpScrollTop = prevScrollTop != null ? prevScrollTop : chatBody.scrollTop;
+    chatState.lastJumpScrollTop = prevScrollTop != null ? Number(prevScrollTop) : Number(chatBody.scrollTop) || 0;
     const msgEl = sourceEl && typeof sourceEl.closest === "function"
       ? sourceEl.closest(".wecom-msg[data-post-number]")
       : null;
     chatState.lastJumpPostNumber = Number(msgEl?.dataset?.postNumber) || 0;
+    if (!isJumpOutsideVisibleArea(chatBody)) {
+      chatState.lastJumpScrollTop = null;
+      chatState.lastJumpPostNumber = 0;
+    }
     syncChatFloatNav(chatBody);
   }
 
@@ -21990,9 +25112,9 @@
     const body = panel.querySelector(".wecom-chat-body");
     const prevScrollTop = body ? body.scrollTop : null;
     const ok = focusRenderedReply(reference);
-    if (ok) {
+    if (ok === "jumped") {
       saveChatJumpPosition(body, prevScrollTop, reference);
-    } else if (reference.dataset.replyPostNumber) {
+    } else if (!ok && reference.dataset.replyPostNumber) {
       showWecomToast(`引用楼层 #${reference.dataset.replyPostNumber} 暂未加载到当前视口`, "info");
     }
     consumeClick(event);
@@ -22025,17 +25147,53 @@
       if (!event.target.closest(".wecom-platform-switcher")) {
         closeAllPlatformDropdowns();
       }
+      if (!event.target.closest(".wecom-timeline-popover, .wecom-chat-timeline-toggle")) {
+        closeTimelinePopover();
+      }
+      if (!event.target.closest(".wecom-likes-popover, .wecom-msg-likes")) {
+        closeLikesPopover();
+      }
+      if (!event.target.closest(".wecom-mention-popup, .wecom-chat-compose")) {
+        closeMentionPopup();
+      }
+      if (!event.target.closest(".wecom-quote-tooltip")) {
+        closeQuoteTooltip();
+      }
+    });
+    document.addEventListener("mouseup", () => {
+      setTimeout(handleSelectionQuoteCheck, 10);
+    });
+    document.addEventListener("keyup", (event) => {
+      if (event.key === "Shift" || event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "ArrowUp" || event.key === "ArrowDown") {
+        setTimeout(handleSelectionQuoteCheck, 10);
+      }
     });
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
         closeAllPlatformDropdowns();
+        closeTimelinePopover();
+        closeLikesPopover();
+        closeFlagDialog();
+        closeMentionPopup();
+        closeQuoteTooltip();
       }
     });
+    window.addEventListener("resize", () => {
+      closeMentionPopup();
+      closeLikesPopover();
+      closeQuoteTooltip();
+    }, { passive: true });
   }
 
   function handleChatHeaderClick(event, panel) {
+    if (event.target.closest(".wecom-chat-timeline-toggle")) {
+      consumeClick(event);
+      toggleTimelinePopover();
+      return true;
+    }
     if (event.target.closest(".wecom-platform-btn")) {
       consumeClick(event);
+      closeTimelinePopover();
       const switcher = event.target.closest(".wecom-platform-switcher");
       if (switcher) {
         const dropdown = switcher.querySelector(".wecom-platform-dropdown");
@@ -22130,6 +25288,8 @@
       return true;
     }
     if (event.target.closest(".wecom-chat-refresh")) {
+      consumeClick(event);
+      closeAllPlatformDropdowns();
       if (chatState.topicId) {
         rateLimitCooldownUntil = 0;
         deleteCachedTopic(chatState.topicId);
@@ -22194,9 +25354,42 @@
       if (!IS_LINUXDO) return;
       return openEditPost(message, button);
     }
+    if (action === "delete") {
+      if (!IS_LINUXDO) return;
+      return deletePostMessage(message, button);
+    }
+    if (action === "share") {
+      return copyPostFloorLink(message);
+    }
+    if (action === "flag") {
+      if (!IS_LINUXDO) return;
+      return openFlagDialog(message);
+    }
+    if (action === "accept-solution") {
+      if (!IS_LINUXDO) return;
+      return toggleSolution(message, button, true);
+    }
+    if (action === "unaccept-solution") {
+      if (!IS_LINUXDO) return;
+      return toggleSolution(message, button, false);
+    }
   }
 
   function handleChatPanelClick(event, panel) {
+    const likesBadge = event.target.closest(".wecom-msg-likes");
+    if (likesBadge && panel.contains(likesBadge) && isPlainClick(event)) {
+      if (!IS_LINUXDO) return;
+      consumeClick(event);
+      const msg = likesBadge.closest(".wecom-msg");
+      const postNumber = Number(msg?.dataset?.postNumber);
+      const post = postNumber ? chatState.postsByNumber?.get(postNumber) : null;
+      const postId = Number(likesBadge.dataset.postId) ||
+        Number(msg?.dataset?.postId) ||
+        Number(post?.id) ||
+        (postNumber === 1 ? Number(chatState.topicData?.post_stream?.posts?.[0]?.id || chatState.topicData?.first_post_id) : 0);
+      openLikedUsersPopover(likesBadge, postId);
+      return;
+    }
     const scrollBottomBtn = event.target.closest(".wecom-chat-scroll-bottom");
     if (scrollBottomBtn && panel.contains(scrollBottomBtn)) {
       consumeClick(event);
@@ -22243,21 +25436,27 @@
     const floorBadge = event.target.closest(".wecom-msg-floor");
     if (floorBadge && panel.contains(floorBadge) && isPlainClick(event)) {
       const msgEl = floorBadge.closest(".wecom-msg");
-      const replyInd = msgEl?.querySelector(".wecom-msg-reply-indicator, a.wecom-reply-reference");
+      const replyInd = msgEl?.querySelector(":scope > .wecom-msg-content > .wecom-msg-header .wecom-msg-reply-indicator, :scope > .wecom-msg-content > .wecom-msg-bubble > a.wecom-reply-reference");
       const body = panel.querySelector(".wecom-chat-body");
       const prevScrollTop = body ? body.scrollTop : null;
-      if (replyInd && focusRenderedReply(replyInd)) {
-        saveChatJumpPosition(body, prevScrollTop, floorBadge);
-        consumeClick(event);
-        return;
+      if (replyInd) {
+        const jumpRes = focusRenderedReply(replyInd);
+        if (jumpRes) {
+          if (jumpRes === "jumped") {
+            saveChatJumpPosition(body, prevScrollTop, floorBadge);
+          }
+          consumeClick(event);
+          return;
+        }
       }
       if (body && msgEl) {
-        saveChatJumpPosition(body, prevScrollTop, floorBadge);
         clearTimeout(replyHighlightTimer);
         highlightedReplyMessage?.classList.remove("is-reply-target");
         highlightedReplyMessage = msgEl;
         msgEl.classList.add("is-reply-target");
-        msgEl.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+        if (!isMessageInChatViewport(body, msgEl)) {
+          scrollChatToV2exReplyEl(body, msgEl);
+        }
         replyHighlightTimer = setTimeout(() => {
           msgEl.classList.remove("is-reply-target");
           if (highlightedReplyMessage === msgEl) highlightedReplyMessage = null;
@@ -22279,8 +25478,11 @@
         if (!matchTopic || targetTopicId === Number(chatState.topicId)) {
           const body = panel.querySelector(".wecom-chat-body");
           const prevScrollTop = body ? body.scrollTop : null;
-          if (body && locateV2exReply(body, target)) {
-            saveChatJumpPosition(body, prevScrollTop, anchorLink);
+          const jumpRes = body ? locateV2exReply(body, target) : false;
+          if (jumpRes) {
+            if (jumpRes === "jumped") {
+              saveChatJumpPosition(body, prevScrollTop, anchorLink);
+            }
             consumeClick(event);
             return;
           }
@@ -22341,9 +25543,12 @@
             if (targetEl) {
               const body = panel.querySelector(".wecom-chat-body");
               const prevScrollTop = body ? body.scrollTop : null;
+              const wasInView = body ? isMessageInChatViewport(body, targetEl) : false;
               consumeClick(event);
-              targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
-              if (body) saveChatJumpPosition(body, prevScrollTop, generalLink);
+              if (body && !wasInView) {
+                scrollChatToV2exReplyEl(body, targetEl);
+                saveChatJumpPosition(body, prevScrollTop, generalLink);
+              }
               return;
             }
           } catch { /* ignore */ }
@@ -22474,6 +25679,9 @@
     chatBody.addEventListener("touchstart", cancelPin, { passive: true });
     chatBody.addEventListener("pointerdown", cancelPin, { passive: true });
     chatBody.addEventListener("scroll", () => {
+      closeQuoteTooltip();
+      closeLikesPopover();
+      closeMentionPopup();
       chatBody.classList.add("is-scrolling");
       clearTimeout(chatScrollTimer);
       chatScrollTimer = setTimeout(() => {
@@ -22980,9 +26188,25 @@
       .join("");
   }
 
+  function solvedBannerHtml(post) {
+    if (!IS_LINUXDO || !post) return "";
+    const isAccepted = Boolean(
+      post.accepted_answer ||
+      (chatState.acceptedAnswerPostNumber && Number(chatState.acceptedAnswerPostNumber) === Number(post.post_number))
+    );
+    if (!isAccepted) return "";
+    return `<div class="wecom-solved-banner">${ICONS.checkCircle}<span>已采纳为解决方案</span></div>`;
+  }
+
   function replyBodyHtml(post, hasReplyIndicator) {
     const cooked = String(post?.cooked || post?.content || "");
-    if (!IS_V2EX) return cooked;
+    if (!IS_V2EX) {
+      if (IS_LINUXDO) {
+        const banner = solvedBannerHtml(post);
+        return banner ? banner + cooked : cooked;
+      }
+      return cooked;
+    }
     let result = cooked;
 
     if (hasReplyIndicator && post?.is_explicit_reply) {
@@ -23071,16 +26295,19 @@
     highlightedReplyMessage = message;
     message.classList.add("is-reply-target");
     const chatBody = message.closest?.(".wecom-chat-body") || document.querySelector(".wecom-chat-body");
-    if (chatBody) {
-      scrollChatToV2exReplyEl(chatBody, message);
-    } else {
-      message.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    const wasInView = chatBody ? isMessageInChatViewport(chatBody, message) : false;
+    if (!wasInView) {
+      if (chatBody) {
+        scrollChatToV2exReplyEl(chatBody, message);
+      } else {
+        message.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+      }
     }
     replyHighlightTimer = setTimeout(() => {
       message.classList.remove("is-reply-target");
       if (highlightedReplyMessage === message) highlightedReplyMessage = null;
     }, REPLY_HIGHLIGHT_DURATION_MS);
-    return true;
+    return wasInView ? "visible" : "jumped";
   }
 
   function parseV2exReplyTarget(urlOrHash) {
@@ -23275,16 +26502,19 @@
       target.resolvedFloor = matchedFloor;
     }
 
+    const wasInView = isMessageInChatViewport(body, el);
     clearTimeout(replyHighlightTimer);
     highlightedReplyMessage?.classList.remove("is-reply-target");
     highlightedReplyMessage = el;
     el.classList.add("is-reply-target");
-    scrollChatToV2exReplyEl(body, el);
+    if (!wasInView || target.notifType || target.payload || target.author) {
+      scrollChatToV2exReplyEl(body, el);
+    }
     replyHighlightTimer = setTimeout(() => {
       el.classList.remove("is-reply-target");
       if (highlightedReplyMessage === el) highlightedReplyMessage = null;
     }, REPLY_HIGHLIGHT_DURATION_MS);
-    return true;
+    return wasInView ? "visible" : "jumped";
   }
 
   function keepChatAtV2exReply(body, target) {
@@ -23575,6 +26805,33 @@
     const editButton = IS_LINUXDO && me && (post.id || post.post_number)
       ? `<button type="button" class="wecom-msg-tool" data-action="edit" title="编辑">${ICONS.edit}</button>`
       : "";
+    const canDelete = IS_LINUXDO && (me || post.can_delete) && post.id;
+    const deleteButton = canDelete
+      ? `<button type="button" class="wecom-msg-tool" data-action="delete" title="撤回 / 删除">${ICONS.trash}</button>`
+      : "";
+    const shareButton = IS_LINUXDO
+      ? `<button type="button" class="wecom-msg-tool" data-action="share" title="分享 / 复制链接">${ICONS.share}</button>`
+      : "";
+    const canFlag = IS_LINUXDO && !me && post.id && (post.can_flag !== false);
+    const flagButton = canFlag
+      ? `<button type="button" class="wecom-msg-tool" data-action="flag" title="举报 / 反馈">${ICONS.flag}</button>`
+      : "";
+    const isAcceptedSolution = Boolean(
+      post.accepted_answer ||
+      (chatState.acceptedAnswerPostNumber && Number(chatState.acceptedAnswerPostNumber) === Number(post.post_number))
+    );
+    const opPost = chatState.postsByNumber?.get(1);
+    const isOp = isMyPost(chatState.topicData?.details?.created_by || opPost, myName);
+    const canAccept = IS_LINUXDO && post.post_number > 1 && (post.can_accept_answer || (!isAcceptedSolution && !chatState.hasAcceptedAnswer && isOp));
+    const canUnaccept = IS_LINUXDO && isAcceptedSolution && (post.can_unaccept_answer || isOp);
+
+    let solutionButton = "";
+    if (canUnaccept) {
+      solutionButton = `<button type="button" class="wecom-msg-tool is-solved-tool" data-action="unaccept-solution" title="取消采纳解答">${ICONS.checkCircle}</button>`;
+    } else if (canAccept) {
+      solutionButton = `<button type="button" class="wecom-msg-tool" data-action="accept-solution" title="采纳为解答">${ICONS.checkCircle}</button>`;
+    }
+
     const boostButton = IS_LINUXDO
       ? `<button type="button" class="wecom-msg-tool" data-action="boost" title="添加 Boost">${ICONS.boost}</button>`
       : "";
@@ -23623,9 +26880,13 @@
           <div class="wecom-msg-tools">
             <button type="button" class="wecom-msg-tool${liked}" data-action="like" title="${likeLabel}">${likeToolIcon}</button>
             <button type="button" class="wecom-msg-tool" data-action="reply" title="回复">${ICONS.reply}</button>
+            ${shareButton}
             ${boostButton}
             ${bookmarkButton}
+            ${solutionButton}
+            ${flagButton}
             ${editButton}
+            ${deleteButton}
           </div>
         </div>
       </div>`;
@@ -23639,7 +26900,11 @@
   }
 
   function bridgeHeaders(contentType) {
-    const headers = { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" };
+    const headers = {
+      Accept: "application/json, text/javascript, */*; q=0.01",
+      "X-Requested-With": "XMLHttpRequest",
+      "Discourse-Present": "true"
+    };
     const token = csrfToken();
     if (token) headers["X-CSRF-Token"] = token;
     if (contentType) headers["Content-Type"] = contentType;
@@ -23661,6 +26926,9 @@
     if (typeof errors === "string" && errors.trim()) return errors.trim();
     if (typeof payload?.message === "string" && payload.message.trim()) return payload.message.trim();
     if (typeof payload?.raw === "string" && payload.raw.trim()) {
+      if (/<html|<title>Just a moment|<!DOCTYPE/i.test(payload.raw)) {
+        return "触发了安全人机验证（Cloudflare），请点击右上角原生视图完成验证";
+      }
       return payload.raw.replace(/\s+/g, " ").trim().slice(0, COMPOSER_ERROR_PREVIEW_LENGTH);
     }
     return fallback;
@@ -24248,7 +27516,7 @@
           const meta = msg.querySelector(".wecom-msg-meta");
           if (meta) {
             const badge = document.createElement("span");
-            badge.className = "wecom-msg-likes";
+            badge.className = "wecom-msg-likes is-static";
             badge.title = `${targetLabel}：1`;
             badge.innerHTML = `<span class="wecom-msg-like-icon">${ICONS.heart}</span><span class="wecom-msg-like-num">1</span>`;
             meta.appendChild(badge);
@@ -24330,15 +27598,15 @@
           } else {
             likeNumEl.textContent = String(next);
             const badge = msg?.querySelector(".wecom-msg-likes");
-            if (badge) badge.title = `${likeLabel}：${next}`;
+            if (badge) badge.title = `${likeLabel}：${next}（点击查看成员）`;
           }
         }
       } else if (!wasLiked && msg) {
         const meta = msg.querySelector(".wecom-msg-meta");
         if (meta) {
           const badge = document.createElement("span");
-          badge.className = "wecom-msg-likes";
-          badge.title = `${likeLabel}：1`;
+          badge.className = "wecom-msg-likes is-interactive";
+          badge.title = `${likeLabel}：1（点击查看成员）`;
           badge.innerHTML = `<span class="wecom-msg-like-icon">${ICONS.heart}</span><span class="wecom-msg-like-num">1</span>`;
           meta.appendChild(badge);
           addedBadge = true;
@@ -24407,15 +27675,15 @@
           const meta = msg.querySelector(".wecom-msg-meta");
           if (meta) {
             const badge = document.createElement("span");
-            badge.className = "wecom-msg-likes";
-            badge.title = `${likeLabel}：${prevCount}`;
+            badge.className = "wecom-msg-likes is-interactive";
+            badge.title = `${likeLabel}：${prevCount}（点击查看成员）`;
             badge.innerHTML = `<span class="wecom-msg-like-icon">${ICONS.heart}</span><span class="wecom-msg-like-num">${prevCount}</span>`;
             meta.appendChild(badge);
           }
         } else if (likeNumEl) {
           likeNumEl.textContent = String(prevCount);
           const badge = msg?.querySelector(".wecom-msg-likes");
-          if (badge) badge.title = `${likeLabel}：${prevCount}`;
+          if (badge) badge.title = `${likeLabel}：${prevCount}（点击查看成员）`;
         }
         showWecomToast("点赞操作失败：" + (err.message || "网络异常"), "error", 2500);
         console.warn("[linuxdo] toggle like failed", err);
@@ -24922,6 +28190,7 @@
     storeComposerDraft(input.value);
     if (composeUi().status?.classList.contains("error")) setComposeStatus("", "", false);
     updateComposeSendState();
+    handleMentionInput(input);
     const correctTopic = nativeComposerMatchesTopic(chatState.topicId);
     const correctTarget = composerBridgeState.nativeReplyToPostNumber === composerBridgeState.replyToPostNumber;
     if (nativeComposerTextarea() && correctTopic && correctTarget) {
@@ -24932,6 +28201,8 @@
 
   function handleComposerKeydown(event) {
     if (event.__wecomComposerGuarded) return;
+    const input = event.currentTarget || event.target;
+    if (handleMentionKeyDown(event, input)) return;
     event.stopPropagation();
     if (event.key !== "Enter" || event.shiftKey || event.isComposing || event.keyCode === 229) return;
     event.preventDefault();
@@ -24941,6 +28212,11 @@
   function guardComposerShortcut(event) {
     const target = event.target;
     if (!(target instanceof Element) || !target.closest("textarea.wecom-chat-compose")) return;
+    const input = target.closest("textarea.wecom-chat-compose");
+    if (handleMentionKeyDown(event, input)) {
+      event.stopImmediatePropagation();
+      return;
+    }
     event.__wecomComposerGuarded = true;
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") event.preventDefault();
     if (event.altKey && !event.ctrlKey && !event.metaKey && (event.key === "b" || event.key === "B")) {
@@ -24967,17 +28243,32 @@
     return name ? `回复 ${name} · #${postNumber}` : `回复消息 #${postNumber}`;
   }
 
-  function showTargetedReply(postNumber) {
+  function showTargetedReply(postNumber, quote = null) {
     const { target } = composeUi();
     composerBridgeState.replyToPostNumber = Number(postNumber) || null;
+    composerBridgeState.quoteData = (quote && quote.text) ? {
+      postNumber: Number(postNumber) || 1,
+      username: quote.username || "",
+      text: quote.text || ""
+    } : null;
     if (!target || !composerBridgeState.replyToPostNumber) return;
-    target.querySelector("span").textContent = replyTargetLabel(postNumber);
+    const span = target.querySelector("span");
+    if (span) {
+      if (composerBridgeState.quoteData) {
+        const u = composerBridgeState.quoteData.username || replyTargetLabel(postNumber);
+        const snippet = composerBridgeState.quoteData.text.replace(/\s+/g, " ").trim().slice(0, 42);
+        span.innerHTML = `<b>引用 ${escapeHtml(u)} · #${postNumber}：</b>“${escapeHtml(snippet)}”`;
+      } else {
+        span.textContent = replyTargetLabel(postNumber);
+      }
+    }
     target.hidden = false;
   }
 
   function hideTargetedReply() {
     const { target } = composeUi();
     composerBridgeState.replyToPostNumber = null;
+    composerBridgeState.quoteData = null;
     if (target) target.hidden = true;
   }
 
@@ -25356,7 +28647,19 @@
     composerBridgeState.submitting = true;
     updateComposeSendState();
     setComposeStatus("正在发送…", "busy", true);
-    const raw = input.value;
+    let raw = input.value;
+    if (composerBridgeState.quoteData?.text) {
+      const q = composerBridgeState.quoteData;
+      if (IS_LINUXDO) {
+        const topicId = chatState.topicId || "";
+        const quoteHeader = topicId
+          ? `[quote="${q.username}, post:${q.postNumber}, topic:${topicId}"]`
+          : `[quote="${q.username}, post:${q.postNumber}"]`;
+        raw = `${quoteHeader}\n${q.text}\n[/quote]\n\n${raw}`;
+      } else {
+        raw = `> @${q.username}: ${q.text}\n\n${raw}`;
+      }
+    }
     const replyTo = composerBridgeState.replyToPostNumber;
     try {
       if (IS_JUEJIN) {
@@ -26267,19 +29570,24 @@
       return data;
     }
 
+    const n = Number(postNumber) || 0;
+    const hasRequestedPost = (topicData) => {
+      if (n <= 1) return true;
+      const loadedPosts = topicData?.post_stream?.posts;
+      return Array.isArray(loadedPosts) && loadedPosts.some((post) => postNumberOf(post) === n);
+    };
     if (!force) {
       const preloaded = getPreloadedTopic(id);
-      if (preloaded && preloaded.id) {
+      if (preloaded && preloaded.id && hasRequestedPost(preloaded)) {
         setCachedTopic(id, preloaded);
         return preloaded;
       }
       const cached = getCachedTopic(id);
-      if (cached) return cached;
+      if (cached && hasRequestedPost(cached)) return cached;
     }
 
     const opts = force ? { cache: "no-store" } : {};
     if (signal) opts.signal = signal;
-    const n = Number(postNumber) || 0;
     let data = null;
     if (n > 1) {
       try {
@@ -26456,11 +29764,13 @@
       if (highlightedReplyMessage === el) highlightedReplyMessage = null;
     }, REPLY_HIGHLIGHT_DURATION_MS);
 
-    const delta = el.getBoundingClientRect().top - body.getBoundingClientRect().top;
+    const ownBounds = getMessageOwnBounds(el);
+    const targetTop = ownBounds ? ownBounds.top : el.getBoundingClientRect().top;
+    const delta = targetTop - body.getBoundingClientRect().top;
     chatState.pinningScroll = true;
     body.scrollTop = Math.max(0, body.scrollTop + delta - 12);
     requestAnimationFrame(() => {
-      chatState.pinningScroll = false;
+      if (!chatState.pinnedPost) chatState.pinningScroll = false;
     });
     return true;
   }
@@ -26486,9 +29796,13 @@
     }, 1000);
   }
 
-  function markPostsOnscreen(postNumbers) {
+  function markPostsOnscreen(topicId, postNumbers) {
+    if (IS_V2EX || IS_JUEJIN || !topicId || !postNumbers?.length) return false;
     const owner = getEmberOwner();
-    const screenTrack = owner ? safeLookup(owner, "service:screen-track") : null;
+    const topicCtrl = owner ? safeLookup(owner, "controller:topic") : null;
+    const modelId = Number(topicCtrl?.get?.("model.id") || topicCtrl?.model?.id || 0);
+    if (!modelId || modelId !== Number(topicId)) return false;
+    const screenTrack = safeLookup(owner, "service:screen-track");
     if (!screenTrack || typeof screenTrack.setOnscreen !== "function") return false;
     try {
       screenTrack.setOnscreen(postNumbers, postNumbers);
@@ -26499,8 +29813,10 @@
   }
 
   function reportReadTimings(topicId, postNumbers) {
-    if (IS_V2EX || IS_JUEJIN || !topicId || !postNumbers.length) return;
-    if (markPostsOnscreen(postNumbers)) return;
+    if (IS_V2EX || IS_JUEJIN || !topicId || !postNumbers?.length) return;
+    if (markPostsOnscreen(topicId, postNumbers)) return;
+    const token = csrfToken();
+    if (!token) return;
     const body = new URLSearchParams();
     body.set("topic_id", String(topicId));
     body.set("topic_time", "400");
@@ -26509,8 +29825,9 @@
       method: "POST",
       credentials: "same-origin",
       headers: {
-        "X-CSRF-Token": csrfToken(),
+        "X-CSRF-Token": token,
         "X-Requested-With": "XMLHttpRequest",
+        "Discourse-Present": "true",
         "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
       },
       body: body.toString()
@@ -26566,6 +29883,13 @@
         };
       }
     }
+    const routeAtStart = topicRouteFromPath(location.pathname);
+    const routePost = (!IS_V2EX && !IS_JUEJIN && routeAtStart.topicId && Number(routeAtStart.topicId) === Number(topicId) && routeAtStart.postNumber > 0)
+      ? Number(routeAtStart.postNumber)
+      : 0;
+    const optionPost = Number(target?.postNumber) || 0;
+    const explicitPost = optionPost || routePost || 0;
+
     const initialBody = document.querySelector(".wecom-chat-body");
     const hasRenderedMsgs = Boolean(
       initialBody &&
@@ -26573,15 +29897,36 @@
       initialBody.querySelector(".wecom-msg") &&
       !initialBody.querySelector(".wecom-chat-loading, .wecom-chat-error, .wecom-chat-empty")
     );
-    if (!force && chatState.loading && isSameTopic(chatState.topicId, topicId)) return;
-    if (!force && isSameTopic(chatState.topicId, topicId) && chatState.renderedLastIdx >= 0 && hasRenderedMsgs) {
-      if (IS_V2EX && target && (target.floor || target.replyId || target.anchor || target.payload)) {
+    if (!force && chatState.loading && isSameTopic(chatState.topicId, topicId) &&
+        (!explicitPost || explicitPost === chatState.targetPostNumber)) {
+      return;
+    }
+    if (isSameTopic(chatState.topicId, topicId) && chatState.renderedLastIdx >= 0 && hasRenderedMsgs) {
+      if (IS_V2EX && !force && target && (target.floor || target.replyId || target.anchor || target.payload)) {
         if (locateV2exReply(initialBody, target)) {
           keepChatAtV2exReply(initialBody, target);
           syncListActive();
           return;
         }
-      } else {
+      } else if (!IS_V2EX && !IS_JUEJIN && (optionPost > 0 || (!force && routePost > 0 && routePost !== getRememberedPost(topicId)))) {
+        const jumpPost = optionPost || routePost;
+        const existingPostEl = initialBody.querySelector(`.wecom-msg[data-post-number="${jumpPost}"]`);
+        if (existingPostEl) {
+          const prevScrollTop = initialBody.scrollTop;
+          const wasInView = isMessageInChatViewport(initialBody, existingPostEl);
+          rememberTopicPost(topicId, jumpPost);
+          replaceTopicPostUrl(topicId, jumpPost);
+          keepChatAtPost(initialBody, jumpPost);
+          if (!wasInView) {
+            saveChatJumpPosition(initialBody, prevScrollTop);
+          }
+          syncTimelineSlider(initialBody, jumpPost);
+          setTimeout(() => syncChatFloatNav(initialBody), 180);
+          reportReadTimings(topicId, [jumpPost]);
+          syncListActive();
+          return;
+        }
+      } else if (!force) {
         syncListActive();
         return;
       }
@@ -26598,6 +29943,12 @@
     if (!sameTopic) {
       saveCurrentTopicReadingPosition();
       chatState.postsByNumber = new Map();
+      chatState.topicData = null;
+      chatState.isClosed = false;
+      chatState.slowModeSeconds = 0;
+      chatState.canCreatePost = true;
+      chatState.hasAcceptedAnswer = false;
+      chatState.acceptedAnswerPostNumber = null;
       chatState.renderedFirstIdx = -1;
       chatState.renderedLastIdx = -1;
       chatState.renderedLastNumber = 0;
@@ -26607,8 +29958,12 @@
       chatState.lastJumpScrollTop = null;
       chatState.lastJumpPostNumber = 0;
       closeEditDialog(true);
+      closeQuoteTooltip();
+      closeLikesPopover();
+      closeMentionPopup();
     }
-    const requestedPost = openingPostNumber(topicId, null);
+    const requestedPost = explicitPost > 0 ? explicitPost : openingPostNumber(topicId, null);
+    chatState.targetPostNumber = requestedPost;
     chatState.loading = true;
     chatState.topicId = topicId;
     ensureChatPanel();
@@ -26636,19 +29991,23 @@
         data = await loadInitialV2exThreadPages(topicId, data, force, signal, targetPage);
         if (signal.aborted || !isSameTopic(chatState.topicId, topicId)) return;
       }
-      let openPost = openingPostNumber(topicId, data);
+      let openPost = explicitPost > 0
+        ? explicitPost
+        : (requestedPost > 0 ? requestedPost : openingPostNumber(topicId, data));
       if (!openPost && target && target.floor) {
         openPost = target.floor + 1;
       }
-      if (!IS_V2EX && !IS_JUEJIN && !requestedPost && openPost > 1 && !((data.post_stream && data.post_stream.posts) || [])
+      if (!IS_V2EX && !IS_JUEJIN && openPost > 1 && !((data.post_stream && data.post_stream.posts) || [])
         .some((post) => postNumberOf(post) === openPost)) {
-        try {
-          data = await fetchTopicJson(topicId, openPost, force, signal);
-        } catch (err) {
-          if (err?.name === "AbortError") throw err;
-          /* 保留首页 */
+        if (requestedPost !== openPost) {
+          try {
+            data = await fetchTopicJson(topicId, openPost, true, signal);
+          } catch (err) {
+            if (err?.name === "AbortError") throw err;
+            /* 保留首页 */
+          }
+          if (signal.aborted || !isSameTopic(chatState.topicId, topicId)) return;
         }
-        if (signal.aborted || !isSameTopic(chatState.topicId, topicId)) return;
       }
       const stream = (data.post_stream && data.post_stream.stream) || [];
       const posts = await postsForTopicOpening(
@@ -26682,6 +30041,12 @@
           : (chatState.renderedLastIdx >= 0 && chatState.renderedLastIdx < chatState.stream.length - 1));
       chatState.title = data.title || "";
       chatState.categoryId = data.category_id || null;
+      chatState.topicData = data;
+      chatState.isClosed = Boolean(data.closed || data.archived);
+      chatState.slowModeSeconds = Number(data.slow_mode_seconds) || 0;
+      chatState.canCreatePost = data.details?.can_create_post !== false;
+      chatState.hasAcceptedAnswer = Boolean(data.has_accepted_answer || data.accepted_answer);
+      chatState.acceptedAnswerPostNumber = (data.accepted_answer && (data.accepted_answer.post_number || data.accepted_answer.postNumber)) || null;
       if (IS_V2EX) {
         setV2exTopicFavoriteState(Boolean(data.v2ex_favorited));
       } else {
@@ -26734,6 +30099,8 @@
       enforceBlankTitle();
 
       setComposerPlaceholder(displayTitle);
+      syncComposerTopicState();
+      updateHeaderChips();
 
       const chatAvatar = document.querySelector(".wecom-chat-avatar");
       if (chatAvatar) {
@@ -26762,6 +30129,7 @@
               ? `<a class="wecom-chat-chip" target="_blank" rel="noopener noreferrer" href="/c/${escapeHtml(cat.slug)}/${cat.id}"><span class="wecom-nav2-cat-dot" style="background:#${escapeHtml(cat.color || "8F959E")}"></span>${escapeHtml(cat.name)}</a>`
               : "";
           }
+          updateHeaderChips();
         }
         if (sub) {
           if (maskDetail) {
@@ -26789,16 +30157,21 @@
           const resolvedFloor = target.resolvedFloor || target.floor || 0;
           const postNum = resolvedFloor ? resolvedFloor + 1 : (openPost || 1);
           rememberTopicPost(topicId, postNum > 0 ? postNum : 1);
-        } else if (sameTopic) {
-          body.scrollTop = Math.min(body.scrollTop, body.scrollHeight);
         } else if (openPost > 1) {
           rememberTopicPost(topicId, openPost);
           replaceTopicPostUrl(topicId, openPost);
           keepChatAtPost(body, openPost);
+          reportReadTimings(topicId, [openPost]);
+        } else if (sameTopic && !explicitPost) {
+          body.scrollTop = Math.min(body.scrollTop, body.scrollHeight);
         } else {
           body.scrollTop = 0;
           rememberTopicPost(topicId, openPost || 1);
           replaceTopicPostUrl(topicId, openPost || 1);
+          if (explicitPost === 1) {
+            keepChatAtPost(body, 1);
+          }
+          reportReadTimings(topicId, [openPost || 1]);
         }
         syncChatFloatNav(body);
         setTimeout(() => syncChatFloatNav(body), 150);
@@ -28217,10 +31590,16 @@
       } else {
         loadList(listState.apiPath || (IS_JUEJIN ? "/pins/recommended" : (IS_V2EX ? "/?tab=all" : "/latest.json")), false);
       }
-      const targetTopicId = topicIdFromPath(pathname);
+      const route = topicRouteFromPath(pathname);
+      const targetTopicId = route.topicId;
       if (targetTopicId) {
-        if (IS_JUEJIN ? (String(chatState.topicId) === String(targetTopicId) && chatState.loading) : (Number(chatState.topicId) === Number(targetTopicId) && chatState.loading)) {
-          // 当前话题正在加载中，避免重复触发 loadTopic 并打断请求
+        const isSameLoading = IS_JUEJIN
+          ? (String(chatState.topicId) === String(targetTopicId) && chatState.loading)
+          : (Number(chatState.topicId) === Number(targetTopicId) && chatState.loading);
+        const needPostJump = !IS_JUEJIN && !IS_V2EX && route.postNumber > 0 &&
+          route.postNumber !== Number(chatState.targetPostNumber || 0);
+        if (isSameLoading && !needPostJump) {
+          // 当前话题正在加载中且目标楼层未变，避免重复触发 loadTopic 并打断请求
         } else {
           loadTopic(targetTopicId);
         }
@@ -28240,6 +31619,8 @@
     scheduled = true;
     requestAnimationFrame(() => {
       scheduled = false;
+      setup403ErrorSuppression();
+      dismiss403ModalsIfAny();
       applyTheme();
     });
   }
@@ -28750,6 +32131,7 @@
       makeFavicon(); // document-start 尽早换标，减少未聚焦标签仍显示原 icon
       setupTitleGuard(); // document-start 守护标题为空白，彻底隐藏详情页标题
       setupWindowControlsOverlay();
+      setup403ErrorSuppression();
     }
 
     // 标签重新可见时再刷一次（部分浏览器未聚焦时会缓存旧 favicon 与 title，并实时刷新相对时间）
@@ -28825,9 +32207,11 @@
       });
       if (external) {
         removeLoadingSliderDom();
+        dismiss403ModalsIfAny();
         scheduleApply();
         scheduleSyncNewPosts();
       }
+      dismiss403ModalsIfAny();
       scheduleSyncChatBadge();
     });
     domMutationObserver = observer;
@@ -28838,6 +32222,13 @@
     for (const method of ["pushState", "replaceState"]) {
       const original = history[method];
       history[method] = function (...args) {
+        if (method === "replaceState" && !suppressHistoryApply && !IS_V2EX && !IS_JUEJIN) {
+          const nextRoute = topicRouteFromPath(args[2] || "");
+          if (nextRoute.topicId && isSameTopic(chatState.topicId, nextRoute.topicId) &&
+              (chatState.loading || chatState.pinnedPost || chatState.pinningScroll)) {
+            return;
+          }
+        }
         const result = original.apply(this, args);
         if (!suppressHistoryApply) scheduleApply();
         return result;

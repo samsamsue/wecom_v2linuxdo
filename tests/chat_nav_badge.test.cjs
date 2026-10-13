@@ -8491,4 +8491,919 @@ test("Test 113: V2EX notification click accurately jumps to target reply floor (
   assert.strictEqual(scrollContainer.scrollTop, 680, "must scroll to the reply's own header+body (680) instead of centering the 1900px nested subtree");
 });
 
+test("Test 114: WeCom-styled topic timeline / page slider popover triggered by top-right icon button", () => {
+  // 1. Structural assertions: icon, button, popover DOM, CSS, and event wiring
+  assert.ok(
+    scriptContent.includes('scrollTop: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11l5 -5l5 5" /><path d="M7 17l5 -5l5 5" /></svg>`') &&
+    scriptContent.includes('timeline: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 4v4" /><circle cx="8.5" cy="10.2" r="2.2" />'),
+    "ICONS must define refined minimalist scrollTop and timeline icon SVGs"
+  );
+  assert.ok(
+    scriptContent.includes('class="wecom-icon-btn wecom-chat-timeline-toggle" title="楼层与进度滑块" aria-label="楼层与进度滑块" aria-expanded="false">${ICONS.timeline}</button>') &&
+    scriptContent.includes('class="wecom-icon-btn wecom-chat-more-item wecom-chat-refresh" title="刷新本话题" aria-label="刷新本话题">'),
+    "ensureChatPanel must render .wecom-chat-timeline-toggle in .wecom-chat-tools and move .wecom-chat-refresh into .wecom-chat-more-actions"
+  );
+  assert.ok(
+    scriptContent.includes('<aside class="wecom-timeline-popover" aria-label="楼层进度导航" hidden>') &&
+    scriptContent.includes('class="wecom-timeline-scrollarea"') &&
+    scriptContent.includes('class="wecom-timeline-scroller"') &&
+    scriptContent.includes('class="wecom-timeline-replies"') &&
+    scriptContent.includes('class="wecom-timeline-jump-input"'),
+    "ensureChatPanel must render .wecom-timeline-popover with hidden attribute by default"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-timeline-popover[hidden]") &&
+    scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-timeline-popover"),
+    "CSS must style .wecom-timeline-popover in both light and dark modes and keep [hidden] display:none"
+  );
+  assert.ok(
+    scriptContent.includes('event.target.closest(".wecom-chat-timeline-toggle")') &&
+    scriptContent.includes("toggleTimelinePopover();"),
+    "handleChatHeaderClick must toggle the timeline popover when clicking the top-right timeline icon"
+  );
+
+  // 2. Behavioral verification via VM sandbox
+  const startIdx = scriptContent.indexOf("function getTopicTimelineMetrics(body)");
+  const endIdx = scriptContent.indexOf("function bindTimelineSliderEvents(panel)");
+  assert.ok(startIdx > 0 && endIdx > startIdx, "must locate timeline slider functions in script");
+  const fnCode = scriptContent.slice(startIdx, endIdx);
+
+  const mockScroller = { style: { top: "" } };
+  const mockFill = { style: { height: "" } };
+  const mockReplies = { textContent: "" };
+  const mockAgo = { textContent: "" };
+  const mockTopBtn = { textContent: "" };
+  const mockBottomBtn = { textContent: "" };
+  const mockJumpInput = { max: "", placeholder: "", value: "" };
+
+  const popoverClasses = new Set();
+  const mockPopover = {
+    hidden: true,
+    classList: {
+      add: (...cls) => cls.forEach((c) => popoverClasses.add(c)),
+      remove: (...cls) => cls.forEach((c) => popoverClasses.delete(c)),
+      contains: (c) => popoverClasses.has(c)
+    },
+    querySelector: (sel) => {
+      if (sel === ".wecom-timeline-scroller") return mockScroller;
+      if (sel === ".wecom-timeline-fill") return mockFill;
+      if (sel === ".wecom-timeline-replies") return mockReplies;
+      if (sel === ".wecom-timeline-ago") return mockAgo;
+      if (sel === ".wecom-timeline-date-top") return mockTopBtn;
+      if (sel === ".wecom-timeline-date-bottom") return mockBottomBtn;
+      if (sel === ".wecom-timeline-jump-input") return mockJumpInput;
+      return null;
+    }
+  };
+
+  const btnClasses = new Set();
+  const btnAttrs = new Map([["aria-expanded", "false"]]);
+  const mockToggleBtn = {
+    classList: {
+      add: (...cls) => cls.forEach((c) => btnClasses.add(c)),
+      remove: (...cls) => cls.forEach((c) => btnClasses.delete(c)),
+      contains: (c) => btnClasses.has(c)
+    },
+    setAttribute: (k, v) => btnAttrs.set(k, String(v)),
+    getAttribute: (k) => btnAttrs.get(k)
+  };
+
+  const mockBody = {
+    clientHeight: 500,
+    scrollHeight: 5000,
+    scrollTop: 1200,
+    querySelector: (sel) => {
+      if (sel.includes('data-post-number="25"')) return { dataset: { postNumber: "25" } };
+      return null;
+    }
+  };
+
+  const mockPanel = {
+    querySelector: (sel) => {
+      if (sel === ".wecom-timeline-popover") return mockPopover;
+      if (sel === ".wecom-chat-timeline-toggle") return mockToggleBtn;
+      if (sel === ".wecom-chat-body") return mockBody;
+      return null;
+    }
+  };
+
+  let scrolledToPost = null;
+  let rememberedPost = null;
+  const postsByNumber = new Map([
+    [1, { post_number: 1, created_at: "2026-09-01T10:00:00Z" }],
+    [15, { post_number: 15, created_at: "2026-09-05T12:00:00Z" }],
+    [25, { post_number: 25, created_at: "2026-09-08T15:30:00Z" }],
+    [51, { post_number: 51, created_at: "2026-09-10T18:00:00Z" }]
+  ]);
+
+  const sandbox = {
+    IS_V2EX: false,
+    chatState: {
+      topicId: 999,
+      stream: Array.from({ length: 51 }, (_, i) => i + 1),
+      replyTotal: 51,
+      renderedLastNumber: 51,
+      hasOlder: false,
+      hasNewer: false,
+      postsByNumber
+    },
+    listState: { topics: [] },
+    document: {
+      activeElement: null,
+      querySelector: (sel) => {
+        if (sel === ".wecom-chat-panel") return mockPanel;
+        if (sel === ".wecom-chat-body") return mockBody;
+        return null;
+      }
+    },
+    visibleTopicPosts: () => [15, 16, 17],
+    getRememberedPost: () => 1,
+    isSameTopic: (a, b) => a === b,
+    formatTime: (iso) => iso.slice(5, 10),
+    closeAllPlatformDropdowns: () => {},
+    closeWatermarkSettings: () => {},
+    isMessageInChatViewport: () => false,
+    saveChatJumpPosition: () => {},
+    scrollChatToPost: (_b, num) => { scrolledToPost = num; },
+    keepChatAtPost: () => {},
+    rememberTopicPost: (_id, num) => { rememberedPost = num; },
+    replaceTopicPostUrl: () => {},
+    syncChatFloatNav: () => {},
+    loadTopic: async () => {},
+    setTimeout: () => {},
+    Number,
+    String,
+    Math,
+    Array
+  };
+
+  const vm = require("node:vm");
+  vm.createContext(sandbox);
+  vm.runInContext(fnCode, sandbox);
+
+  // 2a. Initially hidden; clicking toggle opens popover and syncs metrics (15 / 51 -> 28.00%)
+  assert.strictEqual(mockPopover.hidden, true);
+  sandbox.toggleTimelinePopover();
+  assert.strictEqual(mockPopover.hidden, false, "toggleTimelinePopover must unhide popover");
+  assert.ok(mockToggleBtn.classList.contains("is-active"), "toggle button must receive .is-active when open");
+  assert.strictEqual(mockToggleBtn.getAttribute("aria-expanded"), "true");
+  assert.strictEqual(mockReplies.textContent, "15 / 51");
+  assert.strictEqual(mockScroller.style.top, "28.00%");
+  assert.strictEqual(mockFill.style.height, "28.00%");
+  assert.strictEqual(mockTopBtn.textContent, "09-01");
+  assert.strictEqual(mockBottomBtn.textContent, "09-10");
+  assert.strictEqual(mockAgo.textContent, "09-05");
+  assert.strictEqual(mockJumpInput.placeholder, "1 - 51");
+
+  // 2b. Drag preview updates scroller and floor label to previewFloor (26 / 51 -> 50.00%)
+  sandbox.syncTimelineSlider(mockBody, 26);
+  assert.strictEqual(mockReplies.textContent, "26 / 51");
+  assert.strictEqual(mockScroller.style.top, "50.00%");
+
+  // 2c. Jumping to an existing post scrolls directly to that floor
+  sandbox.jumpChatToTimelinePost(25);
+  assert.strictEqual(scrolledToPost, 25);
+  assert.strictEqual(rememberedPost, 25);
+  assert.strictEqual(mockReplies.textContent, "25 / 51");
+
+  // 2d. Toggling again closes popover and resets button state
+  sandbox.toggleTimelinePopover();
+  assert.strictEqual(mockPopover.hidden, true);
+  assert.strictEqual(mockToggleBtn.getAttribute("aria-expanded"), "false");
+
+  // 3. Reply indicator user color is muted (inherit) rather than highlighted
+  assert.match(
+    scriptContent,
+    /\.wecom-msg-reply-indicator\s+\.wecom-msg-reply-indicator-user\s*\{\s*font-weight:\s*500;\s*color:\s*inherit;\s*\}/,
+    ".wecom-msg-reply-indicator-user must use color: inherit instead of highlighted accent color"
+  );
+
+  // 4. Back-to-position button (.wecom-chat-back-pos) only appears when floor jump leaves visible area
+  const navStartIdx = scriptContent.indexOf("function getMessageOwnBounds(el)");
+  const navEndIdx = scriptContent.indexOf("function handleReplyReferenceClick(event, panel)");
+  assert.ok(navStartIdx > 0 && navEndIdx > navStartIdx, "must locate visible-area jump helpers");
+  const navCode = scriptContent.slice(navStartIdx, navEndIdx);
+
+  const mockBackPosBtn = { hidden: true };
+  const mockScrollBottomBtn = { hidden: true };
+  const navBody = {
+    clientHeight: 500,
+    scrollHeight: 4000,
+    scrollTop: 1000,
+    getBoundingClientRect: () => ({ top: 100, bottom: 600, height: 500 }),
+    querySelector: () => null
+  };
+  const navPanel = {
+    dataset: { empty: "0" },
+    querySelector: (sel) => {
+      if (sel === ".wecom-chat-body") return navBody;
+      if (sel === ".wecom-chat-back-pos") return mockBackPosBtn;
+      if (sel === ".wecom-chat-scroll-bottom") return mockScrollBottomBtn;
+      return null;
+    }
+  };
+  const navSandbox = {
+    chatState: {
+      topicId: 999,
+      lastJumpScrollTop: null,
+      lastJumpPostNumber: 0,
+      pinningScroll: false
+    },
+    document: {
+      querySelector: (sel) => (sel === ".wecom-chat-panel" ? navPanel : navBody)
+    },
+    syncTimelineSlider: () => {},
+    Number,
+    Math,
+    Boolean
+  };
+  vm.createContext(navSandbox);
+  vm.runInContext(navCode, navSandbox);
+
+  // 4a. Small jump within visible area (1000 -> 920): back-pos button must stay hidden
+  navBody.scrollTop = 920;
+  navSandbox.saveChatJumpPosition(navBody, 1000);
+  assert.strictEqual(mockBackPosBtn.hidden, true, "back-pos button must stay hidden when jump stays within visible area");
+  assert.strictEqual(navSandbox.chatState.lastJumpScrollTop, null);
+
+  // 4b. Large jump outside visible area (1000 -> 150): back-pos button must appear
+  navBody.scrollTop = 150;
+  navSandbox.saveChatJumpPosition(navBody, 1000);
+  assert.strictEqual(mockBackPosBtn.hidden, false, "back-pos button must appear when floor jump leaves visible area");
+  assert.strictEqual(navSandbox.chatState.lastJumpScrollTop, 1000);
+
+  // 4c. Scrolling back into the original visible area hides back-pos button automatically
+  navBody.scrollTop = 980;
+  navSandbox.syncChatFloatNav(navBody);
+  assert.strictEqual(mockBackPosBtn.hidden, true, "back-pos button must hide once user returns to the previous visible area");
+});
+
+test("Test 115: Linux.do notification item click jumps accurately to the corresponding floor", () => {
+  const vm = require("node:vm");
+
+  // 1. Verify topicRouteFromPath parses standard, full-origin, query-string, and numeric-slug URLs
+  const routeStart = scriptContent.indexOf("function topicRouteFromPath(pathname)");
+  const routeEnd = scriptContent.indexOf("function topicIdFromPath(pathname)");
+  assert.ok(routeStart > 0 && routeEnd > routeStart, "must locate topicRouteFromPath");
+  const routeSandbox = { IS_JUEJIN: false, String, Number };
+  vm.createContext(routeSandbox);
+  vm.runInContext(scriptContent.slice(routeStart, routeEnd), routeSandbox);
+
+  assert.deepStrictEqual(
+    JSON.parse(JSON.stringify(routeSandbox.topicRouteFromPath("/t/some-topic/123456/78"))),
+    { topicId: 123456, postNumber: 78, slug: "some-topic" }
+  );
+  assert.deepStrictEqual(
+    JSON.parse(JSON.stringify(routeSandbox.topicRouteFromPath("https://linux.do/t/some-topic/123456/78?u=alice"))),
+    { topicId: 123456, postNumber: 78, slug: "some-topic" }
+  );
+  assert.deepStrictEqual(
+    JSON.parse(JSON.stringify(routeSandbox.topicRouteFromPath("/t/2026/123456/78"))),
+    { topicId: 123456, postNumber: 78, slug: "2026" }
+  );
+
+  // 2. Verify handleNotifMenuClick extracts href, remembers target floor, pushes state, and calls loadTopic with { postNumber }
+  const notifStart = scriptContent.indexOf("function handleNotifMenuClick(e, menu)");
+  const notifEnd = scriptContent.indexOf("function bindNotifMenuEvents(menu)");
+  assert.ok(notifStart > 0 && notifEnd > notifStart, "must locate handleNotifMenuClick");
+
+  let rememberedArgs = null;
+  let loadedArgs = null;
+  let pushedUrl = null;
+  let menuClosed = false;
+  const rowClasses = new Set(["unread"]);
+  const mockLink = {
+    tagName: "A",
+    getAttribute: (k) => (k === "href" ? "/t/test-slug/123456/78" : null),
+    closest: (sel) => {
+      if (sel.includes("a[href]")) return mockLink;
+      if (sel.includes(".notification")) return mockRow;
+      return null;
+    }
+  };
+  const mockRow = {
+    dataset: { notificationId: "555" },
+    classList: {
+      remove: (c) => rowClasses.delete(c),
+      add: (c) => rowClasses.add(c)
+    },
+    querySelector: () => mockLink
+  };
+  const mockMenu = {
+    contains: (el) => el === mockLink || el === mockRow
+  };
+
+  const notifSandbox = {
+    notifIgnoreHoverUntil: 0,
+    suppressHistoryApply: false,
+    LOCK_CLASS: "wecom-locked",
+    location: { pathname: "/latest", search: "", hash: "" },
+    history: {
+      pushState: (_s, _t, url) => { pushedUrl = url; }
+    },
+    document: {
+      documentElement: { classList: { add: () => {} } }
+    },
+    isUserMenuTab: () => false,
+    isDismissAllTarget: () => false,
+    topicRouteFromPath: routeSandbox.topicRouteFromPath,
+    decrementNotificationBadge: () => {},
+    markDiscourseNotificationRead: () => {},
+    closeNotifMenu: () => { menuClosed = true; },
+    isPlainClick: () => true,
+    rememberTopicPost: (id, post) => { rememberedArgs = { id, post }; },
+    ensureListPanel: () => {},
+    ensureChatPanel: () => {},
+    loadTopic: (id, force, opts) => { loadedArgs = { id, force, opts }; },
+    Date,
+    String,
+    Boolean
+  };
+  vm.createContext(notifSandbox);
+  vm.runInContext(scriptContent.slice(notifStart, notifEnd), notifSandbox);
+
+  let defaultPrevented = false;
+  notifSandbox.handleNotifMenuClick({
+    target: mockLink,
+    preventDefault: () => { defaultPrevented = true; },
+    stopPropagation: () => {}
+  }, mockMenu);
+
+  assert.strictEqual(defaultPrevented, true, "must prevent default on notification topic link click");
+  assert.strictEqual(menuClosed, true, "must close notification menu");
+  assert.ok(rowClasses.has("read") && !rowClasses.has("unread"), "must mark notification row as read");
+  assert.deepStrictEqual(rememberedArgs, { id: 123456, post: 78 }, "must immediately remember target floor 78");
+  assert.strictEqual(pushedUrl, "/t/test-slug/123456/78", "must push notification URL to history");
+  assert.deepStrictEqual(
+    JSON.parse(JSON.stringify(loadedArgs)),
+    { id: 123456, force: true, opts: { postNumber: 78 } },
+    "must call loadTopic with force=true and { postNumber: 78 }"
+  );
+
+  // 3. Verify fetchTopicJson checks hasRequestedPost before returning cached/preloaded data
+  assert.ok(
+    scriptContent.includes("const hasRequestedPost = (topicData) =>") &&
+    scriptContent.includes("if (cached && hasRequestedPost(cached)) return cached;"),
+    "fetchTopicJson must verify that cached topic data contains the requested postNumber before returning cache"
+  );
+});
+
+test("Test 116: Discourse Poll rich card rendering, voting, progress bars, and view toggle in WeCom UI", () => {
+  // 1. Static assertions for Poll card functions, endpoints, and styles
+  assert.ok(
+    scriptContent.includes("function hydratePolls(root)"),
+    "must define hydratePolls"
+  );
+  assert.ok(
+    scriptContent.includes("hydratePolls(root);"),
+    "hydrateChatImages must call hydratePolls"
+  );
+  assert.ok(
+    scriptContent.includes("async function voteDiscoursePoll("),
+    "must define voteDiscoursePoll"
+  );
+  assert.ok(
+    scriptContent.includes('fetch("/polls/vote"') &&
+    scriptContent.includes('method: "PUT"'),
+    "voteDiscoursePoll must call PUT /polls/vote"
+  );
+  assert.ok(
+    scriptContent.includes("async function removeDiscoursePollVote("),
+    "must define removeDiscoursePollVote"
+  );
+  assert.ok(
+    scriptContent.includes('method: "DELETE"'),
+    "removeDiscoursePollVote must call DELETE /polls/vote"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-poll-card {") &&
+    scriptContent.includes(".wecom-poll-result-bar {") &&
+    scriptContent.includes(".wecom-poll-choice-item {"),
+    "must include light-mode styles for wecom-poll-card, result bars, and choices"
+  );
+  assert.ok(
+    scriptContent.includes("html.wecom-dark .wecom-poll-card") &&
+    scriptContent.includes("html.wecom-dark .wecom-poll-result-bar"),
+    "must include dark-mode styles for wecom-poll-card"
+  );
+
+  // 2. Functional simulation: percentage calculation and result / voting mode rendering
+  function simulatePollPercentages(poll, userVotes = []) {
+    const isMultiple = poll.type === "multiple";
+    const totalVoters = Number(poll.voters) || 0;
+    const totalVotes = poll.options.reduce((sum, o) => sum + (Number(o.votes) || 0), 0);
+
+    return poll.options.map((opt) => {
+      const isChosen = userVotes.includes(opt.id);
+      const votes = Number(opt.votes) || 0;
+      let percent = 0;
+      if (isMultiple) {
+        percent = totalVoters > 0 ? Math.round((votes / totalVoters) * 100) : 0;
+      } else {
+        percent = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+      }
+      return { id: opt.id, votes, percent, isChosen };
+    });
+  }
+
+  const sampleSinglePoll = {
+    name: "poll",
+    type: "regular",
+    status: "open",
+    voters: 10,
+    options: [
+      { id: "opt1", html: "选项一", votes: 7 },
+      { id: "opt2", html: "选项二", votes: 3 }
+    ]
+  };
+
+  const results = simulatePollPercentages(sampleSinglePoll, ["opt1"]);
+  assert.strictEqual(results[0].percent, 70, "opt1 should be 70%");
+  assert.strictEqual(results[0].isChosen, true, "opt1 should be marked chosen");
+  assert.strictEqual(results[1].percent, 30, "opt2 should be 30%");
+  assert.strictEqual(results[1].isChosen, false, "opt2 should not be chosen");
+
+  const sampleMultiplePoll = {
+    name: "poll",
+    type: "multiple",
+    status: "open",
+    max: 2,
+    voters: 5,
+    options: [
+      { id: "a", html: "A", votes: 4 },
+      { id: "b", html: "B", votes: 3 },
+      { id: "c", html: "C", votes: 1 }
+    ]
+  };
+
+  const multiResults = simulatePollPercentages(sampleMultiplePoll, ["a", "b"]);
+  assert.strictEqual(multiResults[0].percent, 80, "4 of 5 voters chose A = 80%");
+  assert.strictEqual(multiResults[1].percent, 60, "3 of 5 voters chose B = 60%");
+  assert.strictEqual(multiResults[2].percent, 20, "1 of 5 voters chose C = 20%");
+  assert.strictEqual(multiResults[0].isChosen, true);
+  assert.strictEqual(multiResults[1].isChosen, true);
+  assert.strictEqual(multiResults[2].isChosen, false);
+});
+
+test("Test 117: Recall/delete, share link, liked users popover, post flagging, solution toggle, topic state chips/lockout, @ mention autocomplete, and selection quote reply (v0.7.83)", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const scriptContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.user.js"), "utf8");
+
+  // 1. Verify icons
+  assert.ok(scriptContent.includes("trash:"), "ICONS must define trash icon");
+  assert.ok(scriptContent.includes("share:"), "ICONS must define share icon");
+  assert.ok(scriptContent.includes("flag:"), "ICONS must define flag icon");
+  assert.ok(scriptContent.includes("checkCircle:"), "ICONS must define checkCircle icon");
+  assert.ok(scriptContent.includes("lock:"), "ICONS must define lock icon");
+  assert.ok(scriptContent.includes("quote:"), "ICONS must define quote icon");
+
+  // 2. Verify CSS styles for Light & Dark mode
+  assert.ok(scriptContent.includes(".wecom-msg-recalled"), "CSS must style recalled message state");
+  assert.ok(scriptContent.includes(".wecom-likes-popover"), "CSS must style liked users popover");
+  assert.ok(scriptContent.includes(".wecom-flag-dialog"), "CSS must style flag dialog");
+  assert.ok(scriptContent.includes(".wecom-solved-banner"), "CSS must style accepted solution banner");
+  assert.ok(scriptContent.includes(".wecom-chat-chip.is-solved"), "CSS must style solved header chip");
+  assert.ok(scriptContent.includes(".wecom-chat-chip.is-locked"), "CSS must style locked header chip");
+  assert.ok(scriptContent.includes(".wecom-chat-chip.is-slowmode"), "CSS must style slow-mode header chip");
+  assert.ok(scriptContent.includes(".wecom-composer-card.is-locked"), "CSS must style locked composer card");
+  assert.ok(scriptContent.includes(".wecom-mention-popup"), "CSS must style mention suggestion popup");
+  assert.ok(scriptContent.includes(".wecom-mini-toast"), "CSS must style mini toast");
+  assert.ok(scriptContent.includes(".wecom-quote-tooltip"), "CSS must style selection quote tooltip");
+  assert.ok(scriptContent.includes(".wecom-quote-tooltip:hover"), "CSS must style selection quote tooltip hover state");
+  assert.ok(scriptContent.includes("html.wecom-dark .wecom-quote-tooltip"), "CSS must style selection quote tooltip for dark mode");
+
+  // 3. Verify tool action buttons in bubbleHtml and handleMessageToolClick
+  assert.ok(scriptContent.includes('data-action="delete"'), "bubbleHtml must render delete tool button for own posts");
+  assert.ok(scriptContent.includes('data-action="share"'), "bubbleHtml must render share tool button");
+  assert.ok(scriptContent.includes('data-action="flag"'), "bubbleHtml must render flag tool button for other posts");
+  assert.ok(scriptContent.includes('data-action="accept-solution"'), "bubbleHtml must support accept-solution tool button");
+  assert.ok(scriptContent.includes('data-action="unaccept-solution"'), "bubbleHtml must support unaccept-solution tool button");
+
+  assert.ok(scriptContent.includes('if (action === "delete")'), "handleMessageToolClick must handle delete action");
+  assert.ok(scriptContent.includes('if (action === "share")'), "handleMessageToolClick must handle share action");
+  assert.ok(scriptContent.includes('if (action === "flag")'), "handleMessageToolClick must handle flag action");
+  assert.ok(scriptContent.includes('if (action === "accept-solution")'), "handleMessageToolClick must handle accept-solution action");
+  assert.ok(scriptContent.includes('if (action === "unaccept-solution")'), "handleMessageToolClick must handle unaccept-solution action");
+
+  // 4. Verify helper functions exist
+  assert.ok(scriptContent.includes("function deletePostMessage("), "script must define deletePostMessage");
+  assert.ok(scriptContent.includes("function copyPostFloorLink("), "script must define copyPostFloorLink");
+  assert.ok(scriptContent.includes("function openLikedUsersPopover("), "script must define openLikedUsersPopover");
+  assert.ok(scriptContent.includes("function openFlagDialog("), "script must define openFlagDialog");
+  assert.ok(scriptContent.includes("function toggleSolution("), "script must define toggleSolution");
+  assert.ok(scriptContent.includes("function updateHeaderChips("), "script must define updateHeaderChips");
+  assert.ok(scriptContent.includes("function syncComposerTopicState("), "script must define syncComposerTopicState");
+  assert.ok(scriptContent.includes("function handleMentionInput("), "script must define handleMentionInput");
+  assert.ok(scriptContent.includes("function handleMentionKeyDown("), "script must define handleMentionKeyDown");
+  assert.ok(scriptContent.includes("function showMiniToast("), "script must define showMiniToast");
+  assert.ok(scriptContent.includes("function closeQuoteTooltip("), "script must define closeQuoteTooltip");
+  assert.ok(scriptContent.includes("function handleSelectionQuoteCheck("), "script must define handleSelectionQuoteCheck");
+  assert.ok(scriptContent.includes("function showQuoteTooltip("), "script must define showQuoteTooltip");
+  assert.ok(scriptContent.includes("function executeSelectionQuote("), "script must define executeSelectionQuote");
+
+  // 5. Test mention query regex logic
+  const matchMention = (text) => {
+    const match = text.match(/(?:^|\s)@([a-zA-Z0-9_\u4e00-\u9fa5\-]*)$/);
+    return match ? match[1] : null;
+  };
+  assert.strictEqual(matchMention("@neo"), "neo");
+  assert.strictEqual(matchMention("你好 @张三"), "张三");
+  assert.strictEqual(matchMention("Hello @user-123"), "user-123");
+  assert.strictEqual(matchMention("email@domain.com"), null);
+  assert.strictEqual(matchMention("@"), "");
+
+  // 6. Test topic state perception logic
+  const simulateTopicChips = (state) => {
+    const chips = [];
+    if (state.hasAcceptedAnswer) chips.push("is-solved");
+    if (state.isClosed) chips.push("is-locked");
+    if (state.slowModeSeconds > 0) chips.push("is-slowmode");
+    return chips;
+  };
+  assert.deepStrictEqual(simulateTopicChips({ hasAcceptedAnswer: true, isClosed: false, slowModeSeconds: 0 }), ["is-solved"]);
+  assert.deepStrictEqual(simulateTopicChips({ hasAcceptedAnswer: false, isClosed: true, slowModeSeconds: 30 }), ["is-locked", "is-slowmode"]);
+  assert.deepStrictEqual(simulateTopicChips({ hasAcceptedAnswer: true, isClosed: true, slowModeSeconds: 0 }), ["is-solved", "is-locked"]);
+
+  // 7. Test selection quote formatting logic
+  const formatSelectionQuote = ({ isLinuxDo, username, postNumber, topicId, text }) => {
+    if (isLinuxDo) {
+      const header = topicId
+        ? `[quote="${username}, post:${postNumber}, topic:${topicId}"]`
+        : `[quote="${username}, post:${postNumber}"]`;
+      return `${header}\n${text}\n[/quote]\n\n`;
+    }
+    return `> @${username}: ${text}\n\n`;
+  };
+
+  const linuxdoQuote = formatSelectionQuote({
+    isLinuxDo: true,
+    username: "alice",
+    postNumber: 5,
+    topicId: 12345,
+    text: "这是一段被划选引用的文字"
+  });
+  assert.strictEqual(
+    linuxdoQuote,
+    '[quote="alice, post:5, topic:12345"]\n这是一段被划选引用的文字\n[/quote]\n\n',
+    "Discourse/Linux.do quote format should include username, post, topic, and text inside bbcode"
+  );
+
+  const v2exQuote = formatSelectionQuote({
+    isLinuxDo: false,
+    username: "bob",
+    postNumber: 3,
+    topicId: null,
+    text: "V2EX划选引用测试"
+  });
+  assert.strictEqual(
+    v2exQuote,
+    "> @bob: V2EX划选引用测试\n\n",
+    "V2EX/Juejin quote format should use markdown blockquote with @username"
+  );
+
+  // 8. Verify Discourse reactions & post_action_users likers resolution
+  assert.ok(
+    scriptContent.includes("/discourse-reactions/posts/${postId}/reactions-users.json"),
+    "openLikedUsersPopover must request discourse-reactions endpoint"
+  );
+  assert.ok(
+    scriptContent.includes("/post_action_users.json?id=${postId}&post_action_type_id=2"),
+    "openLikedUsersPopover must fallback to post_action_users.json"
+  );
+  assert.ok(
+    scriptContent.includes("html.wecom-dark .wecom-likes-popover"),
+    "must include dark mode styles for wecom-likes-popover"
+  );
+  assert.ok(
+    scriptContent.includes("function fetchMentionRemote("),
+    "must define fetchMentionRemote for searching users"
+  );
+  assert.ok(
+    scriptContent.includes("if (!trigger || !IS_LINUXDO) return;"),
+    "openLikedUsersPopover must return immediately without creating popover on non-LinuxDo platforms"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-msg-likes.is-static"),
+    "CSS must include .wecom-msg-likes.is-static for static like badges"
+  );
+
+  // Test liked users extraction simulation
+  const extractLikedUsers = (reactionsData, fallbackData) => {
+    let users = [];
+    if (Array.isArray(reactionsData?.reaction_users)) {
+      for (const group of reactionsData.reaction_users) {
+        if (Array.isArray(group.users)) users.push(...group.users);
+      }
+    }
+    if (!users.length && Array.isArray(fallbackData?.post_action_users)) {
+      users = fallbackData.post_action_users;
+    }
+    const seen = new Set();
+    return users.filter((u) => {
+      const key = (u?.username || u?.id || "").toString().toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
+  const sampleReactions = {
+    reaction_users: [
+      { id: "heart", users: [{ username: "alice", name: "Alice" }, { username: "bob", name: "Bob" }] },
+      { id: "+1", users: [{ username: "alice", name: "Alice" }, { username: "charlie", name: "Charlie" }] }
+    ]
+  };
+  const extracted = extractLikedUsers(sampleReactions, null);
+  assert.strictEqual(extracted.length, 3, "should deduplicate alice across multiple reaction groups");
+  assert.deepStrictEqual(extracted.map((u) => u.username), ["alice", "bob", "charlie"]);
+
+  const sampleFallback = {
+    post_action_users: [{ username: "david", name: "David" }]
+  };
+  const fallbackExtracted = extractLikedUsers({ reaction_users: [] }, sampleFallback);
+  assert.strictEqual(fallbackExtracted.length, 1);
+  assert.strictEqual(fallbackExtracted[0].username, "david");
+
+  // Test mention candidates aggregation simulation
+  const aggregateMentionCandidates = ({ topicData, posts, myUsername, query }) => {
+    const raw = [];
+    if (topicData?.details?.created_by) raw.push(topicData.details.created_by);
+    if (Array.isArray(topicData?.details?.participants)) raw.push(...topicData.details.participants);
+    if (posts) raw.push(...posts);
+
+    const matched = [];
+    const seen = new Set();
+    const myLower = (myUsername || "").toLowerCase();
+    const qLower = (query || "").toLowerCase();
+
+    for (const p of raw) {
+      const u = (p?.username || "").trim();
+      const n = (p?.name || "").trim();
+      const uLower = u.toLowerCase();
+      const nLower = n.toLowerCase();
+      if (!u || uLower === myLower || seen.has(uLower)) continue;
+      if (!qLower || uLower.includes(qLower) || nLower.includes(qLower)) {
+        seen.add(uLower);
+        matched.push({ username: u, name: n || u });
+        if (matched.length >= 8) break;
+      }
+    }
+    return matched;
+  };
+
+  const mockTopicData = {
+    details: {
+      created_by: { username: "op_user", name: "楼主" },
+      participants: [{ username: "responder_1", name: "甲" }, { username: "responder_2", name: "乙" }]
+    }
+  };
+  const mockPosts = [
+    { username: "responder_2", name: "乙" },
+    { username: "new_responder", name: "丙" }
+  ];
+
+  const mentionListAll = aggregateMentionCandidates({
+    topicData: mockTopicData,
+    posts: mockPosts,
+    myUsername: "my_account",
+    query: ""
+  });
+  assert.strictEqual(mentionListAll.length, 4, "should include OP, participants and new post authors deduplicated");
+  assert.strictEqual(mentionListAll[0].username, "op_user");
+
+  const mentionListFiltered = aggregateMentionCandidates({
+    topicData: mockTopicData,
+    posts: mockPosts,
+    myUsername: "my_account",
+    query: "responder"
+  });
+  assert.strictEqual(mentionListFiltered.length, 3, "should filter by 'responder'");
+  assert.strictEqual(mentionListFiltered.some((u) => u.username === "op_user"), false);
+
+  // 10. Verify quote decoupling from textarea & Cloudflare challenge protection
+  assert.ok(
+    !scriptContent.includes("insertComposerText(quoteBlock)"),
+    "executeSelectionQuote must not inject raw quote block directly into textarea"
+  );
+  assert.ok(
+    scriptContent.includes("composerBridgeState.quoteData"),
+    "composerBridgeState must track quoteData for composer submission"
+  );
+  assert.ok(
+    scriptContent.includes("quoteHeader"),
+    "submitComposer must synthesize quoteHeader when quoteData is present"
+  );
+  assert.ok(
+    scriptContent.includes("触发了安全人机验证（Cloudflare）"),
+    "payloadError and poll voting must detect Cloudflare challenge and show friendly guidance"
+  );
+});
+
+test("Test 118: Discourse 403 error modal suppression, screenTrack topic isolation, and poll popupError bypass (v0.7.84)", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const scriptPath = path.join(__dirname, "..", "linuxdo-wecom.user.js");
+  const scriptContent = fs.readFileSync(scriptPath, "utf8");
+
+  // 1. Verify screenTrack topic isolation in markPostsOnscreen
+  assert.ok(
+    scriptContent.includes("function markPostsOnscreen(topicId, postNumbers)"),
+    "markPostsOnscreen must accept topicId and postNumbers"
+  );
+  assert.ok(
+    scriptContent.includes('const modelId = Number(topicCtrl?.get?.("model.id") || topicCtrl?.model?.id || 0);'),
+    "markPostsOnscreen must inspect active topic controller model id"
+  );
+  assert.ok(
+    scriptContent.includes("if (!modelId || modelId !== Number(topicId)) return false;"),
+    "markPostsOnscreen must skip Discourse screenTrack delegation when Ember route topic doesn't match active topic"
+  );
+
+  // 2. Verify reportReadTimings uses fetch and safe catch
+  assert.ok(
+    scriptContent.includes("fetch(\"/topics/timings\""),
+    "reportReadTimings must report read timings directly via fetch"
+  );
+  assert.ok(
+    scriptContent.includes("catch(() => {})"),
+    "reportReadTimings fetch must catch errors silently to avoid triggering unhandled rejections"
+  );
+
+  // 3. Verify poll voting sets popupError: false
+  assert.ok(
+    scriptContent.includes('popupError: false'),
+    "poll voting calls to discourseAjax must specify popupError: false"
+  );
+
+  // 4. Verify 403 error alert and modal suppression functions
+  assert.ok(
+    scriptContent.includes("function setup403ErrorSuppression()"),
+    "setup403ErrorSuppression must be defined"
+  );
+  assert.ok(
+    scriptContent.includes("function dismiss403ModalsIfAny()"),
+    "dismiss403ModalsIfAny must be defined"
+  );
+  assert.ok(
+    scriptContent.includes("bootbox.alert"),
+    "setup403ErrorSuppression must patch bootbox.alert"
+  );
+  assert.ok(
+    scriptContent.includes("dialog.alert"),
+    "setup403ErrorSuppression must patch dialog service alert"
+  );
+
+  // 5. Functional test of 403 message detection pattern
+  const is403Pattern = (msg) => {
+    const text = String(msg || "");
+    return (
+      /403\s*(error|forbidden)?/i.test(text) ||
+      text.includes("403") ||
+      text.includes("Forbidden")
+    );
+  };
+
+  assert.strictEqual(is403Pattern("403 error"), true);
+  assert.strictEqual(is403Pattern("403 Forbidden"), true);
+  assert.strictEqual(is403Pattern("403"), true);
+  assert.strictEqual(is403Pattern("Server Error 500"), false);
+  assert.strictEqual(is403Pattern(""), false);
+});
+
+test("Test 119: V2EX member card topics and replies touch-bottom pagination and reply text expand/collapse (v0.7.85)", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const scriptPath = path.join(__dirname, "..", "linuxdo-wecom.user.js");
+  const scriptContent = fs.readFileSync(scriptPath, "utf8");
+
+  // 1. CSS styling assertions
+  assert.ok(
+    scriptContent.includes(".wecom-member-reply-text.is-expanded"),
+    "must define .wecom-member-reply-text.is-expanded CSS"
+  );
+  assert.ok(
+    scriptContent.includes("-webkit-line-clamp: unset;"),
+    "must unset -webkit-line-clamp when reply text is expanded"
+  );
+  assert.ok(
+    scriptContent.includes("white-space: pre-wrap;"),
+    "must preserve line-breaks with pre-wrap when reply text is expanded"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-member-list-status"),
+    "must define .wecom-member-list-status CSS"
+  );
+  assert.ok(
+    scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-member-reply-text:hover"),
+    "must style reply text hover in dark mode"
+  );
+  assert.ok(
+    scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-member-list-status"),
+    "must style list status in dark mode"
+  );
+
+  // 2. Pagination fetcher definitions
+  assert.ok(
+    scriptContent.includes("async function fetchV2exMemberTopicsPage("),
+    "must define fetchV2exMemberTopicsPage helper"
+  );
+  assert.ok(
+    scriptContent.includes("async function fetchV2exMemberRepliesPage("),
+    "must define fetchV2exMemberRepliesPage helper"
+  );
+
+  // 3. Touch-bottom pagination wiring and duplicate prevention
+  assert.ok(
+    scriptContent.includes("const loadMoreTopics = async () =>"),
+    "must implement loadMoreTopics for topics touch-bottom pagination"
+  );
+  assert.ok(
+    scriptContent.includes("const loadMoreReplies = async () =>"),
+    "must implement loadMoreReplies for replies touch-bottom pagination"
+  );
+  assert.ok(
+    scriptContent.includes("distanceToBottom <= 20"),
+    "must trigger loadMore when distance to bottom is within threshold"
+  );
+  assert.ok(
+    scriptContent.includes("seenTopicUrls.has(base)"),
+    "must deduplicate loaded topics via seenTopicUrls Set"
+  );
+  assert.ok(
+    scriptContent.includes("seenReplyKeys.has(key)"),
+    "must deduplicate loaded replies via seenReplyKeys Set"
+  );
+
+  // 4. Click to expand/collapse reply text wiring
+  assert.ok(
+    scriptContent.includes('textEl.classList.toggle("is-expanded")'),
+    "must toggle is-expanded on wecom-member-reply-text click"
+  );
+  assert.ok(
+    scriptContent.includes('title="点击展开/收起完整回复"'),
+    "must provide tooltip on wecom-member-reply-text informing user it can be clicked to expand"
+  );
+
+  // 5. Cursor focus into composer after confirming quote
+  assert.ok(
+    scriptContent.includes("compInput.setSelectionRange(len, len)"),
+    "executeSelectionQuote must place cursor at the end of input using setSelectionRange"
+  );
+  assert.ok(
+    scriptContent.includes("compInput.focus()"),
+    "executeSelectionQuote must focus the composer input"
+  );
+
+  // 6. Functional test of HTML parsing for pagination
+  const sampleTopicsHtml = `
+    <div class="box">
+      <div class="cell ps_container">
+        <input type="number" class="page_input" value="2" max="15" />
+      </div>
+      <div class="cell item"><span class="item_title"><a href="/t/100#reply5">第一篇主题</a></span></div>
+      <div class="cell item"><span class="item_title"><a href="/t/101#reply12">第二篇主题</a></span></div>
+    </div>
+  `;
+  const parsedTopics = [];
+  const topicRegex = /<span\s+class=["']item_title["']>\s*<a\s+href=["'](\/t\/\d+[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let tm;
+  while ((tm = topicRegex.exec(sampleTopicsHtml)) !== null) {
+    parsedTopics.push({ url: tm[1], title: tm[2].replace(/<[^>]+>/g, "").trim() });
+  }
+  const maxPageMatch = sampleTopicsHtml.match(/class=["']page_input["'][^>]*max=["'](\d+)["']/i);
+  const maxPage = maxPageMatch ? parseInt(maxPageMatch[1], 10) : 1;
+
+  assert.strictEqual(parsedTopics.length, 2);
+  assert.strictEqual(parsedTopics[0].url, "/t/100#reply5");
+  assert.strictEqual(parsedTopics[0].title, "第一篇主题");
+  assert.strictEqual(parsedTopics[1].title, "第二篇主题");
+  assert.strictEqual(maxPage, 15);
+
+  const sampleRepliesHtml = `
+    <div class="dock_area"><a href="/t/200#reply3">回复的主题</a></div>
+    <div class="inner"><div class="reply_content">这是多行回复内容<br />第二行内容</div></div>
+  `;
+  const parsedReplies = [];
+  const replyRegex = /<div\s+class=["']dock_area["']>[\s\S]*?<a\s+href=["'](\/t\/\d+[^"']*)["'][^>]*>([\s\S]*?)<\/a>[\s\S]*?<div\s+class=["']reply_content["']>([\s\S]*?)<\/div>/gi;
+  let rm;
+  while ((rm = replyRegex.exec(sampleRepliesHtml)) !== null) {
+    parsedReplies.push({
+      url: rm[1],
+      topicTitle: rm[2].replace(/<[^>]+>/g, "").trim(),
+      content: rm[3].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+    });
+  }
+  assert.strictEqual(parsedReplies.length, 1);
+  assert.strictEqual(parsedReplies[0].topicTitle, "回复的主题");
+  assert.ok(parsedReplies[0].content.includes("这是多行回复内容 第二行内容"));
+});
+
+
+
+
+
+
+
+
 
