@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.81
+// @version      0.7.82
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -215,6 +215,8 @@
     appsGrid: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5" /><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5" /><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5" /><line x1="14" y1="15.5" x2="20" y2="15.5" /><line x1="14" y1="19" x2="20" y2="19" /></svg>`,
     historySearch: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19v-11a3 3 0 0 1 3 -3h10a3 3 0 0 1 3 3v4" /><path d="M4 19l3 -2h4" /><circle cx="8" cy="11" r=".6" fill="currentColor" /><circle cx="12" cy="11" r=".6" fill="currentColor" /><circle cx="16" cy="11" r=".6" fill="currentColor" /><circle cx="15.5" cy="15.5" r="3" /><line x1="17.8" y1="17.8" x2="20.5" y2="20.5" /></svg>`,
     scrollTop: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6" /><path d="M6 12l6-6 6 6" /><path d="M4 3h16" /></svg>`,
+    scrollBottom: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v13" /><path d="M18 12l-6 6-6-6" /></svg>`,
+    backPos: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4 -4l4 -4" /><path d="M5 10h11a4 4 0 1 1 0 8h-1" /></svg>`,
     platformSwitch: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16m-4 -4l4 4l-4 4" /><path d="M20 15h-16m4 -4l-4 4l4 4" /></svg>`,
     winMin: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"><line x1="1.5" y1="6" x2="10.5" y2="6" /></svg>`,
     winMax: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="1.5" y="1.5" width="9" height="9" rx="1.5" /></svg>`,
@@ -3401,6 +3403,15 @@
     }
     .wecom-msg.is-reply-target > .wecom-msg-content > .wecom-msg-bubble {
       outline: 2px solid var(--wc-accent); outline-offset: 3px;
+    }
+    .wecom-reply-children .wecom-msg.is-reply-target {
+      background: rgba(26, 135, 255, 0.10);
+      border-radius: 6px;
+      outline: 2px solid var(--wc-accent);
+      outline-offset: 2px;
+    }
+    .wecom-reply-children .wecom-msg.is-reply-target > .wecom-msg-content > .wecom-msg-bubble {
+      outline: none;
     }
     /* 对话楼层关系（气泡内层级嵌套、小头像与防冒泡连续引导线） */
     .wecom-thread-node {
@@ -7730,7 +7741,7 @@
       position: absolute;
       top: calc(100% + 6px);
       right: 0;
-      min-width: 220px;
+      min-width: 224px;
       background: var(--wc-surface-0, #FFFFFF);
       border-radius: 8px;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.06);
@@ -7744,6 +7755,68 @@
     }
     .wecom-platform-dropdown[hidden] {
       display: none !important;
+    }
+    .wecom-chat-more-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .wecom-chat-tools .wecom-platform-dropdown .wecom-chat-more-item,
+    .wecom-platform-dropdown .wecom-chat-more-item {
+      width: 100% !important;
+      height: 34px !important;
+      padding: 0 10px !important;
+      border-radius: 6px !important;
+      border: none !important;
+      background: transparent !important;
+      color: var(--wc-text, #1F2329) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: flex-start !important;
+      gap: 10px !important;
+      font-size: 13px !important;
+      font-weight: 500 !important;
+      cursor: pointer !important;
+      transition: background 0.15s ease, color 0.15s ease !important;
+      box-sizing: border-box !important;
+      text-align: left !important;
+    }
+    .wecom-chat-tools .wecom-platform-dropdown .wecom-chat-more-item:hover,
+    .wecom-platform-dropdown .wecom-chat-more-item:hover {
+      background: rgba(0, 0, 0, 0.04) !important;
+      color: var(--wc-blue, #267EF0) !important;
+    }
+    .wecom-chat-tools .wecom-platform-dropdown .wecom-chat-more-item.is-active,
+    .wecom-chat-tools .wecom-platform-dropdown .wecom-chat-more-item.active,
+    .wecom-chat-tools .wecom-platform-dropdown .wecom-chat-more-item.is-bookmarked,
+    .wecom-chat-tools .wecom-platform-dropdown .wecom-chat-more-item.is-on {
+      background: rgba(38, 126, 240, 0.08) !important;
+      color: var(--wc-blue, #267EF0) !important;
+    }
+    .wecom-chat-more-icon {
+      width: 18px;
+      height: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: inherit;
+    }
+    .wecom-chat-more-icon svg {
+      width: 17px !important;
+      height: 17px !important;
+    }
+    .wecom-chat-more-label {
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .wecom-chat-more-divider {
+      height: 1px;
+      background: rgba(0, 0, 0, 0.06);
+      margin: 4px 6px;
     }
     .wecom-platform-dropdown-title {
       font-size: 11px;
@@ -7817,6 +7890,25 @@
       background: #23272E;
       border-color: rgba(255, 255, 255, 0.12);
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-tools .wecom-platform-dropdown .wecom-chat-more-item,
+    html.${ROOT_CLASS}.wecom-dark .wecom-platform-dropdown .wecom-chat-more-item {
+      color: #E6EDF5 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-tools .wecom-platform-dropdown .wecom-chat-more-item:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-platform-dropdown .wecom-chat-more-item:hover {
+      background: rgba(255, 255, 255, 0.06) !important;
+      color: #5BA2FF !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-tools .wecom-platform-dropdown .wecom-chat-more-item.is-active,
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-tools .wecom-platform-dropdown .wecom-chat-more-item.active,
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-tools .wecom-platform-dropdown .wecom-chat-more-item.is-bookmarked,
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-tools .wecom-platform-dropdown .wecom-chat-more-item.is-on {
+      background: rgba(38, 126, 240, 0.22) !important;
+      color: #5BA2FF !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-more-divider {
+      background: rgba(255, 255, 255, 0.08);
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-platform-dropdown-title {
       color: #7D8899;
@@ -8436,6 +8528,120 @@
       width: 14px;
       height: 14px;
       stroke: currentColor;
+    }
+
+    /* 聊天消息区底部居中悬浮导航按钮组（回到上次位置 / 一键滚到底部） */
+    .wecom-chat-float-nav {
+      position: relative;
+      width: 100%;
+      height: 0;
+      flex: 0 0 0;
+      overflow: visible;
+      z-index: 35;
+      pointer-events: none;
+    }
+    .wecom-chat-panel[data-empty="1"] .wecom-chat-float-nav {
+      display: none !important;
+    }
+    .wecom-chat-float-nav-stack {
+      position: absolute;
+      left: 50%;
+      right: auto;
+      transform: translateX(-50%);
+      bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .wecom-chat-back-pos,
+    .wecom-chat-scroll-bottom {
+      pointer-events: auto;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      background: rgba(255, 255, 255, 0.38);
+      color: rgba(31, 35, 41, 0.62);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06), inset 0 0 0 0.5px rgba(255, 255, 255, 0.55);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.82;
+      transition: all 180ms ease;
+      backdrop-filter: blur(8px) saturate(140%);
+      -webkit-backdrop-filter: blur(8px) saturate(140%);
+      user-select: none;
+      padding: 0;
+      margin: 0;
+      box-sizing: border-box;
+    }
+    .wecom-chat-back-pos[hidden],
+    .wecom-chat-scroll-bottom[hidden] {
+      display: none !important;
+    }
+    .wecom-chat-back-pos {
+      height: 30px;
+      padding: 0 11px;
+      border-radius: 15px;
+      font-size: 12px;
+      font-weight: 500;
+      gap: 4px;
+      white-space: nowrap;
+    }
+    .wecom-chat-back-pos svg {
+      width: 13px;
+      height: 13px;
+      flex-shrink: 0;
+    }
+    .wecom-chat-scroll-bottom {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+    }
+    .wecom-chat-scroll-bottom svg {
+      width: 17px;
+      height: 17px;
+      flex-shrink: 0;
+    }
+    .wecom-chat-back-pos:hover,
+    .wecom-chat-scroll-bottom:hover {
+      opacity: 1;
+      background: rgba(255, 255, 255, 0.68);
+      border-color: rgba(0, 0, 0, 0.14);
+      color: rgba(31, 35, 41, 0.92);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.10), inset 0 0 0 0.5px rgba(255, 255, 255, 0.75);
+      transform: scale(1.06);
+    }
+    .wecom-chat-back-pos:active,
+    .wecom-chat-scroll-bottom:active {
+      transform: scale(0.96);
+    }
+    .wecom-floor-link {
+      color: var(--wc-blue, #267EF0);
+      text-decoration: none;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 0 2px;
+      border-radius: 3px;
+      transition: background 0.15s ease;
+    }
+    .wecom-floor-link:hover {
+      background: rgba(38, 126, 240, 0.10);
+      text-decoration: underline;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-back-pos,
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-scroll-bottom {
+      background: rgba(0, 0, 0, 0.36);
+      border-color: rgba(255, 255, 255, 0.22);
+      color: rgba(255, 255, 255, 0.75);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-back-pos:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-scroll-bottom:hover {
+      background: rgba(255, 255, 255, 0.22);
+      border-color: rgba(255, 255, 255, 0.48);
+      color: #FFFFFF;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.42);
     }
 
     /* ==========================================================================
@@ -11816,9 +12022,12 @@
     const chatAvatarToggleBtn = document.querySelector(".wecom-chat-avatar-toggle");
     if (chatAvatarToggleBtn) {
       const hidden = isHideChatAvatar();
+      const labelText = hidden ? "显示对话头像" : "隐藏对话头像";
       chatAvatarToggleBtn.classList.toggle("is-active", hidden);
       chatAvatarToggleBtn.setAttribute("aria-pressed", hidden ? "true" : "false");
-      chatAvatarToggleBtn.title = hidden ? "显示对话头像" : "隐藏对话头像";
+      chatAvatarToggleBtn.title = labelText;
+      const labelEl = chatAvatarToggleBtn.querySelector(".wecom-chat-more-label");
+      if (labelEl) labelEl.textContent = labelText;
     }
 
     const boostBtn = menu.querySelector(".wecom-menu-toggle-boost");
@@ -12198,7 +12407,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.81";
+  const SCRIPT_VERSION = "0.7.82";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -18706,7 +18915,11 @@
         if (conv.dataset.targetFloor) target.floor = Number(conv.dataset.targetFloor);
         if (conv.dataset.targetReplyId) target.replyId = Number(conv.dataset.targetReplyId);
         if (conv.dataset.targetPage) target.page = Number(conv.dataset.targetPage);
-        if (IS_V2EX && !target.floor && !target.replyId && !target.anchor) {
+        if (conv.dataset.targetAuthor) target.author = conv.dataset.targetAuthor;
+        if (conv.dataset.targetPayload) target.payload = conv.dataset.targetPayload;
+        if (conv.dataset.targetNotifType) target.notifType = conv.dataset.targetNotifType;
+        const isNotifRow = conv.classList.contains("is-notif");
+        if (IS_V2EX && !isNotifRow && !target.floor && !target.replyId && !target.anchor && !target.payload) {
           const remembered = getRememberedPost(topicId);
           if (remembered > 1) {
             target.floor = remembered - 1;
@@ -18714,11 +18927,13 @@
             target.anchor = `reply${target.floor}`;
           }
         }
+        const hasV2exJumpTarget = Boolean(target.floor || target.replyId || target.anchor || target.payload);
 
-        if (isSame && hasRendered && (target.floor || target.replyId || target.anchor)) {
+        if (isSame && hasRendered && hasV2exJumpTarget) {
           const located = locateV2exReply(body, target);
           if (located) {
-            if (location.pathname + location.hash !== href) {
+            keepChatAtV2exReply(body, target);
+            if (location.pathname + location.search + location.hash !== href) {
               suppressHistoryApply = true;
               try {
                 history.pushState({}, "", href);
@@ -18753,7 +18968,7 @@
           }
           if (subEl) subEl.textContent = "加载中…";
         }
-        if (location.pathname !== href) {
+        if (location.pathname + location.search + location.hash !== href) {
           suppressHistoryApply = true;
           try {
             history.pushState({}, "", href);
@@ -18763,7 +18978,7 @@
         }
         removeLoadingSliderDom();
         discourseRouteTo(href);
-        loadTopic(topicId, !hasRendered, target);
+        loadTopic(topicId, !hasRendered || hasV2exJumpTarget, target);
         return;
       }
       e.preventDefault();
@@ -18918,9 +19133,10 @@
       return `/pin/${topic.id}`;
     }
     if (IS_V2EX) {
+      const isNotif = Boolean(topic.notification_text || topic.node_name === "通知" || topic.notif_type);
       let targetPage = topic.target_page;
       let targetAnchor = topic.target_anchor;
-      if (!targetPage && !targetAnchor) {
+      if (!isNotif && !targetPage && !targetAnchor) {
         const remembered = rememberedPostForTopic(topic);
         if (remembered > 1) {
           const floor = remembered - 1;
@@ -19031,7 +19247,10 @@
     let targetReplyId = topic.target_reply_id;
     let targetAnchor = topic.target_anchor;
     let targetPage = topic.target_page;
-    if (IS_V2EX && !targetFloor && !targetReplyId && !targetAnchor && !targetPage) {
+    const targetAuthor = topic.target_author || (isNotif ? (topic.v2ex_author || topic.last_poster_username || "") : "");
+    const targetPayload = topic.target_payload || "";
+    const targetNotifType = topic.notif_type || "";
+    if (IS_V2EX && !isNotif && !targetFloor && !targetReplyId && !targetAnchor && !targetPage) {
       const remembered = rememberedPostForTopic(topic);
       if (remembered > 1) {
         targetFloor = remembered - 1;
@@ -19043,7 +19262,10 @@
       targetFloor ? `data-target-floor="${targetFloor}"` : "",
       targetReplyId ? `data-target-reply-id="${targetReplyId}"` : "",
       targetAnchor ? `data-target-anchor="${escapeHtml(targetAnchor)}"` : "",
-      targetPage ? `data-target-page="${targetPage}"` : ""
+      targetPage ? `data-target-page="${targetPage}"` : "",
+      targetAuthor ? `data-target-author="${escapeHtml(targetAuthor)}"` : "",
+      targetPayload ? `data-target-payload="${escapeHtml(targetPayload)}"` : "",
+      targetNotifType ? `data-target-notif-type="${escapeHtml(targetNotifType)}"` : ""
     ].filter(Boolean).join(" ");
     const rawTime = topic.bumped_at || topic.last_activity_at || topic.created_at;
     const timeMs = parseTimestamp(rawTime);
@@ -19208,8 +19430,23 @@
 
   function syncListActive() {
     const currentId = topicIdFromPath(location.pathname);
-    for (const row of document.querySelectorAll(".wecom-conv")) {
-      row.classList.toggle("active", currentId != null && isSameTopic(row.dataset.topicId, currentId));
+    const rows = [...document.querySelectorAll(".wecom-conv")];
+    const hasSpecificActive = currentId != null && rows.some(
+      (r) => r.classList.contains("active") && isSameTopic(r.dataset.topicId, currentId)
+    );
+    if (hasSpecificActive) {
+      for (const row of rows) {
+        if (!isSameTopic(row.dataset.topicId, currentId)) {
+          row.classList.remove("active");
+        }
+      }
+      return;
+    }
+    let matchedOne = false;
+    for (const row of rows) {
+      const match = currentId != null && isSameTopic(row.dataset.topicId, currentId) && !matchedOne;
+      if (match) matchedOne = true;
+      row.classList.toggle("active", match);
     }
   }
 
@@ -19330,8 +19567,17 @@
 
   function v2exNextPageUrl(currentPath) {
     const path = String(currentPath || "");
-    // V2EX 首页 tab=all/latest/全部：下一页为 /recent
-    if (path === "/api/topics/latest.json" || path === "latest" || path === "all" || path === "/" || path === "/?tab=all") {
+    // V2EX 首页及各分类 tab（/?tab=xxx）：原站底部「更多新主题」均指向 /recent
+    if (
+      path === "/api/topics/latest.json" ||
+      path === "/api/topics/hot.json" ||
+      path === "latest" ||
+      path === "all" ||
+      path === "hot" ||
+      path === "/" ||
+      path.startsWith("/?tab=") ||
+      path.includes("tab=")
+    ) {
       return "/recent";
     }
     if (path === "/recent") return "/recent?p=2";
@@ -19351,19 +19597,22 @@
       return { hasMore: false, nextPageUrl: null, totalPages: 1 };
     }
 
-    // 首页全部/最新：无 pager 容器，但下一页确定为 /recent
-    const isAllHome = path === "/api/topics/latest.json" || path === "latest" || path === "all" || path === "/" || path === "/?tab=all";
-    if (isAllHome) {
+    // 首页全部/最新及各分类 tab（/?tab=xxx）：原站底部「更多新主题」均指向 /recent，翻页后继续按 /recent?p=2 递增
+    const isHomeTab =
+      path === "/api/topics/latest.json" ||
+      path === "/api/topics/hot.json" ||
+      path === "latest" ||
+      path === "all" ||
+      path === "hot" ||
+      path === "/" ||
+      path.startsWith("/?tab=") ||
+      path.includes("tab=");
+    if (isHomeTab) {
       return {
         hasMore: count > 0,
-        nextPageUrl: "/recent",
+        nextPageUrl: count > 0 ? "/recent" : null,
         totalPages: 0
       };
-    }
-
-    // 其他首页分类 tab（最热/技术/创意/好玩等）：V2EX 原站首页 tab 为固定精选列表，无分页
-    if (path.includes("tab=") && !path.includes("tab=all") && !path.includes("tab=latest")) {
-      return { hasMore: false, nextPageUrl: null, totalPages: 1 };
     }
 
     if (doc) {
@@ -19615,7 +19864,7 @@
     }
     if (IS_V2EX) {
       const requestSerial = ++listState.requestSerial;
-      const pageUrl = listState.moreUrl;
+      let pageUrl = listState.moreUrl;
       listState.loading = true;
       const statusEl = document.querySelector(".wecom-list-status");
       if (statusEl) {
@@ -19623,26 +19872,42 @@
         statusEl.classList.remove("is-clickable");
       }
       try {
-        const resp = await fetch(pageUrl, { credentials: "same-origin" });
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const html = await resp.text();
-        const doc = new DOMParser().parseFromString(html, "text/html");
-        const isNotifPage = pageUrl.startsWith("/notifications") || (typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications"));
-        const topics = isNotifPage
-          ? extractV2exNotificationsFromDoc(doc)
-          : extractV2exTopicsFromDoc(doc);
-        if (requestSerial !== listState.requestSerial) return;
-        const existing = new Set(listState.topics.map((t) => t.dedup_key || (isNotifPage ? `${t.id}_${t.target_anchor || ""}_${t.notification_text || ""}` : t.id)));
-        const fresh = topics.filter((t) => !existing.has(t.dedup_key || (isNotifPage ? `${t.id}_${t.target_anchor || ""}_${t.notification_text || ""}` : t.id)));
-        if (fresh.length > 0) {
-          listState.topics = listState.topics.concat(fresh);
+        const existing = new Set(listState.topics.map((t) => t.dedup_key || ((typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications")) ? `${t.id}_${t.target_anchor || ""}_${t.notification_text || ""}` : t.id)));
+        let accumulatedFresh = [];
+        let hops = 0;
+        while (pageUrl && hops < 3 && accumulatedFresh.length === 0) {
+          hops += 1;
+          const resp = await fetch(pageUrl, { credentials: "same-origin" });
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          const html = await resp.text();
+          const doc = new DOMParser().parseFromString(html, "text/html");
+          const isNotifPage = pageUrl.startsWith("/notifications") || (typeof listState.apiPath === "string" && listState.apiPath.startsWith("/notifications"));
+          const topics = isNotifPage
+            ? extractV2exNotificationsFromDoc(doc)
+            : extractV2exTopicsFromDoc(doc);
+          if (requestSerial !== listState.requestSerial) return;
+          const fresh = topics.filter((t) => {
+            const key = t.dedup_key || (isNotifPage ? `${t.id}_${t.target_anchor || ""}_${t.notification_text || ""}` : t.id);
+            if (existing.has(key)) return false;
+            existing.add(key);
+            return true;
+          });
+          if (fresh.length > 0) {
+            accumulatedFresh = accumulatedFresh.concat(fresh);
+          }
+          listState.v2exPagePath = pageUrl;
+          listState.v2exPage = v2exPageForPath(pageUrl);
+          const pagination = parseV2exListPagination(doc, pageUrl, topics.length);
+          listState.v2exHasMore = pagination.hasMore && (topics.length > 0);
+          const nextUrl = listState.v2exHasMore ? pagination.nextPageUrl : null;
+          listState.moreUrl = nextUrl;
+          if (!nextUrl || nextUrl === pageUrl) break;
+          pageUrl = nextUrl;
         }
-        listState.v2exPagePath = pageUrl;
-        listState.v2exPage = v2exPageForPath(pageUrl);
-        const pagination = parseV2exListPagination(doc, pageUrl, topics.length);
-        listState.v2exHasMore = pagination.hasMore && (topics.length > 0);
-        listState.moreUrl = listState.v2exHasMore ? pagination.nextPageUrl : null;
-        appendListRows(fresh);
+        if (accumulatedFresh.length > 0) {
+          listState.topics = listState.topics.concat(accumulatedFresh);
+        }
+        appendListRows(accumulatedFresh);
         syncRail();
       } catch (error) {
         if (requestSerial === listState.requestSerial) {
@@ -19703,7 +19968,9 @@
     v2exLoadingPage: false,
     topicBookmarked: false,
     pinnedPost: 0,
-    pinningScroll: false
+    pinningScroll: false,
+    lastJumpScrollTop: null,
+    lastJumpPostNumber: 0
   };
 
   const composerBridgeState = {
@@ -19765,9 +20032,12 @@
     }
     const button = document.querySelector(".wecom-watermark-settings");
     if (!button) return;
+    const labelText = enabled ? "背景水印：已开启" : "背景水印设置";
     button.classList.toggle("is-on", enabled);
     button.setAttribute("aria-pressed", enabled ? "true" : "false");
-    button.title = enabled ? "背景水印：已开启" : "背景水印设置";
+    button.title = labelText;
+    const labelEl = button.querySelector(".wecom-chat-more-label");
+    if (labelEl) labelEl.textContent = labelText;
   }
 
   function saveWatermarkSettings(settings) {
@@ -19790,6 +20060,13 @@
   }
 
   function openWatermarkSettings(panel) {
+    document.querySelectorAll(".wecom-platform-switcher.is-open").forEach((switcher) => {
+      switcher.classList.remove("is-open");
+      const dropdown = switcher.querySelector(".wecom-platform-dropdown");
+      if (dropdown) dropdown.hidden = true;
+      const btn = switcher.querySelector(".wecom-platform-btn");
+      if (btn) btn.setAttribute("aria-expanded", "false");
+    });
     const settings = getWatermarkSettings();
     const dialog = panel.querySelector(".wecom-watermark-panel");
     dialog.querySelector(".wecom-watermark-enabled").checked = settings.enabled;
@@ -21044,7 +21321,9 @@
       !panel.querySelector('[data-composer-action="emoji"]') || !panel.querySelector('[data-composer-action="pic"]') ||
       !panel.querySelector('[data-composer-action="base64"]') ||
       !panel.querySelector('[data-composer-action="doc"]') || !panel.querySelector('[data-composer-action="apps"]') ||
-      !panel.querySelector(".wecom-platform-switcher") || !panel.querySelector(".wecom-chat-avatar-toggle") ||
+      !panel.querySelector(".wecom-platform-switcher") || !panel.querySelector(".wecom-chat-more-btn") ||
+      !panel.querySelector(".wecom-chat-avatar-toggle") ||
+      !panel.querySelector(".wecom-chat-float-nav") ||
       !panel.querySelector(".wecom-composer-bottom .wecom-compose-status"))) {
       panel.remove();
       panel = null;
@@ -21099,19 +21378,39 @@
           </div>
         </div>
         <div class="wecom-chat-tools">
-          <button type="button" class="wecom-icon-btn wecom-chat-avatar-toggle${isHideChatAvatar() ? " is-active" : ""}" title="${isHideChatAvatar() ? "显示对话头像" : "隐藏对话头像"}" aria-label="隐藏对话头像" aria-pressed="${isHideChatAvatar() ? "true" : "false"}">${ICONS.userOff}</button>
-          <button type="button" class="wecom-icon-btn wecom-chat-members-toggle" title="群成员与详情">${ICONS.users}</button>
-          ${IS_JUEJIN ? `
-          <button type="button" class="wecom-icon-btn wecom-open-pin-web" title="在原站打开沸点 ↗" aria-label="在原站打开沸点">${ICONS.external}</button>
-          ` : `
-          <button type="button" class="wecom-icon-btn wecom-topic-bookmark" title="收藏话题" aria-label="收藏话题" aria-pressed="false">${ICONS.bookmark}</button>
-          `}
-          <button type="button" class="wecom-icon-btn wecom-watermark-settings" title="背景水印设置" aria-label="背景水印设置" aria-expanded="false" aria-pressed="false">${ICONS.watermark}</button>
+          <button type="button" class="wecom-icon-btn wecom-chat-scroll-top" title="回到顶部" aria-label="回到顶部">${ICONS.scrollTop}</button>
+          <button type="button" class="wecom-icon-btn wecom-chat-refresh" title="刷新本话题">${ICONS.refresh}</button>
           <div class="wecom-platform-switcher">
-            <button type="button" class="wecom-icon-btn wecom-platform-btn" aria-haspopup="true" aria-expanded="false" title="切换社区平台">
-              ${ICONS.platformSwitch}
+            <button type="button" class="wecom-icon-btn wecom-platform-btn wecom-chat-more-btn" aria-haspopup="true" aria-expanded="false" title="更多" aria-label="更多">
+              ${ICONS.dots}
             </button>
             <div class="wecom-platform-dropdown" hidden>
+              <div class="wecom-chat-more-actions">
+                <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-chat-avatar-toggle${isHideChatAvatar() ? " is-active" : ""}" title="${isHideChatAvatar() ? "显示对话头像" : "隐藏对话头像"}" aria-label="隐藏对话头像" aria-pressed="${isHideChatAvatar() ? "true" : "false"}">
+                  <span class="wecom-chat-more-icon">${ICONS.userOff}</span>
+                  <span class="wecom-chat-more-label">${isHideChatAvatar() ? "显示对话头像" : "隐藏对话头像"}</span>
+                </button>
+                <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-chat-members-toggle" title="群成员与详情">
+                  <span class="wecom-chat-more-icon">${ICONS.users}</span>
+                  <span class="wecom-chat-more-label">群成员与详情</span>
+                </button>
+                ${IS_JUEJIN ? `
+                <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-open-pin-web" title="在原站打开沸点 ↗" aria-label="在原站打开沸点">
+                  <span class="wecom-chat-more-icon">${ICONS.external}</span>
+                  <span class="wecom-chat-more-label">在原站打开沸点 ↗</span>
+                </button>
+                ` : `
+                <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-topic-bookmark" title="收藏话题" aria-label="收藏话题" aria-pressed="false">
+                  <span class="wecom-chat-more-icon">${ICONS.bookmark}</span>
+                  <span class="wecom-chat-more-label">收藏话题</span>
+                </button>
+                `}
+                <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-watermark-settings" title="背景水印设置" aria-label="背景水印设置" aria-expanded="false" aria-pressed="false">
+                  <span class="wecom-chat-more-icon">${ICONS.watermark}</span>
+                  <span class="wecom-chat-more-label">背景水印设置</span>
+                </button>
+              </div>
+              <div class="wecom-chat-more-divider"></div>
               <div class="wecom-platform-dropdown-title">选择社区平台</div>
               <div class="wecom-platform-item${IS_LINUXDO ? " is-active" : ""}" data-target-platform="linuxdo">
                 <span class="wecom-platform-item-icon">🐧</span>
@@ -21139,8 +21438,6 @@
               </div>
             </div>
           </div>
-          <button type="button" class="wecom-icon-btn wecom-chat-scroll-top" title="回到顶部" aria-label="回到顶部">${ICONS.scrollTop}</button>
-          <button type="button" class="wecom-icon-btn wecom-chat-refresh" title="刷新本话题">${ICONS.refresh}</button>
         </div>
       </div>
       <section class="wecom-watermark-panel" aria-label="聊天背景水印" hidden>
@@ -21172,6 +21469,12 @@
         <button type="button" class="wecom-pinned-close" title="收起">×</button>
       </div>
       <div class="wecom-chat-body"></div>
+      <div class="wecom-chat-float-nav">
+        <div class="wecom-chat-float-nav-stack">
+          <button type="button" class="wecom-chat-back-pos" title="回到上次浏览位置" aria-label="回到上次位置" hidden>${ICONS.backPos}<span>回到上次位置</span></button>
+          <button type="button" class="wecom-chat-scroll-bottom" title="滚动到底部" aria-label="滚动到底部" hidden>${ICONS.scrollBottom}</button>
+        </div>
+      </div>
       <div class="wecom-composer">
         <div class="wecom-composer-card">
           <div class="wecom-composer-tools">
@@ -21643,11 +21946,53 @@
     event.stopPropagation();
   }
 
+  function syncChatFloatNav(body) {
+    const panel = document.querySelector(".wecom-chat-panel");
+    if (!panel) return;
+    const chatBody = body || panel.querySelector(".wecom-chat-body");
+    const scrollBottomBtn = panel.querySelector(".wecom-chat-scroll-bottom");
+    const backPosBtn = panel.querySelector(".wecom-chat-back-pos");
+    const isEmpty = panel.dataset.empty === "1" || !chatState.topicId || !chatBody ||
+      Boolean(chatBody.querySelector(".wecom-chat-loading, .wecom-chat-error, .wecom-chat-empty"));
+
+    if (scrollBottomBtn) {
+      if (isEmpty || chatBody.clientHeight <= 0) {
+        scrollBottomBtn.hidden = true;
+      } else {
+        const distFromBottom = chatBody.scrollHeight - (chatBody.scrollTop + chatBody.clientHeight);
+        scrollBottomBtn.hidden = !(distFromBottom > 48);
+      }
+    }
+
+    if (backPosBtn) {
+      if (isEmpty || chatState.lastJumpScrollTop == null) {
+        backPosBtn.hidden = true;
+      } else {
+        backPosBtn.hidden = false;
+      }
+    }
+  }
+
+  function saveChatJumpPosition(body, prevScrollTop, sourceEl = null) {
+    const chatBody = body || document.querySelector(".wecom-chat-body");
+    if (!chatBody) return;
+    chatState.lastJumpScrollTop = prevScrollTop != null ? prevScrollTop : chatBody.scrollTop;
+    const msgEl = sourceEl && typeof sourceEl.closest === "function"
+      ? sourceEl.closest(".wecom-msg[data-post-number]")
+      : null;
+    chatState.lastJumpPostNumber = Number(msgEl?.dataset?.postNumber) || 0;
+    syncChatFloatNav(chatBody);
+  }
+
   function handleReplyReferenceClick(event, panel) {
     const reference = event.target.closest("a.wecom-reply-reference, .wecom-msg-reply-indicator");
     if (!reference || !panel.contains(reference) || !isPlainClick(event)) return false;
+    const body = panel.querySelector(".wecom-chat-body");
+    const prevScrollTop = body ? body.scrollTop : null;
     const ok = focusRenderedReply(reference);
-    if (!ok && reference.dataset.replyPostNumber) {
+    if (ok) {
+      saveChatJumpPosition(body, prevScrollTop, reference);
+    } else if (reference.dataset.replyPostNumber) {
       showWecomToast(`引用楼层 #${reference.dataset.replyPostNumber} 暂未加载到当前视口`, "info");
     }
     consumeClick(event);
@@ -21663,29 +22008,27 @@
     btn.setAttribute("aria-label", btn.title);
   }
 
+  function closeAllPlatformDropdowns() {
+    document.querySelectorAll(".wecom-platform-switcher.is-open").forEach((switcher) => {
+      switcher.classList.remove("is-open");
+      const dropdown = switcher.querySelector(".wecom-platform-dropdown");
+      if (dropdown) dropdown.hidden = true;
+      const btn = switcher.querySelector(".wecom-platform-btn");
+      if (btn) btn.setAttribute("aria-expanded", "false");
+    });
+  }
+
   function bindPlatformSwitcher() {
     if (window.__wecomPlatformSwitcherBound) return;
     window.__wecomPlatformSwitcherBound = true;
     document.addEventListener("click", (event) => {
       if (!event.target.closest(".wecom-platform-switcher")) {
-        document.querySelectorAll(".wecom-platform-switcher.is-open").forEach((switcher) => {
-          switcher.classList.remove("is-open");
-          const dropdown = switcher.querySelector(".wecom-platform-dropdown");
-          if (dropdown) dropdown.hidden = true;
-          const btn = switcher.querySelector(".wecom-platform-btn");
-          if (btn) btn.setAttribute("aria-expanded", "false");
-        });
+        closeAllPlatformDropdowns();
       }
     });
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
-        document.querySelectorAll(".wecom-platform-switcher.is-open").forEach((switcher) => {
-          switcher.classList.remove("is-open");
-          const dropdown = switcher.querySelector(".wecom-platform-dropdown");
-          if (dropdown) dropdown.hidden = true;
-          const btn = switcher.querySelector(".wecom-platform-btn");
-          if (btn) btn.setAttribute("aria-expanded", "false");
-        });
+        closeAllPlatformDropdowns();
       }
     });
   }
@@ -21707,14 +22050,7 @@
       consumeClick(event);
       const item = event.target.closest(".wecom-platform-item");
       const target = item?.dataset?.targetPlatform;
-      const switcher = event.target.closest(".wecom-platform-switcher");
-      if (switcher) {
-        switcher.classList.remove("is-open");
-        const dropdown = switcher.querySelector(".wecom-platform-dropdown");
-        if (dropdown) dropdown.hidden = true;
-        const btn = switcher.querySelector(".wecom-platform-btn");
-        if (btn) btn.setAttribute("aria-expanded", "false");
-      }
+      closeAllPlatformDropdowns();
       if (target === "linuxdo" && !IS_LINUXDO) {
         window.location.href = "https://linux.do/";
       } else if (target === "v2ex" && !IS_V2EX) {
@@ -21738,12 +22074,14 @@
     if (event.target.closest(".wecom-chat-avatar-toggle")) {
       consumeClick(event);
       setHideChatAvatar(!isHideChatAvatar());
+      closeAllPlatformDropdowns();
       return true;
     }
     if (event.target.closest(".wecom-chat-members-toggle")) {
       consumeClick(event);
       const next = !document.documentElement.classList.contains("wecom-members-open");
       setMembersPanelOpen(next);
+      closeAllPlatformDropdowns();
       return true;
     }
     if (event.target.closest(".wecom-win-min")) {
@@ -21769,6 +22107,7 @@
     }
     if (event.target.closest(".wecom-open-pin-web")) {
       consumeClick(event);
+      closeAllPlatformDropdowns();
       if (chatState.topicId) {
         window.open(`https://juejin.cn/pin/${chatState.topicId}`, "_blank", "noopener,noreferrer");
       } else {
@@ -21778,6 +22117,7 @@
     }
     if (event.target.closest(".wecom-topic-bookmark")) {
       consumeClick(event);
+      closeAllPlatformDropdowns();
       if (IS_JUEJIN) return true;
       if (IS_V2EX) {
         const wasFavorited = Boolean(chatState.v2exTopicFavorited);
@@ -21857,17 +22197,90 @@
   }
 
   function handleChatPanelClick(event, panel) {
+    const scrollBottomBtn = event.target.closest(".wecom-chat-scroll-bottom");
+    if (scrollBottomBtn && panel.contains(scrollBottomBtn)) {
+      consumeClick(event);
+      const body = panel.querySelector(".wecom-chat-body");
+      if (body) {
+        chatState.pinnedPost = 0;
+        chatState.pinningScroll = false;
+        body.scrollTo({ top: body.scrollHeight, behavior: "smooth" });
+        setTimeout(() => syncChatFloatNav(body), 350);
+      }
+      return;
+    }
+    const backPosBtn = event.target.closest(".wecom-chat-back-pos");
+    if (backPosBtn && panel.contains(backPosBtn)) {
+      consumeClick(event);
+      const body = panel.querySelector(".wecom-chat-body");
+      if (body && chatState.lastJumpScrollTop != null) {
+        const targetTop = chatState.lastJumpScrollTop;
+        const originPostNum = chatState.lastJumpPostNumber;
+        chatState.lastJumpScrollTop = null;
+        chatState.lastJumpPostNumber = 0;
+        chatState.pinnedPost = 0;
+        chatState.pinningScroll = false;
+        body.scrollTo({ top: targetTop, behavior: "smooth" });
+        if (originPostNum > 0) {
+          const originMsg = body.querySelector(`.wecom-msg[data-post-number="${originPostNum}"]`);
+          if (originMsg) {
+            clearTimeout(replyHighlightTimer);
+            highlightedReplyMessage?.classList.remove("is-reply-target");
+            highlightedReplyMessage = originMsg;
+            originMsg.classList.add("is-reply-target");
+            replyHighlightTimer = setTimeout(() => {
+              originMsg.classList.remove("is-reply-target");
+              if (highlightedReplyMessage === originMsg) highlightedReplyMessage = null;
+            }, REPLY_HIGHLIGHT_DURATION_MS);
+          }
+        }
+        syncChatFloatNav(body);
+        setTimeout(() => syncChatFloatNav(body), 350);
+      }
+      return;
+    }
     if (handleReplyReferenceClick(event, panel)) return;
-    const anchorLink = event.target.closest(".wecom-msg-body a[href*='#reply'], .wecom-msg-body a[href*='#r_'], .wecom-msg-body a[href^='#']");
+    const floorBadge = event.target.closest(".wecom-msg-floor");
+    if (floorBadge && panel.contains(floorBadge) && isPlainClick(event)) {
+      const msgEl = floorBadge.closest(".wecom-msg");
+      const replyInd = msgEl?.querySelector(".wecom-msg-reply-indicator, a.wecom-reply-reference");
+      const body = panel.querySelector(".wecom-chat-body");
+      const prevScrollTop = body ? body.scrollTop : null;
+      if (replyInd && focusRenderedReply(replyInd)) {
+        saveChatJumpPosition(body, prevScrollTop, floorBadge);
+        consumeClick(event);
+        return;
+      }
+      if (body && msgEl) {
+        saveChatJumpPosition(body, prevScrollTop, floorBadge);
+        clearTimeout(replyHighlightTimer);
+        highlightedReplyMessage?.classList.remove("is-reply-target");
+        highlightedReplyMessage = msgEl;
+        msgEl.classList.add("is-reply-target");
+        msgEl.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+        replyHighlightTimer = setTimeout(() => {
+          msgEl.classList.remove("is-reply-target");
+          if (highlightedReplyMessage === msgEl) highlightedReplyMessage = null;
+        }, REPLY_HIGHLIGHT_DURATION_MS);
+        consumeClick(event);
+        return;
+      }
+    }
+    const anchorLink = event.target.closest(".wecom-floor-link, .wecom-msg-body a[href*='#reply'], .wecom-msg-body a[href*='#r_'], .wecom-msg-body a[href^='#']");
     if (anchorLink && panel.contains(anchorLink) && isPlainClick(event)) {
       const href = anchorLink.getAttribute("href") || "";
       const target = parseV2exReplyTarget(href);
+      if (anchorLink.dataset.replyFloor && !target.floor) {
+        target.floor = Number(anchorLink.dataset.replyFloor) || 0;
+      }
       if (target.floor || target.replyId || target.anchor) {
         const matchTopic = href.match(/\/t\/(\d+)/);
         const targetTopicId = matchTopic ? Number(matchTopic[1]) : chatState.topicId;
         if (!matchTopic || targetTopicId === Number(chatState.topicId)) {
           const body = panel.querySelector(".wecom-chat-body");
+          const prevScrollTop = body ? body.scrollTop : null;
           if (body && locateV2exReply(body, target)) {
+            saveChatJumpPosition(body, prevScrollTop, anchorLink);
             consumeClick(event);
             return;
           }
@@ -21926,8 +22339,11 @@
           try {
             const targetEl = panel.querySelector(href);
             if (targetEl) {
+              const body = panel.querySelector(".wecom-chat-body");
+              const prevScrollTop = body ? body.scrollTop : null;
               consumeClick(event);
               targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
+              if (body) saveChatJumpPosition(body, prevScrollTop, generalLink);
               return;
             }
           } catch { /* ignore */ }
@@ -21953,8 +22369,9 @@
   }
 
   function handleChatBodyScroll(panel) {
-    if (chatState.pinningScroll || chatState.pinnedPost) return;
     const body = panel.querySelector(".wecom-chat-body");
+    syncChatFloatNav(body);
+    if (chatState.pinningScroll || chatState.pinnedPost) return;
     if (body.scrollTop < 80) loadOlderPosts();
     if (body.scrollTop + body.clientHeight >= body.scrollHeight - 160) loadNewerPosts();
     trackVisibleTopicPost();
@@ -22061,6 +22478,7 @@
       clearTimeout(chatScrollTimer);
       chatScrollTimer = setTimeout(() => {
         chatBody.classList.remove("is-scrolling");
+        syncChatFloatNav(chatBody);
       }, 800);
       if (!chatBodyScrollThrottleTimer) {
         chatBodyScrollThrottleTimer = setTimeout(() => {
@@ -22426,6 +22844,14 @@
       if (ref.floor) {
         parent = byFloor.get(Number(ref.floor)) || null;
       }
+      if (!parent && post.reply_to_post_number) {
+        const explicitFloor = Number(post.reply_to_floor) || (Number(post.reply_to_post_number) - 1);
+        if (explicitFloor > 0) {
+          parent = byFloor.get(explicitFloor) || null;
+        } else if (Number(post.reply_to_post_number) === 1) {
+          parent = opPost || null;
+        }
+      }
       if (!parent && ref.author) {
         parent = latestByAuthor.get(String(ref.author).toLowerCase()) || null;
       }
@@ -22539,27 +22965,46 @@
       `</span>`;
   }
 
+  function linkifyV2exFloorMentions(html) {
+    if (!html || !html.includes("#")) return html;
+    return String(html)
+      .split(/(<a\b[^>]*>[\s\S]*?<\/a>|<code\b[^>]*>[\s\S]*?<\/code>|<pre\b[^>]*>[\s\S]*?<\/pre>|<[^>]+>)/gi)
+      .map((part, idx) => {
+        if (idx % 2 === 1) return part;
+        return part.replace(/(^|[\s,，。!！?？:：;；(（])#(\d{1,5})(\s*楼)?(?=$|[\s,，。!！?？:：;；)）<])/g, (match, prefix, floorStr, suffix) => {
+          const floor = Number(floorStr);
+          if (!floor || floor <= 0) return match;
+          return `${prefix}<a class="wecom-floor-link" href="#reply${floor}" data-reply-floor="${floor}" title="跳转到 #${floor} 楼">#${floorStr}${suffix || ""}</a>`;
+        });
+      })
+      .join("");
+  }
+
   function replyBodyHtml(post, hasReplyIndicator) {
     const cooked = String(post?.cooked || post?.content || "");
-    if (!IS_V2EX || !hasReplyIndicator || !post?.is_explicit_reply) return cooked;
+    if (!IS_V2EX) return cooked;
+    let result = cooked;
 
-    const reference = post.replyReference || extractReferencedReply(cooked);
-    const author = String(reference?.author || post?.reply_to_user?.username || "").trim();
-    if (!author) return cooked;
+    if (hasReplyIndicator && post?.is_explicit_reply) {
+      const reference = post.replyReference || extractReferencedReply(cooked);
+      const author = String(reference?.author || post?.reply_to_user?.username || "").trim();
+      if (author) {
+        const escapedAuthor = author.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const leadingContent = "(\\s*(?:<p\\b[^>]*>\\s*)?)";
+        const memberLink = new RegExp(
+          `^${leadingContent}(?:@\\s*)?<a\\s+[^>]*href=["']\\/member\\/${escapedAuthor}(?:["'/?#]|$)[^>]*>(?:@\\s*)?[^<]*<\\/a>(?:\\s*#\\d+\\s*(?:楼)?)?\\s*`,
+          "i"
+        );
+        const plainMention = new RegExp(
+          `^${leadingContent}@\\s*${escapedAuthor}(?=\\s|#|<br\\s*\\/?\\s*>|<\\/p>|$)(?:\\s*#\\d+\\s*(?:楼)?)?\\s*`,
+          "i"
+        );
 
-    const escapedAuthor = author.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const leadingContent = "(\\s*(?:<p\\b[^>]*>\\s*)?)";
-    const memberLink = new RegExp(
-      `^${leadingContent}(?:@\\s*)?<a\\s+[^>]*href=["']\\/member\\/${escapedAuthor}(?:["'/?#]|$)[^>]*>(?:@\\s*)?[^<]*<\\/a>\\s*`,
-      "i"
-    );
-    const plainMention = new RegExp(
-      `^${leadingContent}@\\s*${escapedAuthor}(?=\\s|#|<br\\s*\\/?\\s*>|<\\/p>|$)\\s*`,
-      "i"
-    );
-
-    // The reply indicator already identifies the recipient, so omit the duplicated leading mention.
-    return cooked.replace(memberLink, "$1").replace(plainMention, "$1");
+        // The reply indicator already identifies the recipient, so omit the duplicated leading mention.
+        result = result.replace(memberLink, "$1").replace(plainMention, "$1");
+      }
+    }
+    return linkifyV2exFloorMentions(result);
   }
 
   function rerenderCurrentChatMessages() {
@@ -22568,7 +23013,6 @@
       return;
     }
     const prevScrollTop = body.scrollTop;
-    const prevScrollHeight = body.scrollHeight;
 
     const posts = [...chatState.postsByNumber.values()].sort((a, b) => postNumberOf(a) - postNumberOf(b));
     body.innerHTML = renderBubbles(posts, getCurrentUsername()) ||
@@ -22579,9 +23023,8 @@
     }
     syncRenderedWindow(body);
 
-    if (body.scrollHeight === prevScrollHeight) {
-      body.scrollTop = prevScrollTop;
-    }
+    body.scrollTop = prevScrollTop;
+    syncChatFloatNav(body);
   }
 
   function replyReferenceHtml(post) {
@@ -22627,7 +23070,12 @@
     highlightedReplyMessage?.classList.remove("is-reply-target");
     highlightedReplyMessage = message;
     message.classList.add("is-reply-target");
-    message.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    const chatBody = message.closest?.(".wecom-chat-body") || document.querySelector(".wecom-chat-body");
+    if (chatBody) {
+      scrollChatToV2exReplyEl(chatBody, message);
+    } else {
+      message.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    }
     replyHighlightTimer = setTimeout(() => {
       message.classList.remove("is-reply-target");
       if (highlightedReplyMessage === message) highlightedReplyMessage = null;
@@ -22638,54 +23086,200 @@
   function parseV2exReplyTarget(urlOrHash) {
     const res = { floor: 0, replyId: 0, anchor: "", page: 1 };
     if (!urlOrHash) return res;
-    const str = String(urlOrHash);
+    const str = String(urlOrHash).trim();
     const pMatch = str.match(/[?&]p=(\d+)/);
     if (pMatch) res.page = Number(pMatch[1]) || 1;
     const hashIdx = str.indexOf("#");
-    const anchor = hashIdx !== -1 ? str.slice(hashIdx + 1) : str;
+    const anchor = hashIdx !== -1 ? str.slice(hashIdx + 1) : (/^(?:reply\d+|r_\d+)$/i.test(str) ? str : "");
     res.anchor = anchor;
-    const floorMatch = anchor.match(/^reply(\d+)/i) || anchor.match(/(?:^|[?&#])reply(\d+)/i);
+    const floorMatch = anchor.match(/^reply(\d+)/i) || str.match(/(?:^|[?&#])reply(\d+)/i);
     if (floorMatch) {
       res.floor = Number(floorMatch[1]);
       if (!pMatch && res.floor > 100) {
         res.page = Math.floor((res.floor - 1) / 100) + 1;
       }
     }
-    const rMatch = anchor.match(/^r_(\d+)/i) || anchor.match(/(?:^|[?&#])r_(\d+)/i);
+    const rMatch = anchor.match(/^r_(\d+)/i) || str.match(/(?:^|[?&#])r_(\d+)/i);
     if (rMatch) res.replyId = Number(rMatch[1]);
     return res;
   }
 
+  function normalizeV2exReplyMatchText(text) {
+    return String(text || "")
+      .replace(/^(?:\s*@[\w\u4e00-\u9fa5_-]+(?:\s+#\d+)?[\s,，:：]*)+/i, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function findV2exReplyElement(body, target) {
+    if (!body || !target) return null;
+    const allMsgs = [...body.querySelectorAll(".wecom-msg")];
+    if (!allMsgs.length) return null;
+
+    if (target.replyId) {
+      const byId = body.querySelector(`.wecom-msg[data-post-id="${target.replyId}"]`);
+      if (byId) return byId;
+    }
+    if (target.anchor) {
+      const rMatch = String(target.anchor).match(/r_(\d+)/i);
+      if (rMatch) {
+        const byAnchorId = body.querySelector(`.wecom-msg[data-post-id="${rMatch[1]}"]`);
+        if (byAnchorId) return byAnchorId;
+      }
+    }
+
+    let floor = Number(target.floor) || 0;
+    if (!floor && target.anchor) {
+      const fMatch = String(target.anchor).match(/reply(\d+)/i);
+      if (fMatch) floor = Number(fMatch[1]) || 0;
+    }
+
+    const rawPayload = String(target.payload || "").replace(/\s+/g, " ").trim();
+    const normPayload = normalizeV2exReplyMatchText(rawPayload);
+    const author = String(target.author || "").trim();
+    const notifType = String(target.notifType || "").trim();
+
+    const msgUsername = (m) => (m.dataset?.username || m.querySelector?.(".wecom-msg-name")?.textContent || "").trim();
+    const msgBodyText = (m) => (m.querySelector?.(".wecom-msg-body")?.textContent || m.textContent || "").replace(/\s+/g, " ").trim();
+    const matchesPayload = (m) => {
+      if (!rawPayload && !normPayload) return false;
+      const bText = msgBodyText(m);
+      const normB = normalizeV2exReplyMatchText(bText);
+      if (rawPayload && (bText === rawPayload || bText.includes(rawPayload) || rawPayload.includes(bText)) && bText.length > 0) return true;
+      if (normPayload && normB && (normB === normPayload || normB.includes(normPayload) || normPayload.includes(normB))) return true;
+      return false;
+    };
+    const matchesAuthor = (m) => {
+      if (!author) return false;
+      return msgUsername(m).toLowerCase() === author.toLowerCase();
+    };
+    const isMineMsg = (m) => m.dataset?.mine === "1" || m.classList?.contains("is-mine");
+
+    // 1. 感谢回复通知（thank）：V2EX 通知里的 #replyXX 实际是帖子当时的总回复数而非被感谢楼层
+    if (notifType === "thank") {
+      if (rawPayload || normPayload) {
+        const byMinePayload = allMsgs.filter((m) => isMineMsg(m) && matchesPayload(m));
+        if (byMinePayload.length) return byMinePayload[byMinePayload.length - 1];
+        const byPayload = allMsgs.filter(matchesPayload);
+        if (byPayload.length) return byPayload[byPayload.length - 1];
+      }
+      const mineReplies = allMsgs.filter((m) => Number(m.dataset?.floor) > 0 && isMineMsg(m));
+      if (mineReplies.length) {
+        if (floor > 0) {
+          const le = mineReplies.filter((m) => Number(m.dataset.floor) <= floor);
+          if (le.length) return le[le.length - 1];
+        }
+        return mineReplies[mineReplies.length - 1];
+      }
+    }
+
+    // 2. 先按楼层找，但若通知带了明确 author 或 payload，则校验该楼层是否确实对得上（防止前面有删楼导致楼层偏移）
+    let floorEl = null;
+    if (floor > 0) {
+      floorEl = body.querySelector(`.wecom-msg[data-floor="${floor}"]`) ||
+        body.querySelector(`.wecom-msg[data-post-number="${floor + 1}"]`);
+      if (floorEl) {
+        if (!author && !rawPayload) return floorEl;
+        if (matchesAuthor(floorEl) || matchesPayload(floorEl)) return floorEl;
+      }
+    }
+
+    // 3. 按 author + payload 精确匹配
+    if (author && (rawPayload || normPayload)) {
+      const both = allMsgs.filter((m) => matchesAuthor(m) && matchesPayload(m));
+      if (both.length === 1) return both[0];
+      if (both.length > 1 && floor > 0) {
+        both.sort((a, b) => Math.abs((Number(a.dataset?.floor) || 0) - floor) - Math.abs((Number(b.dataset?.floor) || 0) - floor));
+        return both[0];
+      }
+      if (both.length > 0) return both[both.length - 1];
+    }
+
+    // 4. 按 payload 内容匹配
+    if (rawPayload || normPayload) {
+      const byPayload = allMsgs.filter(matchesPayload);
+      if (byPayload.length === 1) return byPayload[0];
+      if (byPayload.length > 1 && floor > 0) {
+        byPayload.sort((a, b) => Math.abs((Number(a.dataset?.floor) || 0) - floor) - Math.abs((Number(b.dataset?.floor) || 0) - floor));
+        return byPayload[0];
+      }
+      if (byPayload.length > 0) return byPayload[byPayload.length - 1];
+    }
+
+    // 5. 按 author 找楼层最接近的回复
+    if (author && notifType !== "thank" && notifType !== "fav") {
+      const byAuthor = allMsgs.filter((m) => Number(m.dataset?.floor) > 0 && matchesAuthor(m));
+      if (byAuthor.length === 1) return byAuthor[0];
+      if (byAuthor.length > 1 && floor > 0) {
+        byAuthor.sort((a, b) => Math.abs((Number(a.dataset?.floor) || 0) - floor) - Math.abs((Number(b.dataset?.floor) || 0) - floor));
+        return byAuthor[0];
+      }
+      if (byAuthor.length > 0) return byAuthor[byAuthor.length - 1];
+    }
+
+    // 6. 回退到按楼层号找到的元素或最接近楼层
+    if (floorEl) return floorEl;
+    if (floor > 0) {
+      let closest = null;
+      let minDiff = Infinity;
+      for (const m of allMsgs) {
+        const f = Number(m.dataset?.floor);
+        if (!Number.isFinite(f) || f <= 0) continue;
+        const diff = Math.abs(f - floor);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closest = m;
+        }
+      }
+      if (closest) return closest;
+    }
+    return null;
+  }
+
+  function scrollChatToV2exReplyEl(body, el) {
+    if (!body || !el) return;
+    // 在楼中楼模式下，.wecom-msg 包含了整棵 .wecom-reply-children 子树，
+    // 直接对 el 调用 scrollIntoView({ block: "center" }) 会滚到整棵子树的正中间而非该条回复本身。
+    const headerEl = el.querySelector?.(":scope > .wecom-msg-main > .wecom-msg-bubble > .wecom-msg-header") ||
+      el.querySelector?.(".wecom-msg-header");
+    const msgBodyEl = el.querySelector?.(":scope > .wecom-msg-main > .wecom-msg-bubble > .wecom-msg-body") ||
+      el.querySelector?.(".wecom-msg-body");
+    const anchorEl = msgBodyEl || headerEl || el;
+    if (typeof body.getBoundingClientRect === "function" && typeof anchorEl.getBoundingClientRect === "function") {
+      const bodyRect = body.getBoundingClientRect();
+      const topRect = (headerEl || anchorEl).getBoundingClientRect();
+      const bottomRect = anchorEl.getBoundingClientRect();
+      if (bodyRect.height > 0 && (topRect.height > 0 || bottomRect.height > 0)) {
+        const ownHeight = Math.max(24, bottomRect.bottom - topRect.top);
+        const deltaTop = topRect.top - bodyRect.top;
+        const offset = ownHeight < bodyRect.height * 0.65
+          ? Math.max(24, Math.min(120, Math.round((bodyRect.height - ownHeight) * 0.28)))
+          : 24;
+        chatState.pinningScroll = true;
+        body.scrollTop = Math.max(0, body.scrollTop + deltaTop - offset);
+        return;
+      }
+    }
+    if (typeof el.scrollIntoView === "function") {
+      el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    }
+  }
+
   function locateV2exReply(body, target) {
     if (!body || !target) return false;
-    let el = null;
-    if (target.floor) {
-      el = body.querySelector(`.wecom-msg[data-floor="${target.floor}"]`);
-      if (!el) {
-        el = body.querySelector(`.wecom-msg[data-post-number="${target.floor + 1}"]`);
-      }
-    }
-    if (!el && target.replyId) {
-      el = body.querySelector(`.wecom-msg[data-post-id="${target.replyId}"]`);
-    }
-    if (!el && target.anchor) {
-      const fMatch = target.anchor.match(/reply(\d+)/i);
-      if (fMatch) {
-        const f = Number(fMatch[1]);
-        el = body.querySelector(`.wecom-msg[data-floor="${f}"], .wecom-msg[data-post-number="${f + 1}"]`);
-      }
-      const rMatch = target.anchor.match(/r_(\d+)/i);
-      if (!el && rMatch) {
-        el = body.querySelector(`.wecom-msg[data-post-id="${rMatch[1]}"]`);
-      }
-    }
+    const el = findV2exReplyElement(body, target);
     if (!el) return false;
+
+    const matchedFloor = Number(el.dataset?.floor) || 0;
+    if (matchedFloor > 0) {
+      target.resolvedFloor = matchedFloor;
+    }
 
     clearTimeout(replyHighlightTimer);
     highlightedReplyMessage?.classList.remove("is-reply-target");
     highlightedReplyMessage = el;
     el.classList.add("is-reply-target");
-    el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    scrollChatToV2exReplyEl(body, el);
     replyHighlightTimer = setTimeout(() => {
       el.classList.remove("is-reply-target");
       if (highlightedReplyMessage === el) highlightedReplyMessage = null;
@@ -22695,11 +23289,14 @@
 
   function keepChatAtV2exReply(body, target) {
     if (!body || !target) return;
-    const targetPost = target.floor ? target.floor + 1 : (target.replyId || 1);
-    chatState.pinnedPost = targetPost;
+    const targetPost = (target.resolvedFloor || target.floor)
+      ? (target.resolvedFloor || target.floor) + 1
+      : (target.replyId || 1);
+    const pinToken = targetPost || 1;
+    chatState.pinnedPost = pinToken;
     chatState.pinningScroll = true;
     const pin = () => {
-      if (Number(chatState.pinnedPost) !== Number(targetPost)) return;
+      if (Number(chatState.pinnedPost) !== Number(pinToken)) return;
       locateV2exReply(body, target);
     };
     pin();
@@ -22710,8 +23307,10 @@
     });
     [50, 160, 350, 700, 1200].forEach((delay) => setTimeout(pin, delay));
     setTimeout(() => {
-      chatState.pinningScroll = false;
-      if (Number(chatState.pinnedPost) === Number(targetPost)) chatState.pinnedPost = 0;
+      if (Number(chatState.pinnedPost) === Number(pinToken)) {
+        chatState.pinningScroll = false;
+        chatState.pinnedPost = 0;
+      }
     }, 1300);
   }
 
@@ -23998,6 +24597,8 @@
     button.setAttribute("aria-pressed", active ? "true" : "false");
     button.setAttribute("aria-label", label);
     button.title = label;
+    const labelEl = button.querySelector(".wecom-chat-more-label");
+    if (labelEl) labelEl.textContent = label;
   }
 
   function handleBookmarksChanged(data, attachedTo) {
@@ -24634,6 +25235,53 @@
     };
   }
 
+  function scrollToSubmittedReply(body, newPostNumber = 0, replyToPostNumber = 0) {
+    if (!body) return;
+    let targetEl = null;
+    if (newPostNumber > 0) {
+      targetEl = body.querySelector(`.wecom-msg[data-post-number="${newPostNumber}"]`);
+    }
+    if (!targetEl && replyToPostNumber > 1) {
+      const parentEl = body.querySelector(
+        `.wecom-msg[data-post-number="${replyToPostNumber}"], .wecom-msg[data-floor="${replyToPostNumber - 1}"]`
+      );
+      if (parentEl) {
+        const childMsgs = parentEl.querySelectorAll(".wecom-reply-children .wecom-msg");
+        targetEl = childMsgs.length ? childMsgs[childMsgs.length - 1] : parentEl;
+      }
+    }
+    if (!targetEl) {
+      const allMsgs = body.querySelectorAll(".wecom-msg[data-post-number]");
+      let maxNum = 0;
+      for (const msg of allMsgs) {
+        const num = Number(msg.dataset.postNumber) || 0;
+        if (num >= maxNum) {
+          maxNum = num;
+          targetEl = msg;
+        }
+      }
+    }
+    if (targetEl && (replyToPostNumber > 1 || targetEl.classList.contains("is-thread-child"))) {
+      clearTimeout(replyHighlightTimer);
+      highlightedReplyMessage?.classList.remove("is-reply-target");
+      highlightedReplyMessage = targetEl;
+      targetEl.classList.add("is-reply-target");
+      targetEl.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+      replyHighlightTimer = setTimeout(() => {
+        targetEl.classList.remove("is-reply-target");
+        if (highlightedReplyMessage === targetEl) highlightedReplyMessage = null;
+      }, REPLY_HIGHLIGHT_DURATION_MS);
+      syncChatFloatNav(body);
+      return;
+    }
+    if (targetEl) {
+      targetEl.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
+    } else {
+      body.scrollTo({ top: body.scrollHeight, behavior: "smooth" });
+    }
+    syncChatFloatNav(body);
+  }
+
   function completeComposerSubmission(input, submittedPost) {
     const topicId = chatState.topicId;
     const requestedReply = composerBridgeState.replyToPostNumber;
@@ -24648,7 +25296,10 @@
       const rawPost = submittedPost?.post || submittedPost;
       const post = withSubmittedReplyMetadata(rawPost, requestedReply);
       if (post && (post.id || post.post_number)) {
-        appendFreshPosts([post], document.querySelector(".wecom-chat-body"), { scroll: true });
+        appendFreshPosts([post], document.querySelector(".wecom-chat-body"), {
+          scroll: true,
+          replyToPostNumber: requestedReply
+        });
       }
       syncNewPostsFromDom();
       scheduleSubmittedPostSync(topicId);
@@ -24722,7 +25373,7 @@
         }
         if (chatBody) {
           setTimeout(() => {
-            chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: "smooth" });
+            scrollToSubmittedReply(chatBody, 0, replyTo);
           }, 100);
         }
         return;
@@ -24731,17 +25382,17 @@
         await submitV2exReply(chatState.topicId, raw);
         completeComposerSubmission(input);
         const chatBody = document.querySelector(".wecom-chat-body");
-        let appended = await pollV2exCurrentTopicOnce();
+        let appended = await pollV2exCurrentTopicOnce({ submittedReplyTo: replyTo, isAfterSubmit: true });
         if (!appended) {
           await delay(600);
-          appended = await pollV2exCurrentTopicOnce();
+          appended = await pollV2exCurrentTopicOnce({ submittedReplyTo: replyTo, isAfterSubmit: true });
         }
-        if (!appended) {
+        if (!appended && !replyTo) {
           await loadTopic(chatState.topicId, true);
         }
         if (chatBody) {
           setTimeout(() => {
-            chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: "smooth" });
+            scrollToSubmittedReply(chatBody, 0, replyTo);
           }, 100);
         }
         return;
@@ -24789,10 +25440,17 @@
     showTargetedReply(postNumber);
     const { input } = composeUi();
     if (IS_V2EX && input) {
+      const postObj = chatState.postsByNumber?.get(Number(postNumber));
       const message = document.querySelector(`.wecom-msg[data-post-number="${postNumber}"]`);
-      const name = message?.querySelector(".wecom-msg-name")?.textContent?.trim();
+      const name = postObj?.username ||
+        message?.querySelector("[data-user-card]")?.dataset?.userCard ||
+        message?.querySelector(".wecom-msg-name")?.textContent?.trim();
+      const floor = postObj?.floor != null
+        ? Number(postObj.floor)
+        : (Number(message?.dataset?.floor) || Math.max(0, Number(postNumber) - 1));
       if (name && !input.value.includes(`@${name}`)) {
-        input.value = `@${name} ` + input.value;
+        const floorPrefix = floor > 0 ? `@${name} #${floor} ` : `@${name} `;
+        input.value = floorPrefix + input.value;
       }
     } else if (IS_JUEJIN && input) {
       const message = document.querySelector(`.wecom-msg[data-post-number="${postNumber}"]`);
@@ -24975,6 +25633,7 @@
           target_reply_id: target.replyId,
           target_anchor: target.anchor,
           target_page: target.page || (target.floor ? Math.max(1, Math.floor((target.floor - 1) / 100) + 1) : 1),
+          target_payload: replyContent,
           title,
           posts_count: target.floor ? target.floor + 1 : 1,
           reply_count: target.floor || 0,
@@ -25078,6 +25737,7 @@
 
       const cellText = (cell.textContent || "").replace(/\s+/g, " ");
       const payloadEl = cell.querySelector(".payload");
+      const rawPayload = payloadEl ? payloadEl.textContent.replace(/\s+/g, " ").trim() : "";
 
       let notifType = "reply";
       let notifLabel = "回复";
@@ -25096,12 +25756,24 @@
         notifLabel = "回复";
       }
 
+      const isReplyThank = notifType === "thank" && cellText.includes("回复");
+      const isTopicThankOrFav = (notifType === "thank" && !isReplyThank) || notifType === "fav";
+      const totalReplyHint = target.floor || 0;
+      if (isTopicThankOrFav) {
+        target.floor = 0;
+        target.replyId = 0;
+        target.anchor = "";
+        target.page = 1;
+      }
+
       let text = "";
       if (payloadEl) {
-        const rawPayload = payloadEl.textContent.replace(/\s+/g, " ").trim();
-        text = author ? `${author}: ${rawPayload}` : rawPayload;
+        if (notifType === "thank") {
+          text = `❤️ ${author || "有人"}: ${rawPayload}`;
+        } else {
+          text = author ? `${author}: ${rawPayload}` : rawPayload;
+        }
       } else if (notifType === "thank") {
-        const isReplyThank = cellText.includes("回复");
         text = isReplyThank
           ? `❤️ ${author || "有人"} 感谢了你的回复`
           : `❤️ ${author || "有人"} 感谢了你的主题`;
@@ -25120,9 +25792,11 @@
         target_reply_id: target.replyId,
         target_anchor: target.anchor,
         target_page: target.page || (target.floor ? Math.max(1, Math.floor((target.floor - 1) / 100) + 1) : 1),
+        target_author: author,
+        target_payload: rawPayload,
         title: (topicLink.textContent || "").replace(/\s+/g, " ").trim() || `话题 #${id}`,
-        posts_count: target.floor ? target.floor + 1 : 1,
-        reply_count: target.floor || 0,
+        posts_count: totalReplyHint ? totalReplyHint + 1 : 1,
+        reply_count: totalReplyHint,
         created_at: timeStr,
         bumped_at: timeStr,
         last_poster_username: author,
@@ -25353,6 +26027,8 @@
     button.setAttribute("aria-pressed", active ? "true" : "false");
     button.setAttribute("aria-label", label);
     button.title = label;
+    const labelEl = button.querySelector(".wecom-chat-more-label");
+    if (labelEl) labelEl.textContent = active ? "已收藏话题" : "收藏话题";
   }
 
   function updateV2exTopicFavoriteStats(favorited) {
@@ -25646,10 +26322,20 @@
   }
 
   async function loadInitialV2exThreadPages(topicId, data, force, signal, targetPage) {
-    if (!isThreadViewEnabled() || Number(targetPage) !== 1 || !data?.v2ex_has_more) return data;
-    const secondPage = await fetchTopicJson(topicId, 0, force, signal, 2);
-    if (signal?.aborted) return data;
-    return mergeV2exTopicPages(data, secondPage);
+    if (!isThreadViewEnabled()) return data;
+    const p = Number(targetPage) || 1;
+    if (p === 1) {
+      if (!data?.v2ex_has_more) return data;
+      const secondPage = await fetchTopicJson(topicId, 0, force, signal, 2);
+      if (signal?.aborted) return data;
+      return mergeV2exTopicPages(data, secondPage);
+    }
+    if (p === 2) {
+      const firstPage = await fetchTopicJson(topicId, 0, force, signal, 1);
+      if (signal?.aborted) return data;
+      return mergeV2exTopicPages(firstPage, data);
+    }
+    return data;
   }
 
   function rememberTopicPost(topicId, postNumber) {
@@ -25675,7 +26361,7 @@
   }
 
   function syncTopicLastReadHref(topicId, postNumber) {
-    const row = document.querySelector(`.wecom-conv[data-topic-id="${topicId}"]`);
+    const row = document.querySelector(`.wecom-conv[data-topic-id="${topicId}"]:not(.is-notif)`);
     if (!row) return;
     if (IS_V2EX) {
       const floor = Math.max(0, postNumber - 1);
@@ -25867,7 +26553,7 @@
     if (!target && IS_V2EX) {
       target = parseV2exReplyTarget(location.href);
     }
-    if (IS_V2EX && (!target || (!target.floor && !target.replyId && !target.anchor))) {
+    if (IS_V2EX && (!target || (!target.floor && !target.replyId && !target.anchor && !target.payload))) {
       const remembered = getRememberedPost(topicId);
       if (remembered > 1) {
         const remFloor = remembered - 1;
@@ -25889,8 +26575,16 @@
     );
     if (!force && chatState.loading && isSameTopic(chatState.topicId, topicId)) return;
     if (!force && isSameTopic(chatState.topicId, topicId) && chatState.renderedLastIdx >= 0 && hasRenderedMsgs) {
-      syncListActive();
-      return;
+      if (IS_V2EX && target && (target.floor || target.replyId || target.anchor || target.payload)) {
+        if (locateV2exReply(initialBody, target)) {
+          keepChatAtV2exReply(initialBody, target);
+          syncListActive();
+          return;
+        }
+      } else {
+        syncListActive();
+        return;
+      }
     }
     if (topicAbortController) {
       topicAbortController.abort();
@@ -25910,6 +26604,8 @@
       chatState.stream = [];
       chatState.hasOlder = false;
       chatState.hasNewer = false;
+      chatState.lastJumpScrollTop = null;
+      chatState.lastJumpPostNumber = 0;
       closeEditDialog(true);
     }
     const requestedPost = openingPostNumber(topicId, null);
@@ -25926,6 +26622,7 @@
           <div class="wecom-chat-spinner"></div>
           <div>加载中…</div>
         </div>`;
+      syncChatFloatNav(body);
     }
     const chatPanel = document.querySelector(".wecom-chat-panel");
     if (chatPanel) chatPanel.dataset.topicId = String(topicId);
@@ -25943,7 +26640,7 @@
       if (!openPost && target && target.floor) {
         openPost = target.floor + 1;
       }
-      if (!requestedPost && openPost > 1 && !((data.post_stream && data.post_stream.posts) || [])
+      if (!IS_V2EX && !IS_JUEJIN && !requestedPost && openPost > 1 && !((data.post_stream && data.post_stream.posts) || [])
         .some((post) => postNumberOf(post) === openPost)) {
         try {
           data = await fetchTopicJson(topicId, openPost, force, signal);
@@ -26087,10 +26784,11 @@
           syncV2exPaginationFooter(body, false);
         }
         syncRenderedWindow(body);
-        if (IS_V2EX && target && (target.floor || target.replyId || target.anchor)) {
-          const postNum = target.floor ? target.floor + 1 : (openPost || 1);
-          rememberTopicPost(topicId, postNum > 0 ? postNum : 1);
+        if (IS_V2EX && target && (target.floor || target.replyId || target.anchor || target.payload)) {
           keepChatAtV2exReply(body, target);
+          const resolvedFloor = target.resolvedFloor || target.floor || 0;
+          const postNum = resolvedFloor ? resolvedFloor + 1 : (openPost || 1);
+          rememberTopicPost(topicId, postNum > 0 ? postNum : 1);
         } else if (sameTopic) {
           body.scrollTop = Math.min(body.scrollTop, body.scrollHeight);
         } else if (openPost > 1) {
@@ -26102,6 +26800,8 @@
           rememberTopicPost(topicId, openPost || 1);
           replaceTopicPostUrl(topicId, openPost || 1);
         }
+        syncChatFloatNav(body);
+        setTimeout(() => syncChatFloatNav(body), 150);
       }
       syncListActive();
     } catch (err) {
@@ -26509,15 +27209,22 @@
     const currentMax = Math.max(...renderedNumbers, 0);
     const moreBar = body.querySelector(".wecom-v2ex-more-bar");
 
+    const lastFreshPost = fresh[fresh.length - 1];
+    const lastFreshNum = postNumberOf(lastFreshPost);
+    const replyToNum = Number(options.replyToPostNumber || lastFreshPost?.reply_to_post_number || 0);
+
     if (isThreadViewEnabled() && !options.flat) {
       rememberChatPosts(fresh);
       rerenderCurrentChatMessages();
       const shouldScroll = options.scroll === true || (options.scroll !== false && wasNearBottom);
-      if (shouldScroll && (options.scroll === true || !options.isPolling)) {
+      if (options.scroll === true) {
+        scrollToSubmittedReply(body, lastFreshNum, replyToNum);
+      } else if (shouldScroll && !options.isPolling) {
         body.scrollTop = body.scrollHeight;
       } else {
         restoreChatScrollAnchor(body, anchor, options);
       }
+      syncChatFloatNav(body);
       return fresh.length;
     }
 
@@ -26544,15 +27251,18 @@
     hydrateChatImages(body);
     syncRenderedWindow(body);
 
-    // 仅当用户主动发帖（options.scroll === true）或此前已在最底部且非轮询跟随时滚动至底部；
+    // 仅当用户主动发帖（options.scroll === true）时滚动至新发表的楼层/被回复楼层下方；
     // 轮询追加或明确禁止滚动的场景（options.isPolling 或 options.scroll === false）：严格锁定滚动条位置，绝不改变当前视口；
     // 用户在浏览上方历史楼层时，绝对禁止自动跳跃到底部，保护阅读进度与体验。
     const shouldScroll = options.scroll === true || (options.scroll !== false && wasNearBottom);
-    if (shouldScroll && (options.scroll === true || !options.isPolling)) {
+    if (options.scroll === true) {
+      scrollToSubmittedReply(body, lastFreshNum, replyToNum);
+    } else if (shouldScroll && !options.isPolling) {
       body.scrollTop = body.scrollHeight;
     } else {
       restoreChatScrollAnchor(body, anchor, options);
     }
+    syncChatFloatNav(body);
     if (chatState.topicId && fresh.length) {
       const conv = document.querySelector(`.wecom-conv[data-topic-id="${chatState.topicId}"]`);
       if (conv) {
@@ -26736,7 +27446,7 @@
     const missing = ids.filter((id) => !loadedIds.has(String(id)));
     if (!missing.length) return 0;
     const posts = sortPostsByStream(await fetchPostsByIds(topicId, missing), missing);
-    return appendFreshPosts(posts, body);
+    return appendFreshPosts(posts, body, { isPolling: true, scroll: false });
   }
 
   async function refreshTopicOnce(topicId) {
@@ -26746,7 +27456,7 @@
     const stream = data?.post_stream?.stream || [];
     const posts = data?.post_stream?.posts || data?.posts || [];
     const tailIds = setRefreshedStream(stream, body);
-    let appended = appendFreshPosts(posts, body);
+    let appended = appendFreshPosts(posts, body, { isPolling: true, scroll: false });
     const loadedIds = new Set(posts.map((post) => post?.id).filter(Boolean).map(String));
     appended += await loadSubmittedTail(topicId, tailIds, loadedIds, body);
     if (chatState.topicId === topicId) {
@@ -26781,7 +27491,7 @@
   let v2exLastPollTime = 0;
   const V2EX_TOPIC_POLL_INTERVAL_MS = 10000;
 
-  async function pollV2exCurrentTopicOnce() {
+  async function pollV2exCurrentTopicOnce(options = {}) {
     if (!IS_V2EX) return 0;
     const topicId = Number(chatState.topicId);
     if (!topicId || chatState.loading) return 0;
@@ -26791,6 +27501,9 @@
     const body = document.querySelector(".wecom-chat-body");
     if (!body || body.querySelector(".wecom-chat-loading, .wecom-chat-error")) return 0;
     if (body.dataset.topicId && Number(body.dataset.topicId) !== topicId) return 0;
+
+    const submittedReplyTo = Number(options?.submittedReplyTo || 0);
+    const isAfterSubmit = Boolean(options?.isAfterSubmit);
 
     v2exTopicPollInFlight = true;
     v2exLastPollTime = Date.now();
@@ -26829,10 +27542,14 @@
       const postsOnPage = (parsed.post_stream?.posts || []).filter((p) => postNumberOf(p) > 1);
       let freshPosts = postsOnPage.filter((p) => !renderedNumbers.has(postNumberOf(p)));
 
-      // 当用户已经浏览至最后一页（!chatState.v2exHasMore），且新回复催生了下一页时，连续抓取下一页新回复
+      // 当用户已经浏览至最后一页（!chatState.v2exHasMore）或刚主动发帖（isAfterSubmit），且新回复在后续页/最后一页时，抓取目标页的新回复
       let nextPageData = null;
-      if (!chatState.v2exHasMore && (parsed.v2ex_has_more || parsed.total_pages > currentPage)) {
-        const nextPage = currentPage + 1;
+      const shouldFetchTailPage = (!chatState.v2exHasMore || (isAfterSubmit && freshPosts.length === 0))
+        && (parsed.v2ex_has_more || parsed.total_pages > currentPage);
+      if (shouldFetchTailPage) {
+        const nextPage = isAfterSubmit && parsed.total_pages > currentPage
+          ? parsed.total_pages
+          : currentPage + 1;
         try {
           const nextRes = await fetch(`/t/${topicId}?p=${nextPage}`, {
             credentials: "same-origin",
@@ -26855,12 +27572,31 @@
 
       let totalAppended = 0;
       if (freshPosts.length > 0) {
+        if (submittedReplyTo > 1) {
+          const lastFresh = freshPosts[freshPosts.length - 1];
+          if (lastFresh && !lastFresh.reply_to_post_number) {
+            lastFresh.reply_to_post_number = submittedReplyTo;
+            lastFresh.reply_to_floor = submittedReplyTo - 1;
+            const targetPost = chatState.postsByNumber?.get(submittedReplyTo);
+            if (targetPost && !lastFresh.reply_to_user) {
+              lastFresh.reply_to_user = {
+                username: targetPost.username || "",
+                name: targetPost.name || targetPost.username || "",
+                avatar_template: targetPost.avatar_template || ""
+              };
+            }
+          }
+        }
         for (const post of freshPosts) {
           if (!chatState.stream.includes(post.id)) {
             chatState.stream.push(post.id);
           }
         }
-        totalAppended = appendFreshPosts(freshPosts, currentBody, { isPolling: true, scroll: false });
+        totalAppended = appendFreshPosts(freshPosts, currentBody, {
+          isPolling: !isAfterSubmit,
+          scroll: isAfterSubmit,
+          replyToPostNumber: submittedReplyTo
+        });
       }
 
       const latestData = nextPageData || parsed;
@@ -26893,7 +27629,7 @@
       }
       setCachedTopic(topicId, latestData);
       syncV2exPaginationFooter(currentBody, false);
-      if (totalAppended === 0 && currentBody.scrollTop !== prevScrollTop) {
+      if (!isAfterSubmit && totalAppended === 0 && currentBody.scrollTop !== prevScrollTop) {
         currentBody.scrollTop = prevScrollTop;
       }
 
@@ -28062,6 +28798,7 @@
       if (typeof el.className === "string" && el.className.includes("wecom-")) return true;
       if (el.closest?.(WECOM_UI_SEL) || el.closest?.(NATIVE_BRIDGE_SEL)) return true;
       if (el.closest?.("#Top a[href^='/notifications'], #Rightbar a[href^='/notifications']")) return true;
+      if (el.tagName === "TITLE" || el.closest?.("title")) return true;
       if (el.tagName === "LINK" && (el.rel?.includes("icon") || el.rel === "manifest")) return true;
       return false;
     }

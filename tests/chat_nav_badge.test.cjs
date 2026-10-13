@@ -1234,11 +1234,8 @@ test("V2EX topic list pagination accurately inspects page indicators and avoids 
     const path = String(apiPath || "");
     const currentPage = testPageForPath(path);
     if (path === "/notifications" || count === 0) return { hasMore: false, nextPageUrl: null };
-    const isAllHome = path === "/" || path === "/?tab=all" || path === "all" || path === "latest";
-    if (isAllHome) return { hasMore: count > 0, nextPageUrl: "/recent" };
-    if (path.includes("tab=") && !path.includes("tab=all") && !path.includes("tab=latest")) {
-      return { hasMore: false, nextPageUrl: null };
-    }
+    const isTabHome = path === "/" || path === "all" || path === "latest" || /^\/\?tab=/i.test(path);
+    if (isTabHome) return { hasMore: count > 0, nextPageUrl: count > 0 ? "/recent" : null };
     if (html) {
       const inputMatch = html.match(/class="[^"]*page_input[^"]*"[^>]*max="(\d+)"/i) ||
         html.match(/max="(\d+)"[^>]*class="[^"]*page_input[^"]*"/i);
@@ -1271,9 +1268,10 @@ test("V2EX topic list pagination accurately inspects page indicators and avoids 
   assert.equal(resHome.hasMore, true);
   assert.equal(resHome.nextPageUrl, "/recent");
 
-  // 2. Tab tech has no pagination
+  // 2. Tab tech paginates via /recent
   const resTech = simulateListPagination("", "/?tab=tech", 50);
-  assert.equal(resTech.hasMore, false);
+  assert.equal(resTech.hasMore, true);
+  assert.equal(resTech.nextPageUrl, "/recent");
 
   // 3. /recent?p=6 with only 19 topics still advances to p=7
   const p6Html = `
@@ -3659,7 +3657,9 @@ test("Topic reply polling and background post sync preserves user reading positi
 
   // 3. submitComposer explicitly specifies { scroll: true } on user submission
   assert.ok(
-    scriptContent.includes("appendFreshPosts([post], document.querySelector(\".wecom-chat-body\"), { scroll: true });"),
+    scriptContent.includes("appendFreshPosts([post], document.querySelector(\".wecom-chat-body\"), {\n          scroll: true,") ||
+    scriptContent.includes("appendFreshPosts([post], document.querySelector(\".wecom-chat-body\"), {\r\n          scroll: true,") ||
+    scriptContent.includes("appendFreshPosts([post], document.querySelector(\".wecom-chat-body\"), { scroll: true"),
     "submitting post must pass { scroll: true } to follow user's own sent message"
   );
 
@@ -4714,7 +4714,7 @@ test("V2EX topic detail conversation background polling and seamless fresh reply
     "must define V2EX_TOPIC_POLL_INTERVAL_MS = 10000"
   );
   assert.ok(
-    scriptContent.includes("async function pollV2exCurrentTopicOnce()"),
+    scriptContent.includes("async function pollV2exCurrentTopicOnce("),
     "must define pollV2exCurrentTopicOnce"
   );
   assert.ok(
@@ -5939,7 +5939,8 @@ test("notifications exempt from fake title, clear distinction between likes/repl
     "loadMoreList must recognize /notifications pageUrl"
   );
   assert.ok(
-    scriptContent.includes("topics = isNotifPage\n          ? extractV2exNotificationsFromDoc(doc)\n          : extractV2exTopicsFromDoc(doc);"),
+    scriptContent.includes("? extractV2exNotificationsFromDoc(doc)") &&
+    scriptContent.includes(": extractV2exTopicsFromDoc(doc);"),
     "loadMoreList must extract notifications on notification pages"
   );
 
@@ -7171,7 +7172,8 @@ test("Test 101: Juejin UI deduplication, publish modal, notification routing, an
 
   // 2. Chat header bookmark replaced with open in web on Juejin
   assert.ok(
-    scriptContent.includes('IS_JUEJIN ? `\n          <button type="button" class="wecom-icon-btn wecom-open-pin-web" title="在原站打开沸点 ↗" aria-label="在原站打开沸点">${ICONS.external}</button>'),
+    scriptContent.includes("wecom-open-pin-web") &&
+    scriptContent.includes('title="在原站打开沸点 ↗"'),
     "Juejin chat header must replace bookmark with open-in-web"
   );
   assert.ok(
@@ -8159,3 +8161,334 @@ test("Test 111: Left rail group item positioned under notifications and search p
     new Function(scriptContent);
   }, "userscript must have strictly valid JavaScript syntax without parse or token errors");
 });
+
+/* ============================================================================
+ * Test 112: Floor Reply Scroll Position, Scroll-to-Bottom Button, Back-to-Position Button, and V2EX ?tab=xxx Pagination (v0.7.82)
+ * ============================================================================ */
+test("Test 112: floor reply scroll position, floating scroll-to-bottom button, back-to-last-position button on floor click, and V2EX ?tab=xxx list pagination (v0.7.82)", () => {
+  // 1. Static assertions: Floor reply scroll position (V2EX & Linux DO)
+  assert.ok(
+    scriptContent.includes("function scrollToSubmittedReply(body, newPostNumber = 0, replyToPostNumber = 0)"),
+    "must define scrollToSubmittedReply helper for scrolling to the newly posted floor reply instead of forcing bottom"
+  );
+  assert.ok(
+    scriptContent.includes("replyToPostNumber: requestedReply"),
+    "completeComposerSubmission on Linux DO must pass replyToPostNumber to appendFreshPosts"
+  );
+  assert.ok(
+    scriptContent.includes("await pollV2exCurrentTopicOnce({ submittedReplyTo: replyTo, isAfterSubmit: true });"),
+    "submitComposer on V2EX must pass submittedReplyTo and isAfterSubmit to pollV2exCurrentTopicOnce"
+  );
+  assert.ok(
+    scriptContent.includes("if (options.scroll === true) {\n      scrollToSubmittedReply(body, lastFreshNum, replyToNum);") ||
+    scriptContent.includes("if (options.scroll === true) {\r\n      scrollToSubmittedReply(body, lastFreshNum, replyToNum);"),
+    "appendFreshPosts must use scrollToSubmittedReply when options.scroll === true"
+  );
+  assert.ok(
+    scriptContent.includes("const floorPrefix = floor > 0 ? `@${name} #${floor} ` : `@${name} `;"),
+    "V2EX replyToPost must include #floor in the @mention prefix when replying to a floor"
+  );
+
+  // 2. Static assertions: Floating scroll-to-bottom & back-to-position buttons centered at bottom
+  assert.ok(
+    scriptContent.includes('class="wecom-chat-float-nav"') &&
+    scriptContent.includes('class="wecom-chat-back-pos"') &&
+    scriptContent.includes('class="wecom-chat-scroll-bottom"'),
+    "ensureChatPanel must render .wecom-chat-float-nav with .wecom-chat-back-pos and .wecom-chat-scroll-bottom"
+  );
+  assert.ok(
+    scriptContent.includes("background: rgba(255, 255, 255, 0.38);") &&
+    scriptContent.includes("backdrop-filter: blur(8px) saturate(140%);") &&
+    scriptContent.includes("left: 50%;") &&
+    scriptContent.includes("transform: translateX(-50%);"),
+    "scroll-to-bottom and back-pos buttons must use subtle translucent frosted-glass texture and be centered at the bottom"
+  );
+  assert.ok(
+    scriptContent.includes("wecom-chat-more-btn") &&
+    scriptContent.includes("wecom-chat-more-actions") &&
+    scriptContent.includes("wecom-chat-more-item wecom-chat-avatar-toggle") &&
+    scriptContent.includes("wecom-chat-more-item wecom-chat-members-toggle") &&
+    scriptContent.includes("wecom-chat-more-item wecom-watermark-settings"),
+    "chat header must keep only scroll-top, refresh, and more button, moving other actions into the more dropdown menu"
+  );
+  assert.ok(
+    scriptContent.includes("function syncChatFloatNav(body)"),
+    "must define syncChatFloatNav to toggle floating navigation buttons based on scroll position"
+  );
+  assert.ok(
+    scriptContent.includes("function saveChatJumpPosition(body, prevScrollTop, sourceEl = null)"),
+    "must define saveChatJumpPosition to record scrollTop before jumping to a floor"
+  );
+  assert.ok(
+    scriptContent.includes("function linkifyV2exFloorMentions(html)"),
+    "must define linkifyV2exFloorMentions to make #floor mentions clickable in V2EX messages"
+  );
+
+  // 3. Static assertions: V2EX /?tab=xxx list pagination
+  assert.ok(
+    scriptContent.includes('path.startsWith("/?tab=") ||') &&
+    scriptContent.includes("const isHomeTab ="),
+    "v2exNextPageUrl and parseV2exListPagination must treat all /?tab=xxx routes as tab home paginating to /recent"
+  );
+  assert.ok(
+    scriptContent.includes("while (pageUrl && hops < 3 && accumulatedFresh.length === 0)"),
+    "loadMoreList on V2EX must support multi-page hop when initial /recent page overlaps with existing tab topics"
+  );
+
+  // 4. Behavioral simulation: scrollToSubmittedReply scrolls to target floor / reply instead of scrollHeight
+  const mockMessages = new Map([
+    [3, { offsetTop: 240, offsetHeight: 80, classes: new Set() }],
+    [15, { offsetTop: 330, offsetHeight: 75, classes: new Set() }]
+  ]);
+  const mockBody = {
+    scrollTop: 200,
+    clientHeight: 500,
+    scrollHeight: 4200,
+    scrolledTo: null,
+    querySelector(sel) {
+      const m = sel.match(/data-post-number="(\d+)"/);
+      if (!m) return null;
+      const num = Number(m[1]);
+      const item = mockMessages.get(num);
+      if (!item) return null;
+      return {
+        offsetTop: item.offsetTop,
+        offsetHeight: item.offsetHeight,
+        classList: {
+          add(c) { item.classes.add(c); },
+          remove(c) { item.classes.delete(c); }
+        },
+        scrollIntoView() {
+          mockBody.scrolledTo = item.offsetTop;
+        }
+      };
+    }
+  };
+
+  function simScrollToSubmittedReply(body, newPostNumber, replyToPostNumber) {
+    const targetEl = (newPostNumber > 0 && body.querySelector(`.wecom-msg[data-post-number="${newPostNumber}"]`))
+      || (replyToPostNumber > 0 && body.querySelector(`.wecom-msg[data-post-number="${replyToPostNumber}"]`));
+    if (targetEl) {
+      targetEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      targetEl.classList.add("is-target-highlight");
+      return;
+    }
+    if (!replyToPostNumber || replyToPostNumber <= 1) {
+      body.scrollTop = body.scrollHeight;
+    }
+  }
+
+  // Replying to floor #2 (post_number = 3), new post is #14 (post_number = 15) placed under post 3 in thread view
+  simScrollToSubmittedReply(mockBody, 15, 3);
+  assert.strictEqual(mockBody.scrolledTo, 330, "must scroll to the newly inserted reply under the target floor");
+  assert.notStrictEqual(mockBody.scrollTop, 4200, "must NOT jump scrollTop to the very bottom (4200)");
+  assert.strictEqual(mockMessages.get(15).classes.has("is-target-highlight"), true, "must highlight the new reply");
+
+  // 5. Behavioral simulation: Floating scroll-to-bottom & back-to-position state machine
+  const floatState = {
+    scrollTop: 120,
+    scrollHeight: 2000,
+    clientHeight: 500,
+    lastJumpScrollTop: null,
+    scrollBottomVisible: false,
+    backPosVisible: false
+  };
+  function simSyncFloatNav() {
+    const distFromBottom = floatState.scrollHeight - floatState.scrollTop - floatState.clientHeight;
+    floatState.scrollBottomVisible = distFromBottom > 48;
+    floatState.backPosVisible = floatState.lastJumpScrollTop !== null && Number.isFinite(floatState.lastJumpScrollTop);
+  }
+  function simClickFloorLink(targetScrollTop) {
+    floatState.lastJumpScrollTop = floatState.scrollTop;
+    floatState.scrollTop = targetScrollTop;
+    simSyncFloatNav();
+  }
+  function simClickBackPos() {
+    if (floatState.lastJumpScrollTop !== null) {
+      floatState.scrollTop = floatState.lastJumpScrollTop;
+      floatState.lastJumpScrollTop = null;
+      simSyncFloatNav();
+    }
+  }
+  function simClickScrollBottom() {
+    floatState.scrollTop = floatState.scrollHeight - floatState.clientHeight;
+    simSyncFloatNav();
+  }
+
+  simSyncFloatNav();
+  assert.strictEqual(floatState.scrollBottomVisible, true, "scroll-to-bottom button must be visible when not at bottom");
+  assert.strictEqual(floatState.backPosVisible, false, "back-to-position button must be hidden before any floor jump");
+
+  // User clicks a floor indicator to jump from 120 to 950
+  simClickFloorLink(950);
+  assert.strictEqual(floatState.scrollTop, 950);
+  assert.strictEqual(floatState.backPosVisible, true, "back-to-position button must appear after clicking a floor");
+
+  // User clicks "回到上次位置"
+  simClickBackPos();
+  assert.strictEqual(floatState.scrollTop, 120, "clicking back-to-position must restore previous scrollTop (120)");
+  assert.strictEqual(floatState.backPosVisible, false, "back-to-position button must hide after returning");
+
+  // User clicks scroll-to-bottom arrow
+  simClickScrollBottom();
+  assert.strictEqual(floatState.scrollTop, 1500, "clicking scroll-to-bottom must scroll to bottom");
+  assert.strictEqual(floatState.scrollBottomVisible, false, "scroll-to-bottom button must hide when at bottom");
+});
+
+test("Test 113: V2EX notification click accurately jumps to target reply floor (payload/author/mine matching, thread-view scroll, and :not(.is-notif) protection)", () => {
+  const vm = require("node:vm");
+
+  // 1. Structural assertions
+  assert.ok(
+    scriptContent.includes("function normalizeV2exReplyMatchText(text)"),
+    "must define normalizeV2exReplyMatchText helper"
+  );
+  assert.ok(
+    scriptContent.includes("function findV2exReplyElement(body, target)"),
+    "must define findV2exReplyElement helper"
+  );
+  assert.ok(
+    scriptContent.includes("function scrollChatToV2exReplyEl(body, el)"),
+    "must define scrollChatToV2exReplyEl helper"
+  );
+  assert.ok(
+    scriptContent.includes('.wecom-conv[data-topic-id="${topicId}"]:not(.is-notif)'),
+    "syncTopicLastReadHref must exclude .is-notif rows so notification jump targets are never overwritten"
+  );
+  assert.ok(
+    scriptContent.includes('data-target-author=') &&
+    scriptContent.includes('data-target-payload=') &&
+    scriptContent.includes('data-target-notif-type='),
+    "convRowHtml must serialize data-target-author, data-target-payload, and data-target-notif-type"
+  );
+
+  // 2. Extract and run parseV2exReplyTarget, normalizeV2exReplyMatchText, findV2exReplyElement, scrollChatToV2exReplyEl
+  const startIdx = scriptContent.indexOf("function parseV2exReplyTarget(urlOrHash)");
+  const endIdx = scriptContent.indexOf("function locateV2exReply(body, target)");
+  assert.ok(startIdx > 0 && endIdx > startIdx, "must locate V2EX reply target functions in script");
+  const fnCode = scriptContent.slice(startIdx, endIdx);
+
+  const sandbox = {
+    chatState: { pinningScroll: false },
+    Number,
+    String,
+    Math
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(fnCode, sandbox);
+
+  // 2a. parseV2exReplyTarget must not treat plain path without '#' as anchor
+  const parsedPlain = sandbox.parseV2exReplyTarget("/t/123456");
+  assert.strictEqual(parsedPlain.anchor, "", "plain URL without hash must have empty anchor");
+  assert.strictEqual(parsedPlain.floor, 0);
+  const parsedAnchor = sandbox.parseV2exReplyTarget("/t/123456?p=2#reply118");
+  assert.strictEqual(parsedAnchor.page, 2);
+  assert.strictEqual(parsedAnchor.floor, 118);
+  assert.strictEqual(parsedAnchor.anchor, "reply118");
+
+  // 2b. normalizeV2exReplyMatchText strips leading @user #floor prefixes
+  assert.strictEqual(
+    sandbox.normalizeV2exReplyMatchText("@alice #12 同意这个方案"),
+    "同意这个方案",
+    "must strip leading @username #floor from reply text"
+  );
+
+  // 2c. Behavioral test of findV2exReplyElement across notification types
+  function makeMockMsg({ floor, postNumber, username, text, mine = false }) {
+    return {
+      dataset: {
+        floor: String(floor),
+        postNumber: String(postNumber || floor + 1),
+        username,
+        mine: mine ? "1" : "0"
+      },
+      classList: {
+        contains: (c) => c === "is-mine" && mine
+      },
+      querySelector: (sel) => {
+        if (sel === ".wecom-msg-name") return { textContent: username };
+        if (sel === ".wecom-msg-body") return { textContent: text };
+        return null;
+      },
+      textContent: text
+    };
+  }
+
+  const msgs = [
+    makeMockMsg({ floor: 0, postNumber: 1, username: "op_user", text: "楼主主贴内容" }),
+    makeMockMsg({ floor: 12, postNumber: 13, username: "me_user", text: "这是我之前在第12楼发表的精彩回复", mine: true }),
+    makeMockMsg({ floor: 23, postNumber: 24, username: "bob_dev", text: "因为前面删了两层楼，这条回复从25楼变成了23楼" }),
+    makeMockMsg({ floor: 80, postNumber: 81, username: "someone_else", text: "最后一楼无关回复" })
+  ];
+
+  const mockBody = {
+    querySelectorAll: (sel) => (sel === ".wecom-msg" ? msgs : []),
+    querySelector: (sel) => {
+      const fMatch = sel.match(/data-floor="(\d+)"/);
+      if (fMatch) {
+        const f = Number(fMatch[1]);
+        return msgs.find((m) => Number(m.dataset.floor) === f) || null;
+      }
+      const pMatch = sel.match(/data-post-number="(\d+)"/);
+      if (pMatch) {
+        const p = Number(pMatch[1]);
+        return msgs.find((m) => Number(m.dataset.postNumber) === p) || null;
+      }
+      return null;
+    }
+  };
+
+  // Case 1: "感谢了你在主题 › ... 中的回复" where V2EX href is #reply80 (total replies), but thanked reply is mine at floor 12
+  const matchedThank = sandbox.findV2exReplyElement(mockBody, {
+    floor: 80,
+    anchor: "reply80",
+    notifType: "thank",
+    author: "thanker_user",
+    payload: "这是我之前在第12楼发表的精彩回复"
+  });
+  assert.strictEqual(Number(matchedThank.dataset.floor), 12, "thank notification must locate user's thanked reply at floor 12 instead of total reply count 80");
+
+  // Case 2: "感谢了你在主题 › ... 中的回复" without payload (falls back to user's own reply <= floor)
+  const matchedThankNoPayload = sandbox.findV2exReplyElement(mockBody, {
+    floor: 80,
+    anchor: "reply80",
+    notifType: "thank",
+    author: "thanker_user",
+    payload: ""
+  });
+  assert.strictEqual(Number(matchedThankNoPayload.dataset.floor), 12, "thank notification without payload must locate user's own reply at floor 12");
+
+  // Case 3: Reply notification where floor shifted from #25 to #23 due to deleted posts, and rawPayload had "@me_user #12 "
+  const matchedShifted = sandbox.findV2exReplyElement(mockBody, {
+    floor: 25,
+    anchor: "reply25",
+    notifType: "reply",
+    author: "bob_dev",
+    payload: "@me_user #12 因为前面删了两层楼，这条回复从25楼变成了23楼"
+  });
+  assert.strictEqual(Number(matchedShifted.dataset.floor), 23, "shifted reply notification must locate bob_dev's reply at floor 23 via author+payload");
+
+  // 2d. Behavioral test of scrollChatToV2exReplyEl with nested .wecom-reply-children
+  const scrollContainer = {
+    scrollTop: 0,
+    getBoundingClientRect: () => ({ top: 100, bottom: 700, height: 600 })
+  };
+  const parentReplyWithHugeSubtree = {
+    // Own header+body is at top: 900..960, while entire .wecom-msg (with children) is 900..2800
+    getBoundingClientRect: () => ({ top: 900, bottom: 2800, height: 1900 }),
+    querySelector: (sel) => {
+      if (sel.includes(".wecom-msg-header")) {
+        return { getBoundingClientRect: () => ({ top: 900, bottom: 924, height: 24 }) };
+      }
+      if (sel.includes(".wecom-msg-body")) {
+        return { getBoundingClientRect: () => ({ top: 924, bottom: 964, height: 40 }) };
+      }
+      return null;
+    }
+  };
+  sandbox.scrollChatToV2exReplyEl(scrollContainer, parentReplyWithHugeSubtree);
+  // deltaTop = 900 - 100 = 800, ownHeight = 64, offset = min(120, round((600 - 64) * 0.28)) = 120 -> scrollTop = 680
+  assert.strictEqual(scrollContainer.scrollTop, 680, "must scroll to the reply's own header+body (680) instead of centering the 1900px nested subtree");
+});
+
+
