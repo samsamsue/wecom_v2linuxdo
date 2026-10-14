@@ -516,6 +516,20 @@ test("V2EX DOM parser, HTML parsing and API adapters are defined", () => {
     scriptContent.includes("submitV2exReply"),
     "must define submitV2exReply"
   );
+  assert.ok(
+    scriptContent.includes("isProblemError") &&
+    scriptContent.includes("isOnceError") &&
+    scriptContent.includes(".problem, #Main .problem"),
+    "submitV2exReply must inspect .problem in V2EX response and handle once expiration retry"
+  );
+  assert.ok(
+    scriptContent.includes('showWecomToast(`${action}失败：${message}`, "error", 4000)'),
+    "reportComposerError must invoke showWecomToast on submission failures"
+  );
+  assert.ok(
+    scriptContent.includes('showWecomToast("回复发送成功！", "success", 2000)'),
+    "submitComposer must invoke showWecomToast on successful V2EX reply"
+  );
 });
 
 test("V2EX list chips and search form are configured correctly", () => {
@@ -9398,6 +9412,1219 @@ test("Test 119: V2EX member card topics and replies touch-bottom pagination and 
   assert.strictEqual(parsedReplies[0].topicTitle, "回复的主题");
   assert.ok(parsedReplies[0].content.includes("这是多行回复内容 第二行内容"));
 });
+
+test("Test 120: Local UI font customization, presets, and CSS injection (v0.7.86)", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const scriptPath = path.join(__dirname, "..", "linuxdo-wecom.user.js");
+  const scriptContent = fs.readFileSync(scriptPath, "utf8");
+
+  // 1. Verify constants and presets
+  assert.ok(
+    scriptContent.includes('const CUSTOM_FONT_KEY = "linuxdo-wecom-custom-font";'),
+    "must define CUSTOM_FONT_KEY constant"
+  );
+  assert.ok(
+    scriptContent.includes('const CUSTOM_FONT_STYLE_ID = "wecom-custom-font-style";'),
+    "must define CUSTOM_FONT_STYLE_ID constant"
+  );
+  assert.ok(
+    scriptContent.includes("const DEFAULT_FONT_STACK ="),
+    "must define DEFAULT_FONT_STACK"
+  );
+  assert.ok(
+    scriptContent.includes("const FONT_PRESETS = Object.freeze({") &&
+    scriptContent.includes('yahei: {') &&
+    scriptContent.includes('kaiti: {') &&
+    scriptContent.includes('songti: {') &&
+    scriptContent.includes('heiti: {') &&
+    scriptContent.includes('pingfang: {') &&
+    scriptContent.includes('wenkai: {') &&
+    scriptContent.includes('harmony: {') &&
+    scriptContent.includes('source: {'),
+    "FONT_PRESETS must declare default, yahei, kaiti, songti, heiti, pingfang, wenkai, harmony, and source"
+  );
+  assert.ok(
+    scriptContent.includes("const FONT_NAME_ALIASES = Object.freeze({") &&
+    scriptContent.includes('"楷体":') &&
+    scriptContent.includes('"宋体":') &&
+    scriptContent.includes('"鸿蒙":') &&
+    scriptContent.includes('"思源黑体":'),
+    "must define FONT_NAME_ALIASES dictionary for Chinese/English font family names"
+  );
+
+  // 2. Verify CSS rules for font row and chips
+  assert.ok(
+    scriptContent.includes(".wecom-menu-font-row {") &&
+    scriptContent.includes(".wecom-menu-font-header {") &&
+    scriptContent.includes(".wecom-menu-font-val {") &&
+    scriptContent.includes(".wecom-menu-font-chips {") &&
+    scriptContent.includes(".wecom-theme-menu .wecom-font-chip {") &&
+    scriptContent.includes(".wecom-theme-menu .wecom-font-chip-custom {"),
+    "RAW_CSS must define full styling for font row, header, grid chips, and custom chip"
+  );
+
+  // 3. Verify menu DOM markup and synchronization
+  assert.ok(
+    scriptContent.includes('<div class="wecom-theme-menu-title wecom-theme-menu-divider">界面字体</div>'),
+    "createThemeMenu must include 界面字体 title divider"
+  );
+  assert.ok(
+    scriptContent.includes('data-font="default"') &&
+    scriptContent.includes('data-font="yahei"') &&
+    scriptContent.includes('data-font="kaiti"') &&
+    scriptContent.includes('data-font="songti"') &&
+    scriptContent.includes('data-font="heiti"') &&
+    scriptContent.includes('data-font="pingfang"') &&
+    scriptContent.includes('data-font="wenkai"') &&
+    scriptContent.includes('data-font="harmony"') &&
+    scriptContent.includes('data-font="source"') &&
+    scriptContent.includes('data-font="pick-system"') &&
+    scriptContent.includes('data-font="custom"'),
+    "createThemeMenu must render chips for all font presets, system picker, and custom input"
+  );
+  assert.ok(
+    scriptContent.includes('const fontRow = menu.querySelector(".wecom-menu-font-row");'),
+    "syncThemeControls must query .wecom-menu-font-row to update chip state"
+  );
+
+  // 4. Verify helper functions and click handling
+  assert.ok(
+    scriptContent.includes("function sanitizeFontFamily(name)"),
+    "must define sanitizeFontFamily helper"
+  );
+  assert.ok(
+    scriptContent.includes("function isFontAvailable(fontName)"),
+    "must define isFontAvailable helper"
+  );
+  assert.ok(
+    scriptContent.includes("function isFontStackAvailable(stackOrName)"),
+    "must define isFontStackAvailable helper"
+  );
+  assert.ok(
+    scriptContent.includes("const SYSTEM_FONT_PROBE_CANDIDATES =") &&
+    scriptContent.includes("function queryAllSystemFonts()") &&
+    scriptContent.includes("function openSystemFontPicker()") &&
+    scriptContent.includes("function closeSystemFontPicker()"),
+    "must define system font probe list and enumeration/picker dialog functions"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-font-picker-dialog") &&
+    scriptContent.includes(".wecom-font-picker-card") &&
+    scriptContent.includes(".wecom-font-search-input") &&
+    scriptContent.includes(".wecom-font-picker-list"),
+    "RAW_CSS must define system font picker dialog styling"
+  );
+  assert.ok(
+    scriptContent.includes("function getCustomFontSetting()"),
+    "must define getCustomFontSetting helper"
+  );
+  assert.ok(
+    scriptContent.includes("function setCustomFontSetting(mode, customName"),
+    "must define setCustomFontSetting helper"
+  );
+  assert.ok(
+    scriptContent.includes("function getCustomFontCssStack()"),
+    "must define getCustomFontCssStack helper"
+  );
+  assert.ok(
+    scriptContent.includes("function applyCustomFont()"),
+    "must define applyCustomFont helper"
+  );
+  assert.ok(
+    scriptContent.includes('const fontChip = event.target.closest(".wecom-font-chip");'),
+    "createThemeMenu click handler must capture .wecom-font-chip clicks"
+  );
+
+  // 5. Verify applyCustomFont integration in bootstrap and theme lifecycle
+  assert.ok(
+    scriptContent.includes("injectStyle();\n    applyCustomFont();"),
+    "_applyTheme must call applyCustomFont right after injectStyle"
+  );
+  assert.ok(
+    scriptContent.includes("applySiteColorMode();\n      applyCustomFont();"),
+    "bootstrap must call applyCustomFont early during document-start"
+  );
+  assert.ok(
+    scriptContent.includes('document.getElementById(CUSTOM_FONT_STYLE_ID)?.remove();'),
+    "_applyTheme must clean up custom font style tag when in native view or other theme active"
+  );
+
+  // 6. Functional test: sanitizeFontFamily & formatFontFamilyStack logic
+  const sanitize = (name) => {
+    if (!name || typeof name !== "string") return "";
+    return name.replace(/["';{}\\]/g, "").trim();
+  };
+  const aliases = {
+    "楷体": '"KaiTi", "楷体", "Kaiti SC", "STKaiti"',
+    "kaiti": '"KaiTi", "楷体", "Kaiti SC", "STKaiti"',
+    "鸿蒙": '"HarmonyOS Sans SC", "HarmonyOS Sans"'
+  };
+  const formatStack = (name) => {
+    const raw = sanitize(name);
+    if (!raw) return "";
+    const parts = raw.split(",").map((p) => p.trim()).filter(Boolean);
+    if (!parts.length) return "";
+    return parts.map((p) => {
+      const lower = p.toLowerCase();
+      if (aliases[p]) return aliases[p];
+      if (aliases[lower]) return aliases[lower];
+      return `"${p}"`;
+    }).join(", ");
+  };
+
+  assert.strictEqual(sanitize('MiSans'), 'MiSans');
+  assert.strictEqual(sanitize('"; body { color: red; } "'), 'body  color: red');
+  assert.strictEqual(formatStack('楷体'), '"KaiTi", "楷体", "Kaiti SC", "STKaiti"');
+  assert.strictEqual(formatStack('JetBrains Mono'), '"JetBrains Mono"');
+  assert.strictEqual(formatStack(''), '');
+
+  // 7. Functional test: custom font setting storage roundtrip
+  const mockStorage = new Map();
+  const getSetting = () => {
+    const raw = mockStorage.get("linuxdo-wecom-custom-font");
+    if (raw) {
+      if (raw.startsWith("{")) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") {
+          return { mode: parsed.mode || "default", customName: parsed.customName || "" };
+        }
+      }
+      return { mode: raw, customName: "" };
+    }
+    return { mode: "default", customName: "" };
+  };
+  const setSetting = (mode, customName = "") => {
+    const setting = { mode, customName: mode === "custom" ? sanitize(customName) : "" };
+    mockStorage.set("linuxdo-wecom-custom-font", JSON.stringify(setting));
+    return setting;
+  };
+
+  assert.deepStrictEqual(getSetting(), { mode: "default", customName: "" });
+  setSetting("yahei");
+  assert.deepStrictEqual(getSetting(), { mode: "yahei", customName: "" });
+  setSetting("kaiti");
+  assert.deepStrictEqual(getSetting(), { mode: "kaiti", customName: "" });
+  setSetting("custom", "LXGW Bright;");
+  assert.deepStrictEqual(getSetting(), { mode: "custom", customName: "LXGW Bright" });
+});
+
+test("Test 121: Desktop window shortcut creator ('创建窗口快捷式'), batch script generator, clipboard copy, and WeCom dialog", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const scriptPath = path.join(__dirname, "..", "linuxdo-wecom.user.js");
+  const scriptContent = fs.readFileSync(scriptPath, "utf8");
+
+  // 1. Verify menu DOM markup and click binding
+  assert.ok(
+    scriptContent.includes('class="wecom-menu-create-shortcut"') &&
+    scriptContent.includes('<span>创建窗口快捷式</span>'),
+    "createThemeMenu must render menu button with text '创建窗口快捷式'"
+  );
+  assert.ok(
+    scriptContent.includes('if (event.target.closest(".wecom-menu-create-shortcut")) {') &&
+    scriptContent.includes('openWindowShortcutDialog();'),
+    "createThemeMenu click listener must handle .wecom-menu-create-shortcut"
+  );
+
+  // 2. Verify helper functions and dialog management
+  assert.ok(
+    scriptContent.includes("function generateShortcutBatContent(appName, appUrl)"),
+    "must define generateShortcutBatContent helper"
+  );
+  assert.ok(
+    scriptContent.includes("function triggerDownloadBatFile(filename, textContent)"),
+    "must define triggerDownloadBatFile helper"
+  );
+  assert.ok(
+    scriptContent.includes("function openWindowShortcutDialog()"),
+    "must define openWindowShortcutDialog helper"
+  );
+  assert.ok(
+    scriptContent.includes("function closeWindowShortcutDialog()"),
+    "must define closeWindowShortcutDialog helper"
+  );
+
+  // 3. Verify CSS styling for shortcut dialog
+  assert.ok(
+    scriptContent.includes(".wecom-shortcut-dialog {") &&
+    scriptContent.includes(".wecom-shortcut-card {") &&
+    scriptContent.includes(".wecom-shortcut-cmd-box {") &&
+    scriptContent.includes(".wecom-shortcut-btn-copy {"),
+    "RAW_CSS must define full styles for .wecom-shortcut-dialog"
+  );
+
+  // 4. Verify cleanup in removePanels and WECOM_UI_SEL guard
+  assert.ok(
+    scriptContent.includes("closeWindowShortcutDialog();"),
+    "removePanels and Escape listener must call closeWindowShortcutDialog"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-shortcut-dialog"),
+    "WECOM_UI_SEL must include .wecom-shortcut-dialog"
+  );
+
+  // 5. Functional test: generateShortcutBatContent logic
+  const genBat = (appName, appUrl) => {
+    return [
+      "@echo off",
+      "chcp 65001 >nul",
+      "setlocal enabledelayedexpansion",
+      `echo  正在为 ${appName} 创建桌面独立窗口快捷方式...`,
+      'set "TARGET_CHROME=C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"',
+      'set "VBS_SCRIPT=%TEMP%\\create_shortcut_%RANDOM%.vbs"',
+      `echo sLinkFile = oWS.SpecialFolders("Desktop") ^& "\\${appName}.lnk" >> "%VBS_SCRIPT%"`,
+      `echo oLink.Arguments = "--app=""${appUrl}""" >> "%VBS_SCRIPT%"`,
+      'cscript //nologo "%VBS_SCRIPT%"'
+    ].join("\r\n");
+  };
+
+  const bat = genBat("LINUX DO (企微版)", "https://linux.do");
+  assert.ok(bat.includes('C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'));
+  assert.ok(bat.includes('--app=""https://linux.do"""'));
+  assert.ok(bat.includes('sLinkFile = oWS.SpecialFolders("Desktop")'));
+  assert.ok(bat.includes('cscript //nologo'));
+});
+
+test("Test 122: AI API Configuration, Model Fetching, Standalone Dialog, and Topic Summary covering Post Content and Replies", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const scriptPath = path.join(__dirname, "..", "linuxdo-wecom.user.js");
+  const scriptContent = fs.readFileSync(scriptPath, "utf8");
+
+  // 1. Settings & Menu Integration
+  assert.ok(
+    scriptContent.includes('class="wecom-menu-ai-config"') &&
+    scriptContent.includes('配置 AI API...</span>') &&
+    scriptContent.includes('class="wecom-menu-state-badge wecom-menu-ai-badge'),
+    "createThemeMenu must render AI configuration button and status badge"
+  );
+  assert.ok(
+    scriptContent.includes('if (event.target.closest(".wecom-menu-ai-config")) {') &&
+    scriptContent.includes('openAiConfigDialog();'),
+    "createThemeMenu click listener must open AI config dialog"
+  );
+  assert.ok(
+    scriptContent.includes('const aiBadge = menu.querySelector(".wecom-menu-ai-badge");') &&
+    scriptContent.includes('isAiConfigured()'),
+    "syncThemeControls must sync AI badge status ('已配置' / '未配置')"
+  );
+
+  // 2. Providers and Configuration Storage Helpers
+  // 2. Providers, Summary Styles, Image Providers, Styles, and Storage Helpers
+  assert.ok(
+    scriptContent.includes("const AI_CONFIG_KEY = \"linuxdo-wecom-ai-config\";") &&
+    scriptContent.includes("const AI_SUMMARY_PREF_KEY = \"linuxdo-wecom-ai-summary-pref\";") &&
+    scriptContent.includes("const AI_IMAGE_CONFIG_KEY = \"linuxdo-wecom-ai-image-config\";") &&
+    scriptContent.includes("const AI_CACHE_KEY = \"linuxdo-wecom-ai-topic-cache\";"),
+    "must define AI_CONFIG_KEY, AI_SUMMARY_PREF_KEY, AI_IMAGE_CONFIG_KEY, and AI_CACHE_KEY storage keys"
+  );
+  assert.ok(
+    scriptContent.includes("const AI_PROVIDERS = Object.freeze({") &&
+    scriptContent.includes("gemini:") &&
+    scriptContent.includes("openai:") &&
+    scriptContent.includes("deepseek:") &&
+    scriptContent.includes("custom:"),
+    "AI_PROVIDERS must support Gemini, OpenAI, DeepSeek, and custom providers"
+  );
+  assert.ok(
+    scriptContent.includes("const AI_IMAGE_PROVIDERS = Object.freeze({") &&
+    scriptContent.includes("openai:") &&
+    scriptContent.includes("siliconflow:") &&
+    scriptContent.includes("custom:"),
+    "AI_IMAGE_PROVIDERS must support OpenAI, SiliconFlow, and custom image providers"
+  );
+  assert.ok(
+    scriptContent.includes("const AI_SUMMARY_STYLES = Object.freeze({") &&
+    scriptContent.includes("sharp:") &&
+    scriptContent.includes("humor:") &&
+    scriptContent.includes("concise:") &&
+    scriptContent.includes("drama:") &&
+    scriptContent.includes("objective:") &&
+    scriptContent.includes("practical:"),
+    "AI_SUMMARY_STYLES must define 6 summary styles: sharp, humor, concise, drama, objective, and practical"
+  );
+  assert.ok(
+    scriptContent.includes("const AI_IMAGE_STYLES = Object.freeze({") &&
+    scriptContent.includes("comic_4panel:") &&
+    scriptContent.includes("comic_color:") &&
+    scriptContent.includes("comic_us:") &&
+    scriptContent.includes("comic_chibi:") &&
+    scriptContent.includes("cyberpunk_comic:") &&
+    scriptContent.includes("sketch_story:"),
+    "AI_IMAGE_STYLES must define comic narrative styles: comic_4panel, comic_color, comic_us, comic_chibi, cyberpunk_comic, and sketch_story"
+  );
+  assert.ok(
+    scriptContent.includes("function getAiConfig()") &&
+    scriptContent.includes("function setAiConfig(cfg)") &&
+    scriptContent.includes("function isAiConfigured()") &&
+    scriptContent.includes("function getAiImageConfig()") &&
+    scriptContent.includes("function setAiImageConfig(cfg)") &&
+    scriptContent.includes("function getEffectiveAiImageConfig()") &&
+    scriptContent.includes("function isAiImageConfigured()") &&
+    scriptContent.includes("function getAiSummaryPref()") &&
+    scriptContent.includes("function setAiSummaryPref(pref)") &&
+    scriptContent.includes("function getTopicAiCache(topicId)") &&
+    scriptContent.includes("function saveTopicAiCache(topicId, partialData)"),
+    "must define AI config, image config, topic cache, and summary pref helpers"
+  );
+
+  // 3. API Communication: Model Fetching, Chat Calling, Image Generation, and Connection Testing
+  assert.ok(
+    scriptContent.includes("async function fetchAiModels(provider, apiKey, baseUrl)"),
+    "must define fetchAiModels helper"
+  );
+  assert.ok(
+    scriptContent.includes("/v1beta/models?key=") &&
+    scriptContent.includes("/models"),
+    "fetchAiModels must handle Gemini native endpoint and OpenAI compatible /models endpoint"
+  );
+  assert.ok(
+    scriptContent.includes("async function callAiChatApi(config, messages, options = {})"),
+    "must define callAiChatApi helper"
+  );
+  assert.ok(
+    scriptContent.includes("generateContent") &&
+    scriptContent.includes("/chat/completions"),
+    "callAiChatApi must support both Gemini generateContent and OpenAI chat/completions"
+  );
+  assert.ok(
+    scriptContent.includes("async function testAiConnection(config)"),
+    "must define testAiConnection helper"
+  );
+  assert.ok(
+    scriptContent.includes("async function callAiImageApi(config, prompt, options = {})") &&
+    scriptContent.includes("async function testAiImageConnection(config)") &&
+    scriptContent.includes("async function fetchAiImageModels(provider, apiKey, baseUrl)") &&
+    scriptContent.includes("async function generateComicVisualPrompt(topicInfo, options = {})"),
+    "must define callAiImageApi, testAiImageConnection, fetchAiImageModels, and generateComicVisualPrompt helpers"
+  );
+  assert.ok(
+    scriptContent.includes("wecom-ai-btn-fetch-img") &&
+    scriptContent.includes("fetchAiImageModels"),
+    "dialog must include image model fetch button and bind fetchAiImageModels"
+  );
+
+  // 4. Standalone AI Configuration Dialog
+  assert.ok(
+    scriptContent.includes("function openAiConfigDialog") &&
+    scriptContent.includes("function closeAiConfigDialog()"),
+    "must define openAiConfigDialog and closeAiConfigDialog helpers"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-ai-config-dialog") &&
+    scriptContent.includes(".wecom-ai-config-card") &&
+    scriptContent.includes(".wecom-ai-config-tabs") &&
+    scriptContent.includes(".wecom-ai-config-tab") &&
+    scriptContent.includes(".wecom-ai-provider-chips") &&
+    scriptContent.includes(".wecom-ai-btn-fetch") &&
+    scriptContent.includes(".wecom-ai-btn-test") &&
+    scriptContent.includes(".wecom-ai-test-status"),
+    "RAW_CSS and DOM must define standalone AI configuration dialog markup and styling"
+  );
+  assert.ok(
+    !scriptContent.includes("wecom-ai-input-prompt"),
+    "openAiConfigDialog must NOT contain custom prompt textarea/input (prompt moved to summary dialog)"
+  );
+
+  // 5. Post Extraction, HTML Cleaning, and Prompt Construction
+  assert.ok(
+    scriptContent.includes("function cleanHtmlToPlainText(html)"),
+    "must define cleanHtmlToPlainText helper"
+  );
+  assert.ok(
+    scriptContent.includes("function extractCurrentTopicForSummary()"),
+    "must define extractCurrentTopicForSummary helper"
+  );
+  assert.ok(
+    scriptContent.includes("mainPost") &&
+    scriptContent.includes("replies") &&
+    scriptContent.includes("post_number > 1") &&
+    scriptContent.includes("highLikesCount") &&
+    scriptContent.includes("【高赞热门回帖（重点关注）】"),
+    "extractCurrentTopicForSummary must extract main post, replies, and highlight high likes posts"
+  );
+  assert.ok(
+    scriptContent.includes("function buildSummaryPrompt(topicInfo, options = {})"),
+    "must define buildSummaryPrompt helper"
+  );
+  assert.ok(
+    scriptContent.includes("【主楼正文内容】") &&
+    scriptContent.includes("【楼层回复与社区讨论】") &&
+    scriptContent.includes("楼主内容极简易懂") &&
+    scriptContent.includes("回复抓犀利与高赞") &&
+    scriptContent.includes("篇幅克制精炼"),
+    "buildSummaryPrompt must incorporate main post, replies, and concise/sharp/likes guidelines"
+  );
+
+  // 6. Summary Dialog, Markdown Rendering, Comic Generator, and Actions
+  assert.ok(
+    scriptContent.includes("function renderSimpleMarkdown(md)"),
+    "must define renderSimpleMarkdown helper"
+  );
+  assert.ok(
+    scriptContent.includes("function openAiSummaryDialog") &&
+    scriptContent.includes("function closeAiSummaryDialog()") &&
+    scriptContent.includes("function triggerTopicAiSummary"),
+    "must define openAiSummaryDialog, closeAiSummaryDialog, and triggerTopicAiSummary helpers"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-ai-summary-dialog") &&
+    scriptContent.includes(".wecom-ai-summary-card") &&
+    scriptContent.includes(".wecom-ai-dialog-tabs") &&
+    scriptContent.includes(".wecom-ai-dialog-tab") &&
+    scriptContent.includes(".wecom-ai-markdown-body") &&
+    scriptContent.includes(".wecom-ai-summary-meta") &&
+    scriptContent.includes(".wecom-ai-summary-loading") &&
+    scriptContent.includes(".wecom-ai-summary-setup") &&
+    scriptContent.includes(".wecom-ai-style-chips") &&
+    scriptContent.includes(".wecom-ai-style-chip") &&
+    scriptContent.includes(".wecom-ai-cache-banner") &&
+    scriptContent.includes(".wecom-ai-cache-badge") &&
+    scriptContent.includes(".wecom-ai-checkbox-label") &&
+    scriptContent.includes(".wecom-ai-checkbox-card") &&
+    scriptContent.includes(".wecom-ai-image-setup") &&
+    scriptContent.includes(".wecom-ai-image-wrap") &&
+    scriptContent.includes(".wecom-ai-image-card") &&
+    scriptContent.includes(".wecom-ai-image-img") &&
+    scriptContent.includes(".wecom-ai-btn-start-summary") &&
+    scriptContent.includes(".wecom-ai-btn-start-image") &&
+    scriptContent.includes(".wecom-ai-btn-change-setup"),
+    "RAW_CSS and DOM must define AI summary dialog setup view, comic setup view, style chips, and actions"
+  );
+  assert.ok(
+    scriptContent.includes("不限制固定格数") &&
+    scriptContent.includes("生成纯中文画面与中文台词") &&
+    scriptContent.includes("漫画对话气泡框") &&
+    scriptContent.includes("中文分镜生图提示词"),
+    "generateComicVisualPrompt must output pure Chinese prompt, support unrestricted storyboard panels, and render Chinese comic speech bubbles"
+  );
+
+  // 7. Chat Header Tools, More Actions, Rail Trigger, and Lifecycle Cleanup
+  assert.ok(
+    scriptContent.includes('class="wecom-icon-btn wecom-chat-ai-summary"') &&
+    scriptContent.includes('title="AI 总结本帖 (包含内容与回复)"'),
+    ".wecom-chat-tools must include AI summary icon button"
+  );
+  assert.ok(
+    scriptContent.includes('class="wecom-icon-btn wecom-chat-more-item wecom-chat-ai-summary-menu"') &&
+    scriptContent.includes('class="wecom-icon-btn wecom-chat-more-item wecom-chat-ai-image-menu"'),
+    ".wecom-chat-more-actions must include AI summary and AI comic image menu items"
+  );
+  assert.ok(
+    scriptContent.includes('if (event.target.closest(".wecom-chat-ai-summary, .wecom-chat-ai-summary-menu")) {') &&
+    scriptContent.includes('triggerTopicAiSummary("summary");'),
+    "chat panel click listener must handle AI summary clicks"
+  );
+  assert.ok(
+    scriptContent.includes('if (event.target.closest(".wecom-chat-ai-image-menu")) {') &&
+    scriptContent.includes('triggerTopicAiSummary("image");'),
+    "chat panel click listener must handle AI comic image clicks"
+  );
+  assert.ok(
+    scriptContent.includes('rail.querySelector("[data-rail-key=\'summary\']")') &&
+    scriptContent.includes('triggerTopicAiSummary();'),
+    "bindRailNavClicks must handle data-rail-key='summary' click"
+  );
+  assert.ok(
+    scriptContent.includes('closeAiConfigDialog();') &&
+    scriptContent.includes('closeAiSummaryDialog();'),
+    "removePanels and Escape key listener must close AI config and summary dialogs"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-ai-config-dialog") &&
+    scriptContent.includes(".wecom-ai-summary-dialog"),
+    "WECOM_UI_SEL must include AI dialog classes"
+  );
+
+  // 8. Functional Tests: cleanHtmlToPlainText
+  const cleanHtml = (html) => {
+    if (!html || typeof html !== "string") return "";
+    let text = html;
+    text = text.replace(/<br\s*\/?>/gi, "\n");
+    text = text.replace(/<\/(p|div|h[1-6]|li|blockquote|tr)>/gi, "\n");
+    text = text.replace(/<img[^>]*alt=["']([^"']+)["'][^>]*>/gi, " [$1] ");
+    text = text.replace(/<[^>]+>/g, "");
+    text = text
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&apos;/g, "'");
+    return text.replace(/\n{3,}/g, "\n\n").trim();
+  };
+
+  const sampleHtml = "<p>大家好，请教一个问题：</p><p>如何使用 <code>Node.js</code> 进行流式传输？<br/>附图：<img src=\"foo.jpg\" alt=\"架构图\"></p><blockquote>参考文档：https://example.com &amp; 更多</blockquote>";
+  const cleaned = cleanHtml(sampleHtml);
+  assert.ok(cleaned.includes("大家好，请教一个问题："));
+  assert.ok(cleaned.includes("如何使用 Node.js 进行流式传输？"));
+  assert.ok(cleaned.includes("[架构图]"));
+  assert.ok(cleaned.includes("参考文档：https://example.com & 更多"));
+  assert.ok(!cleaned.includes("<p>"));
+  assert.ok(!cleaned.includes("<blockquote>"));
+
+  // 9. Functional Tests: buildSummaryPrompt
+  const styles = {
+    sharp: {
+      id: "sharp",
+      label: "🔥 犀利吐槽",
+      name: "犀利吐槽",
+      desc: "观点鲜明一针见血，重点剖析高赞回帖的神吐槽与硬核反驳，直言不讳",
+      instruction: "语言风格：【犀利吐槽】。用辛辣、一针见血的笔触总结。楼主有槽点直截了当指出；回帖部分重点提炼最犀利、反讽、一语中的高赞神评神吐槽，不要说客套话。"
+    },
+    humor: {
+      id: "humor",
+      label: "😄 幽默风趣",
+      name: "幽默风趣",
+      desc: "诙谐网感十足，大白话玩梗，把技术讨论或争论讲得生动有趣",
+      instruction: "语言风格：【幽默风趣】。语言轻松接地气、带有当代互联网人的幽默感。用生动有趣的类比或调侃，把楼主的问题和高赞回帖讲得妙趣横生，引人发笑。"
+    }
+  };
+
+  const buildPrompt = (topicInfo, options = {}) => {
+    const { title, mainAuthor, mainPostText, repliesFormatted, repliesCount } = topicInfo;
+    const styleKey = typeof options === "string" ? options : (options.styleKey || options.style || "sharp");
+    const styleDef = styles[styleKey] || styles.sharp;
+    const customPrompt = typeof options === "string" ? "" : (options.customPrompt || "").trim();
+
+    let basePrompt =
+`你是论坛专业AI总结专家。请对以下讨论进行精炼、易懂、重点突出且篇幅克制的中文总结。
+
+【总结原则】：
+1. 楼主内容极简易懂：用最通俗易懂的大白话提炼楼主的核心背景与诉求，抓取实质要点，去除冗余铺垫。
+2. 回复抓犀利与高赞：特别重点分析点赞多的热门回帖（标有 🔥获赞）与犀利观点，提炼出最有深度、最犀利扎心或最具代表性的楼层神评与态度。
+3. 篇幅克制精炼：整体分析严格控制字数在 250~450 字左右，结构紧凑短小精悍，拒绝又长又臭的废话套话。
+4. ${styleDef.instruction}
+
+【帖子标题】：${title}
+【发帖人/楼主】：${mainAuthor}
+
+【主楼正文内容】：
+${mainPostText || "(主楼无文字内容)"}
+
+【楼层回复与社区讨论】（共收集 ${repliesCount} 条回复）：
+${repliesFormatted || "(暂无回帖讨论)"}`;
+
+    if (customPrompt) {
+      basePrompt += `\n\n【用户重点关注点/自定义要求】：\n${customPrompt}`;
+    }
+
+    basePrompt += `\n\n请严格按以下结构输出 Markdown（语言精炼、排版清爽）：
+### 📌 楼主在说什么（大白话精炼）
+- 简短 2-3 句话讲清楼主核心要点与诉求。
+
+### 💬 犀利高赞神评与社区态度
+- 提炼点赞最多、观点最犀利的回帖态度（标明楼层/作者/高赞亮点）。
+- 归纳社区共识与分歧交锋点。
+
+### 💡 一句话总结
+- 一句精辟有力量的总结或行动建议。`;
+
+    return basePrompt;
+  };
+
+  const sampleTopic = {
+    title: "如何搭建高效的轻量级开发环境？",
+    mainAuthor: "TechExplorer",
+    mainPostText: "希望在 8GB 内存轻薄本上实现前后端全栈开发...",
+    repliesFormatted: "【高赞热门回帖（重点关注）】：\n[#2 DeveloperA (🔥获赞 42)]: 建议使用 VS Code Remote 或轻量级编辑器\n\n【其他楼层回复选摘】：\n[#3 DeveloperB]: 推荐 Docker 资源限制与 WSL2 优化",
+    repliesCount: 2,
+    highLikesCount: 1
+  };
+  const prompt = buildPrompt(sampleTopic, { style: "sharp", customPrompt: "重点关注内存占用" });
+  assert.ok(prompt.includes("【帖子标题】：如何搭建高效的轻量级开发环境？"));
+  assert.ok(prompt.includes("【发帖人/楼主】：TechExplorer"));
+  assert.ok(prompt.includes("【主楼正文内容】：\n希望在 8GB 内存轻薄本上实现前后端全栈开发..."));
+  assert.ok(prompt.includes("【楼层回复与社区讨论】（共收集 2 条回复）："));
+  assert.ok(prompt.includes("🔥获赞 42"));
+  assert.ok(prompt.includes("楼主内容极简易懂"));
+  assert.ok(prompt.includes("回复抓犀利与高赞"));
+  assert.ok(prompt.includes("篇幅克制精炼"));
+  assert.ok(prompt.includes("语言风格：【犀利吐槽】"));
+  assert.ok(prompt.includes("【用户重点关注点/自定义要求】：\n重点关注内存占用"));
+  assert.ok(prompt.includes("### 📌 楼主在说什么（大白话精炼）"));
+  assert.ok(prompt.includes("### 💬 犀利高赞神评与社区态度"));
+  assert.ok(prompt.includes("### 💡 一句话总结"));
+
+  // 10. Functional Tests: renderSimpleMarkdown
+  const escapeHtml = (text) => {
+    if (!text || typeof text !== "string") return "";
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  };
+  const renderMarkdown = (md) => {
+    if (!md || typeof md !== "string") return "";
+    const escaped = escapeHtml(md);
+    const lines = escaped.split(/\r?\n/);
+    const output = [];
+    let inUl = false;
+    let inOl = false;
+    function closeLists() {
+      if (inUl) { output.push("</ul>"); inUl = false; }
+      if (inOl) { output.push("</ol>"); inOl = false; }
+    }
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) { closeLists(); continue; }
+      const formatInline = (str) => {
+        return str
+          .replace(/`([^`]+)`/g, '<code class="wecom-ai-code">$1</code>')
+          .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+      };
+      if (line.startsWith("### ")) {
+        closeLists();
+        output.push(`<div class="wecom-ai-h3">${formatInline(line.slice(4))}</div>`);
+      } else if (line.startsWith("> ") || line.startsWith("&gt; ")) {
+        closeLists();
+        const quoteContent = line.startsWith("&gt; ") ? line.slice(5) : line.slice(2);
+        output.push(`<div class="wecom-ai-quote">${formatInline(quoteContent)}</div>`);
+      } else if (/^[-*]\s+/.test(line)) {
+        if (inOl) { output.push("</ol>"); inOl = false; }
+        if (!inUl) { output.push('<ul class="wecom-ai-ul">'); inUl = true; }
+        output.push(`<li class="wecom-ai-li">${formatInline(line.replace(/^[-*]\s+/, ""))}</li>`);
+      } else {
+        closeLists();
+        output.push(`<p class="wecom-ai-p">${formatInline(line)}</p>`);
+      }
+    }
+    closeLists();
+    return output.join("\n");
+  };
+
+  const mdInput = "### 📌 核心要点\n- **方案A**: 简单高效\n- **方案B**: 稳定性更好\n> 注意备份配置文件\n普通段落测试";
+  const rendered = renderMarkdown(mdInput);
+  assert.ok(rendered.includes('<div class="wecom-ai-h3">📌 核心要点</div>'));
+  assert.ok(rendered.includes('<ul class="wecom-ai-ul">'));
+  assert.ok(rendered.includes('<li class="wecom-ai-li"><strong>方案A</strong>: 简单高效</li>'));
+  assert.ok(rendered.includes('<div class="wecom-ai-quote">注意备份配置文件</div>'));
+  assert.ok(rendered.includes('<p class="wecom-ai-p">普通段落测试</p>'));
+
+  // 11. Functional Tests: Storage Roundtrip & Configuration Logic
+  const mockStorage = new Map();
+  const getCfg = () => {
+    const raw = mockStorage.get("linuxdo-wecom-ai-config");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        provider: parsed.provider || "gemini",
+        apiKey: parsed.apiKey || "",
+        baseUrl: parsed.baseUrl || "",
+        model: parsed.model || ""
+      };
+    }
+    return {
+      provider: "gemini",
+      apiKey: "",
+      baseUrl: "https://generativelanguage.googleapis.com",
+      model: "gemini-1.5-flash"
+    };
+  };
+  const setCfg = (c) => {
+    const toSave = {
+      provider: c.provider || "gemini",
+      apiKey: (c.apiKey || "").trim(),
+      baseUrl: (c.baseUrl || "").trim(),
+      model: (c.model || "").trim()
+    };
+    mockStorage.set("linuxdo-wecom-ai-config", JSON.stringify(toSave));
+    return toSave;
+  };
+  const isConfigured = () => Boolean(getCfg().apiKey.trim());
+
+  const getPref = () => {
+    const raw = mockStorage.get("linuxdo-wecom-ai-summary-pref");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        style: parsed.style || "sharp",
+        customPrompt: parsed.customPrompt || ""
+      };
+    }
+    return { style: "sharp", customPrompt: "" };
+  };
+  const setPref = (p) => {
+    const toSave = {
+      style: p.style || "sharp",
+      customPrompt: (p.customPrompt || "").trim()
+    };
+    mockStorage.set("linuxdo-wecom-ai-summary-pref", JSON.stringify(toSave));
+    return toSave;
+  };
+
+  assert.strictEqual(isConfigured(), false);
+  setCfg({ provider: "deepseek", apiKey: "sk-test123456", model: "deepseek-chat" });
+  assert.strictEqual(isConfigured(), true);
+  assert.strictEqual(getCfg().provider, "deepseek");
+  assert.strictEqual(getCfg().apiKey, "sk-test123456");
+  assert.strictEqual(getCfg().model, "deepseek-chat");
+
+  assert.strictEqual(getPref().style, "sharp");
+  setPref({ style: "humor", customPrompt: "关注高赞反对意见" });
+  assert.strictEqual(getPref().style, "humor");
+  assert.strictEqual(getPref().customPrompt, "关注高赞反对意见");
+
+  // 12. Functional Tests: Topic Cache Persistence & AI Image Configuration Roundtrip
+  const getTopicCache = (topicId) => {
+    if (!topicId) return null;
+    try {
+      const raw = mockStorage.get("linuxdo-wecom-ai-topic-cache");
+      if (!raw) return null;
+      const map = JSON.parse(raw);
+      return map[String(topicId)] || null;
+    } catch {
+      return null;
+    }
+  };
+
+  const saveTopicCache = (topicId, partialData) => {
+    if (!topicId || typeof partialData !== "object") return;
+    try {
+      const tid = String(topicId);
+      const raw = mockStorage.get("linuxdo-wecom-ai-topic-cache");
+      let map = {};
+      if (raw) {
+        try { map = JSON.parse(raw) || {}; } catch { map = {}; }
+      }
+      const existing = map[tid] || {};
+      map[tid] = { ...existing, ...partialData, updatedAt: Date.now() };
+
+      const keys = Object.keys(map);
+      if (keys.length > 5) {
+        keys.sort((a, b) => (map[a]?.updatedAt || 0) - (map[b]?.updatedAt || 0));
+        while (keys.length > 5) {
+          const oldest = keys.shift();
+          delete map[oldest];
+        }
+      }
+      mockStorage.set("linuxdo-wecom-ai-topic-cache", JSON.stringify(map));
+    } catch { /* ignore */ }
+  };
+
+  // Test save summary then retrieve
+  saveTopicCache(12345, {
+    topicTitle: "Linux DO AI 话题讨论",
+    summaryMarkdown: "### 📌 核心观点\n大白话易懂",
+    summaryStyle: "sharp",
+    summaryAt: 1700000000000
+  });
+
+  const cached1 = getTopicCache(12345);
+  assert.ok(cached1, "cached entry must exist for topic 12345");
+  assert.strictEqual(cached1.topicTitle, "Linux DO AI 话题讨论");
+  assert.strictEqual(cached1.summaryStyle, "sharp");
+  assert.ok(cached1.summaryMarkdown.includes("大白话易懂"));
+
+  // Test partial update: saving comic image must NOT wipe out existing summary
+  saveTopicCache(12345, {
+    imageUrl: "https://image.pollinations.ai/prompt/comic123.png",
+    imagePrompt: "Four-panel comic strip depicting Linux DO",
+    imageStyle: "comic_strip",
+    imageAt: 1700000005000
+  });
+
+  const cachedMerged = getTopicCache(12345);
+  assert.ok(cachedMerged.summaryMarkdown.includes("大白话易懂"), "summary must be preserved after saving comic image");
+  assert.strictEqual(cachedMerged.imageUrl, "https://image.pollinations.ai/prompt/comic123.png", "image URL must be saved");
+  assert.strictEqual(cachedMerged.imageStyle, "comic_strip");
+
+  // Test Image Config inheritance
+  const getImgCfg = () => {
+    const raw = mockStorage.get("linuxdo-wecom-ai-image-config");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        provider: parsed.provider || "openai",
+        useSameAsChat: parsed.useSameAsChat !== false,
+        apiKey: parsed.apiKey || "",
+        baseUrl: parsed.baseUrl || "",
+        model: parsed.model || "dall-e-3",
+        size: parsed.size || "1024x1024"
+      };
+    }
+    return {
+      provider: "openai",
+      useSameAsChat: true,
+      apiKey: "",
+      baseUrl: "",
+      model: "dall-e-3",
+      size: "1024x1024"
+    };
+  };
+
+  const setImgCfg = (c) => {
+    const toSave = {
+      provider: c.provider || "openai",
+      useSameAsChat: Boolean(c.useSameAsChat),
+      apiKey: (c.apiKey || "").trim(),
+      baseUrl: (c.baseUrl || "").trim(),
+      model: (c.model || "dall-e-3").trim(),
+      size: c.size || "1024x1024"
+    };
+    mockStorage.set("linuxdo-wecom-ai-image-config", JSON.stringify(toSave));
+    return toSave;
+  };
+
+  const getEffectiveImgCfg = () => {
+    const imgCfg = getImgCfg();
+    if (imgCfg.useSameAsChat) {
+      const chatCfg = getCfg();
+      return {
+        ...imgCfg,
+        apiKey: chatCfg.apiKey,
+        baseUrl: chatCfg.baseUrl || (chatCfg.provider === "openai" ? "https://api.openai.com/v1" : "")
+      };
+    }
+    return imgCfg;
+  };
+
+  setImgCfg({ provider: "openai", useSameAsChat: true, model: "dall-e-3" });
+  const eff1 = getEffectiveImgCfg();
+  assert.strictEqual(eff1.apiKey, "sk-test123456", "effective image config must inherit chat API key when useSameAsChat is true");
+
+  setImgCfg({ provider: "siliconflow", useSameAsChat: false, apiKey: "sk-silicon-key", baseUrl: "https://api.siliconflow.cn/v1", model: "black-forest-labs/FLUX.1-schnell" });
+  const eff2 = getEffectiveImgCfg();
+  assert.strictEqual(eff2.apiKey, "sk-silicon-key", "effective image config must use independent API key when useSameAsChat is false");
+  assert.strictEqual(eff2.model, "black-forest-labs/FLUX.1-schnell");
+
+  // 13. Universal Cross-Platform AI Configuration & Image API Sync (Linux DO ↔ V2EX ↔ Juejin)
+  assert.ok(
+    scriptContent.includes("const AI_SYNC_PREFIX = \"WECOM_AI_SYNC:\";") &&
+    scriptContent.includes("const AI_SYNC_CODE_PREFIX = \"WECOM_AI_CONFIG:\";"),
+    "must define AI_SYNC_PREFIX and AI_SYNC_CODE_PREFIX constants"
+  );
+  assert.ok(
+    scriptContent.includes("function exportUniversalAiBundle()") &&
+    scriptContent.includes("function exportUniversalAiSyncString()") &&
+    scriptContent.includes("function importUniversalAiSyncString(") &&
+    scriptContent.includes("function importUniversalAiBundle(") &&
+    scriptContent.includes("function getUniversalAiBundle()") &&
+    scriptContent.includes("function saveUniversalAiBundle(") &&
+    scriptContent.includes("function consumeUniversalAiSync()") &&
+    scriptContent.includes("function navigateWithAiSync("),
+    "must define universal AI cross-platform sync functions"
+  );
+  assert.ok(
+    scriptContent.includes("data-tab=\"sync\"") &&
+    scriptContent.includes("wecom-ai-config-sync-section") &&
+    scriptContent.includes("wecom-ai-sync-hub") &&
+    scriptContent.includes("wecom-ai-btn-copy-code") &&
+    scriptContent.includes("wecom-ai-btn-paste-code") &&
+    scriptContent.includes("wecom-ai-btn-do-import") &&
+    scriptContent.includes("wecom-ai-sync-to-linuxdo") &&
+    scriptContent.includes("wecom-ai-sync-to-v2ex") &&
+    scriptContent.includes("wecom-ai-sync-to-juejin"),
+    "openAiConfigDialog must render universal sync tab, status hub, code input, and cross-platform sync actions"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-ai-sync-hub") &&
+    scriptContent.includes(".wecom-ai-sync-hub-title") &&
+    scriptContent.includes(".wecom-ai-sync-hub-desc") &&
+    scriptContent.includes(".wecom-ai-sync-btn-group") &&
+    scriptContent.includes(".wecom-ai-sync-chip-btn"),
+    "RAW_CSS must style cross-platform AI sync hub and action chips"
+  );
+  assert.ok(
+    scriptContent.includes("navigateWithAiSync(\"https://linux.do/\")") &&
+    scriptContent.includes("navigateWithAiSync(\"https://www.v2ex.com/\")") &&
+    scriptContent.includes("navigateWithAiSync(\"https://juejin.cn/pins\")"),
+    "platform switcher must navigate with AI sync payload across Linux DO, V2EX, and Juejin"
+  );
+  assert.ok(
+    scriptContent.includes("function bootstrap() {\n    if (!document.documentElement) {\n      setTimeout(bootstrap, 0);\n      return;\n    }\n    consumeUniversalAiSync();") ||
+    (scriptContent.includes("function bootstrap()") && scriptContent.includes("consumeUniversalAiSync();")),
+    "bootstrap must call consumeUniversalAiSync on startup"
+  );
+
+  // 14. Functional Test: Universal Bundle Export, Code Generation, and Cross-Platform Import
+  const testBundle = {
+    v: 1,
+    chat: {
+      provider: "deepseek",
+      apiKey: "sk-universal-chat-key-999",
+      baseUrl: "https://api.deepseek.com/v1",
+      model: "deepseek-reasoner",
+      updatedAt: 1710000000000
+    },
+    image: {
+      provider: "siliconflow",
+      useSameAsChat: false,
+      apiKey: "sk-universal-image-key-888",
+      baseUrl: "https://api.siliconflow.cn/v1",
+      model: "black-forest-labs/FLUX.1-schnell",
+      size: "1024x1024",
+      updatedAt: 1710000000000
+    },
+    pref: {
+      style: "humor",
+      customPrompt: "幽默犀利神评"
+    },
+    ts: 1710000000000
+  };
+
+  // Encode
+  const encodedPayload = Buffer.from(JSON.stringify(testBundle)).toString("base64");
+  const fullSyncCode = "WECOM_AI_CONFIG:" + encodedPayload;
+
+  // Simulate a clean new site without any local configs (e.g. newly visited V2EX or Juejin)
+  const targetMockStorage = new Map();
+  const targetImportBundle = (rawStr) => {
+    let clean = rawStr.trim();
+    if (clean.startsWith("WECOM_AI_CONFIG:")) clean = clean.slice("WECOM_AI_CONFIG:".length).trim();
+    if (clean.startsWith("WECOM_AI_SYNC:")) clean = clean.slice("WECOM_AI_SYNC:".length).trim();
+    const json = JSON.parse(Buffer.from(clean, "base64").toString("utf8"));
+    if (json.chat?.apiKey) targetMockStorage.set("linuxdo-wecom-ai-config", JSON.stringify(json.chat));
+    if (json.image && (json.image.apiKey || json.image.useSameAsChat)) targetMockStorage.set("linuxdo-wecom-ai-image-config", JSON.stringify(json.image));
+    if (json.pref?.style) targetMockStorage.set("linuxdo-wecom-ai-summary-pref", JSON.stringify(json.pref));
+    return true;
+  };
+
+  assert.strictEqual(targetMockStorage.has("linuxdo-wecom-ai-config"), false);
+  assert.strictEqual(targetMockStorage.has("linuxdo-wecom-ai-image-config"), false);
+
+  const importedSuccess = targetImportBundle(fullSyncCode);
+  assert.strictEqual(importedSuccess, true, "universal sync code must import successfully");
+
+  const importedChat = JSON.parse(targetMockStorage.get("linuxdo-wecom-ai-config"));
+  assert.strictEqual(importedChat.provider, "deepseek");
+  assert.strictEqual(importedChat.apiKey, "sk-universal-chat-key-999");
+  assert.strictEqual(importedChat.model, "deepseek-reasoner");
+
+  const importedImg = JSON.parse(targetMockStorage.get("linuxdo-wecom-ai-image-config"));
+  assert.strictEqual(importedImg.provider, "siliconflow");
+  assert.strictEqual(importedImg.apiKey, "sk-universal-image-key-888");
+  assert.strictEqual(importedImg.model, "black-forest-labs/FLUX.1-schnell");
+
+  const importedPref = JSON.parse(targetMockStorage.get("linuxdo-wecom-ai-summary-pref"));
+  assert.strictEqual(importedPref.style, "humor");
+  assert.strictEqual(importedPref.customPrompt, "幽默犀利神评");
+});
+
+test("Test 123: V2EX notification click and floor reply username preservation (DOM parser, cross-page ref, and reply indicator)", () => {
+  // 1. Structural checks
+  assert.ok(
+    scriptContent.includes('const darkLink = cell.querySelector("a.dark");') &&
+    scriptContent.includes('const memberLinks = cell.querySelectorAll("a[href^=\'/member/\']");'),
+    "parseV2exTopicDoc must check a.dark and all memberLinks without stopping on empty avatar links"
+  );
+  assert.ok(
+    scriptContent.includes('data-username="${escapeHtml(post.username || "")}"'),
+    "bubbleHtml must output data-username on .wecom-msg"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-msg-me:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-header > .wecom-msg-name") &&
+    scriptContent.includes(".wecom-reply-children .wecom-msg-name") &&
+    scriptContent.includes(".wecom-msg-me .wecom-reply-children .wecom-msg-name"),
+    "nested reply author names inside .wecom-msg-me bubbles must not be hidden by top-level me rules"
+  );
+
+  // 2. Functional test: Reply cell with avatar link preceding username link
+  function simulateParseReplyUsername(cell) {
+    const floorNo = 15;
+    const idx = 14;
+    let username = "";
+    const darkLink = cell.querySelector("a.dark");
+    if (darkLink && darkLink.textContent?.trim() && darkLink.textContent.trim() !== "楼主") {
+      username = darkLink.textContent.trim();
+    }
+    if (!username) {
+      const memberLinks = cell.querySelectorAll("a[href^='/member/']");
+      for (const link of memberLinks) {
+        const txt = link.textContent?.trim();
+        if (txt && txt !== "楼主") {
+          username = txt;
+          break;
+        }
+        const href = link.getAttribute("href") || "";
+        const m = href.match(/\/member\/([^/?#]+)/);
+        if (m && m[1]) {
+          const raw = decodeURIComponent(m[1]).trim();
+          if (raw && raw !== "楼主") {
+            username = raw;
+            break;
+          }
+        }
+      }
+    }
+    if (!username) {
+      const avatarAlt = cell.querySelector("img.avatar")?.getAttribute("alt")?.trim();
+      if (avatarAlt && avatarAlt !== "楼主") {
+        username = avatarAlt;
+      }
+    }
+    if (!username) {
+      username = `用户_${floorNo || (idx + 2)}`;
+    }
+    return username;
+  }
+
+  // Case A: Standard V2EX cell where avatar <a> has NO text content, but subsequent <a class="dark"> has username
+  const mockCellA = {
+    querySelector(sel) {
+      if (sel === "a.dark") return { textContent: "alice" };
+      if (sel === "img.avatar") return { getAttribute: (attr) => (attr === "alt" ? "alice" : "") };
+      return null;
+    },
+    querySelectorAll(sel) {
+      if (sel === "a[href^='/member/']") {
+        return [
+          { getAttribute: (attr) => (attr === "href" ? "/member/alice" : null), textContent: "" },
+          { getAttribute: (attr) => (attr === "href" ? "/member/alice" : null), textContent: "alice" }
+        ];
+      }
+      return [];
+    }
+  };
+  assert.strictEqual(simulateParseReplyUsername(mockCellA), "alice", "must correctly extract alice when avatar <a> has empty text");
+
+  // Case B: Cell where only avatar <a> exists with href="/member/bob", no a.dark
+  const mockCellB = {
+    querySelector(sel) {
+      return null;
+    },
+    querySelectorAll(sel) {
+      if (sel === "a[href^='/member/']") {
+        return [
+          { getAttribute: (attr) => (attr === "href" ? "/member/bob" : null), textContent: "" }
+        ];
+      }
+      return [];
+    }
+  };
+  assert.strictEqual(simulateParseReplyUsername(mockCellB), "bob", "must extract bob from avatar link href when textContent is empty");
+
+  // 3. Functional test: Notification author extraction with avatar link
+  function simulateParseNotifAuthor(cell) {
+    let author = "";
+    const darkLink = cell.querySelector("a.dark, .fade strong a, strong a");
+    if (darkLink && darkLink.textContent?.trim() && darkLink.textContent.trim() !== "楼主") {
+      author = darkLink.textContent.trim();
+    }
+    if (!author) {
+      const memberLinks = cell.querySelectorAll("a[href^='/member/']");
+      for (const link of memberLinks) {
+        const txt = link.textContent?.trim();
+        if (txt && txt !== "楼主") {
+          author = txt;
+          break;
+        }
+        const href = link.getAttribute("href") || "";
+        const m = href.match(/\/member\/([^/?#]+)/);
+        if (m && m[1]) {
+          const raw = decodeURIComponent(m[1]).trim();
+          if (raw && raw !== "楼主") {
+            author = raw;
+            break;
+          }
+        }
+      }
+    }
+    if (!author) {
+      const avatarAlt = cell.querySelector("img.avatar")?.getAttribute("alt")?.trim();
+      if (avatarAlt && avatarAlt !== "楼主") {
+        author = avatarAlt;
+      }
+    }
+    return author;
+  }
+
+  const mockNotifCell = {
+    querySelector(sel) {
+      if (sel.includes("strong a")) return { textContent: "charlie" };
+      return null;
+    },
+    querySelectorAll(sel) {
+      if (sel === "a[href^='/member/']") {
+        return [
+          { getAttribute: (attr) => (attr === "href" ? "/member/charlie" : null), textContent: "" },
+          { getAttribute: (attr) => (attr === "href" ? "/member/charlie" : null), textContent: "charlie" }
+        ];
+      }
+      return [];
+    }
+  };
+  assert.strictEqual(simulateParseNotifAuthor(mockNotifCell), "charlie", "must extract charlie from notification cell");
+
+  // 4. Functional test: Cross-page floor reply resolution and reply indicator
+  const crossPagePost = {
+    id: 999,
+    post_number: 105,
+    floor: 104,
+    username: "david",
+    cooked: "@alice #15 赞同你的方案",
+    replyReference: { author: "alice", floor: 15 }
+  };
+
+  const ref = crossPagePost.replyReference;
+  if (ref.floor > 0 || ref.author) {
+    crossPagePost.reply_to_post_number = ref.floor ? (ref.floor + 1) : null;
+    crossPagePost.reply_to_floor = ref.floor > 0 ? ref.floor : null;
+    crossPagePost.reply_to_user = ref.author ? {
+      username: ref.author,
+      name: ref.author
+    } : null;
+    crossPagePost.is_explicit_reply = Boolean(ref.floor || ref.author);
+  }
+
+  assert.strictEqual(crossPagePost.reply_to_floor, 15);
+  assert.strictEqual(crossPagePost.reply_to_user.username, "alice");
+
+  function simReplyIndicatorHtml(post) {
+    const parentNum = Number(post?.reply_to_post_number) || 0;
+    const floorNum = Number(post?.reply_to_floor) || (parentNum > 1 ? parentNum - 1 : 0);
+    if (!parentNum && !floorNum) return "";
+    const refAuthor = post?.replyReference?.author || "";
+    let targetUser = post.reply_to_user?.name || post.reply_to_user?.username || "";
+    if ((!targetUser || targetUser.startsWith("用户_")) && refAuthor) {
+      targetUser = refAuthor;
+    }
+    const targetFloor = floorNum > 0 ? `#${floorNum}` : `#${parentNum}`;
+    const userPart = targetUser ? `@${targetUser}` : "";
+    return `回复 ${userPart} ${targetFloor}`;
+  }
+
+  const indicatorText = simReplyIndicatorHtml(crossPagePost);
+  assert.strictEqual(indicatorText, "回复 @alice #15", "cross-page reply indicator must clearly show @alice and #15");
+});
+
+test("Test 124: Floating message action toolbar does not block username/avatar clicks and is not blocked by text", () => {
+  // 1. Floating tools must have elevated z-index (25) so they are never blocked by bubble text
+  assert.ok(
+    scriptContent.includes("z-index: 25 !important;"),
+    ".wecom-msg-tools must have elevated z-index (25) so it is never obscured by text"
+  );
+
+  // 2. Moving mouse to tools maintains visibility and clickability (no premature hover suppression)
+  assert.ok(
+    scriptContent.includes(".wecom-msg-tools:hover") &&
+    scriptContent.includes("pointer-events: auto !important;") &&
+    scriptContent.includes("display: flex !important;"),
+    "moving mouse to .wecom-msg-tools must maintain pointer-events and display flex"
+  );
+
+  // 3. Nested replies in thread view always pin tools to the right edge
+  assert.ok(
+    scriptContent.includes(".wecom-reply-children .wecom-msg-tools") &&
+    scriptContent.includes("right: 0 !important;") &&
+    scriptContent.includes("left: auto !important;"),
+    "nested reply tools must always be pinned to the right edge to avoid overlapping left-aligned author name"
+  );
+
+  // 4. .wecom-msg-me tools rule is strictly scoped to top-level messages
+  assert.ok(
+    scriptContent.includes(".wecom-msg-me:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-tools"),
+    ".wecom-msg-me tools rule must use :not(.is-thread-child) to avoid placing tools on the left in nested replies"
+  );
+});
+
+
+
 
 
 

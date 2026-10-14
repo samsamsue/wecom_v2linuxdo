@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.83
+// @version      0.7.87
 // @description  将 Linux.do 与 V2EX 换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -86,6 +86,107 @@
   const IMAGE_AUTO_LAYOUT_ASPECT_KEY = "linuxdo-wecom-image-layout-aspect";
   const DEFAULT_IMAGE_AUTO_LAYOUT_ASPECT = "1:1";
   const SUPPORTED_IMAGE_AUTO_LAYOUT_ASPECTS = Object.freeze(["4:3", "1:1", "16:9"]);
+  const CUSTOM_FONT_KEY = "linuxdo-wecom-custom-font";
+  const CUSTOM_FONT_STYLE_ID = "wecom-custom-font-style";
+  const DEFAULT_FONT_STACK = '"PingFang SC", "Microsoft YaHei", "Helvetica Neue", Inter, -apple-system, BlinkMacSystemFont, sans-serif';
+  const FONT_PRESETS = Object.freeze({
+    default: {
+      label: "默认",
+      stack: DEFAULT_FONT_STACK,
+      testName: ""
+    },
+    yahei: {
+      label: "微软雅黑",
+      stack: '"Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", sans-serif',
+      testName: "Microsoft YaHei"
+    },
+    kaiti: {
+      label: "楷体",
+      stack: '"KaiTi", "楷体", "Kaiti SC", "STKaiti", "BiauKai", serif',
+      testName: "KaiTi, 楷体, Kaiti SC, STKaiti"
+    },
+    songti: {
+      label: "宋体",
+      stack: '"SimSun", "宋体", "Songti SC", "STSong", serif',
+      testName: "SimSun, 宋体, Songti SC, STSong"
+    },
+    heiti: {
+      label: "黑体",
+      stack: '"SimHei", "黑体", "STHeiti", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
+      testName: "SimHei, 黑体, STHeiti"
+    },
+    pingfang: {
+      label: "苹方",
+      stack: '"PingFang SC", "PingFang TC", -apple-system, BlinkMacSystemFont, "Microsoft YaHei", sans-serif',
+      testName: "PingFang SC"
+    },
+    wenkai: {
+      label: "霞鹜文楷",
+      stack: '"LXGW WenKai", "LXGW WenKai Screen", "LXGW WenKai GB", "霞鹜文楷", "霞鹜文楷 屏幕阅读版", "KaiTi", "STKaiti", sans-serif',
+      testName: "LXGW WenKai, LXGW WenKai Screen, 霞鹜文楷"
+    },
+    harmony: {
+      label: "鸿蒙字体",
+      stack: '"HarmonyOS Sans SC", "HarmonyOS Sans", "HarmonyOS_Sans_SC", "HarmonyOS", "PingFang SC", "Microsoft YaHei", sans-serif',
+      testName: "HarmonyOS Sans SC, HarmonyOS Sans, HarmonyOS"
+    },
+    source: {
+      label: "思源黑体",
+      stack: '"Source Han Sans SC", "Source Han Sans CN", "Noto Sans CJK SC", "Noto Sans SC", "思源黑体", "PingFang SC", "Microsoft YaHei", sans-serif',
+      testName: "Source Han Sans SC, Source Han Sans CN, Noto Sans CJK SC, Noto Sans SC, 思源黑体"
+    }
+  });
+
+  const FONT_NAME_ALIASES = Object.freeze({
+    "楷体": '"KaiTi", "楷体", "Kaiti SC", "STKaiti"',
+    "kaiti": '"KaiTi", "楷体", "Kaiti SC", "STKaiti"',
+    "宋体": '"SimSun", "宋体", "Songti SC", "STSong"',
+    "simsun": '"SimSun", "宋体", "Songti SC", "STSong"',
+    "黑体": '"SimHei", "黑体", "STHeiti"',
+    "simhei": '"SimHei", "黑体", "STHeiti"',
+    "仿宋": '"FangSong", "仿宋", "STFangsong"',
+    "fangsong": '"FangSong", "仿宋", "STFangsong"',
+    "微软雅黑": '"Microsoft YaHei UI", "Microsoft YaHei", "微软雅黑"',
+    "yahei": '"Microsoft YaHei UI", "Microsoft YaHei", "微软雅黑"',
+    "苹方": '"PingFang SC", "PingFang TC", "苹方", "苹方-简"',
+    "pingfang": '"PingFang SC", "PingFang TC", "苹方", "苹方-简"',
+    "霞鹜文楷": '"LXGW WenKai", "LXGW WenKai Screen", "LXGW WenKai GB", "霞鹜文楷", "KaiTi"',
+    "lxgw wenkai": '"LXGW WenKai", "LXGW WenKai Screen", "LXGW WenKai GB", "霞鹜文楷", "KaiTi"',
+    "wenkai": '"LXGW WenKai", "LXGW WenKai Screen", "LXGW WenKai GB", "霞鹜文楷", "KaiTi"',
+    "鸿蒙": '"HarmonyOS Sans SC", "HarmonyOS Sans", "HarmonyOS_Sans_SC", "HarmonyOS"',
+    "鸿蒙字体": '"HarmonyOS Sans SC", "HarmonyOS Sans", "HarmonyOS_Sans_SC", "HarmonyOS"',
+    "harmony": '"HarmonyOS Sans SC", "HarmonyOS Sans", "HarmonyOS_Sans_SC", "HarmonyOS"',
+    "harmonyos": '"HarmonyOS Sans SC", "HarmonyOS Sans", "HarmonyOS_Sans_SC", "HarmonyOS"',
+    "思源": '"Source Han Sans SC", "Source Han Sans CN", "Noto Sans CJK SC", "Noto Sans SC", "思源黑体"',
+    "思源黑体": '"Source Han Sans SC", "Source Han Sans CN", "Noto Sans CJK SC", "Noto Sans SC", "思源黑体"',
+    "source han sans": '"Source Han Sans SC", "Source Han Sans CN", "Noto Sans CJK SC", "Noto Sans SC"',
+    "思源宋体": '"Source Han Serif SC", "Source Han Serif CN", "Noto Serif CJK SC", "Noto Serif SC", "思源宋体"',
+    "source han serif": '"Source Han Serif SC", "Source Han Serif CN", "Noto Serif CJK SC", "Noto Serif SC"',
+    "misans": '"MiSans", "MiSans Normal", "小米兰亭"',
+    "小米兰亭": '"MiSans", "MiSans Normal", "小米兰亭"'
+  });
+
+  const SYSTEM_FONT_PROBE_CANDIDATES = Object.freeze([
+    // 常见中文无衬线 / 品牌字体
+    "Microsoft YaHei", "Microsoft YaHei UI", "微软雅黑", "PingFang SC", "苹方", "Hiragino Sans GB", "冬青黑体",
+    "HarmonyOS Sans SC", "HarmonyOS Sans", "HarmonyOS_Sans_SC", "HarmonyOS", "鸿蒙字体",
+    "Source Han Sans SC", "Source Han Sans CN", "Source Han Sans", "Noto Sans CJK SC", "Noto Sans SC", "思源黑体",
+    "MiSans", "MiSans Normal", "小米兰亭", "OPPOSans", "vivo Sans", "HONOR Sans", "Meiryo",
+    // 经典书法 / 衬线 / 楷体 / 宋体
+    "KaiTi", "楷体", "Kaiti SC", "STKaiti", "BiauKai", "华文楷体",
+    "SimSun", "宋体", "Songti SC", "STSong", "新宋体", "NSimSun", "华文宋体",
+    "FangSong", "仿宋", "STFangsong", "华文仿宋",
+    "SimHei", "黑体", "STHeiti", "华文黑体",
+    "Source Han Serif SC", "Source Han Serif CN", "Noto Serif CJK SC", "Noto Serif SC", "思源宋体",
+    "LXGW WenKai", "LXGW WenKai Screen", "LXGW WenKai GB", "霞鹜文楷", "霞鹜文楷 屏幕阅读版",
+    "LXGW Neo XiHei", "霞鹜新晰黑", "FZShuSong-Z01", "FZKai-Z03", "FZHei-B01",
+    "隶书", "LiSu", "幼圆", "YouYuan", "华文行楷", "STXingkai",
+    // 经典西文字体 / 等宽字体
+    "Arial", "Segoe UI", "Calibri", "Helvetica", "Helvetica Neue", "Inter", "Roboto", "Ubuntu", "Open Sans",
+    "Cascadia Code", "Cascadia Mono", "JetBrains Mono", "Fira Code", "Consolas", "Menlo", "Monaco",
+    "Courier New", "Georgia", "Times New Roman", "Verdana", "Trebuchet MS", "Tahoma"
+  ]);
+
   const THEME_MODE_VALUES = Object.freeze(["light", "dark", "system"]);
   const DEFAULT_THEME_MODE = "light";
   const IMAGE_VIEWER_DEFAULT_SCALE = 1;
@@ -234,7 +335,9 @@
     flag: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5a5 5 0 0 1 7 0a5 5 0 0 0 7 0v9a5 5 0 0 1 -7 0a5 5 0 0 0 -7 0v-9z" /><path d="M5 21v-7" /></svg>`,
     checkCircle: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M9 12l2 2l4 -4" /></svg>`,
     lock: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2" /><circle cx="12" cy="16" r="1" /><path d="M8 11v-4a4 4 0 0 1 8 0v4" /></svg>`,
-    quote: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v6c0 2.667-1.333 4.333-4 5" /><path d="M20 11h-4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v6c0 2.667-1.333 4.333-4 5" /></svg>`
+    quote: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v6c0 2.667-1.333 4.333-4 5" /><path d="M20 11h-4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v6c0 2.667-1.333 4.333-4 5" /></svg>`,
+    eye: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6" /></svg>`,
+    eyeOff: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.585 10.587a2 2 0 0 0 2.829 2.828" /><path d="M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c1.272 -2.12 2.712 -3.678 4.32 -4.674m2.86 -1.146a9.055 9.055 0 0 1 1.82 -.18c3.6 0 6.6 2 9 6c-.666 1.11 -1.379 2.067 -2.138 2.87" /><path d="M3 3l18 18" /></svg>`
   };
   ICONS.chat = ICONS.msg;
   ICONS.list = ICONS.msg;
@@ -3425,7 +3528,7 @@
     .wecom-msg-content { min-width: 0; display: flex; flex-direction: column; position: relative; }
     .wecom-msg-me .wecom-msg-content { align-items: flex-end; }
     .wecom-msg-name { font-size: 12px; color: var(--wc-text-3); margin-bottom: 0 !important; }
-    .wecom-msg-me .wecom-msg-name { display: none; }
+    .wecom-msg-me:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-header > .wecom-msg-name { display: none !important; }
     .wecom-reply-reference {
       display: grid; grid-template-columns: 16px minmax(0, 1fr); column-gap: 6px;
       max-width: 420px; margin: 0 0 5px; padding: 5px 8px;
@@ -3549,8 +3652,17 @@
       gap: 4px;
     }
     .wecom-reply-children .wecom-msg-name {
-      font-size: 11px;
+      display: inline-flex !important;
+      font-size: 11.5px !important;
+      font-weight: 500;
+      color: var(--wc-text-2) !important;
       margin-left: 0 !important;
+      margin-bottom: 0 !important;
+      line-height: 1.2;
+    }
+    .wecom-msg-me .wecom-reply-children .wecom-msg-name {
+      display: inline-flex !important;
+      color: var(--wc-text) !important;
     }
     .wecom-reply-children .wecom-msg-bubble {
       background: transparent !important;
@@ -3601,9 +3713,11 @@
       margin-bottom: 4px;
       line-height: 1.2;
     }
-    .wecom-msg-header .wecom-msg-name {
+    .wecom-msg-header .wecom-msg-name,
+    .wecom-msg-name {
       margin-bottom: 0;
       line-height: 1.2;
+      cursor: pointer !important;
     }
     .wecom-msg-header-time,
     .wecom-msg-header .wecom-msg-meta,
@@ -3730,7 +3844,7 @@
       padding: 2px 10px;
     }
     .wecom-msg-tools {
-      position: absolute; top: -14px; right: 0; z-index: 5;
+      position: absolute; top: -14px; right: 0; z-index: 25 !important;
       display: flex; align-items: center; gap: 2px;
       background: var(--wc-bg);
       border: 1px solid var(--wc-border);
@@ -3739,11 +3853,24 @@
       box-shadow: 0 2px 8px rgba(31, 35, 41, 0.1);
       opacity: 0; visibility: hidden;
       transition: opacity 0.15s ease;
+      pointer-events: none;
     }
     .wecom-msg:hover:not(:has(.wecom-msg:hover)) > .wecom-msg-content > .wecom-msg-tools,
-    .wecom-msg.has-boost-popover > .wecom-msg-content > .wecom-msg-tools { opacity: 1; visibility: visible; }
-    .wecom-msg-me .wecom-msg-tools { right: auto; left: 0; }
-    .wecom-reply-children .wecom-msg-tools { top: -8px; }
+    .wecom-msg.has-boost-popover > .wecom-msg-content > .wecom-msg-tools,
+    .wecom-msg-tools:hover {
+      opacity: 1 !important;
+      visibility: visible !important;
+      pointer-events: auto !important;
+      display: flex !important;
+    }
+    .wecom-msg-me:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-tools { right: auto; left: 0; }
+    .wecom-reply-children .wecom-msg-tools,
+    .wecom-msg-me .wecom-reply-children .wecom-msg-tools {
+      right: 0 !important;
+      left: auto !important;
+      top: -6px !important;
+      z-index: 25 !important;
+    }
     .wecom-msg-tool {
       width: 26px; height: 26px;
       display: flex; align-items: center; justify-content: center;
@@ -5904,6 +6031,1370 @@
       background: var(--wc-blue, #267EF0) !important;
       border-color: var(--wc-blue, #267EF0) !important;
       color: #FFFFFF !important;
+    }
+
+    /* 界面字体设置行 */
+    .wecom-menu-font-row {
+      padding: 6px 8px 8px !important;
+      margin: 0 4px 4px !important;
+      background: rgba(0, 0, 0, 0.025);
+      border-radius: 6px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 5px !important;
+      box-sizing: border-box !important;
+    }
+    html.wecom-dark .wecom-menu-font-row {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    .wecom-menu-font-header {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      font-size: 11px !important;
+      color: var(--wc-text-3) !important;
+      user-select: none !important;
+    }
+    .wecom-menu-font-val {
+      font-weight: 600 !important;
+      color: var(--wc-blue, #267EF0) !important;
+      font-size: 11px !important;
+      max-width: 120px !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      white-space: nowrap !important;
+    }
+    .wecom-menu-font-chips {
+      display: grid !important;
+      grid-template-columns: repeat(3, 1fr) !important;
+      gap: 4px !important;
+      width: 100% !important;
+    }
+    .wecom-theme-menu .wecom-font-chip {
+      height: 22px !important;
+      line-height: 20px !important;
+      padding: 0 4px !important;
+      border: 1px solid rgba(0, 0, 0, 0.1) !important;
+      background: rgba(0, 0, 0, 0.03) !important;
+      border-radius: 4px !important;
+      font-size: 11px !important;
+      color: var(--wc-text-2) !important;
+      cursor: pointer !important;
+      text-align: center !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      transition: all 0.12s ease !important;
+      box-sizing: border-box !important;
+      user-select: none !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+    }
+    .wecom-theme-menu .wecom-font-chip:hover {
+      background: rgba(38, 126, 240, 0.1) !important;
+      border-color: rgba(38, 126, 240, 0.4) !important;
+      color: var(--wc-blue, #267EF0) !important;
+    }
+    .wecom-theme-menu .wecom-font-chip.is-active {
+      background: var(--wc-blue, #267EF0) !important;
+      border-color: var(--wc-blue, #267EF0) !important;
+      color: #FFFFFF !important;
+      font-weight: 600 !important;
+    }
+    .wecom-theme-menu .wecom-font-chip-custom {
+      grid-column: 1 / -1 !important;
+      justify-content: flex-start !important;
+      padding: 0 8px !important;
+    }
+    .wecom-theme-menu .wecom-font-chip-system {
+      grid-column: 1 / -1 !important;
+      justify-content: flex-start !important;
+      padding: 0 8px !important;
+      background: rgba(38, 126, 240, 0.08) !important;
+      border-color: rgba(38, 126, 240, 0.25) !important;
+      color: var(--wc-blue, #267EF0) !important;
+      font-weight: 500 !important;
+    }
+    .wecom-theme-menu .wecom-font-chip-system:hover {
+      background: rgba(38, 126, 240, 0.16) !important;
+      border-color: var(--wc-blue, #267EF0) !important;
+      color: var(--wc-blue, #267EF0) !important;
+    }
+    html.wecom-dark .wecom-theme-menu .wecom-font-chip-system {
+      background: rgba(38, 126, 240, 0.18) !important;
+      border-color: rgba(38, 126, 240, 0.45) !important;
+      color: #64B5F6 !important;
+    }
+    html.wecom-dark .wecom-theme-menu .wecom-font-chip-system:hover {
+      background: rgba(38, 126, 240, 0.3) !important;
+      border-color: #64B5F6 !important;
+      color: #FFFFFF !important;
+    }
+    html.wecom-dark .wecom-theme-menu .wecom-font-chip {
+      background: rgba(255, 255, 255, 0.06) !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      color: #B2B8C2 !important;
+    }
+    html.wecom-dark .wecom-theme-menu .wecom-font-chip:hover {
+      background: rgba(38, 126, 240, 0.2) !important;
+      border-color: rgba(38, 126, 240, 0.6) !important;
+      color: #FFFFFF !important;
+    }
+    html.wecom-dark .wecom-theme-menu .wecom-font-chip.is-active {
+      background: var(--wc-blue, #267EF0) !important;
+      border-color: var(--wc-blue, #267EF0) !important;
+      color: #FFFFFF !important;
+    }
+
+    /* ---------- 系统字体选择弹窗 (.wecom-font-picker-dialog) ---------- */
+    .wecom-font-picker-dialog {
+      position: fixed;
+      inset: 0;
+      z-index: 13000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(24, 35, 49, .45);
+      backdrop-filter: blur(3px);
+      box-sizing: border-box;
+      user-select: none;
+    }
+    .wecom-font-picker-dialog * {
+      box-sizing: border-box;
+    }
+    .wecom-font-picker-card {
+      width: 480px;
+      max-width: 95vw;
+      max-height: 85vh;
+      background: var(--wc-bg, #FFFFFF);
+      border-radius: 10px;
+      border: 1px solid var(--wc-border, #E6E8EB);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: wecomFadeIn 0.16s ease-out;
+    }
+    html.wecom-dark .wecom-font-picker-card {
+      background: #23272E;
+      border-color: rgba(255, 255, 255, 0.12);
+      color: #E4E7EB;
+    }
+    .wecom-font-picker-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px 10px;
+      border-bottom: 1px solid var(--wc-border, #E6E8EB);
+    }
+    html.wecom-dark .wecom-font-picker-head {
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    .wecom-font-picker-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--wc-text, #1A1D24);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    html.wecom-dark .wecom-font-picker-title {
+      color: #FFFFFF;
+    }
+    .wecom-font-picker-close {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--wc-text-3, #8A8F99);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+    .wecom-font-picker-close:hover {
+      background: rgba(0, 0, 0, 0.06);
+      color: var(--wc-text, #1A1D24);
+    }
+    html.wecom-dark .wecom-font-picker-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #FFFFFF;
+    }
+    .wecom-font-picker-body {
+      padding: 12px 18px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+      min-height: 0;
+    }
+    .wecom-font-search-wrap {
+      position: relative;
+      width: 100%;
+    }
+    .wecom-font-search-input {
+      width: 100%;
+      height: 34px;
+      padding: 0 12px;
+      border-radius: 6px;
+      border: 1px solid var(--wc-border, #D5D8DE);
+      background: var(--wc-chat-bg, #F5F7FB);
+      color: var(--wc-text, #1A1D24);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+    .wecom-font-search-input:focus {
+      border-color: var(--wc-blue, #267EF0);
+      background: var(--wc-bg, #FFFFFF);
+    }
+    html.wecom-dark .wecom-font-search-input {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.15);
+      color: #E4E7EB;
+    }
+    html.wecom-dark .wecom-font-search-input:focus {
+      border-color: var(--wc-blue, #267EF0);
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .wecom-font-status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--wc-text-3, #8A8F99);
+    }
+    .wecom-font-refresh-btn {
+      border: none;
+      background: transparent;
+      color: var(--wc-blue, #267EF0);
+      font-size: 11px;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .wecom-font-refresh-btn:hover {
+      background: rgba(38, 126, 240, 0.1);
+    }
+    .wecom-font-picker-list {
+      flex: 1;
+      min-height: 260px;
+      max-height: 380px;
+      overflow-y: auto;
+      border: 1px solid var(--wc-border, #E6E8EB);
+      border-radius: 6px;
+      padding: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    html.wecom-dark .wecom-font-picker-list {
+      border-color: rgba(255, 255, 255, 0.08);
+      background: rgba(0, 0, 0, 0.15);
+    }
+    .wecom-font-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.12s ease;
+      gap: 12px;
+    }
+    .wecom-font-item:hover {
+      background: rgba(38, 126, 240, 0.08);
+    }
+    html.wecom-dark .wecom-font-item:hover {
+      background: rgba(38, 126, 240, 0.18);
+    }
+    .wecom-font-item.is-active {
+      background: rgba(38, 126, 240, 0.12);
+      border-left: 3px solid var(--wc-blue, #267EF0);
+    }
+    .wecom-font-item-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--wc-text, #1A1D24);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 180px;
+    }
+    html.wecom-dark .wecom-font-item-name {
+      color: #E4E7EB;
+    }
+    .wecom-font-item-preview {
+      font-size: 13px;
+      color: var(--wc-text-2, #575757);
+      text-align: right;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+    }
+    html.wecom-dark .wecom-font-item-preview {
+      color: #9EA5B0;
+    }
+    .wecom-font-empty {
+      padding: 30px 10px;
+      text-align: center;
+      color: var(--wc-text-3, #8A8F99);
+      font-size: 13px;
+    }
+
+    /* ---------- 独立窗口快捷方式创建弹窗 (.wecom-shortcut-dialog) ---------- */
+    .wecom-shortcut-dialog {
+      position: fixed;
+      inset: 0;
+      z-index: 13000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(24, 35, 49, .45);
+      backdrop-filter: blur(3px);
+      box-sizing: border-box;
+      user-select: none;
+    }
+    .wecom-shortcut-dialog * {
+      box-sizing: border-box;
+    }
+    .wecom-shortcut-card {
+      width: 540px;
+      max-width: 95vw;
+      background: var(--wc-bg, #FFFFFF);
+      border-radius: 10px;
+      border: 1px solid var(--wc-border, #E6E8EB);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: wecomFadeIn 0.16s ease-out;
+    }
+    html.wecom-dark .wecom-shortcut-card {
+      background: #23272E;
+      border-color: rgba(255, 255, 255, 0.12);
+      color: #E4E7EB;
+    }
+    .wecom-shortcut-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px 10px;
+      border-bottom: 1px solid var(--wc-border, #E6E8EB);
+    }
+    html.wecom-dark .wecom-shortcut-head {
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    .wecom-shortcut-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--wc-text, #1A1D24);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    html.wecom-dark .wecom-shortcut-title {
+      color: #FFFFFF;
+    }
+    .wecom-shortcut-close {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--wc-text-3, #8A8F99);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+    .wecom-shortcut-close:hover {
+      background: rgba(0, 0, 0, 0.06);
+      color: var(--wc-text, #1A1D24);
+    }
+    html.wecom-dark .wecom-shortcut-close:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #FFFFFF;
+    }
+    .wecom-shortcut-body {
+      padding: 16px 20px 20px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--wc-text-2, #5A606C);
+    }
+    html.wecom-dark .wecom-shortcut-body {
+      color: #ABB0BA;
+    }
+    .wecom-shortcut-banner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: rgba(7, 193, 96, 0.1);
+      border: 1px solid rgba(7, 193, 96, 0.25);
+      border-radius: 6px;
+      color: #07C160;
+      font-weight: 500;
+      font-size: 13px;
+      margin-bottom: 14px;
+    }
+    html.wecom-dark .wecom-shortcut-banner {
+      background: rgba(7, 193, 96, 0.16);
+      border-color: rgba(7, 193, 96, 0.35);
+      color: #26D678;
+    }
+    .wecom-shortcut-cmd-box {
+      margin: 8px 0 16px;
+      background: rgba(0, 0, 0, 0.04);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 6px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    html.wecom-dark .wecom-shortcut-cmd-box {
+      background: rgba(0, 0, 0, 0.25);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    .wecom-shortcut-cmd-code {
+      flex: 1;
+      font-family: Consolas, Monaco, "Courier New", monospace;
+      font-size: 12px;
+      color: var(--wc-text, #1F2329);
+      word-break: break-all;
+      user-select: text;
+    }
+    html.wecom-dark .wecom-shortcut-cmd-code {
+      color: #E2E5E9;
+    }
+    .wecom-shortcut-btn-copy {
+      flex-shrink: 0;
+      padding: 4px 10px;
+      border-radius: 4px;
+      border: 1px solid var(--wc-blue, #267EF0);
+      background: var(--wc-blue, #267EF0);
+      color: #FFFFFF;
+      font-size: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: opacity 0.15s ease;
+    }
+    .wecom-shortcut-btn-copy:hover {
+      opacity: 0.9;
+    }
+    .wecom-shortcut-methods {
+      margin: 0;
+      padding-left: 20px;
+    }
+    .wecom-shortcut-methods li {
+      margin-bottom: 8px;
+    }
+    .wecom-shortcut-methods code {
+      background: rgba(0, 0, 0, 0.05);
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-family: Consolas, monospace;
+      font-size: 12px;
+    }
+    html.wecom-dark .wecom-shortcut-methods code {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .wecom-shortcut-foot {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 12px 20px;
+      border-top: 1px solid var(--wc-border, #E6E8EB);
+      background: rgba(0, 0, 0, 0.02);
+    }
+    html.wecom-dark .wecom-shortcut-foot {
+      border-color: rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .wecom-shortcut-action-btn {
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--wc-border, #E6E8EB);
+      background: var(--wc-bg, #FFFFFF);
+      color: var(--wc-text, #1A1D24);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .wecom-shortcut-action-btn:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+    html.wecom-dark .wecom-shortcut-action-btn {
+      background: #2C3038;
+      border-color: rgba(255, 255, 255, 0.1);
+      color: #E2E5E9;
+    }
+    html.wecom-dark .wecom-shortcut-action-btn:hover {
+      background: #373B45;
+    }
+    .wecom-shortcut-action-btn.primary {
+      background: var(--wc-blue, #267EF0);
+      border-color: var(--wc-blue, #267EF0);
+      color: #FFFFFF;
+    }
+    .wecom-shortcut-action-btn.primary:hover {
+      opacity: 0.9;
+    }
+
+    /* ---------- AI API 配置与总结弹窗样式 ---------- */
+    .wecom-ai-config-dialog,
+    .wecom-ai-summary-dialog {
+      position: fixed;
+      inset: 0;
+      z-index: 13000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(24, 35, 49, .45);
+      backdrop-filter: blur(3px);
+      box-sizing: border-box;
+      user-select: none;
+    }
+    .wecom-ai-config-dialog *,
+    .wecom-ai-summary-dialog * {
+      box-sizing: border-box;
+    }
+    .wecom-ai-config-card {
+      width: 660px;
+      max-width: 95vw;
+      max-height: 90vh;
+      min-height: 480px;
+      background: var(--wc-bg, #FFFFFF);
+      border-radius: 10px;
+      border: 1px solid var(--wc-border, #E6E8EB);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: wecomFadeIn 0.16s ease-out;
+    }
+    .wecom-ai-summary-card {
+      width: 760px;
+      max-width: 95vw;
+      max-height: 88vh;
+      background: var(--wc-bg, #FFFFFF);
+      border-radius: 10px;
+      border: 1px solid var(--wc-border, #E6E8EB);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: wecomFadeIn 0.16s ease-out;
+    }
+    html.wecom-dark .wecom-ai-config-card,
+    html.wecom-dark .wecom-ai-summary-card {
+      background: #23272E;
+      border-color: rgba(255, 255, 255, 0.12);
+      color: #E4E7EB;
+    }
+    .wecom-ai-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px 12px;
+      border-bottom: 1px solid var(--wc-border, #E6E8EB);
+      gap: 10px;
+    }
+    html.wecom-dark .wecom-ai-head {
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    .wecom-ai-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--wc-text, #1A1D24);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      flex: 1;
+    }
+    .wecom-ai-title svg {
+      color: var(--wc-blue, #267EF0);
+      flex-shrink: 0;
+    }
+    .wecom-ai-summary-head-title {
+      font-size: 12px;
+      font-weight: normal;
+      color: var(--wc-text-3, #8A8F99);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-left: 6px;
+    }
+    html.wecom-dark .wecom-ai-title {
+      color: #FFFFFF;
+    }
+    .wecom-ai-close {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--wc-text-3, #8A8F99);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+    .wecom-ai-close:hover {
+      background: rgba(0, 0, 0, 0.06);
+      color: var(--wc-text, #1A1D24);
+    }
+    html.wecom-dark .wecom-ai-close:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #FFFFFF;
+    }
+    .wecom-ai-body {
+      padding: 20px 24px 24px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      font-size: 13px;
+    }
+    .wecom-ai-provider-chips {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .wecom-ai-provider-chip {
+      height: 35px;
+      border: 1px solid var(--wc-border, #E6E8EB);
+      background: rgba(0, 0, 0, 0.02);
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--wc-text, #1F2329);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.12s ease;
+      user-select: none;
+    }
+    .wecom-ai-provider-chip:hover {
+      border-color: var(--wc-blue, #267EF0);
+      color: var(--wc-blue, #267EF0);
+    }
+    .wecom-ai-provider-chip.is-active {
+      background: var(--wc-blue, #267EF0);
+      border-color: var(--wc-blue, #267EF0);
+      color: #FFFFFF;
+      font-weight: 600;
+    }
+    html.wecom-dark .wecom-ai-provider-chip {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.1);
+      color: #E2E5E9;
+    }
+    html.wecom-dark .wecom-ai-provider-chip.is-active {
+      background: var(--wc-blue, #267EF0);
+      border-color: var(--wc-blue, #267EF0);
+      color: #FFFFFF;
+    }
+    .wecom-ai-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .wecom-ai-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--wc-text, #1F2329);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    html.wecom-dark .wecom-ai-label {
+      color: #E2E5E9;
+    }
+    .wecom-ai-label-sub {
+      font-weight: normal;
+      font-size: 12px;
+      color: var(--wc-text-3, #8A8F99);
+    }
+    .wecom-ai-input-wrap {
+      display: flex;
+      align-items: center;
+      position: relative;
+      width: 100%;
+    }
+    .wecom-ai-input {
+      width: 100%;
+      height: 36px;
+      padding: 0 12px;
+      border: 1px solid var(--wc-border, #E6E8EB);
+      border-radius: 6px;
+      background: var(--wc-bg, #FFFFFF);
+      color: var(--wc-text, #1F2329);
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+    .wecom-ai-input:focus {
+      border-color: var(--wc-blue, #267EF0);
+      box-shadow: 0 0 0 2px rgba(38, 126, 240, 0.15);
+    }
+    html.wecom-dark .wecom-ai-input {
+      background: #1C1F26;
+      border-color: rgba(255, 255, 255, 0.12);
+      color: #FFFFFF;
+    }
+    .wecom-ai-input-btn {
+      position: absolute;
+      right: 8px;
+      background: transparent;
+      border: none;
+      color: var(--wc-text-3, #8A8F99);
+      font-size: 12px;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wecom-ai-input-btn:hover {
+      color: var(--wc-blue, #267EF0);
+    }
+    .wecom-ai-model-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .wecom-ai-model-select,
+    .wecom-ai-img-model-select {
+      flex: 1;
+      height: 36px;
+      padding: 0 12px;
+      border: 1px solid var(--wc-border, #E6E8EB);
+      border-radius: 6px;
+      background: var(--wc-bg, #FFFFFF);
+      color: var(--wc-text, #1F2329);
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+    }
+    html.wecom-dark .wecom-ai-model-select,
+    html.wecom-dark .wecom-ai-img-model-select {
+      background: #1C1F26;
+      border-color: rgba(255, 255, 255, 0.12);
+      color: #FFFFFF;
+    }
+    .wecom-ai-btn-fetch,
+    .wecom-ai-btn-fetch-img {
+      height: 36px;
+      padding: 0 14px;
+      border: 1px solid var(--wc-blue, #267EF0);
+      background: rgba(38, 126, 240, 0.08);
+      color: var(--wc-blue, #267EF0);
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+    .wecom-ai-btn-fetch:hover,
+    .wecom-ai-btn-fetch-img:hover {
+      background: var(--wc-blue, #267EF0);
+      color: #FFFFFF;
+    }
+    .wecom-ai-custom-model-toggle,
+    .wecom-ai-img-custom-model-toggle {
+      font-size: 12px;
+      color: var(--wc-blue, #267EF0);
+      cursor: pointer;
+      align-self: flex-start;
+      margin-top: 2px;
+    }
+    .wecom-ai-custom-model-toggle:hover,
+    .wecom-ai-img-custom-model-toggle:hover {
+      text-decoration: underline;
+    }
+    .wecom-ai-test-status {
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      line-height: 1.5;
+      display: none;
+    }
+    .wecom-ai-test-status.is-loading {
+      display: block;
+      background: rgba(0, 0, 0, 0.04);
+      color: var(--wc-text-2, #5A606C);
+    }
+    .wecom-ai-test-status.is-success {
+      display: block;
+      background: rgba(7, 193, 96, 0.1);
+      border: 1px solid rgba(7, 193, 96, 0.3);
+      color: #07C160;
+    }
+    .wecom-ai-test-status.is-error {
+      display: block;
+      background: rgba(234, 51, 35, 0.1);
+      border: 1px solid rgba(234, 51, 35, 0.3);
+      color: #EA3323;
+    }
+    .wecom-ai-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 20px;
+      border-top: 1px solid var(--wc-border, #E6E8EB);
+      background: rgba(0, 0, 0, 0.02);
+      flex-wrap: wrap;
+    }
+    html.wecom-dark .wecom-ai-foot {
+      border-color: rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .wecom-ai-foot .wecom-ai-left-actions {
+      margin-right: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .wecom-ai-action-btn {
+      height: 32px;
+      padding: 0 12px;
+      border-radius: 6px;
+      border: 1px solid var(--wc-border, #E6E8EB);
+      background: var(--wc-bg, #FFFFFF);
+      color: var(--wc-text, #1A1D24);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+    .wecom-ai-action-btn:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+    html.wecom-dark .wecom-ai-action-btn {
+      background: #2C3038;
+      border-color: rgba(255, 255, 255, 0.1);
+      color: #E2E5E9;
+    }
+    html.wecom-dark .wecom-ai-action-btn:hover {
+      background: #373B45;
+    }
+    .wecom-ai-action-btn.primary {
+      background: var(--wc-blue, #267EF0);
+      border-color: var(--wc-blue, #267EF0);
+      color: #FFFFFF;
+    }
+    .wecom-ai-action-btn.primary:hover {
+      opacity: 0.9;
+    }
+
+    /* ---------- AI 总结内容呈现 ---------- */
+    .wecom-ai-summary-meta {
+      padding: 8px 14px;
+      background: rgba(38, 126, 240, 0.06);
+      border: 1px solid rgba(38, 126, 240, 0.15);
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--wc-blue, #267EF0);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    html.wecom-dark .wecom-ai-summary-meta {
+      background: rgba(38, 126, 240, 0.12);
+      border-color: rgba(38, 126, 240, 0.25);
+      color: #64B5F6;
+    }
+    .wecom-ai-summary-setup,
+    .wecom-ai-image-setup {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px 18px;
+      background: rgba(0, 0, 0, 0.02);
+      border: 1px solid var(--wc-border, #E6E8EB);
+      border-radius: 10px;
+    }
+    html.wecom-dark .wecom-ai-summary-setup,
+    html.wecom-dark .wecom-ai-image-setup {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    .wecom-ai-checkbox-card {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      background: rgba(0, 0, 0, 0.02);
+      border: 1px solid var(--wc-border, #E6E8EB);
+      border-radius: 6px;
+    }
+    html.wecom-dark .wecom-ai-checkbox-card {
+      background: rgba(255, 255, 255, 0.02);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    .wecom-ai-style-chips {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .wecom-ai-style-chip {
+      height: 32px;
+      padding: 0 8px;
+      border: 1px solid var(--wc-border, #E6E8EB);
+      background: var(--wc-bg, #FFFFFF);
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--wc-text, #1F2329);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: all 0.12s ease;
+      user-select: none;
+    }
+    .wecom-ai-style-chip:hover {
+      border-color: var(--wc-blue, #267EF0);
+      color: var(--wc-blue, #267EF0);
+    }
+    .wecom-ai-style-chip.is-active {
+      background: var(--wc-blue, #267EF0);
+      border-color: var(--wc-blue, #267EF0);
+      color: #FFFFFF;
+      font-weight: 600;
+    }
+    html.wecom-dark .wecom-ai-style-chip {
+      background: #1C1F26;
+      border-color: rgba(255, 255, 255, 0.12);
+      color: #E2E5E9;
+    }
+    html.wecom-dark .wecom-ai-style-chip.is-active {
+      background: var(--wc-blue, #267EF0);
+      border-color: var(--wc-blue, #267EF0);
+      color: #FFFFFF;
+    }
+    .wecom-ai-style-desc {
+      font-size: 11.5px;
+      color: var(--wc-text-2, #5A606C);
+      line-height: 1.5;
+      padding: 7px 12px;
+      background: rgba(38, 126, 240, 0.05);
+      border: 1px dashed rgba(38, 126, 240, 0.22);
+      border-radius: 6px;
+    }
+    html.wecom-dark .wecom-ai-style-desc {
+      color: #A0A6B2;
+      background: rgba(38, 126, 240, 0.08);
+      border-color: rgba(38, 126, 240, 0.3);
+    }
+    .wecom-ai-btn-start-summary,
+    .wecom-ai-btn-start-image {
+      width: 100%;
+      height: 38px;
+      margin-top: 6px;
+      border-radius: 8px;
+      border: none;
+      background: linear-gradient(135deg, #267EF0 0%, #1B65D4 100%);
+      box-shadow: 0 2px 8px rgba(38, 126, 240, 0.25);
+      color: #FFFFFF;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .wecom-ai-btn-start-summary:hover,
+    .wecom-ai-btn-start-image:hover {
+      background: linear-gradient(135deg, #378AF5 0%, #206FE0 100%);
+      box-shadow: 0 4px 12px rgba(38, 126, 240, 0.35);
+      transform: translateY(-1px);
+    }
+    .wecom-ai-btn-start-summary:active,
+    .wecom-ai-btn-start-image:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 6px rgba(38, 126, 240, 0.2);
+    }
+    .wecom-ai-btn-start-summary svg,
+    .wecom-ai-btn-start-image svg {
+      color: #FFFFFF;
+    }
+    .wecom-ai-summary-loading {
+      padding: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      text-align: center;
+    }
+    .wecom-ai-loading-spark {
+      animation: wecomAiPulse 1.8s infinite ease-in-out;
+      color: var(--wc-blue, #267EF0);
+    }
+    @keyframes wecomAiPulse {
+      0% { transform: scale(0.95); opacity: 0.7; }
+      50% { transform: scale(1.15); opacity: 1; filter: drop-shadow(0 0 8px rgba(38, 126, 240, 0.5)); }
+      100% { transform: scale(0.95); opacity: 0.7; }
+    }
+    .wecom-ai-loading-text {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--wc-text, #1F2329);
+    }
+    .wecom-ai-loading-sub {
+      font-size: 12px;
+      color: var(--wc-text-3, #8A8F99);
+    }
+    .wecom-ai-markdown-body {
+      user-select: text;
+      line-height: 1.7;
+      font-size: 14px;
+      color: var(--wc-text, #1F2329);
+    }
+    html.wecom-dark .wecom-ai-markdown-body {
+      color: #E2E5E9;
+    }
+    .wecom-ai-h2, .wecom-ai-h3, .wecom-ai-h4 {
+      margin: 14px 0 6px;
+      font-weight: 600;
+      color: var(--wc-text, #1F2329);
+    }
+    html.wecom-dark .wecom-ai-h2,
+    html.wecom-dark .wecom-ai-h3,
+    html.wecom-dark .wecom-ai-h4 {
+      color: #FFFFFF;
+    }
+    .wecom-ai-h3 {
+      font-size: 15px;
+      border-left: 3px solid var(--wc-blue, #267EF0);
+      padding-left: 8px;
+    }
+    .wecom-ai-p {
+      margin: 6px 0;
+    }
+    .wecom-ai-ul, .wecom-ai-ol {
+      margin: 6px 0 10px;
+      padding-left: 20px;
+    }
+    .wecom-ai-li, .wecom-ai-li-num {
+      margin-bottom: 4px;
+    }
+    .wecom-ai-code {
+      font-family: Consolas, Monaco, monospace;
+      font-size: 12px;
+      background: rgba(0, 0, 0, 0.05);
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+    html.wecom-dark .wecom-ai-code {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .wecom-ai-quote {
+      margin: 8px 0;
+      padding: 6px 12px;
+      border-left: 3px solid #8A8F99;
+      background: rgba(0, 0, 0, 0.03);
+      color: var(--wc-text-2, #5A606C);
+    }
+    html.wecom-dark .wecom-ai-quote {
+      background: rgba(255, 255, 255, 0.04);
+      color: #ABB0BA;
+    }
+
+    /* AI 弹窗标签页 (总结 / 漫画生图 & 对话 / 生图设置) */
+    .wecom-ai-dialog-tabs,
+    .wecom-ai-config-tabs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--wc-border, #E6E8EB);
+      background: rgba(0, 0, 0, 0.02);
+      flex-shrink: 0;
+    }
+    html.wecom-dark .wecom-ai-dialog-tabs,
+    html.wecom-dark .wecom-ai-config-tabs {
+      border-color: rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .wecom-ai-dialog-tab,
+    .wecom-ai-config-tab {
+      padding: 11px 16px;
+      border: none;
+      background: transparent;
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--wc-text-2, #5A606C);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .wecom-ai-dialog-tab:hover,
+    .wecom-ai-config-tab:hover {
+      color: var(--wc-blue, #267EF0);
+    }
+    .wecom-ai-dialog-tab.is-active,
+    .wecom-ai-config-tab.is-active {
+      color: var(--wc-blue, #267EF0);
+      border-bottom-color: var(--wc-blue, #267EF0);
+      font-weight: 600;
+    }
+    html.wecom-dark .wecom-ai-dialog-tab,
+    html.wecom-dark .wecom-ai-config-tab {
+      color: #9AA0A6;
+    }
+    html.wecom-dark .wecom-ai-dialog-tab.is-active,
+    html.wecom-dark .wecom-ai-config-tab.is-active {
+      color: #64B5F6;
+      border-bottom-color: #64B5F6;
+    }
+
+    /* AI 缓存恢复提示横幅 */
+    .wecom-ai-cache-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      background: rgba(7, 193, 96, 0.08);
+      border: 1px solid rgba(7, 193, 96, 0.2);
+      font-size: 11px;
+      color: #07C160;
+    }
+    html.wecom-dark .wecom-ai-cache-banner {
+      background: rgba(7, 193, 96, 0.12);
+      border-color: rgba(7, 193, 96, 0.25);
+      color: #5CD694;
+    }
+    .wecom-ai-cache-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 8px;
+      background: #07C160;
+      color: #FFFFFF;
+      flex-shrink: 0;
+    }
+
+    /* 复选框样式 */
+    .wecom-ai-checkbox-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--wc-text, #1F2329);
+      cursor: pointer;
+      user-select: none;
+      padding: 2px 0;
+    }
+    .wecom-ai-checkbox-label input[type="checkbox"] {
+      cursor: pointer;
+      accent-color: var(--wc-blue, #267EF0);
+      width: 16px;
+      height: 16px;
+      margin: 0;
+    }
+    html.wecom-dark .wecom-ai-checkbox-label {
+      color: #E2E5E9;
+    }
+
+    /* 漫画生图容器与预览 */
+    .wecom-ai-image-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+    }
+    .wecom-ai-image-card {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--wc-border, #E6E8EB);
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.02);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      position: relative;
+    }
+    html.wecom-dark .wecom-ai-image-card {
+      background: #181B20;
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+    .wecom-ai-image-img {
+      max-width: 100%;
+      max-height: 440px;
+      object-fit: contain;
+      display: block;
+      cursor: zoom-in;
+      transition: transform 0.2s ease;
+    }
+    .wecom-ai-image-img:hover {
+      transform: scale(1.01);
+    }
+    .wecom-ai-image-prompt-details {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.02);
+      border: 1px solid var(--wc-border, #E6E8EB);
+      font-size: 11px;
+      color: var(--wc-text-3, #8A8F99);
+      line-height: 1.5;
+      user-select: text;
+    }
+    html.wecom-dark .wecom-ai-image-prompt-details {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(255, 255, 255, 0.08);
+      color: #9AA0A6;
+    }
+    .wecom-ai-image-prompt-title {
+      font-weight: 600;
+      color: var(--wc-text-2, #5A606C);
+      margin-bottom: 3px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    html.wecom-dark .wecom-ai-image-prompt-title {
+      color: #C4C9D2;
+    }
+
+    .wecom-chat-tools .wecom-chat-ai-summary {
+      color: var(--wc-blue, #267EF0) !important;
+    }
+    .wecom-chat-tools .wecom-chat-ai-summary:hover {
+      background: rgba(38, 126, 240, 0.12) !important;
+    }
+    html.wecom-dark .wecom-chat-tools .wecom-chat-ai-summary {
+      color: #64B5F6 !important;
+    }
+    html.wecom-dark .wecom-chat-tools .wecom-chat-ai-summary:hover {
+      background: rgba(38, 126, 240, 0.22) !important;
+    }
+
+    /* AI 跨站通用同步样式 */
+    .wecom-ai-sync-hub {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 8px;
+      background: rgba(38, 126, 240, 0.05);
+      border: 1px solid rgba(38, 126, 240, 0.18);
+    }
+    html.wecom-dark .wecom-ai-sync-hub {
+      background: rgba(38, 126, 240, 0.08);
+      border-color: rgba(38, 126, 240, 0.25);
+    }
+    .wecom-ai-sync-hub-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--wc-blue, #267EF0);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    html.wecom-dark .wecom-ai-sync-hub-title {
+      color: #64B5F6;
+    }
+    .wecom-ai-sync-hub-desc {
+      font-size: 12px;
+      color: var(--wc-text-2, #5A606C);
+      line-height: 1.5;
+    }
+    html.wecom-dark .wecom-ai-sync-hub-desc {
+      color: #9AA0A6;
+    }
+    .wecom-ai-sync-btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .wecom-ai-sync-chip-btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--wc-border, #E6E8EB);
+      background: var(--wc-card-bg, #FFFFFF);
+      font-size: 12px;
+      color: var(--wc-text, #1F2329);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .wecom-ai-sync-chip-btn:hover {
+      border-color: var(--wc-blue, #267EF0);
+      color: var(--wc-blue, #267EF0);
+      background: rgba(38, 126, 240, 0.06);
+    }
+    html.wecom-dark .wecom-ai-sync-chip-btn {
+      background: #24272E;
+      border-color: rgba(255, 255, 255, 0.12);
+      color: #E2E5E9;
+    }
+    html.wecom-dark .wecom-ai-sync-chip-btn:hover {
+      border-color: #64B5F6;
+      color: #64B5F6;
+      background: rgba(100, 181, 246, 0.12);
+    }
+    .wecom-ai-sync-import-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
     }
 
     /* ---------- 气泡排版切换悬浮钮 ---------- */
@@ -8788,31 +10279,51 @@
     .wecom-msg-me .wecom-msg-content {
       align-items: flex-end;
     }
-    .wecom-msg-me .wecom-msg-name {
-      display: none;
+    .wecom-msg-me:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-header > .wecom-msg-name {
+      display: none !important;
     }
     .wecom-msg-me .wecom-msg-bubble {
       background: var(--wc-bubble-me) !important; /* #95EC69 */
       color: var(--wc-bubble-me-text) !important; /* #1F2329 */
     }
 
-    /* 悬停浮动工具条 */
+    /* 悬停浮动工具条：确保层级置顶（z-index: 25）不被文字遮挡，鼠标移入时保持显示可正常点击 */
     .wecom-msg-tools {
       position: absolute;
-      top: -24px;
+      top: -14px;
       right: 0;
-      display: none;
+      display: flex;
       align-items: center;
       gap: 2px;
-      background: #FFFFFF;
+      background: var(--wc-bg, #FFFFFF);
       border: 1px solid var(--wc-border);
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
       border-radius: 4px;
       padding: 2px 4px;
-      z-index: 10;
+      z-index: 25 !important;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.15s ease, visibility 0.15s ease;
     }
-    .wecom-msg:hover .wecom-msg-tools {
-      display: flex;
+    .wecom-msg:hover:not(:has(.wecom-msg:hover)) > .wecom-msg-content > .wecom-msg-tools,
+    .wecom-msg.has-boost-popover > .wecom-msg-content > .wecom-msg-tools,
+    .wecom-msg-tools:hover {
+      opacity: 1 !important;
+      visibility: visible !important;
+      pointer-events: auto !important;
+      display: flex !important;
+    }
+    .wecom-msg-me:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-tools {
+      right: auto;
+      left: 0;
+    }
+    .wecom-reply-children .wecom-msg-tools,
+    .wecom-msg-me .wecom-reply-children .wecom-msg-tools {
+      right: 0 !important;
+      left: auto !important;
+      top: -6px !important;
+      z-index: 25 !important;
     }
     .wecom-msg-tool {
       width: 22px;
@@ -10762,6 +12273,12 @@
     html.${ROOT_CLASS}.wecom-dark .wecom-reply-children:hover:not(:has(.wecom-reply-children:hover)),
     html.${ROOT_CLASS}.wecom-dark .wecom-reply-children:focus-within:not(:has(.wecom-reply-children:focus-within)) {
       border-left-color: var(--wc-accent) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-reply-children .wecom-msg-name {
+      color: #9aa0a6 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-me .wecom-reply-children .wecom-msg-name {
+      color: #E1E4EA !important;
     }
 
     /* 深色模式：V2EX 用户资料卡 */
@@ -13147,6 +14664,3023 @@
     refreshChatMessagesLayout();
   }
 
+  /* ============================== 界面字体设置 ============================== */
+
+  function sanitizeFontFamily(name) {
+    if (!name || typeof name !== "string") return "";
+    return name.replace(/["';{}\\]/g, "").trim();
+  }
+
+  function isFontAvailable(fontName) {
+    if (typeof document === "undefined" || !document.createElement) return true;
+    try {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return true;
+      const text = "AaBbCcDdEeFfGg12345中文测试!@#";
+      ctx.font = "72px monospace";
+      const monoW = ctx.measureText(text).width;
+      ctx.font = "72px sans-serif";
+      const sansW = ctx.measureText(text).width;
+
+      const safeFont = sanitizeFontFamily(fontName);
+      if (!safeFont) return true;
+      ctx.font = `72px "${safeFont}", monospace`;
+      const testMonoW = ctx.measureText(text).width;
+      ctx.font = `72px "${safeFont}", sans-serif`;
+      const testSansW = ctx.measureText(text).width;
+
+      return testMonoW !== monoW || testSansW !== sansW;
+    } catch {
+      return true;
+    }
+  }
+
+  function isFontStackAvailable(stackOrName) {
+    if (!stackOrName || typeof stackOrName !== "string") return true;
+    const names = stackOrName.split(",").map((s) => s.replace(/["']/g, "").trim()).filter(Boolean);
+    if (!names.length) return true;
+    const generic = ["sans-serif", "serif", "monospace", "cursive", "fantasy", "system-ui", "-apple-system", "BlinkMacSystemFont", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", "Inter"];
+    const candidates = names.filter((n) => !generic.includes(n));
+    if (!candidates.length) return true;
+    return candidates.some(isFontAvailable);
+  }
+
+  function formatFontFamilyStack(name) {
+    const raw = sanitizeFontFamily(name);
+    if (!raw) return "";
+    const parts = raw.split(",").map((p) => p.trim()).filter(Boolean);
+    if (!parts.length) return "";
+    return parts.map((p) => {
+      const lower = p.toLowerCase();
+      if (typeof FONT_NAME_ALIASES !== "undefined" && FONT_NAME_ALIASES[p]) return FONT_NAME_ALIASES[p];
+      if (typeof FONT_NAME_ALIASES !== "undefined" && FONT_NAME_ALIASES[lower]) return FONT_NAME_ALIASES[lower];
+      return `"${p}"`;
+    }).join(", ");
+  }
+
+  function getCustomFontSetting() {
+    try {
+      const raw = localStorage.getItem(CUSTOM_FONT_KEY);
+      if (raw) {
+        if (raw.startsWith("{")) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === "object") {
+            const mode = parsed.mode in FONT_PRESETS || parsed.mode === "custom" ? parsed.mode : "default";
+            const customName = typeof parsed.customName === "string" ? sanitizeFontFamily(parsed.customName) : "";
+            return { mode, customName };
+          }
+        } else if (FONT_PRESETS[raw]) {
+          return { mode: raw, customName: "" };
+        } else if (raw === "custom") {
+          return { mode: "custom", customName: "" };
+        }
+      }
+    } catch { /* ignore */ }
+    return { mode: "default", customName: "" };
+  }
+
+  function setCustomFontSetting(mode, customName = "") {
+    const safeMode = mode in FONT_PRESETS || mode === "custom" ? mode : "default";
+    const safeName = sanitizeFontFamily(customName);
+    const setting = {
+      mode: safeMode,
+      customName: safeMode === "custom" ? safeName : ""
+    };
+    try {
+      localStorage.setItem(CUSTOM_FONT_KEY, JSON.stringify(setting));
+    } catch { /* ignore */ }
+    applyCustomFont();
+    syncThemeControls();
+    return setting;
+  }
+
+  function getCustomFontCssStack() {
+    const setting = getCustomFontSetting();
+    if (setting.mode === "custom" && setting.customName) {
+      const customStack = formatFontFamilyStack(setting.customName);
+      if (customStack) {
+        return `${customStack}, ${DEFAULT_FONT_STACK}`;
+      }
+    }
+    const preset = FONT_PRESETS[setting.mode];
+    if (preset && setting.mode !== "default") {
+      return preset.stack;
+    }
+    return DEFAULT_FONT_STACK;
+  }
+
+  function getCustomFontDisplayLabel() {
+    const setting = getCustomFontSetting();
+    if (setting.mode === "custom") {
+      return setting.customName ? `自定义 (${setting.customName})` : "自定义";
+    }
+    const preset = FONT_PRESETS[setting.mode];
+    return preset ? preset.label : "默认";
+  }
+
+  function applyCustomFont() {
+    if (typeof document === "undefined") return;
+    if (otherThemeActive() || getViewMode() === "native") {
+      document.getElementById(CUSTOM_FONT_STYLE_ID)?.remove();
+      document.documentElement.style.removeProperty("--wc-font");
+      return;
+    }
+    const setting = getCustomFontSetting();
+    let style = document.getElementById(CUSTOM_FONT_STYLE_ID);
+
+    if (setting.mode === "default") {
+      if (style) style.remove();
+      document.documentElement.style.removeProperty("--wc-font");
+      return;
+    }
+
+    const fontStack = getCustomFontCssStack();
+    if (!style) {
+      style = document.createElement("style");
+      style.id = CUSTOM_FONT_STYLE_ID;
+      (document.head || document.documentElement).appendChild(style);
+    }
+
+    style.textContent = `
+      :root {
+        --wc-font: ${fontStack} !important;
+      }
+      html.${ROOT_CLASS},
+      html.${ROOT_CLASS} body,
+      .${ROOT_CLASS} .wecom-rail,
+      .${ROOT_CLASS} .wecom-list-panel,
+      .${ROOT_CLASS} .wecom-chat-panel,
+      .${ROOT_CLASS} .wecom-titlebar,
+      .${ROOT_CLASS} .wecom-theme-menu,
+      .${ROOT_CLASS} .wecom-member-panel,
+      .${ROOT_CLASS} input,
+      .${ROOT_CLASS} button,
+      .${ROOT_CLASS} textarea,
+      .${ROOT_CLASS} select,
+      .wecom-v2ex-user-popover,
+      .wecom-v2ex-member-card,
+      .wecom-juejin-member-card,
+      .wecom-toast,
+      .wecom-dialog {
+        font-family: var(--wc-font) !important;
+      }
+
+      /* 针对消息气泡、列表项、标题、正文等内容区域深度穿透，避免被原生 .cooked p 等样式覆盖 */
+      .${ROOT_CLASS} .wecom-list-panel *:not(code):not(pre):not(kbd):not(samp):not(i):not(svg):not(path):not([class*="icon"]),
+      .${ROOT_CLASS} .wecom-chat-panel *:not(code):not(pre):not(kbd):not(samp):not(i):not(svg):not(path):not([class*="icon"]),
+      .${ROOT_CLASS} .wecom-titlebar *:not(code):not(pre):not(kbd):not(samp):not(i):not(svg):not(path):not([class*="icon"]),
+      .${ROOT_CLASS} .wecom-rail *:not(code):not(pre):not(kbd):not(samp):not(i):not(svg):not(path):not([class*="icon"]),
+      .wecom-v2ex-user-popover *:not(i):not(svg):not(path):not([class*="icon"]),
+      .wecom-v2ex-member-card *:not(i):not(svg):not(path):not([class*="icon"]),
+      .wecom-juejin-member-card *:not(i):not(svg):not(path):not([class*="icon"]) {
+        font-family: var(--wc-font) !important;
+      }
+
+      .${ROOT_CLASS} code, .${ROOT_CLASS} pre, .${ROOT_CLASS} kbd, .${ROOT_CLASS} samp,
+      .wecom-msg-bubble code, .wecom-msg-bubble pre {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+      }
+    `;
+    try {
+      document.documentElement.style.setProperty("--wc-font", fontStack);
+    } catch { /* ignore */ }
+  }
+
+  /* ============================== 系统本地字体读取与选择器 ============================== */
+
+  let cachedSystemFonts = null;
+
+  async function queryAllSystemFonts() {
+    if (cachedSystemFonts && cachedSystemFonts.fonts && cachedSystemFonts.fonts.length > 0) {
+      return cachedSystemFonts;
+    }
+    let result = [];
+    let method = "scan";
+
+    // 1. 尝试使用现代浏览器的 Local Font Access API
+    if (typeof window !== "undefined" && typeof window.queryLocalFonts === "function") {
+      try {
+        const fonts = await window.queryLocalFonts();
+        if (Array.isArray(fonts) && fonts.length > 0) {
+          const set = new Set();
+          fonts.forEach((f) => {
+            if (f.family && !f.family.startsWith("@")) set.add(f.family);
+          });
+          result = Array.from(set);
+          method = "api";
+        }
+      } catch (err) {
+        // 用户拒绝授权或浏览器禁用 API
+        console.warn("[linuxdo-wecom] queryLocalFonts:", err);
+      }
+    }
+
+    // 2. 若 API 不可用或被拒绝，使用 Canvas 探针扫描常用系统与三方字体库
+    if (!result.length) {
+      result = SYSTEM_FONT_PROBE_CANDIDATES.filter(isFontAvailable);
+      method = "scan";
+    }
+
+    // 中文字体或常用字体优先排序
+    result.sort((a, b) => {
+      const aZh = /[\u4e00-\u9fa5]/.test(a);
+      const bZh = /[\u4e00-\u9fa5]/.test(b);
+      if (aZh && !bZh) return -1;
+      if (!aZh && bZh) return 1;
+      return a.localeCompare(b, "zh-Hans-CN");
+    });
+
+    cachedSystemFonts = { fonts: result, method };
+    return cachedSystemFonts;
+  }
+
+  function closeSystemFontPicker() {
+    const dialog = document.querySelector(".wecom-font-picker-dialog");
+    if (dialog) dialog.remove();
+  }
+
+  async function openSystemFontPicker() {
+    closeSystemFontPicker();
+    setThemeMenuOpen(false);
+
+    const dialog = document.createElement("div");
+    dialog.className = "wecom-font-picker-dialog";
+    dialog.innerHTML = `
+      <div class="wecom-font-picker-card" role="dialog" aria-modal="true" aria-labelledby="wecom-font-picker-title">
+        <div class="wecom-font-picker-head">
+          <div id="wecom-font-picker-title" class="wecom-font-picker-title">
+            ${ICONS.gear || ""} <span>选择本地系统字体</span>
+          </div>
+          <button type="button" class="wecom-font-picker-close" aria-label="关闭">&times;</button>
+        </div>
+        <div class="wecom-font-picker-body">
+          <div class="wecom-font-search-wrap">
+            <input type="text" class="wecom-font-search-input" placeholder="输入关键字搜索已安装的字体 (如 楷体, YaHei, MiSans)..." />
+          </div>
+          <div class="wecom-font-status-bar">
+            <span class="wecom-font-count-label">正在读取本地系统字体...</span>
+            <button type="button" class="wecom-font-refresh-btn">重新扫描</button>
+          </div>
+          <div class="wecom-font-picker-list">
+            <div class="wecom-font-empty">正在加载字体列表...</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(dialog);
+
+    dialog.addEventListener("click", (e) => {
+      if (e.target === dialog || e.target.closest(".wecom-font-picker-close")) {
+        closeSystemFontPicker();
+      }
+    });
+
+    const searchInput = dialog.querySelector(".wecom-font-search-input");
+    const countLabel = dialog.querySelector(".wecom-font-count-label");
+    const listEl = dialog.querySelector(".wecom-font-picker-list");
+    const refreshBtn = dialog.querySelector(".wecom-font-refresh-btn");
+
+    const renderList = (fonts, method) => {
+      const curSetting = getCustomFontSetting();
+      const currentVal = curSetting.mode === "custom" ? curSetting.customName.toLowerCase() : "";
+      const filter = (searchInput?.value || "").trim().toLowerCase();
+      const filtered = fonts.filter((f) => !filter || f.toLowerCase().includes(filter));
+
+      const sourceTip = method === "api" ? "系统 API 完整读取" : "本地 Canvas 探针扫描";
+      if (countLabel) {
+        countLabel.textContent = `共找到 ${fonts.length} 个可用字体（${sourceTip}）`;
+      }
+
+      if (!filtered.length) {
+        listEl.innerHTML = `<div class="wecom-font-empty">未找到匹配 "${escapeHtml(filter)}" 的字体</div>`;
+        return;
+      }
+
+      listEl.innerHTML = filtered.map((font) => {
+        const isActive = currentVal === font.toLowerCase();
+        return `
+          <div class="wecom-font-item ${isActive ? "is-active" : ""}" data-font="${escapeHtml(font)}">
+            <span class="wecom-font-item-name" title="${escapeHtml(font)}">${escapeHtml(font)}</span>
+            <span class="wecom-font-item-preview" style="font-family: '${escapeHtml(font)}', sans-serif">
+              企业微信 5.0 - 中文测试 AaBb
+            </span>
+          </div>
+        `;
+      }).join("");
+    };
+
+    const loadData = async (forceRefresh = false) => {
+      if (forceRefresh) cachedSystemFonts = null;
+      if (countLabel) countLabel.textContent = "正在读取本地字体...";
+      const data = await queryAllSystemFonts();
+      renderList(data.fonts || [], data.method || "scan");
+    };
+
+    searchInput?.addEventListener("input", async () => {
+      const data = await queryAllSystemFonts();
+      renderList(data.fonts || [], data.method || "scan");
+    });
+
+    refreshBtn?.addEventListener("click", () => {
+      void loadData(true);
+    });
+
+    listEl.addEventListener("click", (e) => {
+      const item = e.target.closest(".wecom-font-item");
+      if (item && item.dataset.font) {
+        const selectedFont = item.dataset.font;
+        setCustomFontSetting("custom", selectedFont);
+        closeSystemFontPicker();
+        showWecomToast(`已应用系统字体: ${selectedFont}`, "success", 2000);
+      }
+    });
+
+    await loadData(false);
+    setTimeout(() => searchInput?.focus(), 50);
+  }
+
+  /* ---------- 桌面独立窗口快捷方式创建与指引 ---------- */
+  function generateShortcutBatContent(appName, appUrl) {
+    return [
+      "@echo off",
+      "chcp 65001 >nul",
+      "setlocal enabledelayedexpansion",
+      "echo ========================================================",
+      `echo  正在为 ${appName} 创建桌面独立窗口快捷方式...`,
+      "echo ========================================================",
+      "echo.",
+      'set "TARGET_CHROME=C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"',
+      'if not exist "!TARGET_CHROME!" (',
+      '    if exist "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe" (',
+      '        set "TARGET_CHROME=C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"',
+      '    ) else if exist "%LOCALAPPDATA%\\Google\\Chrome\\Application\\chrome.exe" (',
+      '        set "TARGET_CHROME=%LOCALAPPDATA%\\Google\\Chrome\\Application\\chrome.exe"',
+      '    ) else if exist "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe" (',
+      '        set "TARGET_CHROME=C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"',
+      '    ) else if exist "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe" (',
+      '        set "TARGET_CHROME=C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe"',
+      "    )",
+      ")",
+      'set "VBS_SCRIPT=%TEMP%\\create_shortcut_%RANDOM%.vbs"',
+      'echo Set oWS = WScript.CreateObject("WScript.Shell") > "%VBS_SCRIPT%"',
+      `echo sLinkFile = oWS.SpecialFolders("Desktop") ^& "\\${appName}.lnk" >> "%VBS_SCRIPT%"`,
+      'echo Set oLink = oWS.CreateShortcut(sLinkFile) >> "%VBS_SCRIPT%"',
+      'echo oLink.TargetPath = "!TARGET_CHROME!" >> "%VBS_SCRIPT%"',
+      `echo oLink.Arguments = "--app=""${appUrl}""" >> "%VBS_SCRIPT%"`,
+      `echo oLink.Description = "${appName} 独立应用窗口" >> "%VBS_SCRIPT%"`,
+      'echo oLink.IconLocation = "!TARGET_CHROME!, 0" >> "%VBS_SCRIPT%"',
+      'echo oLink.Save >> "%VBS_SCRIPT%"',
+      'cscript //nologo "%VBS_SCRIPT%"',
+      'del "%VBS_SCRIPT%" >nul 2>&1',
+      "echo.",
+      `echo [成功] 已在桌面创建 [${appName}] 快捷方式！`,
+      `echo 启动目标: "!TARGET_CHROME!" --app="${appUrl}"`,
+      "echo.",
+      "echo ========================================================",
+      "pause"
+    ].join("\r\n");
+  }
+
+  function triggerDownloadBatFile(filename, textContent) {
+    try {
+      const blob = new Blob([textContent], { type: "application/x-bat;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        a.remove();
+        URL.revokeObjectURL(url);
+      }, 1000);
+      return true;
+    } catch (err) {
+      console.warn("[linuxdo-wecom] triggerDownloadBatFile failed:", err);
+      return false;
+    }
+  }
+
+  function copyTextToClipboard(text) {
+    if (navigator.clipboard?.writeText) {
+      return navigator.clipboard.writeText(text).catch(() => false);
+    }
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+      return Promise.resolve(true);
+    } catch {
+      return Promise.resolve(false);
+    }
+  }
+
+  function closeWindowShortcutDialog() {
+    const dialog = document.querySelector(".wecom-shortcut-dialog");
+    if (dialog) dialog.remove();
+  }
+
+  function openWindowShortcutDialog() {
+    closeWindowShortcutDialog();
+    closeSystemFontPicker();
+    setThemeMenuOpen(false);
+
+    const appUrl = IS_V2EX ? "https://www.v2ex.com" : IS_JUEJIN ? "https://juejin.cn" : "https://linux.do";
+    const appName = IS_V2EX ? "V2EX (企微版)" : IS_JUEJIN ? "稀土掘金 (企微版)" : "LINUX DO (企微版)";
+    const batFileName = `创建${IS_V2EX ? "V2EX" : IS_JUEJIN ? "掘金" : "LinuxDo"}桌面快捷方式.bat`;
+    const appCommand = `"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --app="${appUrl}"`;
+    const batContent = generateShortcutBatContent(appName, appUrl);
+
+    // 1. 自动触发下载 .bat 生成脚本
+    triggerDownloadBatFile(batFileName, batContent);
+
+    // 2. 自动复制命令到剪贴板
+    void copyTextToClipboard(appCommand);
+
+    // 3. 弹出企业微信风格指引窗口
+    const dialog = document.createElement("div");
+    dialog.className = "wecom-shortcut-dialog";
+    dialog.innerHTML = `
+      <div class="wecom-shortcut-card" role="dialog" aria-modal="true" aria-labelledby="wecom-shortcut-title">
+        <div class="wecom-shortcut-head">
+          <div id="wecom-shortcut-title" class="wecom-shortcut-title">
+            ${ICONS.win || ""} <span>创建桌面独立窗口快捷方式</span>
+          </div>
+          <button type="button" class="wecom-shortcut-close" aria-label="关闭">&times;</button>
+        </div>
+        <div class="wecom-shortcut-body">
+          <div class="wecom-shortcut-banner">
+            <span>${ICONS.checkCircle || "✔"}</span>
+            <span>已自动下载桌面快捷方式生成脚本，并复制启动命令！</span>
+          </div>
+          <div style="font-weight: 600; color: var(--wc-text, #1F2329); margin-bottom: 4px;">快捷方式启动命令：</div>
+          <div class="wecom-shortcut-cmd-box">
+            <code class="wecom-shortcut-cmd-code">${escapeHtml(appCommand)}</code>
+            <button type="button" class="wecom-shortcut-btn-copy">${ICONS.copy || ""} <span>复制</span></button>
+          </div>
+          <div style="font-weight: 600; color: var(--wc-text, #1F2329); margin-bottom: 6px;">如何添加到桌面：</div>
+          <ol class="wecom-shortcut-methods">
+            <li><strong>一键生成（推荐）</strong>：直接双击运行刚刚下载的 <code>${escapeHtml(batFileName)}</code> 文件，即可一键在桌面生成带有 Chrome 图标的独立应用快捷方式！</li>
+            <li><strong>手动创建</strong>：在电脑桌面空白处点击 <strong>鼠标右键 &rarr; 新建 &rarr; 快捷方式</strong>，直接粘贴上面已复制的命令并命名保存即可。</li>
+            <li><strong>Chrome 原生应用模式</strong>：也可在 Chrome 地址栏右侧点击 <strong>安装应用</strong> 图标，或菜单 <code>⋮ &rarr; 保存并共享 &rarr; 创建快捷方式</code>（勾选“在独立窗口中打开”）。</li>
+          </ol>
+        </div>
+        <div class="wecom-shortcut-foot">
+          <button type="button" class="wecom-shortcut-action-btn wecom-shortcut-btn-redownload">重新下载脚本 (.bat)</button>
+          <button type="button" class="wecom-shortcut-action-btn primary wecom-shortcut-btn-confirm">我知道了</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(dialog);
+
+    dialog.addEventListener("click", (e) => {
+      if (e.target === dialog || e.target.closest(".wecom-shortcut-close") || e.target.closest(".wecom-shortcut-btn-confirm")) {
+        closeWindowShortcutDialog();
+        return;
+      }
+      if (e.target.closest(".wecom-shortcut-btn-copy")) {
+        void copyTextToClipboard(appCommand);
+        const copyBtn = dialog.querySelector(".wecom-shortcut-btn-copy");
+        if (copyBtn) {
+          copyBtn.innerHTML = `${ICONS.checkCircle || ""} <span>已复制</span>`;
+          setTimeout(() => {
+            copyBtn.innerHTML = `${ICONS.copy || ""} <span>复制</span>`;
+          }, 1500);
+        }
+        showWecomToast("已复制启动命令到剪贴板", "success", 1500);
+        return;
+      }
+      if (e.target.closest(".wecom-shortcut-btn-redownload")) {
+        triggerDownloadBatFile(batFileName, batContent);
+        showWecomToast("已重新开始下载快捷方式脚本", "info", 1800);
+        return;
+      }
+    });
+
+    showWecomToast("已生成快捷方式脚本，启动命令已复制！", "success", 2500);
+  }
+
+  /* ============================== AI API 配置与帖子总结 ============================== */
+
+  const AI_CONFIG_KEY = "linuxdo-wecom-ai-config";
+  const AI_SUMMARY_PREF_KEY = "linuxdo-wecom-ai-summary-pref";
+
+  const AI_PROVIDERS = Object.freeze({
+    gemini: {
+      id: "gemini",
+      name: "Google Gemini",
+      baseUrl: "https://generativelanguage.googleapis.com",
+      defaultModel: "gemini-1.5-flash",
+      placeholderKey: "AIzaSy...",
+      placeholderUrl: "https://generativelanguage.googleapis.com"
+    },
+    openai: {
+      id: "openai",
+      name: "OpenAI",
+      baseUrl: "https://api.openai.com/v1",
+      defaultModel: "gpt-4o-mini",
+      placeholderKey: "sk-...",
+      placeholderUrl: "https://api.openai.com/v1"
+    },
+    deepseek: {
+      id: "deepseek",
+      name: "DeepSeek",
+      baseUrl: "https://api.deepseek.com",
+      defaultModel: "deepseek-chat",
+      placeholderKey: "sk-...",
+      placeholderUrl: "https://api.deepseek.com"
+    },
+    custom: {
+      id: "custom",
+      name: "自定义 (OpenAI兼容)",
+      baseUrl: "",
+      defaultModel: "gpt-4o-mini",
+      placeholderKey: "sk-...",
+      placeholderUrl: "https://api.example.com/v1"
+    }
+  });
+
+  const AI_DEFAULT_MODELS = Object.freeze({
+    gemini: ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp", "gemini-pro"],
+    openai: ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo", "o1-mini", "o1-preview"],
+    deepseek: ["deepseek-chat", "deepseek-reasoner"],
+    custom: ["gpt-4o-mini", "gpt-4o", "deepseek-chat"]
+  });
+
+  const AI_SUMMARY_STYLES = Object.freeze({
+    sharp: {
+      id: "sharp",
+      label: "🔥 犀利吐槽",
+      name: "犀利吐槽",
+      desc: "观点鲜明一针见血，重点剖析高赞回帖的神吐槽与硬核反驳，直言不讳",
+      instruction: "语言风格：【犀利吐槽】。用辛辣、一针见血的笔触总结。楼主有槽点直截了当指出；回帖部分重点提炼最犀利、反讽、一语中的高赞神评神吐槽，不要说客套话。"
+    },
+    humor: {
+      id: "humor",
+      label: "😄 幽默风趣",
+      name: "幽默风趣",
+      desc: "诙谐网感十足，大白话玩梗，把技术讨论或争论讲得生动有趣",
+      instruction: "语言风格：【幽默风趣】。语言轻松接地气、带有当代互联网人的幽默感。用生动有趣的类比或调侃，把楼主的问题和高赞回帖讲得妙趣横生，引人发笑。"
+    },
+    concise: {
+      id: "concise",
+      label: "⚡ 极简速读",
+      name: "极简速读",
+      desc: "极致压缩干货，3 点概括主楼 + 2 点高赞反馈，30秒读完",
+      instruction: "语言风格：【极简速读】。极致精简，拒绝任何铺垫和客套废话。主楼仅用 2-3 条短句提炼核心，高赞回帖仅用 2 条短句概括，总字数严控在 180 字以内。"
+    },
+    drama: {
+      id: "drama",
+      label: "🍉 吃瓜围观",
+      name: "吃瓜围观",
+      desc: "吃瓜第一线视角，还原讨论现场、对立交锋与神展开",
+      instruction: "语言风格：【吃瓜围观】。采用“前排吃瓜、看热闹不嫌事大”的围观视角，生动还原讨论氛围，梳理楼主与楼层高赞之间的戏剧性碰撞、神级反转与群众围观态度。"
+    },
+    objective: {
+      id: "objective",
+      label: "⚖️ 客观深度",
+      name: "客观深度",
+      desc: "理性严谨，客观拆解楼主核心诉求，平衡呈现正反两方高赞观点",
+      instruction: "语言风格：【客观中立】。保持严谨、中立与理性。清晰梳理楼主的问题与背景，平衡归纳楼层高赞支持方与反对方的核心事实与依据，不偏不倚。"
+    },
+    practical: {
+      id: "practical",
+      label: "🛠️ 实用干货",
+      name: "实用干货",
+      desc: "直奔解决问题，提炼楼主痛点及高赞回帖给出的具体操作/避坑方案",
+      instruction: "语言风格：【实用干货】。以解决问题为导向，提炼楼主的核心痛点与需求，重点整理高赞回帖中给出的具体可执行步骤、踩坑警告或推荐工具/方案。"
+    }
+  });
+
+  const AI_SYNC_PREFIX = "WECOM_AI_SYNC:";
+  const AI_SYNC_CODE_PREFIX = "WECOM_AI_CONFIG:";
+  let transientUniversalBundle = null;
+
+  function exportUniversalAiBundle() {
+    return {
+      v: 1,
+      chat: getAiConfig(),
+      image: getAiImageConfig(),
+      pref: getAiSummaryPref(),
+      ts: Date.now()
+    };
+  }
+
+  function exportUniversalAiSyncString() {
+    try {
+      const bundle = exportUniversalAiBundle();
+      return btoa(unescape(encodeURIComponent(JSON.stringify(bundle))));
+    } catch {
+      return "";
+    }
+  }
+
+  function importUniversalAiSyncString(rawStr) {
+    if (!rawStr || typeof rawStr !== "string") return false;
+    let clean = rawStr.trim();
+    if (clean.startsWith(AI_SYNC_CODE_PREFIX)) clean = clean.slice(AI_SYNC_CODE_PREFIX.length).trim();
+    if (clean.startsWith(AI_SYNC_PREFIX)) clean = clean.slice(AI_SYNC_PREFIX.length).trim();
+    try {
+      const jsonStr = decodeURIComponent(escape(atob(clean)));
+      const bundle = JSON.parse(jsonStr);
+      return importUniversalAiBundle(bundle);
+    } catch {
+      try {
+        const bundle = JSON.parse(decodeURIComponent(clean));
+        return importUniversalAiBundle(bundle);
+      } catch {
+        return false;
+      }
+    }
+  }
+
+  function importUniversalAiBundle(bundle) {
+    if (!bundle || typeof bundle !== "object") return false;
+    let imported = false;
+    if (bundle.chat && typeof bundle.chat === "object" && bundle.chat.apiKey) {
+      setAiConfig(bundle.chat);
+      imported = true;
+    }
+    if (bundle.image && typeof bundle.image === "object" && (bundle.image.apiKey || bundle.image.useSameAsChat)) {
+      setAiImageConfig(bundle.image);
+      imported = true;
+    }
+    if (bundle.pref && typeof bundle.pref === "object" && bundle.pref.style) {
+      setAiSummaryPref(bundle.pref);
+    }
+    if (imported) {
+      saveUniversalAiBundle(bundle);
+    }
+    return imported;
+  }
+
+  function getUniversalAiBundle() {
+    if (transientUniversalBundle) return transientUniversalBundle;
+
+    try {
+      if (typeof GM_getValue === "function") {
+        const gmRaw = GM_getValue("wecom_universal_ai_bundle", null);
+        if (gmRaw) {
+          const parsed = typeof gmRaw === "string" ? JSON.parse(gmRaw) : gmRaw;
+          if (parsed && typeof parsed === "object") {
+            transientUniversalBundle = parsed;
+            return parsed;
+          }
+        }
+      }
+    } catch { /* ignore */ }
+
+    try {
+      if (window.name && window.name.startsWith("WECOM_AI_BUNDLE:")) {
+        const raw = window.name.slice("WECOM_AI_BUNDLE:".length);
+        try {
+          const jsonStr = decodeURIComponent(escape(atob(raw)));
+          const parsed = JSON.parse(jsonStr);
+          if (parsed && typeof parsed === "object") {
+            transientUniversalBundle = parsed;
+            return parsed;
+          }
+        } catch {
+          const parsed = JSON.parse(decodeURIComponent(raw));
+          if (parsed && typeof parsed === "object") {
+            transientUniversalBundle = parsed;
+            return parsed;
+          }
+        }
+      }
+    } catch { /* ignore */ }
+
+    return null;
+  }
+
+  function saveUniversalAiBundle(bundle = null) {
+    const toSave = bundle || exportUniversalAiBundle();
+    transientUniversalBundle = toSave;
+
+    try {
+      const syncStr = exportUniversalAiSyncString();
+      if (syncStr) {
+        window.name = "WECOM_AI_BUNDLE:" + syncStr;
+      }
+    } catch { /* ignore */ }
+
+    try {
+      if (typeof GM_setValue === "function") {
+        GM_setValue("wecom_universal_ai_bundle", JSON.stringify(toSave));
+      }
+    } catch { /* ignore */ }
+  }
+
+  let lastAiSyncToastTime = 0;
+  function consumeUniversalAiSync() {
+    let synced = false;
+    let explicitHashSync = false;
+    try {
+      if (window.location.hash.includes("wecom_ai_sync=")) {
+        const match = window.location.hash.match(/wecom_ai_sync=([^&]+)/);
+        if (match && match[1]) {
+          if (importUniversalAiSyncString(match[1])) {
+            synced = true;
+            explicitHashSync = true;
+          }
+        }
+        const isAutoClose = window.location.hash.includes("auto_close=1");
+        const cleanUrl = window.location.href.replace(/[#&]wecom_ai_sync=[^&]+/, "").replace(/[#&]auto_close=1/, "").replace(/#$/, "");
+        window.history.replaceState(null, "", cleanUrl);
+        if (isAutoClose) {
+          try { window.close(); } catch { /* ignore */ }
+        }
+      }
+    } catch { /* ignore */ }
+
+    if (!synced) {
+      const bundle = getUniversalAiBundle();
+      if (bundle) {
+        const curChat = getAiConfig();
+        const curImage = getAiImageConfig();
+        const bundleTs = bundle.ts || 0;
+        let shouldSyncChat = false;
+        let shouldSyncImage = false;
+
+        if (bundle.chat?.apiKey) {
+          const chatTs = curChat.updatedAt || 0;
+          if (!curChat.apiKey || (bundleTs > 0 && bundleTs > chatTs)) {
+            setAiConfig({ ...bundle.chat, updatedAt: bundleTs || Date.now() });
+            shouldSyncChat = true;
+          }
+        }
+        if (bundle.image && (bundle.image.apiKey || bundle.image.useSameAsChat)) {
+          const imgTs = curImage.updatedAt || 0;
+          const hasImg = Boolean(curImage.apiKey || curImage.useSameAsChat);
+          if (!hasImg || (bundleTs > 0 && bundleTs > imgTs)) {
+            setAiImageConfig({ ...bundle.image, updatedAt: bundleTs || Date.now() });
+            shouldSyncImage = true;
+          }
+        }
+        if (bundle.pref && bundle.pref.style) {
+          setAiSummaryPref(bundle.pref);
+        }
+        if (shouldSyncChat || shouldSyncImage) {
+          synced = true;
+        }
+      }
+    }
+
+    // 跨站配置同步在后台静默无感完成，切站点时不打扰正常浏览
+    return synced;
+  }
+
+  function navigateWithAiSync(targetUrl) {
+    const syncStr = exportUniversalAiSyncString();
+    try {
+      window.name = "WECOM_AI_BUNDLE:" + syncStr;
+    } catch { /* ignore */ }
+
+    try {
+      const u = new URL(targetUrl, window.location.href);
+      if (syncStr) {
+        u.hash = "wecom_ai_sync=" + syncStr;
+      }
+      window.location.href = u.toString();
+    } catch {
+      window.location.href = targetUrl;
+    }
+  }
+
+  function getAiConfig() {
+    try {
+      const raw = localStorage.getItem(AI_CONFIG_KEY);
+      if (raw) {
+        const cfg = JSON.parse(raw);
+        if (cfg && typeof cfg === "object") {
+          const provider = cfg.provider || "gemini";
+          const provInfo = AI_PROVIDERS[provider] || AI_PROVIDERS.gemini;
+          if (cfg.apiKey && cfg.apiKey.trim().length > 0) {
+            return {
+              provider,
+              apiKey: cfg.apiKey || "",
+              baseUrl: cfg.baseUrl !== undefined ? cfg.baseUrl : provInfo.baseUrl,
+              model: cfg.model || provInfo.defaultModel,
+              updatedAt: cfg.updatedAt || 0
+            };
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    const fallback = getUniversalAiBundle();
+    if (fallback?.chat?.apiKey) {
+      try {
+        localStorage.setItem(AI_CONFIG_KEY, JSON.stringify(fallback.chat));
+      } catch { /* ignore */ }
+      return fallback.chat;
+    }
+
+    return {
+      provider: "gemini",
+      apiKey: "",
+      baseUrl: AI_PROVIDERS.gemini.baseUrl,
+      model: AI_PROVIDERS.gemini.defaultModel,
+      updatedAt: 0
+    };
+  }
+
+  function setAiConfig(cfg) {
+    try {
+      const provider = cfg.provider || "gemini";
+      const provInfo = AI_PROVIDERS[provider] || AI_PROVIDERS.gemini;
+      const toSave = {
+        provider,
+        apiKey: (cfg.apiKey || "").trim(),
+        baseUrl: cfg.baseUrl !== undefined ? (cfg.baseUrl || "").trim() : provInfo.baseUrl,
+        model: (cfg.model || provInfo.defaultModel).trim(),
+        updatedAt: cfg.updatedAt || Date.now()
+      };
+      localStorage.setItem(AI_CONFIG_KEY, JSON.stringify(toSave));
+      saveUniversalAiBundle();
+      return toSave;
+    } catch {
+      return null;
+    }
+  }
+
+  function isAiConfigured() {
+    const cfg = getAiConfig();
+    return Boolean(cfg.apiKey && cfg.apiKey.trim().length > 0);
+  }
+
+  function getAiSummaryPref() {
+    try {
+      const raw = localStorage.getItem(AI_SUMMARY_PREF_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") {
+          return {
+            style: parsed.style && AI_SUMMARY_STYLES[parsed.style] ? parsed.style : "sharp",
+            customPrompt: typeof parsed.customPrompt === "string" ? parsed.customPrompt : ""
+          };
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return { style: "sharp", customPrompt: "" };
+  }
+
+  function setAiSummaryPref(pref) {
+    try {
+      localStorage.setItem(AI_SUMMARY_PREF_KEY, JSON.stringify({
+        style: pref.style && AI_SUMMARY_STYLES[pref.style] ? pref.style : "sharp",
+        customPrompt: (pref.customPrompt || "").trim()
+      }));
+      saveUniversalAiBundle();
+    } catch {
+      // ignore
+    }
+  }
+
+  const AI_CACHE_KEY = "linuxdo-wecom-ai-topic-cache";
+  const AI_IMAGE_CONFIG_KEY = "linuxdo-wecom-ai-image-config";
+
+  const AI_IMAGE_PROVIDERS = Object.freeze({
+    gemini: {
+      id: "gemini",
+      name: "Google (Imagen 3)",
+      baseUrl: "https://generativelanguage.googleapis.com",
+      defaultModel: "imagen-3.0-generate-002",
+      defaultSize: "1024x1024",
+      placeholderKey: "AIzaSy...",
+      placeholderUrl: "https://generativelanguage.googleapis.com"
+    },
+    openai: {
+      id: "openai",
+      name: "OpenAI (DALL-E 3)",
+      baseUrl: "https://api.openai.com/v1",
+      defaultModel: "dall-e-3",
+      defaultSize: "1024x1024",
+      placeholderKey: "sk-...",
+      placeholderUrl: "https://api.openai.com/v1"
+    },
+    siliconflow: {
+      id: "siliconflow",
+      name: "硅基流动 (Flux / SD3.5)",
+      baseUrl: "https://api.siliconflow.cn/v1",
+      defaultModel: "black-forest-labs/FLUX.1-schnell",
+      defaultSize: "1024x1024",
+      placeholderKey: "sk-...",
+      placeholderUrl: "https://api.siliconflow.cn/v1"
+    },
+    custom: {
+      id: "custom",
+      name: "自定义 (OpenAI兼容接口)",
+      baseUrl: "",
+      defaultModel: "dall-e-3",
+      defaultSize: "1024x1024",
+      placeholderKey: "sk-...",
+      placeholderUrl: "https://api.example.com/v1"
+    }
+  });
+
+  const AI_IMAGE_DEFAULT_MODELS = Object.freeze({
+    gemini: ["imagen-3.0-generate-002", "gemini-2.5-flash-image", "image-generation-001"],
+    openai: ["dall-e-3", "gpt-image-2", "dall-e-2", "gpt-image-2-5-flare", "gpt-image-2-5-full"],
+    siliconflow: [
+      "black-forest-labs/FLUX.1-schnell",
+      "black-forest-labs/FLUX.1-dev",
+      "stabilityai/stable-diffusion-3-5-large"
+    ],
+    custom: ["gpt-image-2", "dall-e-3", "gpt-image-2-5-flare", "gpt-image-2-5-full", "imagen-3.0-generate-002", "flux-schnell", "flux-dev", "midjourney"]
+  });
+
+  const AI_IMAGE_STYLES = Object.freeze({
+    comic_4panel: {
+      id: "comic_4panel",
+      label: "📖 连环故事分镜",
+      name: "连环故事分镜",
+      desc: "多格连环画分镜叙事，自由构思镜头不限格数，生动的角色表情与戏剧性情节推进",
+      promptModifier: "多格连环画分镜叙事风格，生动的人物表情与肢体动作，情节起伏推进，漫画分镜排版，带中文对白气泡框"
+    },
+    comic_color: {
+      id: "comic_color",
+      label: "🎨 现代全彩条漫",
+      name: "现代全彩条漫",
+      desc: "现代全彩条漫/Webtoon风格，垂直分镜流式叙事，色彩通透，剧情层层递进",
+      promptModifier: "现代全彩条漫长图叙事风格，垂直多格分镜排布，精致数码插画质感，饱满通透的色彩，角色生动互动与中文对话气泡"
+    },
+    comic_us: {
+      id: "comic_us",
+      label: "💥 美漫张力分镜",
+      name: "美漫张力分镜",
+      desc: "粗犷线条与强烈明暗阴影，美漫画卷大片张力，戏剧冲突拉满",
+      promptModifier: "经典美式英雄漫画风格，粗犷有力的墨线，强烈的明暗光影对比，电影级戏剧张力分镜构图"
+    },
+    comic_chibi: {
+      id: "comic_chibi",
+      label: "🐱 治愈Q版萌漫",
+      name: "治愈Q版萌漫",
+      desc: "治愈萌系角色、轻松幽默的论坛日常叙事、手绘温馨水彩质感",
+      promptModifier: "治愈系Q版可爱漫画风格，幽默趣味的情节互动，柔和水彩马卡龙色调，简洁温馨的手绘线条"
+    },
+    cyberpunk_comic: {
+      id: "cyberpunk_comic",
+      label: "🌆 赛博科幻分镜",
+      name: "赛博科幻分镜",
+      desc: "未来数码都市、霓虹光影与科技极客感、大场面科幻分镜叙事",
+      promptModifier: "赛博朋克科幻漫画风格，霓虹反光与科技质感，未来主义机械细节，富有冲击力的大场面多视角分镜"
+    },
+    sketch_story: {
+      id: "sketch_story",
+      label: "✏️ 极简黑白速写",
+      name: "极简黑白速写",
+      desc: "干练干净的钢笔线稿，极客幽默草图，纯粹聚焦故事与情节本质",
+      promptModifier: "极简黑白钢笔速写漫画风格，干净利落的排线与分镜草图，幽默机智的情节构思，纯粹视觉叙事"
+    }
+  });
+
+  function getAiImageConfig() {
+    try {
+      const raw = localStorage.getItem(AI_IMAGE_CONFIG_KEY);
+      if (raw) {
+        const cfg = JSON.parse(raw);
+        if (cfg && typeof cfg === "object") {
+          const provider = cfg.provider || "openai";
+          const provInfo = AI_IMAGE_PROVIDERS[provider] || AI_IMAGE_PROVIDERS.openai;
+          if (cfg.apiKey || cfg.useSameAsChat) {
+            return {
+              provider,
+              useSameAsChat: Boolean(cfg.useSameAsChat),
+              apiKey: cfg.apiKey || "",
+              baseUrl: cfg.baseUrl !== undefined ? cfg.baseUrl : provInfo.baseUrl,
+              model: cfg.model || provInfo.defaultModel,
+              size: cfg.size || "1024x1024",
+              updatedAt: cfg.updatedAt || 0
+            };
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    const fallback = getUniversalAiBundle();
+    if (fallback?.image && (fallback.image.apiKey || fallback.image.useSameAsChat)) {
+      try {
+        localStorage.setItem(AI_IMAGE_CONFIG_KEY, JSON.stringify(fallback.image));
+      } catch { /* ignore */ }
+      return fallback.image;
+    }
+
+    return {
+      provider: "openai",
+      useSameAsChat: true,
+      apiKey: "",
+      baseUrl: AI_IMAGE_PROVIDERS.openai.baseUrl,
+      model: AI_IMAGE_PROVIDERS.openai.defaultModel,
+      size: "1024x1024",
+      updatedAt: 0
+    };
+  }
+
+  function setAiImageConfig(cfg) {
+    try {
+      const provider = cfg.provider || "openai";
+      const provInfo = AI_IMAGE_PROVIDERS[provider] || AI_IMAGE_PROVIDERS.openai;
+      const toSave = {
+        provider,
+        useSameAsChat: Boolean(cfg.useSameAsChat),
+        apiKey: (cfg.apiKey || "").trim(),
+        baseUrl: cfg.baseUrl !== undefined ? (cfg.baseUrl || "").trim() : provInfo.baseUrl,
+        model: (cfg.model || provInfo.defaultModel).trim(),
+        size: cfg.size || "1024x1024",
+        updatedAt: cfg.updatedAt || Date.now()
+      };
+      localStorage.setItem(AI_IMAGE_CONFIG_KEY, JSON.stringify(toSave));
+      saveUniversalAiBundle();
+      return toSave;
+    } catch {
+      return null;
+    }
+  }
+
+  function getEffectiveAiImageConfig() {
+    const imgCfg = getAiImageConfig();
+    if (imgCfg.useSameAsChat) {
+      const chatCfg = getAiConfig();
+      return {
+        ...imgCfg,
+        apiKey: chatCfg.apiKey,
+        baseUrl: chatCfg.baseUrl || imgCfg.baseUrl
+      };
+    }
+    if (!imgCfg.apiKey) {
+      const chatCfg = getAiConfig();
+      if (chatCfg.apiKey && (chatCfg.provider === "openai" || chatCfg.provider === "custom")) {
+        return {
+          ...imgCfg,
+          apiKey: chatCfg.apiKey,
+          baseUrl: imgCfg.baseUrl || chatCfg.baseUrl
+        };
+      }
+    }
+    return imgCfg;
+  }
+
+  function isAiImageConfigured() {
+    const cfg = getEffectiveAiImageConfig();
+    return Boolean(cfg.apiKey && cfg.apiKey.trim().length > 0);
+  }
+
+  function getTopicAiCache(topicId) {
+    if (!topicId) return null;
+    try {
+      const raw = localStorage.getItem(AI_CACHE_KEY);
+      if (!raw) return null;
+      const map = JSON.parse(raw);
+      return (map && typeof map === "object") ? (map[String(topicId)] || null) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function saveTopicAiCache(topicId, partialData) {
+    if (!topicId) return;
+    try {
+      const raw = localStorage.getItem(AI_CACHE_KEY);
+      const map = raw ? JSON.parse(raw) : {};
+      const key = String(topicId);
+      const existing = map[key] || {};
+      map[key] = {
+        ...existing,
+        ...partialData,
+        updatedAt: Date.now()
+      };
+      const keys = Object.keys(map);
+      if (keys.length > 80) {
+        keys.sort((a, b) => (map[a]?.updatedAt || 0) - (map[b]?.updatedAt || 0));
+        while (keys.length > 80) {
+          delete map[keys.shift()];
+        }
+      }
+      localStorage.setItem(AI_CACHE_KEY, JSON.stringify(map));
+    } catch (err) {
+      console.warn("[linuxdo-wecom] saveTopicAiCache failed:", err);
+    }
+  }
+
+  function formatAiCacheTime(ts) {
+    if (!ts) return "";
+    const diff = Date.now() - ts;
+    if (diff < 60000) return "刚刚";
+    if (diff < 3600000) return `${Math.floor(diff / 60000)} 分钟前`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`;
+    const d = new Date(ts);
+    return `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  }
+
+  function safeApiFetch(url, options = {}) {
+    const gmXhr = (typeof GM_xmlhttpRequest === "function" ? GM_xmlhttpRequest : null)
+      || (typeof GM !== "undefined" && typeof GM.xmlHttpRequest === "function" ? GM.xmlHttpRequest : null);
+
+    if (gmXhr) {
+      return new Promise((resolve, reject) => {
+        gmXhr({
+          method: options.method || "GET",
+          url,
+          headers: options.headers || {},
+          data: options.body || null,
+          timeout: options.timeout || 60000,
+          onload: (res) => {
+            resolve({
+              ok: res.status >= 200 && res.status < 300,
+              status: res.status,
+              statusText: res.statusText || "",
+              json: async () => JSON.parse(res.responseText || "{}"),
+              text: async () => res.responseText || ""
+            });
+          },
+          onerror: (err) => reject(new Error(err?.error || "网络连接错误")),
+          ontimeout: () => reject(new Error("请求超时"))
+        });
+      });
+    }
+
+    return fetch(url, options).catch((err) => {
+      if (err instanceof TypeError && /failed to fetch|networkerror|load failed/i.test(err.message)) {
+        throw new Error("跨域连接受阻 (CORS/Cloudflare 拦截)。该中转站未开启浏览器跨域，可在油猴脚本头将 [@grant none] 改为 [@grant GM_xmlhttpRequest] 彻底解除跨域限制。");
+      }
+      throw err;
+    });
+  }
+
+  async function callAiImageApi(config, prompt, options = {}) {
+    const effective = config || getEffectiveAiImageConfig();
+    const apiKey = (effective.apiKey || "").trim();
+    let baseUrl = (effective.baseUrl || "").trim().replace(/\/+$/, "");
+    const model = (effective.model || "dall-e-3").trim();
+    const size = options.size || effective.size || "1024x1024";
+
+    if (!apiKey) throw new Error("请先配置生图 API Key");
+    if (!baseUrl) throw new Error("请先配置生图 API Base URL");
+
+    // Google Gemini 官方接口支持 (支持 Imagen 3 及多模态原生出图)
+    if (baseUrl.includes("googleapis.com") && !baseUrl.includes("/openai")) {
+      if (model.includes("imagen") || model.includes("image-generation")) {
+        const url = `${baseUrl}/v1beta/models/${encodeURIComponent(model)}:predict?key=${encodeURIComponent(apiKey)}`;
+        const aspectRatio = size === "1024x1792" ? "9:16" : (size === "1792x1024" ? "16:9" : "1:1");
+        const resp = await safeApiFetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            instances: [{ prompt }],
+            parameters: { sampleCount: 1, aspectRatio, outputMimeType: "image/jpeg" }
+          }),
+          signal: options.signal
+        });
+        if (!resp.ok) {
+          let errDetail = `${resp.status} ${resp.statusText}`;
+          try {
+            const errJson = await resp.json();
+            if (errJson?.error?.message) errDetail = errJson.error.message;
+          } catch {}
+          throw new Error(errDetail);
+        }
+        const gData = await resp.json();
+        const b64 = gData?.predictions?.[0]?.bytesBase64Encoded;
+        if (b64) {
+          return { url: `data:image/jpeg;base64,${b64}`, revised_prompt: "" };
+        }
+        throw new Error("Gemini Imagen 未返回有效图片数据");
+      }
+
+      // Gemini 多模态原生生图
+      const url = `${baseUrl}/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+      const resp = await safeApiFetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseModalities: ["IMAGE", "TEXT"]
+          }
+        }),
+        signal: options.signal
+      });
+      if (!resp.ok) {
+        let errDetail = `${resp.status} ${resp.statusText}`;
+        try {
+          const errJson = await resp.json();
+          if (errJson?.error?.message) errDetail = errJson.error.message;
+        } catch {}
+        throw new Error(errDetail);
+      }
+      const gData = await resp.json();
+      const parts = gData?.candidates?.[0]?.content?.parts || [];
+      for (const p of parts) {
+        if (p?.inlineData?.data) {
+          const mime = p.inlineData.mimeType || "image/png";
+          return { url: `data:${mime};base64,${p.inlineData.data}`, revised_prompt: "" };
+        }
+      }
+      throw new Error(`模型 ${model} 未返回图像数据。使用 Google 官方 Key 生图推荐选择 Imagen 3 (imagen-3.0-generate-002)`);
+    }
+
+    const url = baseUrl.endsWith("/images/generations")
+      ? baseUrl
+      : `${baseUrl}/images/generations`;
+
+    const aspectRatio = size === "1024x1792" ? "9:16" : (size === "1792x1024" ? "16:9" : "1:1");
+    let finalPrompt = prompt;
+    if (/midjourney|mj/i.test(model) && !finalPrompt.includes("--ar")) {
+      finalPrompt = `${finalPrompt} --ar ${aspectRatio}`;
+    }
+
+    const payload = {
+      model,
+      prompt: finalPrompt,
+      size,
+      n: 1
+    };
+
+    const resp = await safeApiFetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(payload),
+      signal: options.signal
+    });
+
+    if (!resp.ok) {
+      let errDetail = `${resp.status} ${resp.statusText}`;
+      try {
+        const errJson = await resp.json();
+        if (errJson?.error?.message) errDetail = errJson.error.message;
+      } catch {}
+      throw new Error(errDetail);
+    }
+
+    const data = await resp.json();
+    const item = data?.data?.[0];
+    if (item?.url) {
+      return { url: item.url, revised_prompt: item.revised_prompt || "" };
+    }
+    if (item?.b64_json) {
+      return { url: `data:image/png;base64,${item.b64_json}`, revised_prompt: item.revised_prompt || "" };
+    }
+    throw new Error("生图 API 未返回有效图片数据");
+  }
+
+  async function testAiImageConnection(config) {
+    const testPrompt = "A cute robot waving hand in clean comic style, white background";
+    return await callAiImageApi(config, testPrompt);
+  }
+
+  async function generateComicVisualPrompt(topicInfo, options = {}) {
+    const { title, mainAuthor, mainPostText, highLikesReplies } = topicInfo;
+    const includeReplies = Boolean(options.includeReplies);
+    const styleKey = options.styleKey || "comic_4panel";
+    const styleDef = AI_IMAGE_STYLES[styleKey] || AI_IMAGE_STYLES.comic_4panel;
+    const customStyle = (options.customStyle || "").trim();
+
+    if (isAiConfigured()) {
+      const chatCfg = getAiConfig();
+      let textToSummarize = `帖子标题: 《${title}》\n发帖作者: ${mainAuthor}\n主楼帖子内容:\n${(mainPostText || "").slice(0, 1600)}`;
+      if (includeReplies && Array.isArray(highLikesReplies) && highLikesReplies.length > 0) {
+        const topRepliesText = highLikesReplies.slice(0, 5).map((r) => `[#${r.post_number} 楼 ${r.author} (获赞 ${r.likes})]: ${r.text.slice(0, 200)}`).join("\n");
+        textToSummarize += `\n\n社区高赞神评与讨论:\n${topRepliesText}`;
+      }
+
+      const promptRequest =
+`你是一位精通视觉叙事与分镜构图的资深漫画大师兼 AI 生图提示词专家。
+请将下面来自 Linux.do 论坛的真实帖子，重构成一段具有连贯剧情与视觉张力的【中文生图提示词（Visual Prompt）】（适配 DALL-E 3、FLUX、Midjourney、Imagen 等最新生图大模型）。
+
+【选定漫画叙事风格】：${styleDef.name} (${styleDef.promptModifier})${customStyle ? `\n【用户自定义风格/要求】：${customStyle}` : ""}
+
+【核心要求与规则】：
+1. 【不限制固定格数】：请根据故事情节的高潮起伏，自由编排最适合的分镜结构（如 3~6 格连环画分镜、动态条漫排版或全景故事画卷），绝对不要死板限定格数。
+2. 【生成纯中文画面与中文台词】：
+   - 必须直接输出纯中文生图描述，严禁输出任何英文单词。
+   - 生图模型支持直接渲染中文！请在画面描述中，为主要角色设计带有尖角或圆角的【漫画对话气泡框】与【内心独白方框】，并在提示词中明确写出框内的精炼中文对白（用引号标出，如：对话气泡中写着“代码怎么又崩了？！”、“赶紧上车！”）。
+   - 场景中可自然融入地道中文元素，如带有中文字样的招牌、横幅、电脑屏幕中文代码报错或中文拟声词（如“轰！”、“哈哈”），让画面自然生成纯正的中文漫画。
+3. 【戏剧冲突与人物表现】：${includeReplies ? "画面需生动展现楼主经历的窘境/难题，以及社区热心网友或犀利神评的戏剧性互动与吐槽，形成弹幕般热闹的讨论氛围。" : "画面紧紧围绕楼主的亲身经历展开，突出主角丰富夸张的面部表情与剧情反转。"}
+4. 【输出格式】：只输出最终生成的中文提示词本身（字数约 150~280 汉字），严禁输出任何前缀、解释、Markdown 引用标记或多余客套话。
+
+【论坛原帖内容】：
+${textToSummarize}`;
+
+      try {
+        const res = await callAiChatApi(chatCfg, [{ role: "user", content: promptRequest }]);
+        if (res && res.length > 20) {
+          return res.replace(/^["'`]|["'`]$/g, "").trim();
+        }
+      } catch (err) {
+        console.warn("[linuxdo-wecom] generateComicVisualPrompt chat fallback:", err);
+      }
+    }
+
+    const cleanTitle = (title || "").replace(/["']/g, "").slice(0, 100);
+    const cleanSnippet = (mainPostText || "").replace(/[\r\n]+/g, " ").replace(/["']/g, "").slice(0, 250);
+    let fallback = `连环画多格分镜叙事图，生动呈现故事《${cleanTitle}》，${styleDef.promptModifier}。分镜剧情构图自然编排，各分镜画面中角色表情丰富生动，带有漫画对话气泡框，气泡中清晰写有简短中文台词。主线剧情：“${cleanSnippet}”`;
+    if (includeReplies) {
+      fallback += `，伴随分镜展示社区热心网友与犀利神评的精彩互动吐槽、弹幕式中文对话气泡`;
+    }
+    if (customStyle) {
+      fallback += `，画面融入风格：${customStyle}`;
+    }
+    return fallback;
+  }
+
+  async function fetchAiModels(provider, apiKey, baseUrl) {
+    const prov = AI_PROVIDERS[provider] || AI_PROVIDERS.custom;
+    const finalBaseUrl = (baseUrl || prov.baseUrl || "").replace(/\/+$/, "");
+    if (!apiKey) throw new Error("请先填写 API Key");
+
+    if (provider === "gemini" && !finalBaseUrl.includes("/openai")) {
+      const url = `${finalBaseUrl}/v1beta/models?key=${encodeURIComponent(apiKey)}`;
+      const resp = await safeApiFetch(url);
+      if (!resp.ok) {
+        let errDetail = `${resp.status} ${resp.statusText}`;
+        try {
+          const errJson = await resp.json();
+          if (errJson?.error?.message) errDetail = errJson.error.message;
+        } catch { /* ignore */ }
+        throw new Error(errDetail);
+      }
+      const data = await resp.json();
+      const list = Array.isArray(data.models) ? data.models : [];
+      const modelIds = list
+        .map((m) => (m.name || "").replace(/^models\//, ""))
+        .filter((name) => Boolean(name) && !name.includes("embedding") && !name.includes("aqa"));
+      if (!modelIds.length) throw new Error("未获取到有效的生成式模型");
+      return modelIds;
+    }
+
+    if (!finalBaseUrl) throw new Error("请填写 API Base URL");
+    const url = `${finalBaseUrl}/models`;
+    const resp = await safeApiFetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${apiKey}`
+      }
+    });
+    if (!resp.ok) {
+      let errDetail = `${resp.status} ${resp.statusText}`;
+      try {
+        const errJson = await resp.json();
+        if (errJson?.error?.message) errDetail = errJson.error.message;
+      } catch { /* ignore */ }
+      throw new Error(errDetail);
+    }
+    const data = await resp.json();
+    const list = Array.isArray(data.data) ? data.data : (Array.isArray(data.models) ? data.models : []);
+    const modelIds = list
+      .map((m) => (typeof m === "string" ? m : m.id || m.name || ""))
+      .filter(Boolean);
+    if (!modelIds.length) throw new Error("未在响应中解析到模型列表");
+    return modelIds;
+  }
+
+  async function fetchAiImageModels(provider, apiKey, baseUrl) {
+    const prov = AI_IMAGE_PROVIDERS[provider] || AI_IMAGE_PROVIDERS.custom;
+    const finalBaseUrl = (baseUrl || prov.baseUrl || "").replace(/\/+$/, "");
+    if (!apiKey) throw new Error("请先填写 API Key");
+
+    if (finalBaseUrl.includes("googleapis.com") && !finalBaseUrl.includes("/openai")) {
+      const gUrl = `${finalBaseUrl}/v1beta/models?key=${encodeURIComponent(apiKey)}`;
+      const gResp = await safeApiFetch(gUrl);
+      if (!gResp.ok) {
+        let errDetail = `${gResp.status} ${gResp.statusText}`;
+        try {
+          const errJson = await gResp.json();
+          if (errJson?.error?.message) errDetail = errJson.error.message;
+        } catch { /* ignore */ }
+        throw new Error(errDetail);
+      }
+      const gData = await gResp.json();
+      const gList = Array.isArray(gData.models) ? gData.models : [];
+      const gModelIds = gList
+        .map((m) => (m.name || "").replace(/^models\//, ""))
+        .filter((name) => Boolean(name) && !name.includes("embedding") && !name.includes("aqa"));
+      if (!gModelIds.length) throw new Error("未获取到有效模型");
+      return gModelIds;
+    }
+
+    if (!finalBaseUrl) throw new Error("请先填写 API Base URL");
+    const url = `${finalBaseUrl}/models`;
+    const resp = await safeApiFetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${apiKey}`
+      }
+    });
+    if (!resp.ok) {
+      let errDetail = `${resp.status} ${resp.statusText}`;
+      try {
+        const errJson = await resp.json();
+        if (errJson?.error?.message) errDetail = errJson.error.message;
+      } catch { /* ignore */ }
+      throw new Error(errDetail);
+    }
+    const data = await resp.json();
+    const list = Array.isArray(data.data) ? data.data : (Array.isArray(data.models) ? data.models : []);
+    const modelIds = list
+      .map((m) => (typeof m === "string" ? m : m.id || m.name || ""))
+      .filter(Boolean);
+    if (!modelIds.length) throw new Error("未在响应中解析到模型列表");
+
+    const imgRegex = /dall-?e|flux|diffusion|sdxl|stable-diffusion|midjourney|mj|recraft|imagen|image|kling|cogview|kolors|wanx|sora/i;
+    const imgModels = modelIds.filter((m) => imgRegex.test(m));
+    const otherModels = modelIds.filter((m) => !imgRegex.test(m));
+
+    const defaults = AI_IMAGE_DEFAULT_MODELS[provider] || AI_IMAGE_DEFAULT_MODELS.custom || [];
+    const combined = [...imgModels];
+    for (const d of defaults) {
+      if (!combined.includes(d)) combined.push(d);
+    }
+    for (const o of otherModels) {
+      if (!combined.includes(o)) combined.push(o);
+    }
+    return combined;
+  }
+
+  async function callAiChatApi(config, messages, options = {}) {
+    const { provider = "gemini", apiKey, baseUrl, model } = config;
+    if (!apiKey) throw new Error("未配置 API Key，请先进入设置配置");
+    const prov = AI_PROVIDERS[provider] || AI_PROVIDERS.custom;
+    const finalBaseUrl = (baseUrl || prov.baseUrl || "").replace(/\/+$/, "");
+    const finalModel = model || prov.defaultModel || "gemini-1.5-flash";
+
+    if (provider === "gemini" && !finalBaseUrl.includes("/openai")) {
+      const url = `${finalBaseUrl}/v1beta/models/${encodeURIComponent(finalModel)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+      const combinedPrompt = messages.map((m) => m.content).join("\n\n");
+      const resp = await safeApiFetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: combinedPrompt }]
+            }
+          ]
+        }),
+        signal: options.signal
+      });
+      if (!resp.ok) {
+        let errDetail = `${resp.status} ${resp.statusText}`;
+        try {
+          const errJson = await resp.json();
+          if (errJson?.error?.message) errDetail = errJson.error.message;
+        } catch { /* ignore */ }
+        throw new Error(errDetail);
+      }
+      const data = await resp.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) {
+        if (data?.promptFeedback?.blockReason) {
+          throw new Error("内容被安全策略拦截: " + data.promptFeedback.blockReason);
+        }
+        throw new Error(data?.error?.message || "未收到有效回复");
+      }
+      return text.trim();
+    }
+
+    if (!finalBaseUrl) throw new Error("请配置 API Base URL");
+    const url = `${finalBaseUrl}/chat/completions`;
+    const resp = await safeApiFetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: finalModel,
+        messages: messages,
+        temperature: 0.3
+      }),
+      signal: options.signal
+    });
+    if (!resp.ok) {
+      let errDetail = `${resp.status} ${resp.statusText}`;
+      try {
+        const errJson = await resp.json();
+        if (errJson?.error?.message) errDetail = errJson.error.message;
+      } catch { /* ignore */ }
+      throw new Error(errDetail);
+    }
+    const data = await resp.json();
+    const text = data?.choices?.[0]?.message?.content;
+    if (!text && text !== "") {
+      throw new Error(data?.error?.message || "未在响应中解析到回复文本");
+    }
+    return String(text).trim();
+  }
+
+  async function testAiConnection(config) {
+    const messages = [{ role: "user", content: "请回复两个字：连接成功" }];
+    return await callAiChatApi(config, messages);
+  }
+
+  function cleanHtmlToPlainText(html) {
+    if (!html || typeof html !== "string") return "";
+    let text = html;
+    text = text.replace(/<br\s*\/?>/gi, "\n");
+    text = text.replace(/<\/(p|div|h[1-6]|li|blockquote|tr)>/gi, "\n");
+    text = text.replace(/<img[^>]*alt=["']([^"']+)["'][^>]*>/gi, " [$1] ");
+    text = text.replace(/<[^>]+>/g, "");
+    text = text
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&apos;/g, "'");
+    return text.replace(/\n{3,}/g, "\n\n").trim();
+  }
+
+  function extractCurrentTopicForSummary() {
+    let title = "";
+    if (chatState.topicData?.title) {
+      title = chatState.topicData.title;
+    } else {
+      const titleEl = document.querySelector(".wecom-chat-title-text, .wecom-chat-title, .wecom-titlebar-title");
+      if (titleEl) title = titleEl.textContent?.trim() || "";
+      if (!title) title = document.title || "未知主题";
+    }
+
+    const topicId = String(
+      chatState.topicId ||
+      chatState.topicData?.id ||
+      (location.pathname.match(/\/(?:t|topics)\/(?:[^/]+\/)?(\d+)/)?.[1]) ||
+      title ||
+      "current"
+    );
+
+    let mainAuthor = "楼主";
+    let mainPostText = "";
+    let mainPost = null;
+    if (chatState.postsByNumber && chatState.postsByNumber.has(1)) {
+      mainPost = chatState.postsByNumber.get(1);
+    } else {
+      const firstEl = document.querySelector('.wecom-chat-body .wecom-msg[data-post-number="1"], .wecom-chat-body .wecom-msg:first-child');
+      if (firstEl) {
+        const author = firstEl.querySelector(".wecom-msg-name")?.textContent?.trim() || "楼主";
+        const content = firstEl.querySelector(".wecom-msg-content, .wecom-bubble-original-body, .wecom-msg-body")?.innerHTML || firstEl.textContent || "";
+        mainPost = { post_number: 1, name: author, username: author, cooked: content };
+      }
+    }
+
+    if (mainPost) {
+      mainAuthor = mainPost.name || mainPost.username || "楼主";
+      mainPostText = cleanHtmlToPlainText(mainPost.cooked || mainPost.raw || "");
+      if (mainPostText.length > 4000) {
+        mainPostText = mainPostText.slice(0, 4000) + "\n...[主楼过长已截断]";
+      }
+    }
+
+    const replies = [];
+    const seenPostNums = new Set();
+    if (chatState.postsByNumber) {
+      const sorted = Array.from(chatState.postsByNumber.values())
+        .filter((p) => p && p.post_number > 1)
+        .sort((a, b) => (a.post_number || 0) - (b.post_number || 0));
+      for (const p of sorted) {
+        seenPostNums.add(p.post_number);
+        const text = cleanHtmlToPlainText(p.cooked || p.raw || "");
+        if (text) {
+          let likes = Number(p.like_count) || 0;
+          if (!likes && Array.isArray(p.actions_summary)) {
+            likes = Number(p.actions_summary.find((a) => a.id === 2)?.count) || 0;
+          }
+          replies.push({
+            post_number: p.post_number,
+            author: p.name || p.username || `#${p.post_number}`,
+            likes,
+            text
+          });
+        }
+      }
+    }
+
+    document.querySelectorAll(".wecom-chat-body .wecom-msg").forEach((msg) => {
+      const num = parseInt(msg.dataset?.postNumber || "0", 10);
+      if (num > 1 && !seenPostNums.has(num)) {
+        seenPostNums.add(num);
+        const author = msg.querySelector(".wecom-msg-name")?.textContent?.trim() || `#${num}`;
+        const text = cleanHtmlToPlainText(msg.querySelector(".wecom-msg-content, .wecom-bubble-original-body, .wecom-msg-body")?.innerHTML || msg.textContent || "");
+        let likes = 0;
+        const likeNumEl = msg.querySelector(".wecom-msg-like-num");
+        if (likeNumEl) likes = parseInt(likeNumEl.textContent || "0", 10) || 0;
+        if (text) {
+          replies.push({ post_number: num, author, likes, text });
+        }
+      }
+    });
+
+    replies.sort((a, b) => a.post_number - b.post_number);
+    const repliesCount = replies.length;
+    const highLikesReplies = replies.filter((r) => r.likes > 0).sort((a, b) => b.likes - a.likes);
+    const highLikesCount = highLikesReplies.length;
+
+    // 分段排版：高赞热门回复优先明确标识，方便 AI 特别提取
+    const formattedParts = [];
+    if (highLikesReplies.length > 0) {
+      formattedParts.push("【高赞热门回帖（重点关注）】：");
+      highLikesReplies.slice(0, 15).forEach((r) => {
+        const singleText = r.text.length > 500 ? r.text.slice(0, 500) + "...[截断]" : r.text;
+        formattedParts.push(`[#${r.post_number} ${r.author} (🔥获赞 ${r.likes})]: ${singleText}`);
+      });
+      formattedParts.push("\n【其他楼层回复选摘】：");
+    }
+    const otherReplies = replies.filter((r) => r.likes === 0).slice(0, 25);
+    otherReplies.forEach((r) => {
+      const singleText = r.text.length > 400 ? r.text.slice(0, 400) + "...[截断]" : r.text;
+      formattedParts.push(`[#${r.post_number} ${r.author}]: ${singleText}`);
+    });
+
+    const repliesFormatted = formattedParts.length > 0
+      ? formattedParts.join("\n")
+      : replies.slice(0, 30).map((r) => `[#${r.post_number} ${r.author}]: ${r.text}`).join("\n");
+
+    return {
+      topicId,
+      title,
+      mainAuthor,
+      mainPostText,
+      repliesFormatted,
+      repliesCount,
+      highLikesCount,
+      highLikesReplies,
+      replies
+    };
+  }
+
+  function buildSummaryPrompt(topicInfo, options = {}) {
+    const { title, mainAuthor, mainPostText, repliesFormatted, repliesCount } = topicInfo;
+    const styleKey = typeof options === "string" ? options : (options.styleKey || options.style || "sharp");
+    const styleDef = AI_SUMMARY_STYLES[styleKey] || AI_SUMMARY_STYLES.sharp;
+    const customPrompt = typeof options === "string" ? "" : (options.customPrompt || "").trim();
+
+    let basePrompt =
+`你是论坛专业AI总结专家。请对以下讨论进行精炼、易懂、重点突出且篇幅克制的中文总结。
+
+【总结原则】：
+1. 楼主内容极简易懂：用最通俗易懂的大白话提炼楼主的核心背景与诉求，抓取实质要点，去除冗余铺垫。
+2. 回复抓犀利与高赞：特别重点分析点赞多的热门回帖（标有 🔥获赞）与犀利观点，提炼出最有深度、最犀利扎心或最具代表性的楼层神评与态度。
+3. 篇幅克制精炼：整体分析严格控制字数在 250~450 字左右，结构紧凑短小精悍，拒绝又长又臭的废话套话。
+4. ${styleDef.instruction}
+
+【帖子标题】：${title}
+【发帖人/楼主】：${mainAuthor}
+
+【主楼正文内容】：
+${mainPostText || "(主楼无文字内容)"}
+
+【楼层回复与社区讨论】（共收集 ${repliesCount} 条回复）：
+${repliesFormatted || "(暂无回帖讨论)"}`;
+
+    if (customPrompt) {
+      basePrompt += `\n\n【用户重点关注点/自定义要求】：\n${customPrompt}`;
+    }
+
+    basePrompt += `\n\n请严格按以下结构输出 Markdown（语言精炼、排版清爽）：
+### 📌 楼主在说什么（大白话精炼）
+- 简短 2-3 句话讲清楼主核心要点与诉求。
+
+### 💬 犀利高赞神评与社区态度
+- 提炼点赞最多、观点最犀利的回帖态度（标明楼层/作者/高赞亮点）。
+- 归纳社区共识与分歧交锋点。
+
+### 💡 一句话总结
+- 一句精辟有力量的总结或行动建议。`;
+
+    return basePrompt;
+  }
+
+  function renderSimpleMarkdown(md) {
+    if (!md || typeof md !== "string") return "";
+    const escaped = escapeHtml(md);
+    const lines = escaped.split(/\r?\n/);
+    const output = [];
+    let inUl = false;
+    let inOl = false;
+
+    function closeLists() {
+      if (inUl) {
+        output.push("</ul>");
+        inUl = false;
+      }
+      if (inOl) {
+        output.push("</ol>");
+        inOl = false;
+      }
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) {
+        closeLists();
+        continue;
+      }
+
+      const formatInline = (str) => {
+        return str
+          .replace(/`([^`]+)`/g, '<code class="wecom-ai-code">$1</code>')
+          .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+      };
+
+      if (line.startsWith("#### ")) {
+        closeLists();
+        output.push(`<div class="wecom-ai-h4">${formatInline(line.slice(5))}</div>`);
+      } else if (line.startsWith("### ")) {
+        closeLists();
+        output.push(`<div class="wecom-ai-h3">${formatInline(line.slice(4))}</div>`);
+      } else if (line.startsWith("## ")) {
+        closeLists();
+        output.push(`<div class="wecom-ai-h2">${formatInline(line.slice(3))}</div>`);
+      } else if (line.startsWith("# ")) {
+        closeLists();
+        output.push(`<div class="wecom-ai-h2">${formatInline(line.slice(2))}</div>`);
+      } else if (line.startsWith("> ") || line.startsWith("&gt; ")) {
+        closeLists();
+        const quoteContent = line.startsWith("&gt; ") ? line.slice(5) : line.slice(2);
+        output.push(`<div class="wecom-ai-quote">${formatInline(quoteContent)}</div>`);
+      } else if (/^[-*]\s+/.test(line)) {
+        if (inOl) { output.push("</ol>"); inOl = false; }
+        if (!inUl) { output.push('<ul class="wecom-ai-ul">'); inUl = true; }
+        const itemContent = line.replace(/^[-*]\s+/, "");
+        output.push(`<li class="wecom-ai-li">${formatInline(itemContent)}</li>`);
+      } else if (/^\d+\.\s+/.test(line)) {
+        if (inUl) { output.push("</ul>"); inUl = false; }
+        if (!inOl) { output.push('<ol class="wecom-ai-ol">'); inOl = true; }
+        const itemContent = line.replace(/^\d+\.\s+/, "");
+        output.push(`<li class="wecom-ai-li-num">${formatInline(itemContent)}</li>`);
+      } else {
+        closeLists();
+        output.push(`<p class="wecom-ai-p">${formatInline(line)}</p>`);
+      }
+    }
+    closeLists();
+    return output.join("\n");
+  }
+
+  function closeAiConfigDialog() {
+    document.querySelector(".wecom-ai-config-dialog")?.remove();
+  }
+
+  function openAiConfigDialog(initialTab = "chat") {
+    closeAiConfigDialog();
+    const chatCfg = getAiConfig();
+    const imgCfg = getAiImageConfig();
+
+    let activeTab = initialTab === "image" ? "image" : "chat";
+    let currentChatProvider = chatCfg.provider || "gemini";
+    let currentChatModels = (AI_DEFAULT_MODELS[currentChatProvider] || []).slice();
+    if (chatCfg.model && !currentChatModels.includes(chatCfg.model)) {
+      currentChatModels.unshift(chatCfg.model);
+    }
+
+    let currentImgProvider = imgCfg.provider || "openai";
+    let currentImgModels = (AI_IMAGE_DEFAULT_MODELS[currentImgProvider] || []).slice();
+    if (imgCfg.model && !currentImgModels.includes(imgCfg.model)) {
+      currentImgModels.unshift(imgCfg.model);
+    }
+
+    const overlay = document.createElement("div");
+    overlay.className = "wecom-ai-config-dialog";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-label", "配置 AI API");
+
+    const getChatProvDef = (prov) => AI_PROVIDERS[prov] || AI_PROVIDERS.custom;
+    const getImgProvDef = (prov) => AI_IMAGE_PROVIDERS[prov] || AI_IMAGE_PROVIDERS.custom;
+
+    const renderCard = () => {
+      const chatProvInfo = getChatProvDef(currentChatProvider);
+      const imgProvInfo = getImgProvDef(currentImgProvider);
+
+      return (
+        `<div class="wecom-ai-config-card">` +
+        `  <div class="wecom-ai-head">` +
+        `    <div class="wecom-ai-title">${ICONS.spark} <span>配置 AI API (文本 & 生图)</span></div>` +
+        `    <button type="button" class="wecom-ai-close" title="关闭" aria-label="关闭">&times;</button>` +
+        `  </div>` +
+        `  <div class="wecom-ai-config-tabs">` +
+        `    <button type="button" class="wecom-ai-config-tab${activeTab === "chat" ? " is-active" : ""}" data-tab="chat">💬 文本对话/总结模型</button>` +
+        `    <button type="button" class="wecom-ai-config-tab${activeTab === "image" ? " is-active" : ""}" data-tab="image">🎨 AI 生图模型 (DALL-E / Flux)</button>` +
+        `    <button type="button" class="wecom-ai-config-tab${activeTab === "sync" ? " is-active" : ""}" data-tab="sync">🌐 全平台跨站同步</button>` +
+        `  </div>` +
+        `  <div class="wecom-ai-body">` +
+        `    <!-- 文本模型配置 -->` +
+        `    <div class="wecom-ai-config-section wecom-ai-config-chat-section" style="${activeTab === "chat" ? "" : "display:none;"}">` +
+        `      <div class="wecom-ai-field">` +
+        `        <div class="wecom-ai-label">服务商 (Provider)</div>` +
+        `        <div class="wecom-ai-provider-chips">` +
+        `          <button type="button" class="wecom-ai-provider-chip${currentChatProvider === "gemini" ? " is-active" : ""}" data-provider="gemini">Gemini</button>` +
+        `          <button type="button" class="wecom-ai-provider-chip${currentChatProvider === "openai" ? " is-active" : ""}" data-provider="openai">OpenAI</button>` +
+        `          <button type="button" class="wecom-ai-provider-chip${currentChatProvider === "deepseek" ? " is-active" : ""}" data-provider="deepseek">DeepSeek</button>` +
+        `          <button type="button" class="wecom-ai-provider-chip${currentChatProvider === "custom" ? " is-active" : ""}" data-provider="custom">自定义</button>` +
+        `        </div>` +
+        `      </div>` +
+        `      <div class="wecom-ai-field">` +
+        `        <div class="wecom-ai-label">` +
+        `          <span>API Key</span>` +
+        `          <span class="wecom-ai-label-sub">仅保存在当前浏览器本地</span>` +
+        `        </div>` +
+        `        <div class="wecom-ai-input-wrap">` +
+        `          <input type="password" class="wecom-ai-input wecom-ai-input-key" placeholder="${chatProvInfo.placeholderKey}" value="${escapeHtml(chatCfg.apiKey)}" autocomplete="off" spellcheck="false" />` +
+        `          <button type="button" class="wecom-ai-input-btn wecom-ai-btn-toggle-key" title="显示/隐藏 API Key">${ICONS.eye}</button>` +
+        `        </div>` +
+        `      </div>` +
+        `      <div class="wecom-ai-field">` +
+        `        <div class="wecom-ai-label">` +
+        `          <span>API 代理 / 地址 (Base URL)</span>` +
+        `          <span class="wecom-ai-label-sub">留空则自动使用官方默认地址</span>` +
+        `        </div>` +
+        `        <input type="text" class="wecom-ai-input wecom-ai-input-url" placeholder="${chatProvInfo.placeholderUrl}" value="${escapeHtml(chatCfg.baseUrl)}" spellcheck="false" />` +
+        `      </div>` +
+        `      <div class="wecom-ai-field">` +
+        `        <div class="wecom-ai-label">` +
+        `          <span>模型 (Model)</span>` +
+        `          <span class="wecom-ai-label-sub">支持获取列表或手动指定</span>` +
+        `        </div>` +
+        `        <div class="wecom-ai-model-row">` +
+        `          <select class="wecom-ai-model-select">` +
+        currentChatModels.map((m) => `<option value="${escapeHtml(m)}"${m === chatCfg.model ? " selected" : ""}>${escapeHtml(m)}</option>`).join("") +
+        `          </select>` +
+        `          <button type="button" class="wecom-ai-btn-fetch">${ICONS.refresh} 获取模型列表</button>` +
+        `        </div>` +
+        `        <input type="text" class="wecom-ai-input wecom-ai-input-custom-model" placeholder="输入任意模型名称（如 deepseek-chat）" value="${escapeHtml(chatCfg.model)}" style="display:none;margin-top:6px;" spellcheck="false" />` +
+        `        <a class="wecom-ai-custom-model-toggle">自定义模型名称</a>` +
+        `      </div>` +
+        `      <div class="wecom-ai-test-status"></div>` +
+        `    </div>` +
+        `    <!-- 生图模型配置 -->` +
+        `    <div class="wecom-ai-config-section wecom-ai-config-image-section" style="${activeTab === "image" ? "" : "display:none;"}">` +
+        `      <div class="wecom-ai-field">` +
+        `        <div class="wecom-ai-label">生图服务商 / 接口格式</div>` +
+        `        <div class="wecom-ai-provider-chips wecom-ai-img-provider-chips">` +
+        `          <button type="button" class="wecom-ai-provider-chip${currentImgProvider === "gemini" ? " is-active" : ""}" data-img-provider="gemini">Google (Imagen)</button>` +
+        `          <button type="button" class="wecom-ai-provider-chip${currentImgProvider === "openai" ? " is-active" : ""}" data-img-provider="openai">OpenAI (DALL-E)</button>` +
+        `          <button type="button" class="wecom-ai-provider-chip${currentImgProvider === "siliconflow" ? " is-active" : ""}" data-img-provider="siliconflow">硅基流动 (Flux)</button>` +
+        `          <button type="button" class="wecom-ai-provider-chip${currentImgProvider === "custom" ? " is-active" : ""}" data-img-provider="custom">自定义 (兼容格式)</button>` +
+        `        </div>` +
+        `      </div>` +
+        `      <label class="wecom-ai-checkbox-label" style="margin:4px 0 2px;">` +
+        `        <input type="checkbox" class="wecom-ai-img-same-as-chat"${imgCfg.useSameAsChat ? " checked" : ""} />` +
+        `        <span>使用与文本对话相同的 API Key 和 Base URL</span>` +
+        `      </label>` +
+        `      <div class="wecom-ai-img-credential-fields"${imgCfg.useSameAsChat ? ' style="display:none;"' : ""}>` +
+        `        <div class="wecom-ai-field">` +
+        `          <div class="wecom-ai-label">生图 API Key</div>` +
+        `          <div class="wecom-ai-input-wrap">` +
+        `            <input type="password" class="wecom-ai-input wecom-ai-img-input-key" placeholder="${imgProvInfo.placeholderKey}" value="${escapeHtml(imgCfg.apiKey)}" autocomplete="off" spellcheck="false" />` +
+        `            <button type="button" class="wecom-ai-input-btn wecom-ai-btn-toggle-img-key" title="显示/隐藏 API Key">${ICONS.eye}</button>` +
+        `          </div>` +
+        `        </div>` +
+        `        <div class="wecom-ai-field">` +
+        `          <div class="wecom-ai-label">生图 Base URL</div>` +
+        `          <input type="text" class="wecom-ai-input wecom-ai-img-input-url" placeholder="${imgProvInfo.placeholderUrl}" value="${escapeHtml(imgCfg.baseUrl)}" spellcheck="false" />` +
+        `        </div>` +
+        `      </div>` +
+        `      <div class="wecom-ai-field">` +
+        `        <div class="wecom-ai-label">` +
+        `          <span>生图模型 (Image Model)</span>` +
+        `          <span class="wecom-ai-label-sub">支持获取列表或手动指定</span>` +
+        `        </div>` +
+        `        <div class="wecom-ai-model-row">` +
+        `          <select class="wecom-ai-model-select wecom-ai-img-model-select">` +
+        currentImgModels.map((m) => `<option value="${escapeHtml(m)}"${m === imgCfg.model ? " selected" : ""}>${escapeHtml(m)}</option>`).join("") +
+        `          </select>` +
+        `          <button type="button" class="wecom-ai-btn-fetch wecom-ai-btn-fetch-img">${ICONS.refresh} 获取模型列表</button>` +
+        `        </div>` +
+        `        <input type="text" class="wecom-ai-input wecom-ai-img-input-custom-model" placeholder="输入生图模型名（如 dall-e-3 或 black-forest-labs/FLUX.1-schnell）" value="${escapeHtml(imgCfg.model)}" style="display:none;margin-top:6px;" spellcheck="false" />` +
+        `        <a class="wecom-ai-custom-model-toggle wecom-ai-img-custom-model-toggle">自定义生图模型名称</a>` +
+        `      </div>` +
+        `      <div class="wecom-ai-field">` +
+        `        <div class="wecom-ai-label">生图分辨率 / 比例</div>` +
+        `        <select class="wecom-ai-model-select wecom-ai-img-size-select">` +
+        `          <option value="1024x1024"${imgCfg.size === "1024x1024" ? " selected" : ""}>1024x1024 (方形 1:1 · 推荐)</option>` +
+        `          <option value="1024x1792"${imgCfg.size === "1024x1792" ? " selected" : ""}>1024x1792 (竖屏长图 9:16 · 适合条漫)</option>` +
+        `          <option value="1792x1024"${imgCfg.size === "1792x1024" ? " selected" : ""}>1792x1024 (宽幅全景 16:9 · 适合大场面)</option>` +
+        `        </select>` +
+        `      </div>` +
+        `      <div class="wecom-ai-test-status wecom-ai-img-test-status"></div>` +
+        `    </div>` +
+        `    <!-- 跨站通用同步配置 -->` +
+        `    <div class="wecom-ai-config-section wecom-ai-config-sync-section" style="${activeTab === "sync" ? "" : "display:none;"}">` +
+        `      <div class="wecom-ai-sync-hub">` +
+        `        <div class="wecom-ai-sync-hub-title">${ICONS.spark} 全平台通用共享状态</div>` +
+        `        <div class="wecom-ai-sync-hub-desc">` +
+        `          当前平台：<strong>${IS_V2EX ? "V2EX" : IS_JUEJIN ? "稀土掘金" : "LINUX DO"}</strong> · 状态：<strong>${isAiConfigured() ? "✅ 已配置全平台通用" : "⚠️ 尚未配置"}</strong><br/>` +
+        `          文本模型与生图模型配置已支持全站共享。在任意站点保存后，左侧停靠栏切换平台即可自动同步，无需重复配置。` +
+        `        </div>` +
+        `        <div class="wecom-ai-sync-btn-group">` +
+        `          <button type="button" class="wecom-ai-sync-chip-btn wecom-ai-btn-copy-code">${ICONS.copy} 复制通用配置码</button>` +
+        `          <button type="button" class="wecom-ai-sync-chip-btn wecom-ai-btn-paste-code">📋 从剪贴板粘贴导入</button>` +
+        `        </div>` +
+        `        <div class="wecom-ai-sync-import-box" style="margin-top:6px;">` +
+        `          <input type="text" class="wecom-ai-input wecom-ai-input-sync-code" placeholder="手动粘贴跨站通用配置码 (WECOM_AI_CONFIG:...)" spellcheck="false" />` +
+        `          <button type="button" class="wecom-ai-action-btn wecom-ai-btn-do-import">导入</button>` +
+        `        </div>` +
+        `      </div>` +
+        `      <div class="wecom-ai-field" style="margin-top:14px;">` +
+        `        <div class="wecom-ai-label">` +
+        `          <span>🚀 一键同步至其他平台</span>` +
+        `          <span class="wecom-ai-label-sub">点击在新标签页打开并完成配置同步</span>` +
+        `        </div>` +
+        `        <div class="wecom-ai-sync-btn-group">` +
+        `          ${!IS_LINUXDO ? '<button type="button" class="wecom-ai-sync-chip-btn wecom-ai-sync-to-linuxdo">🐧 同步到 LINUX DO</button>' : ''}` +
+        `          ${!IS_V2EX ? '<button type="button" class="wecom-ai-sync-chip-btn wecom-ai-sync-to-v2ex">🧭 同步到 V2EX</button>' : ''}` +
+        `          ${!IS_JUEJIN ? '<button type="button" class="wecom-ai-sync-chip-btn wecom-ai-sync-to-juejin">💎 同步到 稀土掘金</button>' : ''}` +
+        `        </div>` +
+        `      </div>` +
+        `      <div class="wecom-ai-test-status wecom-ai-sync-status"></div>` +
+        `    </div>` +
+        `  </div>` +
+        `  <div class="wecom-ai-foot">` +
+        `    <div class="wecom-ai-left-actions">` +
+        `      <button type="button" class="wecom-ai-action-btn wecom-ai-btn-test"${activeTab === "chat" ? "" : ' style="display:none;"'}>${ICONS.bolt} 测试文本连接</button>` +
+        `      <button type="button" class="wecom-ai-action-btn wecom-ai-btn-test-img"${activeTab === "image" ? "" : ' style="display:none;"'}>${ICONS.pic} 测试生图连接</button>` +
+        `    </div>` +
+        `    <button type="button" class="wecom-ai-action-btn wecom-ai-btn-cancel">取消</button>` +
+        `    <button type="button" class="wecom-ai-action-btn primary wecom-ai-btn-save">保存</button>` +
+        `  </div>` +
+        `</div>`
+      );
+    };
+
+    overlay.innerHTML = renderCard();
+    document.body.appendChild(overlay);
+
+    const card = overlay.querySelector(".wecom-ai-config-card");
+    const chatSection = card.querySelector(".wecom-ai-config-chat-section");
+    const imgSection = card.querySelector(".wecom-ai-config-image-section");
+    const syncSection = card.querySelector(".wecom-ai-config-sync-section");
+
+    // Chat elements
+    const keyInput = card.querySelector(".wecom-ai-input-key");
+    const urlInput = card.querySelector(".wecom-ai-input-url");
+    const modelSelect = card.querySelector(".wecom-ai-model-select");
+    const customModelInput = card.querySelector(".wecom-ai-input-custom-model");
+    const statusBox = card.querySelector(".wecom-ai-test-status:not(.wecom-ai-img-test-status):not(.wecom-ai-sync-status)");
+    const fetchBtn = card.querySelector(".wecom-ai-btn-fetch");
+    const testBtn = card.querySelector(".wecom-ai-btn-test");
+
+    // Image elements
+    const sameCheckbox = card.querySelector(".wecom-ai-img-same-as-chat");
+    const imgCredFields = card.querySelector(".wecom-ai-img-credential-fields");
+    const imgKeyInput = card.querySelector(".wecom-ai-img-input-key");
+    const imgUrlInput = card.querySelector(".wecom-ai-img-input-url");
+    const imgModelSelect = card.querySelector(".wecom-ai-img-model-select");
+    const imgCustomModelInput = card.querySelector(".wecom-ai-img-input-custom-model");
+    const imgSizeSelect = card.querySelector(".wecom-ai-img-size-select");
+    const imgStatusBox = card.querySelector(".wecom-ai-img-test-status");
+    const fetchImgBtn = card.querySelector(".wecom-ai-btn-fetch-img");
+    const testImgBtn = card.querySelector(".wecom-ai-btn-test-img");
+
+    // Sync elements
+    const syncCodeInput = card.querySelector(".wecom-ai-input-sync-code");
+    const syncStatus = card.querySelector(".wecom-ai-sync-status");
+    const copyCodeBtn = card.querySelector(".wecom-ai-btn-copy-code");
+    const pasteCodeBtn = card.querySelector(".wecom-ai-btn-paste-code");
+    const doImportBtn = card.querySelector(".wecom-ai-btn-do-import");
+    const syncLinuxDoBtn = card.querySelector(".wecom-ai-sync-to-linuxdo");
+    const syncV2exBtn = card.querySelector(".wecom-ai-sync-to-v2ex");
+    const syncJuejinBtn = card.querySelector(".wecom-ai-sync-to-juejin");
+
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) closeAiConfigDialog();
+    });
+
+    card.addEventListener("click", (e) => {
+      const tabBtn = e.target.closest(".wecom-ai-config-tab");
+      if (tabBtn) {
+        activeTab = tabBtn.dataset.tab;
+        card.querySelectorAll(".wecom-ai-config-tab").forEach((t) => t.classList.toggle("is-active", t.dataset.tab === activeTab));
+        chatSection.style.display = activeTab === "chat" ? "" : "none";
+        imgSection.style.display = activeTab === "image" ? "" : "none";
+        syncSection.style.display = activeTab === "sync" ? "" : "none";
+        testBtn.style.display = activeTab === "chat" ? "" : "none";
+        testImgBtn.style.display = activeTab === "image" ? "" : "none";
+        return;
+      }
+
+      const chip = e.target.closest(".wecom-ai-provider-chip[data-provider]");
+      if (chip) {
+        const prov = chip.dataset.provider;
+        if (prov === currentChatProvider) return;
+        currentChatProvider = prov;
+        card.querySelectorAll(".wecom-ai-provider-chip[data-provider]").forEach((c) => c.classList.toggle("is-active", c.dataset.provider === prov));
+        const pDef = getChatProvDef(prov);
+        keyInput.placeholder = pDef.placeholderKey;
+        urlInput.placeholder = pDef.placeholderUrl;
+        if (!urlInput.value || Object.values(AI_PROVIDERS).some((p) => p.baseUrl === urlInput.value.trim())) {
+          urlInput.value = pDef.baseUrl;
+        }
+        currentChatModels = (AI_DEFAULT_MODELS[prov] || []).slice();
+        modelSelect.innerHTML = currentChatModels.map((m) => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join("");
+        customModelInput.value = currentChatModels[0] || "";
+        return;
+      }
+
+      const imgChip = e.target.closest(".wecom-ai-provider-chip[data-img-provider]");
+      if (imgChip) {
+        const prov = imgChip.dataset.imgProvider;
+        if (prov === currentImgProvider) return;
+        currentImgProvider = prov;
+        card.querySelectorAll(".wecom-ai-provider-chip[data-img-provider]").forEach((c) => c.classList.toggle("is-active", c.dataset.imgProvider === prov));
+        const provInfo = getImgProvDef(prov);
+        imgKeyInput.placeholder = provInfo.placeholderKey;
+        imgUrlInput.placeholder = provInfo.placeholderUrl;
+        if (!imgUrlInput.value || Object.values(AI_IMAGE_PROVIDERS).some((p) => p.baseUrl === imgUrlInput.value.trim())) {
+          imgUrlInput.value = provInfo.baseUrl;
+        }
+        currentImgModels = (AI_IMAGE_DEFAULT_MODELS[prov] || []).slice();
+        imgModelSelect.innerHTML = currentImgModels.map((m) => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join("");
+        imgCustomModelInput.value = currentImgModels[0] || "";
+        return;
+      }
+
+      if (e.target.closest(".wecom-ai-close") || e.target.closest(".wecom-ai-btn-cancel")) {
+        closeAiConfigDialog();
+        return;
+      }
+
+      if (e.target.closest(".wecom-ai-btn-toggle-key")) {
+        const isPwd = keyInput.type === "password";
+        keyInput.type = isPwd ? "text" : "password";
+        const btn = e.target.closest(".wecom-ai-btn-toggle-key");
+        btn.innerHTML = isPwd ? ICONS.eyeOff : ICONS.eye;
+        return;
+      }
+
+      if (e.target.closest(".wecom-ai-btn-toggle-img-key")) {
+        const isPwd = imgKeyInput.type === "password";
+        imgKeyInput.type = isPwd ? "text" : "password";
+        const btn = e.target.closest(".wecom-ai-btn-toggle-img-key");
+        btn.innerHTML = isPwd ? ICONS.eyeOff : ICONS.eye;
+        return;
+      }
+
+      if (e.target.closest(".wecom-ai-custom-model-toggle")) {
+        const isHidden = customModelInput.style.display === "none";
+        customModelInput.style.display = isHidden ? "block" : "none";
+        e.target.closest(".wecom-ai-custom-model-toggle").textContent = isHidden ? "返回下拉选择" : "自定义模型名称";
+        return;
+      }
+
+      if (e.target.closest(".wecom-ai-img-custom-model-toggle")) {
+        const isHidden = imgCustomModelInput.style.display === "none";
+        imgCustomModelInput.style.display = isHidden ? "block" : "none";
+        e.target.closest(".wecom-ai-img-custom-model-toggle").textContent = isHidden ? "返回下拉选择" : "自定义生图模型名称";
+        return;
+      }
+    });
+
+    sameCheckbox.addEventListener("change", () => {
+      imgCredFields.style.display = sameCheckbox.checked ? "none" : "";
+    });
+
+    modelSelect.addEventListener("change", () => {
+      customModelInput.value = modelSelect.value;
+    });
+
+    imgModelSelect.addEventListener("change", () => {
+      imgCustomModelInput.value = imgModelSelect.value;
+    });
+
+    fetchBtn.addEventListener("click", async () => {
+      const apiKey = keyInput.value.trim();
+      const baseUrl = urlInput.value.trim() || getChatProvDef(currentChatProvider).baseUrl;
+      if (!apiKey) {
+        statusBox.className = "wecom-ai-test-status is-error";
+        statusBox.textContent = "请先填写 API Key";
+        return;
+      }
+      fetchBtn.disabled = true;
+      fetchBtn.textContent = "拉取中...";
+      statusBox.className = "wecom-ai-test-status is-loading";
+      statusBox.textContent = "正在拉取模型列表中...";
+      try {
+        const models = await fetchAiModels(currentChatProvider, apiKey, baseUrl);
+        currentChatModels = models;
+        const activeModel = customModelInput.value.trim() || modelSelect.value;
+        modelSelect.innerHTML = models.map((m) => `<option value="${escapeHtml(m)}"${m === activeModel ? " selected" : ""}>${escapeHtml(m)}</option>`).join("");
+        if (!models.includes(activeModel)) {
+          customModelInput.value = models[0];
+          modelSelect.value = models[0];
+        }
+        statusBox.className = "wecom-ai-test-status is-success";
+        statusBox.textContent = `成功获取 ${models.length} 个可用模型！已更新列表。`;
+        showWecomToast(`已获取 ${models.length} 个模型`, "success");
+      } catch (err) {
+        statusBox.className = "wecom-ai-test-status is-error";
+        statusBox.textContent = `获取失败: ${err.message || String(err)}`;
+        showWecomToast("获取模型列表失败", "error");
+      } finally {
+        fetchBtn.disabled = false;
+        fetchBtn.innerHTML = `${ICONS.refresh} 获取模型列表`;
+      }
+    });
+
+    testBtn.addEventListener("click", async () => {
+      const apiKey = keyInput.value.trim();
+      const baseUrl = urlInput.value.trim() || getChatProvDef(currentChatProvider).baseUrl;
+      const model = customModelInput.style.display !== "none" ? customModelInput.value.trim() : (modelSelect.value || customModelInput.value.trim());
+      if (!apiKey) {
+        statusBox.className = "wecom-ai-test-status is-error";
+        statusBox.textContent = "请先填写 API Key";
+        return;
+      }
+      testBtn.disabled = true;
+      statusBox.className = "wecom-ai-test-status is-loading";
+      statusBox.textContent = "正在向 API 发送测试请求...";
+      try {
+        const reply = await testAiConnection({ provider: currentChatProvider, apiKey, baseUrl, model });
+        statusBox.className = "wecom-ai-test-status is-success";
+        statusBox.textContent = `连接成功！AI 回复: "${reply}"`;
+        showWecomToast("AI 文本连接成功！", "success");
+      } catch (err) {
+        statusBox.className = "wecom-ai-test-status is-error";
+        statusBox.textContent = `连接测试失败: ${err.message || String(err)}`;
+        showWecomToast("连接测试失败", "error");
+      } finally {
+        testBtn.disabled = false;
+      }
+    });
+
+    fetchImgBtn?.addEventListener("click", async () => {
+      const useSame = sameCheckbox.checked;
+      const apiKey = useSame ? keyInput.value.trim() : imgKeyInput.value.trim();
+      const baseUrl = useSame ? (urlInput.value.trim() || getChatProvDef(currentChatProvider).baseUrl) : (imgUrlInput.value.trim() || getImgProvDef(currentImgProvider).baseUrl);
+
+      if (!apiKey) {
+        imgStatusBox.className = "wecom-ai-test-status is-error";
+        imgStatusBox.textContent = useSame ? "请先在文本配置中填写 API Key" : "请先填写生图 API Key";
+        return;
+      }
+      fetchImgBtn.disabled = true;
+      fetchImgBtn.textContent = "拉取中...";
+      imgStatusBox.className = "wecom-ai-test-status is-loading";
+      imgStatusBox.textContent = "正在拉取生图模型列表中...";
+      try {
+        const models = await fetchAiImageModels(currentImgProvider, apiKey, baseUrl);
+        currentImgModels = models;
+        const activeModel = imgCustomModelInput.value.trim() || imgModelSelect.value;
+        const imgRegex = /dall-?e|flux|diffusion|sdxl|stable-diffusion|midjourney|mj|recraft|imagen|image|kling|cogview|kolors|wanx|sora/i;
+        const activeIsImage = imgRegex.test(activeModel);
+        const firstImgModel = models.find((m) => imgRegex.test(m));
+        const preferredModel = (activeIsImage && models.includes(activeModel))
+          ? activeModel
+          : (firstImgModel || (models.includes(activeModel) ? activeModel : (models[0] || "")));
+
+        imgModelSelect.innerHTML = models.map((m) => `<option value="${escapeHtml(m)}"${m === preferredModel ? " selected" : ""}>${escapeHtml(m)}</option>`).join("");
+        imgCustomModelInput.value = preferredModel;
+        imgModelSelect.value = preferredModel;
+        imgStatusBox.className = "wecom-ai-test-status is-success";
+        imgStatusBox.textContent = `成功获取 ${models.length} 个可用模型！已更新生图模型列表。`;
+        showWecomToast(`已获取 ${models.length} 个生图模型`, "success");
+      } catch (err) {
+        imgStatusBox.className = "wecom-ai-test-status is-error";
+        imgStatusBox.textContent = `获取生图模型失败: ${err.message || String(err)}`;
+        showWecomToast("获取生图模型列表失败", "error");
+      } finally {
+        fetchImgBtn.disabled = false;
+        fetchImgBtn.innerHTML = `${ICONS.refresh} 获取模型列表`;
+      }
+    });
+
+    testImgBtn.addEventListener("click", async () => {
+      const useSame = sameCheckbox.checked;
+      const apiKey = useSame ? keyInput.value.trim() : imgKeyInput.value.trim();
+      const baseUrl = useSame ? (urlInput.value.trim() || getChatProvDef(currentChatProvider).baseUrl) : (imgUrlInput.value.trim() || getImgProvDef(currentImgProvider).baseUrl);
+      const model = imgCustomModelInput.style.display !== "none" ? imgCustomModelInput.value.trim() : (imgModelSelect.value || imgCustomModelInput.value.trim());
+      const size = imgSizeSelect.value || "1024x1024";
+
+      if (!apiKey) {
+        imgStatusBox.className = "wecom-ai-test-status is-error";
+        imgStatusBox.textContent = "请先填写生图 API Key";
+        return;
+      }
+      testImgBtn.disabled = true;
+      imgStatusBox.className = "wecom-ai-test-status is-loading";
+      imgStatusBox.textContent = "正在向生图 API 发送测试绘图请求 (预计需要数秒)...";
+      try {
+        const res = await testAiImageConnection({ provider: currentImgProvider, apiKey, baseUrl, model, size });
+        imgStatusBox.className = "wecom-ai-test-status is-success";
+        imgStatusBox.innerHTML = `生图成功！已收到图片数据。<a href="${escapeHtml(res.url)}" target="_blank" style="color:var(--wc-blue);margin-left:6px;text-decoration:underline;">预览测试图</a>`;
+        showWecomToast("生图 API 测试成功！", "success");
+      } catch (err) {
+        let errMsg = err.message || String(err);
+        if (/client protocol/i.test(errMsg)) {
+          errMsg += "（提示：当前选中的可能为文本对话模型，请在下拉列表中选择 gpt-image-2、dall-e-3 或 flux 等生图模型，或检查 API 令牌是否已开通生图权限）";
+        } else if (/compatible providers/i.test(errMsg)) {
+          errMsg += "（提示：中转站未配置该模型的生图渠道，请尝试切换为 gpt-image-2 或 dall-e-3）";
+        }
+        imgStatusBox.className = "wecom-ai-test-status is-error";
+        imgStatusBox.textContent = `生图测试失败: ${errMsg}`;
+        showWecomToast("生图测试失败", "error");
+      } finally {
+        testImgBtn.disabled = false;
+      }
+    });
+
+    function updateCardFieldsFromStorage() {
+      const newChat = getAiConfig();
+      const newImg = getAiImageConfig();
+      currentChatProvider = newChat.provider || "gemini";
+      currentImgProvider = newImg.provider || "openai";
+
+      card.querySelectorAll(".wecom-ai-provider-chip[data-provider]").forEach((c) => c.classList.toggle("is-active", c.dataset.provider === currentChatProvider));
+      card.querySelectorAll(".wecom-ai-provider-chip[data-img-provider]").forEach((c) => c.classList.toggle("is-active", c.dataset.imgProvider === currentImgProvider));
+
+      keyInput.value = newChat.apiKey || "";
+      urlInput.value = newChat.baseUrl || "";
+      currentChatModels = (AI_DEFAULT_MODELS[currentChatProvider] || []).slice();
+      if (newChat.model && !currentChatModels.includes(newChat.model)) {
+        currentChatModels.unshift(newChat.model);
+      }
+      modelSelect.innerHTML = currentChatModels.map((m) => `<option value="${escapeHtml(m)}"${m === newChat.model ? " selected" : ""}>${escapeHtml(m)}</option>`).join("");
+      customModelInput.value = newChat.model || "";
+
+      sameCheckbox.checked = Boolean(newImg.useSameAsChat);
+      imgCredFields.style.display = sameCheckbox.checked ? "none" : "";
+      imgKeyInput.value = newImg.apiKey || "";
+      imgUrlInput.value = newImg.baseUrl || "";
+      currentImgModels = (AI_IMAGE_DEFAULT_MODELS[currentImgProvider] || []).slice();
+      if (newImg.model && !currentImgModels.includes(newImg.model)) {
+        currentImgModels.unshift(newImg.model);
+      }
+      imgModelSelect.innerHTML = currentImgModels.map((m) => `<option value="${escapeHtml(m)}"${m === newImg.model ? " selected" : ""}>${escapeHtml(m)}</option>`).join("");
+      imgCustomModelInput.value = newImg.model || "";
+      if (newImg.size) imgSizeSelect.value = newImg.size;
+
+      const descEl = card.querySelector(".wecom-ai-sync-hub-desc");
+      if (descEl) {
+        descEl.innerHTML =
+          `当前平台：<strong>${IS_V2EX ? "V2EX" : IS_JUEJIN ? "稀土掘金" : "LINUX DO"}</strong> · 状态：<strong>${isAiConfigured() ? "✅ 已配置全平台通用" : "⚠️ 尚未配置"}</strong><br/>` +
+          `文本模型与生图模型配置已支持全站共享。在任意站点保存后，左侧停靠栏切换平台即可自动同步，无需重复配置。`;
+      }
+    }
+
+    function syncCurrentInputsToStorage() {
+      const apiKey = keyInput.value.trim();
+      const baseUrl = urlInput.value.trim() || getChatProvDef(currentChatProvider).baseUrl;
+      const model = customModelInput.style.display !== "none" && customModelInput.value.trim() ? customModelInput.value.trim() : (modelSelect.value || customModelInput.value.trim());
+
+      setAiConfig({
+        provider: currentChatProvider,
+        apiKey,
+        baseUrl,
+        model
+      });
+
+      const useSame = sameCheckbox.checked;
+      const imgApiKey = useSame ? "" : imgKeyInput.value.trim();
+      const imgBaseUrl = useSame ? "" : (imgUrlInput.value.trim() || getImgProvDef(currentImgProvider).baseUrl);
+      const imgModel = imgCustomModelInput.style.display !== "none" && imgCustomModelInput.value.trim() ? imgCustomModelInput.value.trim() : (imgModelSelect.value || imgCustomModelInput.value.trim());
+      const imgSize = imgSizeSelect.value || "1024x1024";
+
+      setAiImageConfig({
+        provider: currentImgProvider,
+        useSameAsChat: useSame,
+        apiKey: imgApiKey,
+        baseUrl: imgBaseUrl,
+        model: imgModel,
+        size: imgSize
+      });
+      saveUniversalAiBundle();
+    }
+
+    copyCodeBtn?.addEventListener("click", () => {
+      const currentChatKey = keyInput.value.trim();
+      if (!isAiConfigured() && !currentChatKey) {
+        if (syncStatus) {
+          syncStatus.className = "wecom-ai-test-status is-error";
+          syncStatus.textContent = "尚未填写 AI API Key，请先填写并保存后再复制通用配置码。";
+        }
+        showWecomToast("请先填写 AI API Key", "error");
+        return;
+      }
+      syncCurrentInputsToStorage();
+      const syncStr = exportUniversalAiSyncString();
+      if (!syncStr) {
+        if (syncStatus) {
+          syncStatus.className = "wecom-ai-test-status is-error";
+          syncStatus.textContent = "生成配置码失败，请先检查并保存配置";
+        }
+        return;
+      }
+      const fullCode = AI_SYNC_CODE_PREFIX + syncStr;
+      if (syncCodeInput) syncCodeInput.value = fullCode;
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(fullCode).then(() => {
+          if (syncStatus) {
+            syncStatus.className = "wecom-ai-test-status is-success";
+            syncStatus.textContent = "✅ 已复制全平台通用 AI 配置码到剪贴板！可直接粘贴至其他站点或设备导入。";
+          }
+          showWecomToast("已复制通用配置码到剪贴板！", "success");
+        }).catch(() => {
+          if (syncCodeInput) syncCodeInput.select();
+          if (syncStatus) {
+            syncStatus.className = "wecom-ai-test-status is-success";
+            syncStatus.textContent = "已生成配置码，请全选上方输入框复制。";
+          }
+        });
+      } else {
+        if (syncCodeInput) syncCodeInput.select();
+        if (syncStatus) {
+          syncStatus.className = "wecom-ai-test-status is-success";
+          syncStatus.textContent = "已生成配置码，请全选上方输入框复制。";
+        }
+      }
+    });
+
+    pasteCodeBtn?.addEventListener("click", async () => {
+      if (syncStatus) {
+        syncStatus.className = "wecom-ai-test-status is-loading";
+        syncStatus.textContent = "正在读取剪贴板...";
+      }
+      try {
+        if (!navigator.clipboard?.readText) {
+          throw new Error("浏览器不支持直接读取剪贴板，请手动在下方文本框粘贴后点击导入");
+        }
+        const text = await navigator.clipboard.readText();
+        if (!text || (!text.includes(AI_SYNC_CODE_PREFIX) && !text.includes(AI_SYNC_PREFIX) && !text.startsWith("ey"))) {
+          if (syncStatus) {
+            syncStatus.className = "wecom-ai-test-status is-error";
+            syncStatus.textContent = "剪贴板中未发现通用 AI 配置码，请先在已有配置的平台点击「复制通用配置码」。";
+          }
+          showWecomToast("剪贴板中未检测到配置码", "error");
+          return;
+        }
+        if (syncCodeInput) syncCodeInput.value = text.trim();
+        const success = importUniversalAiSyncString(text.trim());
+        if (success) {
+          updateCardFieldsFromStorage();
+          if (syncStatus) {
+            syncStatus.className = "wecom-ai-test-status is-success";
+            syncStatus.textContent = "🎉 导入成功！全平台通用 AI 对话与生图配置已生效。";
+          }
+          showWecomToast("全平台 AI 配置已成功导入！", "success");
+        } else {
+          if (syncStatus) {
+            syncStatus.className = "wecom-ai-test-status is-error";
+            syncStatus.textContent = "配置码解析失败，请检查配置码是否完整";
+          }
+          showWecomToast("配置码解析失败", "error");
+        }
+      } catch (err) {
+        if (syncStatus) {
+          syncStatus.className = "wecom-ai-test-status is-error";
+          syncStatus.textContent = `剪贴板读取受阻 (${err.message || String(err)})，请在下方文本框手动粘贴后点击「导入」`;
+        }
+      }
+    });
+
+    doImportBtn?.addEventListener("click", () => {
+      const code = syncCodeInput?.value.trim();
+      if (!code) {
+        if (syncStatus) {
+          syncStatus.className = "wecom-ai-test-status is-error";
+          syncStatus.textContent = "请先粘贴跨站通用配置码";
+        }
+        showWecomToast("请先粘贴配置码", "error");
+        return;
+      }
+      const success = importUniversalAiSyncString(code);
+      if (success) {
+        updateCardFieldsFromStorage();
+        if (syncStatus) {
+          syncStatus.className = "wecom-ai-test-status is-success";
+          syncStatus.textContent = "🎉 导入成功！全平台通用 AI 对话与生图配置已生效。";
+        }
+        showWecomToast("全平台 AI 配置已成功导入！", "success");
+      } else {
+        if (syncStatus) {
+          syncStatus.className = "wecom-ai-test-status is-error";
+          syncStatus.textContent = "配置码解析失败，请确保格式正确（以 WECOM_AI_CONFIG: 开头）";
+        }
+        showWecomToast("配置码解析失败", "error");
+      }
+    });
+
+    function openSyncTargetTab(baseUrl) {
+      syncCurrentInputsToStorage();
+      const syncStr = exportUniversalAiSyncString();
+      if (!syncStr) {
+        if (syncStatus) {
+          syncStatus.className = "wecom-ai-test-status is-error";
+          syncStatus.textContent = "尚未配置 API Key，请先输入 API Key";
+        }
+        showWecomToast("请先填写 AI API Key", "error");
+        return;
+      }
+      const targetUrl = `${baseUrl}#wecom_ai_sync=${encodeURIComponent(syncStr)}`;
+      window.open(targetUrl, "_blank");
+      if (syncStatus) {
+        syncStatus.className = "wecom-ai-test-status is-success";
+        syncStatus.textContent = "🚀 已在新标签页打开目标站点并自动同步配置！";
+      }
+      showWecomToast("已在新标签页打开并同步！", "success");
+    }
+
+    syncLinuxDoBtn?.addEventListener("click", () => openSyncTargetTab("https://linux.do/"));
+    syncV2exBtn?.addEventListener("click", () => openSyncTargetTab("https://www.v2ex.com/"));
+    syncJuejinBtn?.addEventListener("click", () => openSyncTargetTab("https://juejin.cn/pins"));
+
+    if (!isAiConfigured() && navigator.clipboard?.readText) {
+      navigator.clipboard.readText().then((clipText) => {
+        if (clipText && (clipText.startsWith(AI_SYNC_CODE_PREFIX) || clipText.startsWith(AI_SYNC_PREFIX))) {
+          if (syncCodeInput) syncCodeInput.value = clipText;
+          if (syncStatus) {
+            syncStatus.className = "wecom-ai-test-status is-loading";
+            syncStatus.innerHTML = `📋 检测到剪贴板中存在跨站配置码，<a class="wecom-ai-quick-import-link" style="color:var(--wc-blue);cursor:pointer;text-decoration:underline;">点击立即一键导入</a>`;
+            const quickLink = syncStatus.querySelector(".wecom-ai-quick-import-link");
+            quickLink?.addEventListener("click", () => {
+              if (importUniversalAiSyncString(clipText)) {
+                updateCardFieldsFromStorage();
+                syncStatus.className = "wecom-ai-test-status is-success";
+                syncStatus.textContent = "🎉 导入成功！已同步全平台通用配置。";
+                showWecomToast("全平台通用配置已导入！", "success");
+              }
+            });
+          }
+        }
+      }).catch(() => { /* ignore */ });
+    }
+
+    card.querySelector(".wecom-ai-btn-save").addEventListener("click", () => {
+      const apiKey = keyInput.value.trim();
+      const baseUrl = urlInput.value.trim() || getChatProvDef(currentChatProvider).baseUrl;
+      const model = customModelInput.style.display !== "none" && customModelInput.value.trim() ? customModelInput.value.trim() : (modelSelect.value || customModelInput.value.trim());
+
+      setAiConfig({
+        provider: currentChatProvider,
+        apiKey,
+        baseUrl,
+        model
+      });
+
+      const useSame = sameCheckbox.checked;
+      const imgApiKey = useSame ? "" : imgKeyInput.value.trim();
+      const imgBaseUrl = useSame ? "" : (imgUrlInput.value.trim() || getImgProvDef(currentImgProvider).baseUrl);
+      const imgModel = imgCustomModelInput.style.display !== "none" && imgCustomModelInput.value.trim() ? imgCustomModelInput.value.trim() : (imgModelSelect.value || imgCustomModelInput.value.trim());
+      const imgSize = imgSizeSelect.value || "1024x1024";
+
+      setAiImageConfig({
+        provider: currentImgProvider,
+        useSameAsChat: useSame,
+        apiKey: imgApiKey,
+        baseUrl: imgBaseUrl,
+        model: imgModel,
+        size: imgSize
+      });
+
+      saveUniversalAiBundle();
+      showWecomToast("AI API 配置（全平台通用）已保存！", "success");
+      closeAiConfigDialog();
+      syncThemeControls();
+    });
+  }
+
+  let activeSummaryAbort = null;
+  let activeImageAbort = null;
+
+  function closeAiSummaryDialog() {
+    if (activeSummaryAbort) {
+      try { activeSummaryAbort.abort(); } catch { /* ignore */ }
+      activeSummaryAbort = null;
+    }
+    if (activeImageAbort) {
+      try { activeImageAbort.abort(); } catch { /* ignore */ }
+      activeImageAbort = null;
+    }
+    document.querySelector(".wecom-ai-summary-dialog")?.remove();
+  }
+
+  function openAiSummaryDialog(topicInfo, initialTab = "summary") {
+    closeAiSummaryDialog();
+    const chatConfig = getAiConfig();
+    const imgConfig = getEffectiveAiImageConfig();
+    const pref = getAiSummaryPref();
+    const topicCache = getTopicAiCache(topicInfo.topicId);
+
+    let currentTab = initialTab === "image" ? "image" : "summary";
+    let currentStyle = topicCache?.summaryStyle || pref.style || "sharp";
+    let currentImgStyle = topicCache?.imageStyle || "comic_4panel";
+    let currentImgRatio = topicCache?.imageRatio || imgConfig.size || "1024x1024";
+
+    const overlay = document.createElement("div");
+    overlay.className = "wecom-ai-summary-dialog";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-label", "AI 话题助手");
+
+    const highLikesHint = topicInfo.highLikesCount > 0
+      ? `含 <strong>${topicInfo.highLikesCount}</strong> 条高赞热评`
+      : "暂无高赞统计";
+
+    const hasCachedSummary = Boolean(topicCache?.summaryMarkdown);
+    const hasCachedImage = Boolean(topicCache?.imageUrl);
+
+    overlay.innerHTML =
+      `<div class="wecom-ai-summary-card">` +
+      `  <div class="wecom-ai-head">` +
+      `    <div class="wecom-ai-title">${ICONS.spark} <span>AI 话题助手</span><span class="wecom-ai-summary-head-title">${escapeHtml(topicInfo.title || "")}</span></div>` +
+      `    <button type="button" class="wecom-ai-close" title="关闭" aria-label="关闭">&times;</button>` +
+      `  </div>` +
+      `  <div class="wecom-ai-dialog-tabs">` +
+      `    <button type="button" class="wecom-ai-dialog-tab${currentTab === "summary" ? " is-active" : ""}" data-tab="summary">📝 话题精炼总结</button>` +
+      `    <button type="button" class="wecom-ai-dialog-tab${currentTab === "image" ? " is-active" : ""}" data-tab="image">🎨 漫画叙事生图</button>` +
+      `  </div>` +
+      `  <div class="wecom-ai-body">` +
+      `    <!-- 文本总结面板 -->` +
+      `    <div class="wecom-ai-summary-pane" style="${currentTab === "summary" ? "" : "display:none;"}">` +
+      `      <div class="wecom-ai-summary-meta">` +
+      `        <span>🤖 对话模型: <strong>${escapeHtml(chatConfig.model || chatConfig.provider)}</strong> (${escapeHtml(chatConfig.provider)})</span>` +
+      `        <span>💬 主楼正文 + ${topicInfo.repliesCount} 条回复（${highLikesHint}）</span>` +
+      `      </div>` +
+      `      <div class="wecom-ai-cache-banner wecom-ai-summary-cache-banner" style="${hasCachedSummary ? "" : "display:none;"}">` +
+      `        <span>🕒 已从本地缓存恢复历史总结（${hasCachedSummary ? formatAiCacheTime(topicCache.summaryAt) : ""}）</span>` +
+      `        <span class="wecom-ai-cache-badge">已缓存</span>` +
+      `      </div>` +
+      `      <div class="wecom-ai-summary-setup" style="${hasCachedSummary ? "display:none;" : ""}">` +
+      `        <div class="wecom-ai-label">` +
+      `          <span>选择总结类型 / 风格</span>` +
+      `          <span class="wecom-ai-label-sub">点击切换不同解读风格</span>` +
+      `        </div>` +
+      `        <div class="wecom-ai-style-chips wecom-ai-summary-style-chips">` +
+      Object.values(AI_SUMMARY_STYLES).map((s) =>
+        `<button type="button" class="wecom-ai-style-chip${s.id === currentStyle ? " is-active" : ""}" data-style="${s.id}">${s.label}</button>`
+      ).join("") +
+      `        </div>` +
+      `        <div class="wecom-ai-style-desc wecom-ai-summary-style-desc">${AI_SUMMARY_STYLES[currentStyle]?.desc || ""}</div>` +
+      `        <div class="wecom-ai-label" style="margin-top:6px;">` +
+      `          <span>自定义偏好 / 关注点（可选）</span>` +
+      `          <span class="wecom-ai-label-sub">例如：重点看Bug原因、或是看反对意见</span>` +
+      `        </div>` +
+      `        <input type="text" class="wecom-ai-input wecom-ai-summary-prompt-input" placeholder="输入你想让 AI 重点关注的方面（选填）" value="${escapeHtml(pref.customPrompt || "")}" />` +
+      `        <button type="button" class="wecom-ai-btn-start-summary">${ICONS.spark} 开始生成 AI 总结</button>` +
+      `      </div>` +
+      `      <div class="wecom-ai-summary-loading" style="display:none;">` +
+      `        <div class="wecom-ai-loading-spark">${ICONS.spark}</div>` +
+      `        <div class="wecom-ai-loading-text">AI 正在提炼楼主重点与高赞神评...</div>` +
+      `        <div class="wecom-ai-loading-sub">抓取核心观点、犀利神评与高赞建议，篇幅精炼不冗长</div>` +
+      `      </div>` +
+      `      <div class="wecom-ai-markdown-body" style="${hasCachedSummary ? "" : "display:none;"}">${hasCachedSummary ? renderSimpleMarkdown(topicCache.summaryMarkdown) : ""}</div>` +
+      `      <div class="wecom-ai-test-status is-error wecom-ai-summary-error" style="display:none;margin-top:14px;"></div>` +
+      `    </div>` +
+      `    <!-- 漫画生图面板 -->` +
+      `    <div class="wecom-ai-image-pane" style="${currentTab === "image" ? "" : "display:none;"}">` +
+      `      <div class="wecom-ai-summary-meta">` +
+      `        <span>🎨 生图模型: <strong>${escapeHtml(imgConfig.model || imgConfig.provider)}</strong> (${escapeHtml(imgConfig.provider)}${imgConfig.useSameAsChat ? " · 复用对话凭据" : ""})</span>` +
+      `        <span>📐 画幅比例: <strong class="wecom-ai-img-meta-ratio">${escapeHtml(currentImgRatio === "1024x1792" ? "9:16 竖版长图" : (currentImgRatio === "1792x1024" ? "16:9 横版宽幅" : "1:1 正方"))}</strong></span>` +
+      `      </div>` +
+      `      <div class="wecom-ai-cache-banner wecom-ai-image-cache-banner" style="${hasCachedImage ? "" : "display:none;"}">` +
+      `        <span>🕒 已从本地缓存恢复历史漫画（${hasCachedImage ? formatAiCacheTime(topicCache.imageAt) : ""}）</span>` +
+      `        <span class="wecom-ai-cache-badge">已缓存</span>` +
+      `      </div>` +
+      `      <div class="wecom-ai-image-setup" style="${hasCachedImage ? "display:none;" : ""}">` +
+      `        <div class="wecom-ai-checkbox-card">` +
+      `          <label class="wecom-ai-checkbox-label">` +
+      `            <input type="checkbox" class="wecom-ai-img-include-replies" ${topicInfo.highLikesCount > 0 ? "checked" : ""} />` +
+      `            <span>融入楼层高赞讨论与神评 (丰富分镜剧情与弹幕互动)</span>` +
+      `          </label>` +
+      `        </div>` +
+      `        <div class="wecom-ai-label">` +
+      `          <span>选择漫画叙事风格</span>` +
+      `          <span class="wecom-ai-label-sub">连环画分镜叙事，剧情多格自然排布</span>` +
+      `        </div>` +
+      `        <div class="wecom-ai-style-chips wecom-ai-img-style-chips">` +
+      Object.values(AI_IMAGE_STYLES).map((s) =>
+        `<button type="button" class="wecom-ai-style-chip${s.id === currentImgStyle ? " is-active" : ""}" data-img-style="${s.id}">${s.label}</button>`
+      ).join("") +
+      `        </div>` +
+      `        <div class="wecom-ai-style-desc wecom-ai-img-style-desc">${AI_IMAGE_STYLES[currentImgStyle]?.desc || ""}</div>` +
+      `        <div class="wecom-ai-label" style="margin-top:2px;">` +
+      `          <span>画幅比例 / 版式构图</span>` +
+      `          <span class="wecom-ai-label-sub">根据故事情节选择适合的构图版式</span>` +
+      `        </div>` +
+      `        <div class="wecom-ai-style-chips wecom-ai-img-ratio-chips">` +
+      `          <button type="button" class="wecom-ai-style-chip${currentImgRatio === "1024x1792" ? " is-active" : ""}" data-ratio="1024x1792">📱 9:16 竖版 (条漫推荐)</button>` +
+      `          <button type="button" class="wecom-ai-style-chip${currentImgRatio === "1024x1024" ? " is-active" : ""}" data-ratio="1024x1024">🔲 1:1 正方 (通用经典)</button>` +
+      `          <button type="button" class="wecom-ai-style-chip${currentImgRatio === "1792x1024" ? " is-active" : ""}" data-ratio="1792x1024">🖥️ 16:9 横版 (全景大场面)</button>` +
+      `        </div>` +
+      `        <div class="wecom-ai-label" style="margin-top:2px;">` +
+      `          <span>自定义细节 / 额外要求（可选）</span>` +
+      `          <span class="wecom-ai-label-sub">例如：复古港漫风、水墨画风、赛博蒸汽朋克、新海诚唯美光影</span>` +
+      `        </div>` +
+      `        <input type="text" class="wecom-ai-input wecom-ai-img-custom-style-input" placeholder="输入自定义画面细节或风格补充描述（选填）" />` +
+      `        <button type="button" class="wecom-ai-btn-start-image">${ICONS.spark} 开始生成叙事漫画</button>` +
+      `      </div>` +
+      `      <div class="wecom-ai-summary-loading wecom-ai-image-loading" style="display:none;">` +
+      `        <div class="wecom-ai-loading-spark">${ICONS.spark}</div>` +
+      `        <div class="wecom-ai-loading-text wecom-ai-image-loading-text">正在根据剧情构思中文分镜脚本...</div>` +
+      `        <div class="wecom-ai-loading-sub">中文分镜脚本就绪后将调用生图接口绘制，通常耗时 5~15 秒</div>` +
+      `      </div>` +
+      `      <div class="wecom-ai-image-wrap" style="${hasCachedImage ? "" : "display:none;"}">` +
+      `        <div class="wecom-ai-image-card">` +
+      `          <img class="wecom-ai-image-img" src="${escapeHtml(topicCache?.imageUrl || "")}" alt="漫画叙事生图" title="点击新标签打开原图" />` +
+      `        </div>` +
+      `        <div class="wecom-ai-image-prompt-details" style="${topicCache?.imagePrompt ? "" : "display:none;"}">` +
+      `          <div class="wecom-ai-image-prompt-title">🎨 中文分镜生图提示词:</div>` +
+      `          <div class="wecom-ai-image-prompt-text">${escapeHtml(topicCache?.imagePrompt || "")}</div>` +
+      `        </div>` +
+      `      </div>` +
+      `      <div class="wecom-ai-test-status is-error wecom-ai-image-error" style="display:none;margin-top:14px;"></div>` +
+      `    </div>` +
+      `  </div>` +
+      `  <div class="wecom-ai-foot">` +
+      `    <!-- 文本总结底部操作 -->` +
+      `    <div class="wecom-ai-left-actions wecom-ai-summary-actions" style="${currentTab === "summary" ? "" : "display:none;"}">` +
+      `      <button type="button" class="wecom-ai-action-btn wecom-ai-btn-change-setup" style="${hasCachedSummary ? "" : "display:none;"}">⚙️ 调整要求</button>` +
+      `      <button type="button" class="wecom-ai-action-btn wecom-ai-btn-resummarize" style="${hasCachedSummary ? "" : "display:none;"}">${ICONS.refresh} 重新总结</button>` +
+      `      <button type="button" class="wecom-ai-action-btn wecom-ai-btn-copy-summary" style="${hasCachedSummary ? "" : "display:none;"}">${ICONS.copy} 复制总结</button>` +
+      `    </div>` +
+      `    <!-- 漫画生图底部操作 -->` +
+      `    <div class="wecom-ai-left-actions wecom-ai-image-actions" style="${currentTab === "image" ? "" : "display:none;"}">` +
+      `      <button type="button" class="wecom-ai-action-btn wecom-ai-btn-change-img-setup" style="${hasCachedImage ? "" : "display:none;"}">⚙️ 调整风格</button>` +
+      `      <button type="button" class="wecom-ai-action-btn wecom-ai-btn-reimage" style="${hasCachedImage ? "" : "display:none;"}">${ICONS.refresh} 重新生图</button>` +
+      `      <button type="button" class="wecom-ai-action-btn wecom-ai-btn-open-img" style="${hasCachedImage ? "" : "display:none;"}">🔍 查看原图</button>` +
+      `      <button type="button" class="wecom-ai-action-btn wecom-ai-btn-download-img" style="${hasCachedImage ? "" : "display:none;"}">💾 下载图片</button>` +
+      `      <button type="button" class="wecom-ai-action-btn wecom-ai-btn-copy-img" style="${hasCachedImage ? "" : "display:none;"}">🔗 复制链接</button>` +
+      `    </div>` +
+      `    <button type="button" class="wecom-ai-action-btn primary wecom-ai-btn-close-summary">关闭</button>` +
+      `  </div>` +
+      `</div>`;
+
+    document.body.appendChild(overlay);
+
+    const card = overlay.querySelector(".wecom-ai-summary-card");
+    const summaryPane = card.querySelector(".wecom-ai-summary-pane");
+    const imagePane = card.querySelector(".wecom-ai-image-pane");
+    const summaryActions = card.querySelector(".wecom-ai-summary-actions");
+    const imageActions = card.querySelector(".wecom-ai-image-actions");
+
+    // Summary elements
+    const summarySetup = card.querySelector(".wecom-ai-summary-setup");
+    const summaryStyleDesc = card.querySelector(".wecom-ai-summary-style-desc");
+    const promptInput = card.querySelector(".wecom-ai-summary-prompt-input");
+    const startSummaryBtn = card.querySelector(".wecom-ai-btn-start-summary");
+    const summaryLoading = card.querySelector(".wecom-ai-summary-loading");
+    const summaryLoadingText = summaryLoading.querySelector(".wecom-ai-loading-text");
+    const mdView = card.querySelector(".wecom-ai-markdown-body");
+    const summaryError = card.querySelector(".wecom-ai-summary-error");
+    const summaryCacheBanner = card.querySelector(".wecom-ai-summary-cache-banner");
+    const changeSetupBtn = card.querySelector(".wecom-ai-btn-change-setup");
+    const resummarizeBtn = card.querySelector(".wecom-ai-btn-resummarize");
+    const copySummaryBtn = card.querySelector(".wecom-ai-btn-copy-summary");
+
+    if (hasCachedSummary) {
+      mdView.dataset.rawMarkdown = topicCache.summaryMarkdown;
+    }
+
+    // Image elements
+    const imgSetup = card.querySelector(".wecom-ai-image-setup");
+    const imgIncludeReplies = card.querySelector(".wecom-ai-img-include-replies");
+    const imgStyleDesc = card.querySelector(".wecom-ai-img-style-desc");
+    const imgCustomStyleInput = card.querySelector(".wecom-ai-img-custom-style-input");
+    const startImageBtn = card.querySelector(".wecom-ai-btn-start-image");
+    const imgLoading = card.querySelector(".wecom-ai-image-loading");
+    const imgLoadingText = card.querySelector(".wecom-ai-image-loading-text");
+    const imgWrap = card.querySelector(".wecom-ai-image-wrap");
+    const imgElement = card.querySelector(".wecom-ai-image-img");
+    const imgPromptDetails = card.querySelector(".wecom-ai-image-prompt-details");
+    const imgPromptText = card.querySelector(".wecom-ai-image-prompt-text");
+    const imgError = card.querySelector(".wecom-ai-image-error");
+    const imgCacheBanner = card.querySelector(".wecom-ai-image-cache-banner");
+    const changeImgSetupBtn = card.querySelector(".wecom-ai-btn-change-img-setup");
+    const reimageBtn = card.querySelector(".wecom-ai-btn-reimage");
+    const openImgBtn = card.querySelector(".wecom-ai-btn-open-img");
+    const downloadImgBtn = card.querySelector(".wecom-ai-btn-download-img");
+    const copyImgBtn = card.querySelector(".wecom-ai-btn-copy-img");
+
+    const switchTab = (tab) => {
+      currentTab = tab;
+      card.querySelectorAll(".wecom-ai-dialog-tab").forEach((b) => b.classList.toggle("is-active", b.dataset.tab === tab));
+      summaryPane.style.display = tab === "summary" ? "block" : "none";
+      imagePane.style.display = tab === "image" ? "block" : "none";
+      summaryActions.style.display = tab === "summary" ? "inline-flex" : "none";
+      imageActions.style.display = tab === "image" ? "inline-flex" : "none";
+    };
+
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) closeAiSummaryDialog();
+    });
+
+    card.addEventListener("click", (e) => {
+      const tabBtn = e.target.closest(".wecom-ai-dialog-tab");
+      if (tabBtn) {
+        switchTab(tabBtn.dataset.tab);
+        return;
+      }
+
+      if (e.target.closest(".wecom-ai-close") || e.target.closest(".wecom-ai-btn-close-summary")) {
+        closeAiSummaryDialog();
+        return;
+      }
+
+      // Summary style chip
+      const summaryChip = e.target.closest(".wecom-ai-summary-style-chips .wecom-ai-style-chip");
+      if (summaryChip) {
+        const s = summaryChip.dataset.style;
+        if (s && AI_SUMMARY_STYLES[s]) {
+          currentStyle = s;
+          card.querySelectorAll(".wecom-ai-summary-style-chips .wecom-ai-style-chip").forEach((c) => c.classList.toggle("is-active", c.dataset.style === s));
+          if (summaryStyleDesc) summaryStyleDesc.textContent = AI_SUMMARY_STYLES[s].desc;
+          setAiSummaryPref({ style: currentStyle, customPrompt: promptInput.value.trim() });
+        }
+        return;
+      }
+
+      // Image style chip
+      const imgChip = e.target.closest(".wecom-ai-img-style-chips .wecom-ai-style-chip");
+      if (imgChip) {
+        const s = imgChip.dataset.imgStyle;
+        if (s && AI_IMAGE_STYLES[s]) {
+          currentImgStyle = s;
+          card.querySelectorAll(".wecom-ai-img-style-chips .wecom-ai-style-chip").forEach((c) => c.classList.toggle("is-active", c.dataset.imgStyle === s));
+          if (imgStyleDesc) imgStyleDesc.textContent = AI_IMAGE_STYLES[s].desc;
+        }
+        return;
+      }
+
+      // Image ratio chip
+      const ratioChip = e.target.closest(".wecom-ai-img-ratio-chips .wecom-ai-style-chip");
+      if (ratioChip) {
+        const r = ratioChip.dataset.ratio;
+        if (r) {
+          currentImgRatio = r;
+          card.querySelectorAll(".wecom-ai-img-ratio-chips .wecom-ai-style-chip").forEach((c) => c.classList.toggle("is-active", c.dataset.ratio === r));
+          const metaRatio = card.querySelector(".wecom-ai-img-meta-ratio");
+          if (metaRatio) {
+            metaRatio.textContent = r === "1024x1792" ? "9:16 竖版长图" : (r === "1792x1024" ? "16:9 横版宽幅" : "1:1 正方");
+          }
+          const cur = getAiImageConfig();
+          setAiImageConfig({ ...cur, size: r });
+        }
+        return;
+      }
+
+      // Summary actions
+      if (e.target.closest(".wecom-ai-btn-change-setup")) {
+        summarySetup.style.display = "flex";
+        changeSetupBtn.style.display = "none";
+        return;
+      }
+
+      if (e.target.closest(".wecom-ai-btn-copy-summary")) {
+        const textToCopy = mdView.dataset.rawMarkdown || mdView.textContent || "";
+        if (!textToCopy) {
+          showWecomToast("暂无总结内容可复制", "info");
+          return;
+        }
+        try {
+          navigator.clipboard.writeText(textToCopy).then(() => {
+            showWecomToast("总结内容已复制到剪贴板！", "success");
+          }).catch(() => {
+            showWecomToast("复制失败，请手动选中文本复制", "warn");
+          });
+        } catch {
+          showWecomToast("复制失败，请手动选中文本复制", "warn");
+        }
+        return;
+      }
+
+      if (e.target.closest(".wecom-ai-btn-resummarize")) {
+        runSummary();
+        return;
+      }
+
+      // Image actions
+      if (e.target.closest(".wecom-ai-btn-change-img-setup")) {
+        imgSetup.style.display = "flex";
+        changeImgSetupBtn.style.display = "none";
+        return;
+      }
+
+      if (e.target.closest(".wecom-ai-btn-reimage")) {
+        runImageGeneration();
+        return;
+      }
+
+      if (e.target.closest(".wecom-ai-btn-open-img") || e.target.closest(".wecom-ai-image-img")) {
+        if (imgElement.src) {
+          window.open(imgElement.src, "_blank");
+        }
+        return;
+      }
+
+      if (e.target.closest(".wecom-ai-btn-copy-img")) {
+        if (!imgElement.src) {
+          showWecomToast("暂无图片可复制", "info");
+          return;
+        }
+        try {
+          navigator.clipboard.writeText(imgElement.src).then(() => {
+            showWecomToast("漫画图片链接已复制！", "success");
+          }).catch(() => {
+            showWecomToast("复制失败，请手动右键图片复制", "warn");
+          });
+        } catch {
+          showWecomToast("复制失败，请手动右键图片复制", "warn");
+        }
+        return;
+      }
+
+      if (e.target.closest(".wecom-ai-btn-download-img")) {
+        if (!imgElement.src) {
+          showWecomToast("暂无图片可下载", "info");
+          return;
+        }
+        try {
+          const a = document.createElement("a");
+          a.href = imgElement.src;
+          a.target = "_blank";
+          a.download = `linuxdo-comic-${topicInfo.topicId || Date.now()}.png`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          showWecomToast("已开始下载漫画图片", "success");
+        } catch {
+          window.open(imgElement.src, "_blank");
+        }
+        return;
+      }
+    });
+
+    const runSummary = async () => {
+      const customPrompt = promptInput.value.trim();
+      setAiSummaryPref({ style: currentStyle, customPrompt });
+
+      if (activeSummaryAbort) {
+        try { activeSummaryAbort.abort(); } catch { /* ignore */ }
+      }
+      activeSummaryAbort = new AbortController();
+
+      summarySetup.style.display = "none";
+      summaryLoading.style.display = "flex";
+      mdView.style.display = "none";
+      summaryError.style.display = "none";
+      if (summaryCacheBanner) summaryCacheBanner.style.display = "none";
+      resummarizeBtn.disabled = true;
+
+      const styleName = AI_SUMMARY_STYLES[currentStyle]?.name || "犀利吐槽";
+      summaryLoadingText.textContent = `AI 正在以【${styleName}】风格提炼楼主重点与高赞神评...`;
+
+      const prompt = buildSummaryPrompt(topicInfo, { styleKey: currentStyle, customPrompt });
+      const messages = [{ role: "user", content: prompt }];
+
+      try {
+        const result = await callAiChatApi(chatConfig, messages, { signal: activeSummaryAbort.signal });
+        mdView.dataset.rawMarkdown = result;
+        mdView.innerHTML = renderSimpleMarkdown(result);
+        summaryLoading.style.display = "none";
+        mdView.style.display = "block";
+        changeSetupBtn.style.display = "inline-flex";
+        resummarizeBtn.style.display = "inline-flex";
+        copySummaryBtn.style.display = "inline-flex";
+
+        saveTopicAiCache(topicInfo.topicId, {
+          topicTitle: topicInfo.title,
+          summaryMarkdown: result,
+          summaryStyle: currentStyle,
+          summaryAt: Date.now()
+        });
+      } catch (err) {
+        if (err.name === "AbortError") return;
+        summaryLoading.style.display = "none";
+        summaryError.style.display = "block";
+        summaryError.innerHTML = `<div>总结失败: ${escapeHtml(err.message || String(err))}</div><div style="margin-top:6px;font-size:11px;opacity:0.85;">可点击左侧停靠栏设置图标检查并测试 API 配置。</div>`;
+        changeSetupBtn.style.display = "inline-flex";
+        summarySetup.style.display = "flex";
+      } finally {
+        resummarizeBtn.disabled = false;
+        activeSummaryAbort = null;
+      }
+    };
+
+    const runImageGeneration = async () => {
+      if (!isAiImageConfigured()) {
+        showWecomToast("请先配置 AI 生图 API", "info", 2000);
+        openAiConfigDialog("image");
+        return;
+      }
+      const effImgConfig = getEffectiveAiImageConfig();
+      const customStyle = imgCustomStyleInput.value.trim();
+      const includeReplies = imgIncludeReplies.checked;
+
+      if (activeImageAbort) {
+        try { activeImageAbort.abort(); } catch { /* ignore */ }
+      }
+      activeImageAbort = new AbortController();
+
+      imgSetup.style.display = "none";
+      imgLoading.style.display = "flex";
+      imgWrap.style.display = "none";
+      imgError.style.display = "none";
+      if (imgCacheBanner) imgCacheBanner.style.display = "none";
+      reimageBtn.disabled = true;
+
+      const styleName = AI_IMAGE_STYLES[currentImgStyle]?.name || "连环画分镜";
+      imgLoadingText.textContent = `AI 正在根据剧情构思【${styleName}】中文分镜脚本...`;
+
+      try {
+        const visualPrompt = await generateComicVisualPrompt(topicInfo, {
+          styleKey: currentImgStyle,
+          customStyle,
+          includeReplies,
+          signal: activeImageAbort.signal
+        });
+
+        imgLoadingText.textContent = `中文分镜脚本已就绪，正在调用生图模型绘制【${styleName}】...`;
+
+        const genRes = await callAiImageApi(effImgConfig, visualPrompt, {
+          size: currentImgRatio,
+          signal: activeImageAbort.signal
+        });
+        const finalUrl = genRes.url;
+
+        imgElement.src = finalUrl;
+        imgPromptText.textContent = visualPrompt;
+        imgPromptDetails.style.display = "block";
+
+        imgLoading.style.display = "none";
+        imgWrap.style.display = "flex";
+        changeImgSetupBtn.style.display = "inline-flex";
+        reimageBtn.style.display = "inline-flex";
+        openImgBtn.style.display = "inline-flex";
+        downloadImgBtn.style.display = "inline-flex";
+        copyImgBtn.style.display = "inline-flex";
+
+        saveTopicAiCache(topicInfo.topicId, {
+          topicTitle: topicInfo.title,
+          imageUrl: finalUrl,
+          imagePrompt: visualPrompt,
+          imageStyle: currentImgStyle,
+          imageRatio: currentImgRatio,
+          imageAt: Date.now()
+        });
+        showWecomToast("漫画生成成功并已缓存！", "success");
+      } catch (err) {
+        if (err.name === "AbortError") return;
+        imgLoading.style.display = "none";
+        imgError.style.display = "block";
+        imgError.innerHTML = `<div>生图失败: ${escapeHtml(err.message || String(err))}</div><div style="margin-top:6px;font-size:11px;opacity:0.85;">可前往设置检查生图 API Key、模型名称或 Base URL。</div>`;
+        changeImgSetupBtn.style.display = "inline-flex";
+        imgSetup.style.display = "flex";
+      } finally {
+        reimageBtn.disabled = false;
+        activeImageAbort = null;
+      }
+    };
+
+    startSummaryBtn.addEventListener("click", () => {
+      runSummary();
+    });
+
+    startImageBtn.addEventListener("click", () => {
+      runImageGeneration();
+    });
+  }
+
+  function triggerTopicAiSummary(initialTab = "summary") {
+    if (initialTab === "image") {
+      if (!isAiImageConfigured()) {
+        showWecomToast("请先配置 AI 生图 API", "info", 2000);
+        openAiConfigDialog("image");
+        return;
+      }
+    } else {
+      if (!isAiConfigured()) {
+        showWecomToast("请先配置 AI API", "info", 2000);
+        openAiConfigDialog("chat");
+        return;
+      }
+    }
+    const topicInfo = extractCurrentTopicForSummary();
+    if (!topicInfo.mainPostText && topicInfo.repliesCount === 0) {
+      showWecomToast("未检测到当前话题内容或楼层回复", "info", 2000);
+      return;
+    }
+    openAiSummaryDialog(topicInfo, initialTab);
+  }
+
   const THEME_MODE_LABELS = Object.freeze({
     light: "浅色模式",
     dark: "深色模式",
@@ -13346,6 +17880,34 @@
         chip.setAttribute("aria-checked", active ? "true" : "false");
       });
     }
+
+    const fontRow = menu.querySelector(".wecom-menu-font-row");
+    if (fontRow) {
+      const curSetting = getCustomFontSetting();
+      const valEl = fontRow.querySelector(".wecom-menu-font-val");
+      if (valEl) valEl.textContent = getCustomFontDisplayLabel();
+      fontRow.querySelectorAll(".wecom-font-chip").forEach((chip) => {
+        const f = chip.dataset.font;
+        const active = f === curSetting.mode;
+        chip.classList.toggle("is-active", active);
+        chip.setAttribute("aria-checked", active ? "true" : "false");
+      });
+      const customChip = fontRow.querySelector(".wecom-font-chip-custom");
+      if (customChip) {
+        if (curSetting.mode === "custom" && curSetting.customName) {
+          customChip.textContent = `✏️ 自定义: ${curSetting.customName}`;
+        } else {
+          customChip.textContent = "✏️ 手动输入字体名称...";
+        }
+      }
+    }
+
+    const aiBadge = menu.querySelector(".wecom-menu-ai-badge");
+    if (aiBadge) {
+      const configured = isAiConfigured();
+      aiBadge.textContent = configured ? "已配置" : "未配置";
+      aiBadge.className = `wecom-menu-state-badge wecom-menu-ai-badge ${configured ? "is-on" : "is-off"}`;
+    }
   }
 
   function bindThemeControls() {
@@ -13370,7 +17932,13 @@
       if (!event.target.closest(".wecom-theme-controls, .wecom-theme-menu")) setThemeMenuOpen(false);
     });
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") setThemeMenuOpen(false);
+      if (event.key === "Escape") {
+        setThemeMenuOpen(false);
+        closeSystemFontPicker();
+        closeWindowShortcutDialog();
+        closeAiConfigDialog();
+        closeAiSummaryDialog();
+      }
     });
   }
 
@@ -13448,6 +18016,28 @@
       `    <button type="button" class="wecom-aspect-chip" data-aspect="16:9">16:9</button>` +
       `  </div>` +
       `</div>` +
+      `<div class="wecom-theme-menu-title wecom-theme-menu-divider">界面字体</div>` +
+      `<div class="wecom-menu-font-row" title="点击切换界面字体">` +
+      `  <div class="wecom-menu-font-header"><span class="wecom-menu-sub-label">字体选择</span><span class="wecom-menu-font-val">默认</span></div>` +
+      `  <div class="wecom-menu-font-chips">` +
+      `    <button type="button" class="wecom-font-chip" data-font="default">默认</button>` +
+      `    <button type="button" class="wecom-font-chip" data-font="yahei">微软雅黑</button>` +
+      `    <button type="button" class="wecom-font-chip" data-font="kaiti">楷体</button>` +
+      `    <button type="button" class="wecom-font-chip" data-font="songti">宋体</button>` +
+      `    <button type="button" class="wecom-font-chip" data-font="heiti">黑体</button>` +
+      `    <button type="button" class="wecom-font-chip" data-font="pingfang">苹方</button>` +
+      `    <button type="button" class="wecom-font-chip" data-font="wenkai">霞鹜文楷</button>` +
+      `    <button type="button" class="wecom-font-chip" data-font="harmony">鸿蒙</button>` +
+      `    <button type="button" class="wecom-font-chip" data-font="source">思源</button>` +
+      `    <button type="button" class="wecom-font-chip wecom-font-chip-system" data-font="pick-system">📋 从系统字体列表选择...</button>` +
+      `    <button type="button" class="wecom-font-chip wecom-font-chip-custom" data-font="custom">✏️ 手动输入字体名称...</button>` +
+      `  </div>` +
+      `</div>` +
+      `<div class="wecom-theme-menu-title wecom-theme-menu-divider">AI 助手</div>` +
+      `<button type="button" role="menuitem" class="wecom-menu-ai-config" title="配置 AI API (Gemini / OpenAI / DeepSeek)">` +
+      `${ICONS.spark}<span class="wecom-menu-label">配置 AI API...</span><span class="wecom-menu-state-badge wecom-menu-ai-badge is-off">未配置</span></button>` +
+      `<div class="wecom-theme-menu-title wecom-theme-menu-divider">独立窗口</div>` +
+      `<button type="button" role="menuitem" class="wecom-menu-create-shortcut" title="创建桌面独立窗口快捷方式 (--app 模式)">${ICONS.win}<span>创建窗口快捷式</span></button>` +
       `<button type="button" role="menuitem" class="wecom-menu-restore-native">${ICONS.external}<span>恢复原风格 (Alt+W)</span></button>` +
       `<button type="button" role="menuitem" class="wecom-check-update">${ICONS.refresh}<span>检查脚本更新</span></button>`;
     document.body.appendChild(menu);
@@ -13460,6 +18050,20 @@
       }, 800);
     }, { passive: true });
     menu.addEventListener("click", (event) => {
+      if (event.target.closest(".wecom-menu-ai-config")) {
+        event.preventDefault();
+        event.stopPropagation();
+        setThemeMenuOpen(false);
+        openAiConfigDialog();
+        return;
+      }
+      if (event.target.closest(".wecom-menu-create-shortcut")) {
+        event.preventDefault();
+        event.stopPropagation();
+        setThemeMenuOpen(false);
+        openWindowShortcutDialog();
+        return;
+      }
       if (event.target.closest(".wecom-menu-restore-native")) {
         event.preventDefault();
         event.stopPropagation();
@@ -13575,6 +18179,52 @@
         setImageAutoLayoutAspect(aspectVal);
         return;
       }
+      const fontChip = event.target.closest(".wecom-font-chip");
+      if (fontChip) {
+        event.preventDefault();
+        event.stopPropagation();
+        const fontKey = fontChip.dataset.font;
+        if (fontKey === "pick-system") {
+          void openSystemFontPicker();
+          return;
+        }
+        if (fontKey === "custom") {
+          const current = getCustomFontSetting();
+          const prevVal = current.mode === "custom" ? current.customName : "";
+          const input = window.prompt("请输入本地已安装的字体名称 (如 楷体, SimSun, MiSans, JetBrains Mono 等):", prevVal);
+          if (input !== null) {
+            const trimmed = input.trim();
+            if (trimmed) {
+              setCustomFontSetting("custom", trimmed);
+              const available = isFontStackAvailable(trimmed);
+              if (available) {
+                showWecomToast(`已应用自定义字体: ${trimmed}`, "success", 2000);
+              } else {
+                showWecomToast(`已设置: ${trimmed}（提示：未检测到此本地字体，请确认系统已安装且名称准确）`, "warning", 3600);
+              }
+            } else {
+              setCustomFontSetting("default");
+              showWecomToast("已恢复默认字体", "info", 1800);
+            }
+          }
+        } else {
+          setCustomFontSetting(fontKey);
+          const preset = FONT_PRESETS[fontKey];
+          const label = preset?.label || "默认";
+          if (preset?.testName && !isFontStackAvailable(preset.testName)) {
+            if (fontKey === "wenkai") {
+              showWecomToast(`已切换: 霞鹜文楷（未检测到本地字体包，已回退楷体）`, "info", 3200);
+            } else if (fontKey === "pingfang") {
+              showWecomToast(`已切换: 苹方（当前设备未安装苹方，已回退默认字体）`, "info", 3200);
+            } else {
+              showWecomToast(`已切换: ${label}（未检测到本地字体包，已回退默认字体）`, "info", 3200);
+            }
+          } else {
+            showWecomToast(`已切换字体: ${label}`, "success", 1800);
+          }
+        }
+        return;
+      }
       const option = event.target.closest("button[data-theme-mode]");
       if (!option) return;
       event.preventDefault();
@@ -13611,7 +18261,7 @@
     if (!rail || !document.body) return;
     const controls = rail.querySelector(".wecom-theme-controls") || createThemeControls(rail);
     let menu = document.querySelector(".wecom-theme-menu");
-    if (menu && !menu.querySelector("button[data-mask-title-mode]")) {
+    if (menu && (!menu.querySelector("button[data-mask-title-mode]") || !menu.querySelector(".wecom-menu-font-row") || !menu.querySelector(".wecom-font-chip-system") || !menu.querySelector(".wecom-menu-create-shortcut"))) {
       menu.remove();
       menu = null;
     }
@@ -13625,7 +18275,7 @@
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.83";
+  const SCRIPT_VERSION = "0.7.87";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -14676,6 +19326,15 @@
     bindRailNotifClick(rail);
     if (IS_LINUXDO) {
       bindRailConnectClick(rail);
+    }
+    const summaryBtn = rail.querySelector("[data-rail-key='summary']");
+    if (summaryBtn && !summaryBtn.dataset.boundAiSummary) {
+      summaryBtn.dataset.boundAiSummary = "true";
+      summaryBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerTopicAiSummary();
+      });
     }
   }
 
@@ -19811,7 +24470,7 @@
     const optionList = Array.isArray(options) ? options : [options];
     if (!optionList.length) throw new Error("请先选择投票选项");
 
-    const discourseAjax = window.require?.("discourse/lib/ajax")?.ajax;
+    const discourseAjax = discourseRequire("discourse/lib/ajax")?.ajax || window.require?.("discourse/lib/ajax")?.ajax;
     if (typeof discourseAjax === "function") {
       try {
         return await discourseAjax("/polls/vote", {
@@ -19855,7 +24514,7 @@
   async function removeDiscoursePollVote(postId, pollName) {
     if (!postId) throw new Error("缺少帖子 ID");
 
-    const discourseAjax = window.require?.("discourse/lib/ajax")?.ajax;
+    const discourseAjax = discourseRequire("discourse/lib/ajax")?.ajax || window.require?.("discourse/lib/ajax")?.ajax;
     if (typeof discourseAjax === "function") {
       try {
         return await discourseAjax("/polls/vote", {
@@ -21617,7 +26276,7 @@
         const isSame = isSameTopic(chatState.topicId, topicId);
         const hasRendered = isSame && Boolean(
           body &&
-          Number(body.dataset.topicId) === topicId &&
+          Number(body.dataset.topicId) === Number(topicId) &&
           body.querySelector(".wecom-msg") &&
           !body.querySelector(".wecom-chat-loading, .wecom-chat-error, .wecom-chat-empty")
         );
@@ -24096,6 +28755,7 @@
           </div>
         </div>
         <div class="wecom-chat-tools">
+          <button type="button" class="wecom-icon-btn wecom-chat-ai-summary" title="AI 总结本帖 (包含内容与回复)" aria-label="AI 总结本帖">${ICONS.spark}</button>
           <button type="button" class="wecom-icon-btn wecom-chat-scroll-top" title="回到顶部" aria-label="回到顶部">${ICONS.scrollTop}</button>
           <button type="button" class="wecom-icon-btn wecom-chat-timeline-toggle" title="楼层与进度滑块" aria-label="楼层与进度滑块" aria-expanded="false">${ICONS.timeline}</button>
           <div class="wecom-platform-switcher">
@@ -24104,6 +28764,14 @@
             </button>
             <div class="wecom-platform-dropdown" hidden>
               <div class="wecom-chat-more-actions">
+                <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-chat-ai-summary-menu" title="AI 总结本帖" aria-label="AI 总结本帖">
+                  <span class="wecom-chat-more-icon">${ICONS.spark}</span>
+                  <span class="wecom-chat-more-label">AI 总结本帖</span>
+                </button>
+                <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-chat-ai-image-menu" title="AI 漫画叙事生图" aria-label="AI 漫画叙事生图">
+                  <span class="wecom-chat-more-icon">${ICONS.pic}</span>
+                  <span class="wecom-chat-more-label">AI 漫画叙事生图</span>
+                </button>
                 <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-chat-refresh" title="刷新本话题" aria-label="刷新本话题">
                   <span class="wecom-chat-more-icon">${ICONS.refresh}</span>
                   <span class="wecom-chat-more-label">刷新本话题</span>
@@ -25210,12 +29878,24 @@
       const target = item?.dataset?.targetPlatform;
       closeAllPlatformDropdowns();
       if (target === "linuxdo" && !IS_LINUXDO) {
-        window.location.href = "https://linux.do/";
+        navigateWithAiSync("https://linux.do/"); // window.location.href = "https://linux.do/"
       } else if (target === "v2ex" && !IS_V2EX) {
-        window.location.href = "https://www.v2ex.com/";
+        navigateWithAiSync("https://www.v2ex.com/"); // window.location.href = "https://www.v2ex.com/"
       } else if (target === "juejin" && !IS_JUEJIN) {
-        window.location.href = "https://juejin.cn/pins";
+        navigateWithAiSync("https://juejin.cn/pins"); // window.location.href = "https://juejin.cn/pins"
       }
+      return true;
+    }
+    if (event.target.closest(".wecom-chat-ai-summary, .wecom-chat-ai-summary-menu")) {
+      consumeClick(event);
+      closeAllPlatformDropdowns();
+      triggerTopicAiSummary("summary");
+      return true;
+    }
+    if (event.target.closest(".wecom-chat-ai-image-menu")) {
+      consumeClick(event);
+      closeAllPlatformDropdowns();
+      triggerTopicAiSummary("image");
       return true;
     }
     if (event.target.closest(".wecom-chat-scroll-top")) {
@@ -26067,11 +30747,26 @@
       if (parent && parent !== post && postNumberOf(parent) < postNumberOf(post)) {
         post.reply_to_post_number = parent.post_number;
         post.reply_to_floor = parent.floor != null ? parent.floor : (parent.post_number - 1);
+        const parentName = parent.name || parent.displayName || parent.username || "";
+        const resolvedName = (parentName && !parentName.startsWith("用户_"))
+          ? parentName
+          : (ref.author || parentName);
+        const resolvedUsername = (parent.username && !parent.username.startsWith("用户_"))
+          ? parent.username
+          : (ref.author || parent.username);
         post.reply_to_user = {
-          username: parent.username,
-          name: parent.name || parent.displayName || parent.username
+          username: resolvedUsername,
+          name: resolvedName
         };
         post.is_explicit_reply = true;
+      } else if (ref.floor > 0 || ref.author) {
+        post.reply_to_post_number = ref.floor ? (ref.floor + 1) : null;
+        post.reply_to_floor = ref.floor > 0 ? ref.floor : null;
+        post.reply_to_user = ref.author ? {
+          username: ref.author,
+          name: ref.author
+        } : null;
+        post.is_explicit_reply = Boolean(ref.floor || ref.author);
       } else {
         post.reply_to_post_number = null;
         post.reply_to_floor = null;
@@ -26154,20 +30849,27 @@
 
   function replyIndicatorHtml(post) {
     const parentNum = Number(post?.reply_to_post_number) || 0;
-    if (!parentNum || parentNum === postNumberOf(post)) return "";
+    const floorNum = Number(post?.reply_to_floor) || (parentNum > 1 ? parentNum - 1 : 0);
+    if (!parentNum && !floorNum) return "";
+    if (parentNum && parentNum === postNumberOf(post)) return "";
     if (IS_V2EX) {
       if (!post.is_explicit_reply && parentNum === 1) return "";
     } else {
       if (replyReferenceHtml(post)) return "";
     }
-    const targetUser = post.reply_to_user?.name || post.reply_to_user?.username || "";
-    const targetFloor = post.reply_to_floor != null && post.reply_to_floor > 0
-      ? `#${post.reply_to_floor}`
-      : (parentNum === 1 ? "楼主" : `#${parentNum}`);
+    const refAuthor = post?.replyReference?.author || "";
+    let targetUser = post.reply_to_user?.name || post.reply_to_user?.username || "";
+    if ((!targetUser || targetUser.startsWith("用户_")) && refAuthor) {
+      targetUser = refAuthor;
+    }
+    const targetFloor = floorNum > 0
+      ? `#${floorNum}`
+      : (parentNum === 1 ? "楼主" : (parentNum > 0 ? `#${parentNum}` : ""));
     const userPart = targetUser ? `@${escapeHtml(targetUser)}` : "";
     const floorPart = targetFloor ? escapeHtml(targetFloor) : "";
-    const floorAttr = post.reply_to_floor != null ? ` data-reply-floor="${post.reply_to_floor}"` : "";
-    return `<span class="wecom-msg-reply-indicator" data-reply-post-number="${parentNum}"${floorAttr} title="跳转到引用消息 #${parentNum}">` +
+    const jumpPostNum = parentNum || (floorNum > 0 ? floorNum + 1 : 0);
+    const floorAttr = floorNum > 0 ? ` data-reply-floor="${floorNum}"` : "";
+    return `<span class="wecom-msg-reply-indicator" data-reply-post-number="${jumpPostNum}"${floorAttr} title="跳转到引用消息 #${jumpPostNum}">` +
       `回复 ${userPart ? `<span class="wecom-msg-reply-indicator-user">${userPart}</span> ` : ""}` +
       `<span class="wecom-msg-reply-indicator-floor">${floorPart}</span>` +
       `</span>`;
@@ -26863,7 +31565,7 @@
     ].filter(Boolean).join("");
     const metaHtml = metaParts ? `<span class="wecom-msg-meta">${metaParts}</span>` : "";
     return `
-      <div class="wecom-msg wecom-msg-${side}${threadClass}" data-post-number="${post.post_number}"${post.id ? ` data-post-id="${post.id}"` : ""}${post.floor != null ? ` data-floor="${post.floor}"` : ""}${threadAttr}${me ? ' data-mine="1"' : ""}>
+      <div class="wecom-msg wecom-msg-${side}${threadClass}" data-post-number="${post.post_number}"${post.id ? ` data-post-id="${post.id}"` : ""}${post.floor != null ? ` data-floor="${post.floor}"` : ""}${threadAttr} data-username="${escapeHtml(post.username || "")}"${me ? ' data-mine="1"' : ""}>
         <span class="wecom-msg-avatar" style="background:${avatarBg}"${userCardAttributes(post)}>${avatar}</span>
         <div class="wecom-msg-content">
           <div class="wecom-msg-header">
@@ -27695,6 +32397,8 @@
 
   function discourseRequire(moduleId) {
     try {
+      const pageWindow = typeof unsafeWindow !== "undefined" ? unsafeWindow : window;
+      if (typeof pageWindow.require === "function") return pageWindow.require(moduleId);
       if (typeof window.require === "function") return window.require(moduleId);
     } catch { /* module missing */ }
     return null;
@@ -27712,10 +32416,12 @@
   function getEmberOwner() {
     if (IS_V2EX || IS_JUEJIN) return null;
     try {
+      const pageWindow = typeof unsafeWindow !== "undefined" ? unsafeWindow : window;
+      if (pageWindow.Discourse?.__container__) return pageWindow.Discourse.__container__;
       if (window.Discourse?.__container__) return window.Discourse.__container__;
 
       // Ember.Namespace 反查 Discourse 应用
-      const Ember = window.Ember;
+      const Ember = pageWindow.Ember || window.Ember;
       const namespaces = Ember?.Namespace?.NAMESPACES;
       if (Array.isArray(namespaces)) {
         const app = namespaces.find((n) =>
@@ -27729,9 +32435,10 @@
         discourseRequire("discourse-common/lib/get-owner") ||
         discourseRequire("discourse/lib/get-owner");
       if (mod) {
+        const disc = pageWindow.Discourse || window.Discourse;
         const owner =
-          (typeof mod.getOwnerWithFallback === "function" && mod.getOwnerWithFallback(window.Discourse)) ||
-          (typeof mod.getOwner === "function" && mod.getOwner(window.Discourse)) ||
+          (typeof mod.getOwnerWithFallback === "function" && mod.getOwnerWithFallback(disc)) ||
+          (typeof mod.getOwner === "function" && mod.getOwner(disc)) ||
           null;
         if (owner) return owner;
       }
@@ -28048,6 +32755,7 @@
     const message = error instanceof Error ? error.message : String(error || "未知错误");
     console.error("[linuxdo-wecom] composer bridge failed", error);
     setComposeStatus(`${action}失败：${message}`, "error", true);
+    showWecomToast(`${action}失败：${message}`, "error", 4000);
   }
 
   function delay(ms) {
@@ -28239,8 +32947,19 @@
 
   function replyTargetLabel(postNumber) {
     const message = document.querySelector(`.wecom-msg[data-post-number="${postNumber}"]`);
-    const name = message?.querySelector(".wecom-msg-name")?.textContent?.trim();
-    return name ? `回复 ${name} · #${postNumber}` : `回复消息 #${postNumber}`;
+    const postObj = chatState.postsByNumber?.get(Number(postNumber));
+    let name = postObj?.username ||
+      message?.dataset?.username ||
+      message?.querySelector("[data-user-card]")?.dataset?.userCard ||
+      message?.querySelector(".wecom-msg-name")?.textContent?.trim() || "";
+    if (name.startsWith("用户_") && message?.dataset?.username && !message.dataset.username.startsWith("用户_")) {
+      name = message.dataset.username;
+    }
+    const floor = (IS_V2EX && postObj?.floor != null)
+      ? postObj.floor
+      : (IS_V2EX && message?.dataset?.floor ? Number(message.dataset.floor) : null);
+    const floorText = floor != null && floor > 0 ? `#${floor}` : (postNumber === 1 ? "楼主" : `#${postNumber}`);
+    return name ? `回复 ${name} · ${floorText}` : `回复消息 ${floorText}`;
   }
 
   function showTargetedReply(postNumber, quote = null) {
@@ -28690,7 +33409,7 @@
           await delay(600);
           appended = await pollV2exCurrentTopicOnce({ submittedReplyTo: replyTo, isAfterSubmit: true });
         }
-        if (!appended && !replyTo) {
+        if (!appended) {
           await loadTopic(chatState.topicId, true);
         }
         if (chatBody) {
@@ -28698,6 +33417,7 @@
             scrollToSubmittedReply(chatBody, 0, replyTo);
           }, 100);
         }
+        showWecomToast("回复发送成功！", "success", 2000);
         return;
       }
       let apiError = null;
@@ -28745,9 +33465,16 @@
     if (IS_V2EX && input) {
       const postObj = chatState.postsByNumber?.get(Number(postNumber));
       const message = document.querySelector(`.wecom-msg[data-post-number="${postNumber}"]`);
-      const name = postObj?.username ||
+      let name = postObj?.username ||
+        message?.dataset?.username ||
         message?.querySelector("[data-user-card]")?.dataset?.userCard ||
         message?.querySelector(".wecom-msg-name")?.textContent?.trim();
+      if ((!name || name.startsWith("用户_")) && message?.querySelector("[data-user-card]")?.dataset?.userCard) {
+        const cardUser = message.querySelector("[data-user-card]").dataset.userCard;
+        if (cardUser && !cardUser.startsWith("用户_")) {
+          name = cardUser;
+        }
+      }
       const floor = postObj?.floor != null
         ? Number(postObj.floor)
         : (Number(message?.dataset?.floor) || Math.max(0, Number(postNumber) - 1));
@@ -28964,8 +33691,30 @@
       const title = titleLink.textContent.trim();
       const avatarImg = item.querySelector("img.avatar");
       const avatar = avatarImg?.getAttribute("src") || "";
-      const authorLink = item.querySelector(".topic_info strong a, a[href^='/member/']");
-      const author = authorLink?.textContent.trim() || "";
+      let author = "";
+      const darkLink = item.querySelector("a.dark, .topic_info strong a");
+      if (darkLink && darkLink.textContent?.trim() && darkLink.textContent.trim() !== "楼主") {
+        author = darkLink.textContent.trim();
+      }
+      if (!author) {
+        const memberLinks = item.querySelectorAll("a[href^='/member/']");
+        for (const link of memberLinks) {
+          const txt = link.textContent?.trim();
+          if (txt && txt !== "楼主") {
+            author = txt;
+            break;
+          }
+          const href = link.getAttribute("href") || "";
+          const m = href.match(/\/member\/([^/?#]+)/);
+          if (m && m[1]) {
+            const raw = decodeURIComponent(m[1]).trim();
+            if (raw && raw !== "楼主") {
+              author = raw;
+              break;
+            }
+          }
+        }
+      }
       const nodeLink = item.querySelector("a.node");
       const nodeName = nodeLink?.textContent.trim() || "";
       const countLink = item.querySelector("a.count_livid, a.count_orange");
@@ -29020,8 +33769,36 @@
       if (!id) return;
       const target = parseV2exReplyTarget(rawHref);
 
-      const memberLink = cell.querySelector("a[href^='/member/']");
-      const author = memberLink?.textContent?.trim() || "";
+      let author = "";
+      const darkLink = cell.querySelector("a.dark, .fade strong a, strong a");
+      if (darkLink && darkLink.textContent?.trim() && darkLink.textContent.trim() !== "楼主") {
+        author = darkLink.textContent.trim();
+      }
+      if (!author) {
+        const memberLinks = cell.querySelectorAll("a[href^='/member/']");
+        for (const link of memberLinks) {
+          const txt = link.textContent?.trim();
+          if (txt && txt !== "楼主") {
+            author = txt;
+            break;
+          }
+          const href = link.getAttribute("href") || "";
+          const m = href.match(/\/member\/([^/?#]+)/);
+          if (m && m[1]) {
+            const raw = decodeURIComponent(m[1]).trim();
+            if (raw && raw !== "楼主") {
+              author = raw;
+              break;
+            }
+          }
+        }
+      }
+      if (!author) {
+        const avatarAlt = cell.querySelector("img.avatar")?.getAttribute("alt")?.trim();
+        if (avatarAlt && avatarAlt !== "楼主") {
+          author = avatarAlt;
+        }
+      }
       const avatar = cell.querySelector("img.avatar")?.getAttribute("src") || "";
 
       // 时间提取：优先匹配右侧 td 中的 .snow 或 .ago，若无则取 [title]
@@ -29211,15 +33988,49 @@
     const replyCells = doc.querySelectorAll("#Main .cell[id^='r_'], #Main div[id^='r_']");
     replyCells.forEach((cell, idx) => {
       const rid = Number(cell.id.replace("r_", "")) || (idx + 2);
-      const username = cell.querySelector("a.dark, a[href^='/member/']")?.textContent?.trim() || `用户_${idx + 2}`;
+      const floorEl = cell.querySelector(".no");
+      const floorNo = floorEl ? parseInt(floorEl.textContent.trim(), 10) : ((page - 1) * 100 + idx + 1);
+
+      let username = "";
+      const darkLink = cell.querySelector("a.dark");
+      if (darkLink && darkLink.textContent?.trim() && darkLink.textContent.trim() !== "楼主") {
+        username = darkLink.textContent.trim();
+      }
+      if (!username) {
+        const memberLinks = cell.querySelectorAll("a[href^='/member/']");
+        for (const link of memberLinks) {
+          const txt = link.textContent?.trim();
+          if (txt && txt !== "楼主") {
+            username = txt;
+            break;
+          }
+          const href = link.getAttribute("href") || "";
+          const m = href.match(/\/member\/([^/?#]+)/);
+          if (m && m[1]) {
+            const raw = decodeURIComponent(m[1]).trim();
+            if (raw && raw !== "楼主") {
+              username = raw;
+              break;
+            }
+          }
+        }
+      }
+      if (!username) {
+        const avatarAlt = cell.querySelector("img.avatar")?.getAttribute("alt")?.trim();
+        if (avatarAlt && avatarAlt !== "楼主") {
+          username = avatarAlt;
+        }
+      }
+      if (!username) {
+        username = `用户_${floorNo || (idx + 2)}`;
+      }
+
       const avatar = cell.querySelector("img.avatar")?.getAttribute("src") || "";
       const content = cell.querySelector(".reply_content")?.innerHTML || "";
       const timeNode = cell.querySelector(".ago, .fade");
       const timeText = timeNode?.getAttribute("title") || timeNode?.textContent?.trim() || "";
       const likesEl = cell.querySelector(".small.fade") || cell.querySelector("img[alt='❤️']")?.closest(".small, .fade, span");
       const likesCount = likesEl ? parseInt(likesEl.textContent.trim().replace(/\D/g, ""), 10) || 0 : 0;
-      const floorEl = cell.querySelector(".no");
-      const floorNo = floorEl ? parseInt(floorEl.textContent.trim(), 10) : ((page - 1) * 100 + idx + 1);
 
       posts.push({
         id: rid,
@@ -29498,27 +34309,118 @@
   }
 
   async function submitV2exReply(topicId, content) {
-    let once = document.querySelector("#Main form input[name='once'], input[name='once']")?.value;
-    if (!once) {
-      const res = await fetch(`/t/${topicId}`, { credentials: "same-origin" });
+    if (!topicId) throw new Error("缺少话题 ID，无法发送回复");
+    const tid = Number(topicId);
+
+    // 辅助函数：根据话题及上下文获取有效的发帖 once token 与表单 action
+    const resolveOnceAndAction = async (forceRemote = false) => {
+      // 1. 如果当前页面 DOM 确系本话题的回复表单，且有 once，直接使用
+      if (!forceRemote) {
+        const domForm = document.querySelector(`#Main form[action*='/t/${tid}'], form[action*='/t/${tid}']`);
+        if (domForm && topicIdFromPath(location.pathname) === tid) {
+          const domOnce = domForm.querySelector("input[name='once']")?.value?.trim();
+          if (domOnce) {
+            const act = domForm.getAttribute("action") || `/t/${tid}`;
+            return { once: domOnce, actionUrl: act.startsWith("/") ? act : "/" + act };
+          }
+        }
+
+        // 2. 如果 chatState.topicData 记录了刚解析出的 v2ex_once
+        if (chatState.topicData && Number(chatState.topicData.id) === tid && chatState.topicData.v2ex_once) {
+          const cachedOnce = chatState.topicData.v2ex_once.trim();
+          if (cachedOnce) {
+            return { once: cachedOnce, actionUrl: `/t/${tid}` };
+          }
+        }
+      }
+
+      // 3. 否则实时从服务端拉取最新的话题页面（使用 no-cache 避免命中过期 HTML）
+      const page = Number(chatState.v2exPage) || 1;
+      const fetchPath = page > 1 ? `/t/${tid}?p=${page}` : `/t/${tid}`;
+      const res = await fetch(fetchPath, { credentials: "same-origin", cache: "no-cache" });
+      if (!res.ok) throw new Error(`获取话题回复表单失败 (HTTP ${res.status})`);
+      if (res.redirected && (res.url.includes("/signin") || res.url.includes("/login"))) {
+        throw new Error("请先登录 V2EX 账号后再回复");
+      }
       const html = await res.text();
       const doc = new DOMParser().parseFromString(html, "text/html");
-      once = doc.querySelector("input[name='once']")?.value;
-    }
-    if (!once) throw new Error("未能获取 V2EX 发帖 once token，请先登录 V2EX");
-    const params = new URLSearchParams();
-    params.append("content", content);
-    params.append("once", once);
-    const postRes = await fetch(`/t/${topicId}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: params.toString(),
-      credentials: "same-origin"
-    });
-    if (!postRes.ok && postRes.status !== 302 && postRes.status !== 200) {
-      throw new Error(`回复提交失败 (HTTP ${postRes.status})`);
+      if (doc.querySelector("form[action*='signin']") || doc.querySelector(".message")?.textContent?.includes("登录")) {
+        throw new Error("请先登录 V2EX 账号后再回复");
+      }
+      const form = doc.querySelector(`#Main form[action*='/t/'], form[action*='/t/'], #Main form`);
+      const fetchedOnce = form?.querySelector("input[name='once']")?.value?.trim() || doc.querySelector("input[name='once']")?.value?.trim() || "";
+      if (!fetchedOnce) {
+        const closedMsg = doc.querySelector("#Main .topic_content, #Main")?.textContent?.includes("主题已关闭")
+          || doc.querySelector(".closed") != null;
+        if (closedMsg) throw new Error("该主题已被锁定或关闭，无法继续回复");
+        throw new Error("未能获取 V2EX 发帖 once 凭证，请先确认登录状态");
+      }
+      const act = form?.getAttribute("action") || `/t/${tid}`;
+      return { once: fetchedOnce, actionUrl: act.startsWith("/") ? act : "/" + act };
+    };
+
+    // 辅助函数：执行 POST 提交并严密校验响应结果
+    const postReply = async (once, actionUrl) => {
+      const params = new URLSearchParams();
+      params.append("content", content);
+      params.append("once", once);
+
+      const postRes = await fetch(actionUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Cache-Control": "no-cache"
+        },
+        body: params.toString(),
+        credentials: "same-origin"
+      });
+
+      if (!postRes.ok && postRes.status !== 302 && postRes.status !== 200) {
+        throw new Error(`回复提交失败 (HTTP ${postRes.status})`);
+      }
+      if (postRes.redirected && (postRes.url.includes("/signin") || postRes.url.includes("/login"))) {
+        throw new Error("登录已过期，请重新登录 V2EX");
+      }
+
+      // 深入读取响应文本，检查 V2EX 业务级错误（如 .problem / 错误提示）
+      const resText = await postRes.text();
+      const postDoc = new DOMParser().parseFromString(resText, "text/html");
+      const problemEl = postDoc.querySelector(".problem, #Main .problem");
+      if (problemEl) {
+        const errorMsg = problemEl.textContent.trim().replace(/\s+/g, " ");
+        if (errorMsg) {
+          const err = new Error(errorMsg);
+          err.isProblemError = true;
+          err.isOnceError = /once|token|过期|无效/i.test(errorMsg);
+          throw err;
+        }
+      }
+      const msgEl = postDoc.querySelector("#Main .message, .message");
+      if (msgEl && !postDoc.querySelector(".reply_content, .topic_content, #Main .cell[id^='r_']")) {
+        const errorMsg = msgEl.textContent.trim().replace(/\s+/g, " ");
+        if (errorMsg) throw new Error(errorMsg);
+      }
+
+      // 提交成功！若返回的新页面中有新的 once token，缓存以便后续连续回复
+      const nextOnce = postDoc.querySelector("input[name='once']")?.value?.trim();
+      if (nextOnce && chatState.topicData) {
+        chatState.topicData.v2ex_once = nextOnce;
+      }
+      return true;
+    };
+
+    let { once, actionUrl } = await resolveOnceAndAction(false);
+    try {
+      await postReply(once, actionUrl);
+    } catch (err) {
+      // 若是由于 once 过期/错误导致，立即无感从服务端拉取最新 once 重试一次
+      if (err.isOnceError) {
+        if (chatState.topicData) chatState.topicData.v2ex_once = null;
+        const fresh = await resolveOnceAndAction(true);
+        await postReply(fresh.once, fresh.actionUrl);
+        return;
+      }
+      throw err;
     }
   }
 
@@ -31438,6 +36340,10 @@
     closeEditDialog(true);
     closeOfficialEmojiPicker();
     closeV2exEmojiPicker();
+    closeSystemFontPicker();
+    closeWindowShortcutDialog();
+    closeAiConfigDialog();
+    closeAiSummaryDialog();
     document.documentElement.classList.remove("wecom-members-open", "wecom-composing-new", "wecom-mask-composing");
     document.querySelector(".wecom-list-panel")?.remove();
     document.querySelector(".wecom-chat-panel")?.remove();
@@ -31498,6 +36404,8 @@
       console.warn("[linuxdo-wecom] 检测到 IDEA / 飞书 / 钉钉主题脚本已启用，企业微信主题自动避让。请只保留其中一个。");
       document.documentElement.classList.remove(ROOT_CLASS, LOCK_CLASS, "wecom-topic-open", "wecom-dark");
       document.body?.classList.remove("wecom-dark");
+      document.getElementById(CUSTOM_FONT_STYLE_ID)?.remove();
+      document.documentElement.style.removeProperty("--wc-font");
       removePanels();
       return;
     }
@@ -31507,12 +36415,15 @@
 
     if (getViewMode() === "native") {
       document.documentElement.classList.remove(ROOT_CLASS, LOCK_CLASS, "wecom-topic-open");
+      document.getElementById(CUSTOM_FONT_STYLE_ID)?.remove();
+      document.documentElement.style.removeProperty("--wc-font");
       removePanels();
       ensureModeFab();
       return;
     }
 
     injectStyle();
+    applyCustomFont();
     document.documentElement.classList.add(ROOT_CLASS);
     document.documentElement.classList.toggle("wecom-nav2-open", isNav2Open());
     document.documentElement.classList.toggle("wecom-hide-boost", !isBoostEnabled());
@@ -32106,6 +37017,7 @@
       setTimeout(bootstrap, 0);
       return;
     }
+    consumeUniversalAiSync();
     if (IS_V2EX) {
       if (location.pathname === "/new" || location.pathname.startsWith("/new/")) {
         document.documentElement.classList.add("wecom-v2ex-new-page");
@@ -32120,6 +37032,7 @@
     if (!otherThemeActive()) {
       // document-start 尽早应用用户选择，减少主题闪烁。
       applySiteColorMode();
+      applyCustomFont();
     }
     if (getViewMode() !== "native" && !otherThemeActive()) {
       document.documentElement.classList.add(ROOT_CLASS);
@@ -32138,6 +37051,7 @@
     if (!window.__wecomFaviconVisibilityBound) {
       window.__wecomFaviconVisibilityBound = true;
       window.addEventListener("focus", () => {
+        consumeUniversalAiSync();
         if (getViewMode() !== "native" && !otherThemeActive()) {
           makeFavicon();
           enforceBlankTitle();
@@ -32145,26 +37059,29 @@
         }
       });
       document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "visible" && getViewMode() !== "native" && !otherThemeActive()) {
-          makeFavicon();
-          enforceBlankTitle();
-          refreshRelativeTimes();
-          if (IS_V2EX) {
-            pollV2exNotificationsOnce();
-            if (chatState.topicId && Date.now() - v2exLastPollTime >= 5000) {
-              pollV2exCurrentTopicOnce();
+        if (document.visibilityState === "visible") {
+          consumeUniversalAiSync();
+          if (getViewMode() !== "native" && !otherThemeActive()) {
+            makeFavicon();
+            enforceBlankTitle();
+            refreshRelativeTimes();
+            if (IS_V2EX) {
+              pollV2exNotificationsOnce();
+              if (chatState.topicId && Date.now() - v2exLastPollTime >= 5000) {
+                pollV2exCurrentTopicOnce();
+              }
             }
-          }
-          if (IS_JUEJIN) {
-            if (chatState.topicId && Date.now() - juejinLastPollTime >= 5000) {
-              pollJuejinCurrentTopicOnce();
+            if (IS_JUEJIN) {
+              if (chatState.topicId && Date.now() - juejinLastPollTime >= 5000) {
+                pollJuejinCurrentTopicOnce();
+              }
             }
           }
         }
       });
     }
 
-    const WECOM_UI_SEL = ".wecom-toast-container, .wecom-confirm-dialog, .wecom-connect-overlay, .wecom-connect-modal, .wecom-base64-insert-dialog, .wecom-v2ex-user-popover, .wecom-v2ex-member-card, .wecom-juejin-member-card, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-rail-resizer, .wecom-list-resizer, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
+    const WECOM_UI_SEL = ".wecom-toast-container, .wecom-confirm-dialog, .wecom-font-picker-dialog, .wecom-shortcut-dialog, .wecom-ai-config-dialog, .wecom-ai-summary-dialog, .wecom-connect-overlay, .wecom-connect-modal, .wecom-base64-insert-dialog, .wecom-v2ex-user-popover, .wecom-v2ex-member-card, .wecom-juejin-member-card, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-rail-resizer, .wecom-list-resizer, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
     const NATIVE_BRIDGE_SEL = "#reply-control, .dialog-holder, .dialog-container, #discourse-modal-container, .d-modal, .bootbox, .autocomplete, .autocomplete-container, .d-editor-popup, [data-identifier='emoji-picker'], .tag-chooser";
 
     function isWecomOrBridgeNode(node) {
