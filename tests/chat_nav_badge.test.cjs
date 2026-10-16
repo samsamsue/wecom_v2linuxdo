@@ -1194,7 +1194,8 @@ test("Linux DO notification menu teardown, route synchronization, and topic navi
   );
   assert.ok(
     scriptContent.includes('navigateInApp(IS_V2EX ? "/?tab=all" : "/latest");') ||
-    scriptContent.includes('navigateInApp(IS_V2EX ? "/?tab=all" : (IS_JUEJIN ? "/pins/recommended" : "/latest"));'),
+    scriptContent.includes('navigateInApp(IS_V2EX ? "/?tab=all" : (IS_JUEJIN ? "/pins/recommended" : "/latest"));') ||
+    scriptContent.includes('navigateInApp(IS_ZHIHU ? "/hot" : (IS_V2EX ? "/?tab=all" : (IS_JUEJIN ? "/pins/recommended" : "/latest")));'),
     "handleChatNavClick must route to latest when clicking from unsupported path"
   );
 
@@ -2828,7 +2829,8 @@ test("Topic opening suppresses Discourse page loading indicator and timeline pro
 
   // 4. Verify runtime invocations on topic navigation and DOM mutation
   assert.ok(
-    scriptContent.includes("discourseRouteTo(url) {\n    if (IS_V2EX || !url) return false;\n    removeLoadingSliderDom();"),
+    scriptContent.includes("discourseRouteTo(url) {\n    if (IS_V2EX || !url) return false;\n    removeLoadingSliderDom();") ||
+    scriptContent.includes("discourseRouteTo(url) {\n    if (IS_V2EX || IS_JUEJIN || IS_ZHIHU || !url) return false;\n    removeLoadingSliderDom();"),
     "discourseRouteTo must invoke removeLoadingSliderDom"
   );
   assert.ok(
@@ -3548,7 +3550,8 @@ test("V2EX built-in emoji picker integrates with composer, supports tabs, Unicod
 
   // 3. Composer tool action branches for IS_V2EX and graceful fallback
   assert.ok(
-    scriptContent.includes("if (action === \"emoji\") {\n      if (IS_V2EX || IS_JUEJIN) {\n        toggleV2exEmojiPicker(button);\n        return;\n      }\n      showOfficialEmojiPicker(button).catch(() => {\n        toggleV2exEmojiPicker(button);\n      });\n      return;\n    }"),
+    scriptContent.includes("if (action === \"emoji\") {\n      if (IS_V2EX || IS_JUEJIN) {\n        toggleV2exEmojiPicker(button);\n        return;\n      }\n      showOfficialEmojiPicker(button).catch(() => {\n        toggleV2exEmojiPicker(button);\n      });\n      return;\n    }") ||
+    scriptContent.includes("if (action === \"emoji\") {\n      if (IS_V2EX || IS_JUEJIN || IS_ZHIHU) {\n        toggleV2exEmojiPicker(button);\n        return;\n      }\n      showOfficialEmojiPicker(button).catch(() => {\n        toggleV2exEmojiPicker(button);\n      });\n      return;\n    }"),
     "handleComposerToolClick must branch to toggleV2exEmojiPicker when IS_V2EX or IS_JUEJIN is true, and fall back on error"
   );
 
@@ -4560,7 +4563,8 @@ test("Linux DO left rail navigation displays Connect instead of calendar, and cl
 
   // 3. RAIL_DECO_ITEMS differentiates Linux DO (Connect) and V2EX/Juejin (通知)
   assert.ok(
-    scriptContent.includes('(IS_V2EX || IS_JUEJIN) ? { key: "notif", icon: "bell", label: "通知" } : { key: "connect", icon: "connect", label: "Connect" }'),
+    scriptContent.includes('(IS_V2EX || IS_JUEJIN) ? { key: "notif", icon: "bell", label: "通知" } : { key: "connect", icon: "connect", label: "Connect" }') ||
+    scriptContent.includes('(IS_V2EX || IS_JUEJIN || IS_ZHIHU) ? { key: "notif", icon: "bell", label: "通知" } : { key: "connect", icon: "connect", label: "Connect" }'),
     "RAIL_DECO_ITEMS must show Connect on Linux DO and 通知 on V2EX/Juejin"
   );
 
@@ -5591,7 +5595,8 @@ test("V2EX notification navigation, URL pushState synchronization, MutationObser
 test("V2EX left rail replaces schedule (cal) with notifications (notif), binds click, and synchronizes badges and active status (v0.7.43)", () => {
   // 1. Static code assertions
   assert.ok(
-    scriptContent.includes('(IS_V2EX || IS_JUEJIN) ? { key: "notif", icon: "bell", label: "通知" } : { key: "connect", icon: "connect", label: "Connect" }'),
+    scriptContent.includes('(IS_V2EX || IS_JUEJIN) ? { key: "notif", icon: "bell", label: "通知" } : { key: "connect", icon: "connect", label: "Connect" }') ||
+    scriptContent.includes('(IS_V2EX || IS_JUEJIN || IS_ZHIHU) ? { key: "notif", icon: "bell", label: "通知" } : { key: "connect", icon: "connect", label: "Connect" }'),
     "must configure notif with bell icon and '通知' label on V2EX and Juejin"
   );
   assert.ok(
@@ -6664,7 +6669,8 @@ test("Test 91: Discourse SiteSettings deprecation warning prevention and Mutatio
   // 1. 验证 disablePageLoadingIndicator 不直接触碰 Discourse 2.8+ 弃用 getter 并具备禁用状态缓存
   assert.ok(
     scriptContent.includes("let pageLoadingIndicatorDisabled = false;") &&
-    scriptContent.includes("if (IS_V2EX || pageLoadingIndicatorDisabled) return;"),
+    (scriptContent.includes("if (IS_V2EX || pageLoadingIndicatorDisabled) return;") ||
+     scriptContent.includes("if (IS_V2EX || IS_JUEJIN || IS_ZHIHU || pageLoadingIndicatorDisabled) return;")),
     "disablePageLoadingIndicator must cache completion state to avoid redundant calls"
   );
   assert.ok(
@@ -6910,7 +6916,7 @@ test("Test 97: Juejin Pins (掘金 · 沸点) platform support, 64-bit ID string
   assert.ok(scriptContent.includes("// @match        https://juejin.cn/*"), "metadata must declare @match https for juejin.cn");
   assert.ok(scriptContent.includes("// @connect      api.juejin.cn"), "metadata must declare @connect api.juejin.cn");
   assert.ok(scriptContent.includes("const IS_JUEJIN = /(?:^|\\.)juejin\\.cn$/i.test(CURRENT_HOST);"), "must define IS_JUEJIN regex");
-  assert.ok(scriptContent.includes('const CURRENT_PLATFORM = IS_JUEJIN ? "juejin" : (IS_V2EX ? "v2ex" : "linuxdo");'), "must include juejin in CURRENT_PLATFORM");
+  assert.ok(scriptContent.includes('IS_JUEJIN ? "juejin" : (IS_V2EX ? "v2ex" : "linuxdo")'), "must include juejin in CURRENT_PLATFORM");
 
   // Host regex simulation
   const juejinRegex = /(?:^|\.)juejin\.cn$/i;
@@ -6966,7 +6972,7 @@ test("Test 97: Juejin Pins (掘金 · 沸点) platform support, 64-bit ID string
   assert.ok(scriptContent.includes("async function submitJuejinComment("), "must define submitJuejinComment");
 
   // 5. UI integrations
-  assert.ok(scriptContent.includes('const searchPlaceholder = IS_JUEJIN ? "搜索掘金沸点" :'), "search placeholder for Juejin");
+  assert.ok(scriptContent.includes('IS_JUEJIN ? "搜索掘金沸点" :'), "search placeholder for Juejin");
   assert.ok(scriptContent.includes('data-target-platform="juejin"'), "platform switcher includes juejin option");
   assert.ok(scriptContent.includes('window.location.href = "https://juejin.cn/pins"'), "platform switcher redirects to juejin pins");
   assert.ok(scriptContent.includes('endpoint = isLiked ? "/interact_api/v1/digg/cancel" : "/interact_api/v1/digg/save"'), "toggleLike hooks juejin digg save/cancel");
@@ -7172,7 +7178,8 @@ test("Test 100: Juejin user profile card popup, metrics, follow action, and dism
 test("Test 101: Juejin UI deduplication, publish modal, notification routing, and redundant feature stripping (v0.7.70)", () => {
   // 1. Redundant feature stripping: Connect removed from Juejin
   assert.ok(
-    scriptContent.includes('(IS_V2EX || IS_JUEJIN) ? { key: "notif", icon: "bell", label: "通知" } : { key: "connect", icon: "connect", label: "Connect" }'),
+    scriptContent.includes('(IS_V2EX || IS_JUEJIN) ? { key: "notif", icon: "bell", label: "通知" } : { key: "connect", icon: "connect", label: "Connect" }') ||
+    scriptContent.includes('(IS_V2EX || IS_JUEJIN || IS_ZHIHU) ? { key: "notif", icon: "bell", label: "通知" } : { key: "connect", icon: "connect", label: "Connect" }'),
     "Juejin must not show Connect on rail"
   );
   assert.ok(
@@ -7195,17 +7202,20 @@ test("Test 101: Juejin UI deduplication, publish modal, notification routing, an
     "wecom-open-pin-web click must open current pin on juejin.cn"
   );
   assert.ok(
-    scriptContent.includes("if (IS_JUEJIN) return true;"),
+    scriptContent.includes("if (IS_JUEJIN) return true;") ||
+    scriptContent.includes("if (IS_JUEJIN || IS_ZHIHU) return true;"),
     "wecom-topic-bookmark click must guard against Juejin"
   );
 
   // 3. Avoid 200px gap from setNav2Open
   assert.ok(
-    scriptContent.includes("if (IS_JUEJIN) {\n      setListNavOpen(open);\n      return;\n    }"),
+    scriptContent.includes("if (IS_JUEJIN) {\n      setListNavOpen(open);\n      return;\n    }") ||
+    scriptContent.includes("if (IS_JUEJIN || IS_ZHIHU) {\n      setListNavOpen(open);\n      return;\n    }"),
     "setNav2Open must delegate to setListNavOpen on Juejin"
   );
   assert.ok(
-    scriptContent.includes("if (IS_JUEJIN) return false;\n    try { return localStorage.getItem(NAV2_KEY)"),
+    scriptContent.includes("if (IS_JUEJIN) return false;\n    try { return localStorage.getItem(NAV2_KEY)") ||
+    scriptContent.includes("if (IS_JUEJIN || IS_ZHIHU) return false;\n    try { return localStorage.getItem(NAV2_KEY)"),
     "isNav2Open must return false on Juejin"
   );
 
@@ -7235,13 +7245,15 @@ test("Test 101: Juejin UI deduplication, publish modal, notification routing, an
 
   // 6. Direct built-in emoji picker on Juejin
   assert.ok(
-    scriptContent.includes("if (IS_V2EX || IS_JUEJIN) {\n        toggleV2exEmojiPicker(button);\n        return;\n      }"),
+    scriptContent.includes("if (IS_V2EX || IS_JUEJIN) {\n        toggleV2exEmojiPicker(button);\n        return;\n      }") ||
+    scriptContent.includes("if (IS_V2EX || IS_JUEJIN || IS_ZHIHU) {\n        toggleV2exEmojiPicker(button);\n        return;\n      }"),
     "composer emoji picker must directly invoke built-in picker on Juejin"
   );
 
   // 7. getEmberOwner early return
   assert.ok(
-    scriptContent.includes("function getEmberOwner() {\n    if (IS_V2EX || IS_JUEJIN) return null;"),
+    scriptContent.includes("function getEmberOwner() {\n    if (IS_V2EX || IS_JUEJIN) return null;") ||
+    scriptContent.includes("function getEmberOwner() {\n    if (IS_V2EX || IS_JUEJIN || IS_ZHIHU) return null;"),
     "getEmberOwner must return null early on V2EX and Juejin"
   );
 
@@ -10623,14 +10635,801 @@ test("Test 124: Floating message action toolbar does not block username/avatar c
   );
 });
 
+test("Test 125: AI comic generation layout modes (dynamic_asym, narrative_multi, splash_single, vertical_strip), anti-rigid-grid prompt rules, and dialog layout chips selector", () => {
+  // 1. AI_IMAGE_LAYOUTS constant definitions
+  assert.ok(
+    scriptContent.includes("const AI_IMAGE_LAYOUTS = Object.freeze({"),
+    "must define AI_IMAGE_LAYOUTS constant"
+  );
+  assert.ok(
+    scriptContent.includes("dynamic_asym:") &&
+    scriptContent.includes("narrative_multi:") &&
+    scriptContent.includes("splash_single:") &&
+    scriptContent.includes("vertical_strip:"),
+    "must provide dynamic_asym, narrative_multi, splash_single, and vertical_strip layouts"
+  );
 
+  // 2. Anti-rigid-grid and border-breaking prompt rules
+  assert.ok(
+    scriptContent.includes("严禁死板对称等宽田字网格或方块棋盘格") ||
+    scriptContent.includes("严禁死板等宽的 2x2 对称田字网格或棋盘格"),
+    "must include explicit anti-rigid-grid negative prompt instruction"
+  );
+  assert.ok(
+    scriptContent.includes("border-breaking") ||
+    scriptContent.includes("破格外显"),
+    "must include border-breaking / dynamic visual impact rules"
+  );
 
+  // 3. CSS for layout chips selector
+  assert.ok(
+    scriptContent.includes(".wecom-ai-img-layout-chips"),
+    "must define .wecom-ai-img-layout-chips in CSS"
+  );
+  assert.ok(
+    scriptContent.includes("grid-template-columns: repeat(2, 1fr) !important;"),
+    "layout chips must use 2-column grid layout for clear option presentation"
+  );
 
+  // 4. generateComicVisualPrompt layout integration
+  assert.ok(
+    scriptContent.includes("const layoutKey = options.layoutKey || \"dynamic_asym\";"),
+    "generateComicVisualPrompt must default to dynamic_asym layout"
+  );
+  assert.ok(
+    scriptContent.includes("【选定分镜版式结构】：${layoutDef.name}"),
+    "generateComicVisualPrompt promptRequest must inject selected layout definition"
+  );
 
+  // 5. openAiSummaryDialog UI and cache integration
+  assert.ok(
+    scriptContent.includes("topicCache?.imageLayout || \"dynamic_asym\""),
+    "openAiSummaryDialog must restore or default currentImgLayout to dynamic_asym"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-ai-img-layout-chips .wecom-ai-style-chip"),
+    "openAiSummaryDialog click handler must support switching image layout chips"
+  );
+  assert.ok(
+    scriptContent.includes("imageLayout: currentImgLayout"),
+    "runImageGeneration must cache imageLayout in topic cache"
+  );
 
+  // 6. Functional simulation: prompt building with different layouts
+  function simBuildPrompt(topicInfo, options = {}) {
+    const layoutKey = options.layoutKey || "dynamic_asym";
+    const layouts = {
+      dynamic_asym: { name: "动感非对称", antiGrid: true },
+      narrative_multi: { name: "连贯叙事多格", antiGrid: false },
+      splash_single: { name: "单幅高光大画", antiGrid: true },
+      vertical_strip: { name: "垂直流式长漫", antiGrid: true }
+    };
+    const layout = layouts[layoutKey] || layouts.dynamic_asym;
+    const rule = layoutKey === "splash_single"
+      ? "禁止任何画框分割线条，单张宏大全景大画"
+      : "严禁生成死板等宽的 2x2 对称田字网格或棋盘格！采用主副分镜大小强烈错落对比";
+    return {
+      layoutName: layout.name,
+      antiGridRule: rule
+    };
+  }
 
+  const defaultPrompt = simBuildPrompt({ title: "测试帖子" });
+  assert.strictEqual(defaultPrompt.layoutName, "动感非对称");
+  assert.ok(defaultPrompt.antiGridRule.includes("严禁生成死板等宽的 2x2 对称田字网格"));
 
+  const splashPrompt = simBuildPrompt({ title: "测试帖子" }, { layoutKey: "splash_single" });
+  assert.strictEqual(splashPrompt.layoutName, "单幅高光大画");
+  assert.ok(splashPrompt.antiGridRule.includes("禁止任何画框分割线条"));
+});
 
+test("Test 126: Chat scrollbar scrolling prevents spurious blue outline box on bubbles (outline: none, scroll-clear, and loaded-topic guard)", () => {
+  // 1. RAW_CSS must enforce outline: none !important on bubbles, chat body, and focus-visible states
+  assert.ok(
+    scriptContent.includes(".wecom-msg-bubble:focus-visible") &&
+    scriptContent.includes(".wecom-chat-body:focus") &&
+    scriptContent.includes("outline: none !important;"),
+    "bubbles and chat body must suppress default browser focus outline ring"
+  );
 
+  // 2. Chat body scroll listener must immediately dismiss any active reply target highlight
+  assert.ok(
+    scriptContent.includes("highlightedReplyMessage.classList.remove(\"is-reply-target\");") &&
+    scriptContent.includes("highlightedReplyMessage = null;"),
+    "chatBody onscroll must immediately clear any active is-reply-target highlight"
+  );
+
+  // 3. scrollChatToPost must only add is-reply-target when options.highlight is explicitly true
+  assert.ok(
+    scriptContent.includes("function scrollChatToPost(body, postNumber, options = {})") &&
+    scriptContent.includes("if (options.highlight === true) {"),
+    "scrollChatToPost must only highlight when options.highlight === true"
+  );
+
+  // 4. keepChatAtPost image stabilizer ticks must not re-trigger highlighting
+  assert.ok(
+    scriptContent.includes("const initialHighlight = Boolean(options?.highlight);") &&
+    scriptContent.includes("pin(initialHighlight);") &&
+    scriptContent.includes("() => pin(false)"),
+    "keepChatAtPost must only pass highlight on initial pin and false on stabilizer ticks"
+  );
+
+  // 5. _applyTheme must guard against re-invoking loadTopic when topic is already rendered and user is browsing
+  assert.ok(
+    scriptContent.includes("isSameTopicLoaded && !chatState.loading && chatState.renderedLastIdx >= 0"),
+    "_applyTheme must not repeatedly invoke loadTopic while reading or scrolling"
+  );
+
+  // 6. loadTopic must abort auto-jump if user is currently scrolling
+  assert.ok(
+    scriptContent.includes("initialBody.classList.contains(\"is-scrolling\") && !optionPost"),
+    "loadTopic must not jump or highlight if user is actively scrolling"
+  );
+
+  // 7. Functional simulation of scrollChatToPost highlight guard
+  let highlightCalled = false;
+  function simScrollChatToPost(postNumber, options = {}) {
+    if (options.highlight === true) {
+      highlightCalled = true;
+    }
+  }
+
+  // Normal scroll / anchor stabilization tick: highlight must remain false
+  simScrollChatToPost(10, { highlight: false });
+  assert.strictEqual(highlightCalled, false, "scrolling must not trigger bubble highlight");
+
+  simScrollChatToPost(10);
+  assert.strictEqual(highlightCalled, false, "default scrollChatToPost must not highlight");
+
+  // Explicit jump request: highlight triggered
+  simScrollChatToPost(10, { highlight: true });
+  assert.strictEqual(highlightCalled, true, "explicit jump request must trigger highlight");
+});
+
+test("Test 127: AI Image Model fetch strict filtering (no default append, no text models) and AI Dialog minimization / float pill background processing", () => {
+  // 1. fetchAiImageModels must strictly return fetched image models without appending defaults or unrelated text models
+  assert.ok(
+    scriptContent.includes("async function fetchAiImageModels(provider, apiKey, baseUrl)"),
+    "must define fetchAiImageModels helper"
+  );
+  assert.ok(
+    !scriptContent.includes("combined.push(d)") && !scriptContent.includes("combined.push(o)"),
+    "fetchAiImageModels must not append hardcoded default models or other text models to fetched list"
+  );
+  assert.ok(
+    scriptContent.includes("imgModels.length ? imgModels : modelIds"),
+    "fetchAiImageModels must return exact matched image models or raw fetched models without fake append"
+  );
+
+  // 2. Functional model filter verification
+  const imgRegex = /dall-?e|flux|diffusion|sdxl|stable-diffusion|midjourney|mj|recraft|imagen|image|kling|cogview|kolors|wanx|sora/i;
+  const apiModels = [
+    "gpt-4o",
+    "gpt-4o-mini",
+    "dall-e-3",
+    "claude-3-5-sonnet-20241022",
+    "deepseek-chat",
+    "black-forest-labs/FLUX.1-schnell",
+    "text-embedding-3-small"
+  ];
+  const filtered = apiModels.filter((m) => imgRegex.test(m));
+  assert.deepStrictEqual(filtered, ["dall-e-3", "black-forest-labs/FLUX.1-schnell"], "must only retain genuine image models");
+
+  // 3. AI Dialog Minimize & Floating Pill UI Elements
+  assert.ok(
+    scriptContent.includes(".wecom-ai-minimize") &&
+    scriptContent.includes(".wecom-ai-head-actions") &&
+    scriptContent.includes(".wecom-ai-float-pill") &&
+    scriptContent.includes(".wecom-ai-float-pill-dot") &&
+    scriptContent.includes(".wecom-ai-float-pill-btn-restore") &&
+    scriptContent.includes(".wecom-ai-float-pill-btn-close"),
+    "RAW_CSS must define minimize button and floating mini-pill widget styles"
+  );
+
+  // 4. Lifecycle helper functions
+  assert.ok(
+    scriptContent.includes("function minimizeAiSummaryDialog") &&
+    scriptContent.includes("function restoreAiSummaryDialog") &&
+    scriptContent.includes("function updateAiFloatPill") &&
+    scriptContent.includes("function removeAiFloatPill"),
+    "must define minimizeAiSummaryDialog, restoreAiSummaryDialog, and float pill helpers"
+  );
+
+  // 5. Safe Close Behavior: auto-minimize when actively running
+  assert.ok(
+    scriptContent.includes("const isRunning = Boolean(activeSummaryAbort || activeImageAbort);") &&
+    scriptContent.includes("if (isRunning && !forceAbort) {") &&
+    scriptContent.includes("minimizeAiSummaryDialog();"),
+    "closeAiSummaryDialog must auto-minimize to prevent task abortion on accidental close"
+  );
+
+  // 6. Image persistence to cloud host (Imgur / CDN) and LocalStorage quota protection
+  assert.ok(
+    scriptContent.includes("async function persistAiComicImage(rawUrl)") &&
+    scriptContent.includes("async function uploadGeneratedImageToImgur(rawUrl)"),
+    "must define persistAiComicImage and uploadGeneratedImageToImgur helpers"
+  );
+  assert.ok(
+    scriptContent.includes("permanentUrl = await persistAiComicImage(finalUrl);"),
+    "runImageGeneration must upload image to cloud host before caching to prevent quota overflow and link expiration"
+  );
+  assert.ok(
+    scriptContent.includes("pruneAndSave") &&
+    scriptContent.includes("localStorage quota exceeded, pruning old base64 images"),
+    "saveTopicAiCache must handle quota exceeded errors and prune legacy base64 images"
+  );
+
+  // 7. Timeout extension and elapsed progress ticker for AI generation
+  assert.ok(
+    scriptContent.includes("options.timeout || 180000") &&
+    scriptContent.includes("options.timeout || 300000"),
+    "safeApiFetch and callAiImageApi must use extended timeout (180s fallback, 300s for image generation)"
+  );
+  assert.ok(
+    scriptContent.includes("已耗时") &&
+    scriptContent.includes("可最小化至后台"),
+    "runImageGeneration must show real-time elapsed seconds ticker and remind user of background minimization"
+  );
+});
+
+test("Test 128: Cloudflare challenge popup dual-ended auto-close mechanism (popup self-close & opener active probe / event listener)", () => {
+  // 1. Definition of CF popup detection and challenge active helpers
+  assert.ok(
+    scriptContent.includes("function isCfPopupWindow()"),
+    "must define isCfPopupWindow helper"
+  );
+  assert.ok(
+    scriptContent.includes("function isCfChallengeActive()"),
+    "must define isCfChallengeActive helper"
+  );
+  assert.ok(
+    scriptContent.includes("function setupCfPopupAutoClose()"),
+    "must define setupCfPopupAutoClose helper"
+  );
+
+  // 2. Popup window identification and parameter markers
+  assert.ok(
+    scriptContent.includes('window.name === "wecom_native_cf_popup"') &&
+    scriptContent.includes('popupUrl.searchParams.set("wecom_cf_popup", "1")'),
+    "openNativePopup must mark popup with window.name and wecom_cf_popup=1 query parameter"
+  );
+
+  // 3. Popup window self-closing and notification to parent window
+  assert.ok(
+    scriptContent.includes('window.opener.postMessage({ type: "WECOM_CF_PASSED" }') &&
+    scriptContent.includes('localStorage.setItem("wecom_cf_passed_at"') &&
+    scriptContent.includes("window.close()"),
+    "setupCfPopupAutoClose must notify parent via postMessage and storage event, then call window.close()"
+  );
+
+  // 4. Main window active monitoring and dual-ended auto-close
+  assert.ok(
+    scriptContent.includes('event.data?.type === "WECOM_CF_PASSED"') &&
+    scriptContent.includes('event.key === "wecom_cf_passed_at"') &&
+    scriptContent.includes("win.close()"),
+    "openNativePopup in main window must listen for WECOM_CF_PASSED and storage event to close win"
+  );
+  assert.ok(
+    scriptContent.includes("fetch(probePath") &&
+    scriptContent.includes('finishAndReload("passed")'),
+    "openNativePopup must actively probe API in background and auto-close popup window when 200 OK received"
+  );
+
+  // 5. Bootstrap invocation
+  assert.ok(
+    scriptContent.includes("if (isCfPopupWindow()) {") &&
+    scriptContent.includes("setupCfPopupAutoClose();"),
+    "bootstrap must invoke setupCfPopupAutoClose if isCfPopupWindow is true"
+  );
+
+  // 6. Functional simulation of isCfChallengeActive
+  function simIsCfActive(title, docElements) {
+    if (/Just a moment\.\.\.|Cloudflare|Attention Required!/i.test(title || "")) return true;
+    if (docElements.includes("challenge-stage") ||
+        docElements.includes("challenge-running") ||
+        docElements.includes("cf-turnstile-wrapper") ||
+        docElements.includes("cf-wrapper")) {
+      return true;
+    }
+    return false;
+  }
+
+  // Active challenges
+  assert.equal(simIsCfActive("Just a moment...", []), true, "Just a moment title must indicate active CF challenge");
+  assert.equal(simIsCfActive("Attention Required! | Cloudflare", []), true, "Cloudflare title must indicate active challenge");
+  assert.equal(simIsCfActive("LINUX DO", ["challenge-stage"]), true, "challenge-stage element must indicate active challenge");
+  assert.equal(simIsCfActive("LINUX DO", ["cf-turnstile-wrapper"]), true, "cf-turnstile-wrapper must indicate active challenge");
+
+  // Passed / normal Discourse
+  assert.equal(simIsCfActive("话题讨论 - LINUX DO", ["main-outlet", "topic-post"]), false, "normal Discourse page must indicate challenge passed");
+});
+
+test("Test 129: AI Summary & Comic Generation History entry points (dialog tabs, chat header dropdown menu, left rail fallback), caching, filtering, search, and action controls", () => {
+  // 1. Verify CSS styles for AI History pane in linuxdo-wecom.user.js
+  assert.ok(scriptContent.includes(".wecom-ai-history-pane"), "must include .wecom-ai-history-pane CSS");
+  assert.ok(scriptContent.includes(".wecom-ai-history-toolbar"), "must include .wecom-ai-history-toolbar CSS");
+  assert.ok(scriptContent.includes(".wecom-ai-history-filter-chips"), "must include .wecom-ai-history-filter-chips CSS");
+  assert.ok(scriptContent.includes(".wecom-ai-history-search-input"), "must include .wecom-ai-history-search-input CSS");
+  assert.ok(scriptContent.includes(".wecom-ai-history-list"), "must include .wecom-ai-history-list CSS");
+  assert.ok(scriptContent.includes(".wecom-ai-history-card"), "must include .wecom-ai-history-card CSS");
+  assert.ok(scriptContent.includes(".wecom-ai-history-thumb"), "must include .wecom-ai-history-thumb CSS");
+  assert.ok(scriptContent.includes(".wecom-ai-history-summary-snip"), "must include .wecom-ai-history-summary-snip CSS");
+  assert.ok(scriptContent.includes(".wecom-ai-history-card-actions"), "must include .wecom-ai-history-card-actions CSS");
+  assert.ok(scriptContent.includes(".wecom-ai-history-empty"), "must include .wecom-ai-history-empty CSS");
+
+  // 2. Verify Storage & Helper functions in script
+  assert.ok(scriptContent.includes("function getAllAiTopicCaches()"), "must define getAllAiTopicCaches");
+  assert.ok(scriptContent.includes("function deleteTopicAiCache("), "must define deleteTopicAiCache");
+  assert.ok(scriptContent.includes("function clearAllAiTopicCaches()"), "must define clearAllAiTopicCaches");
+  assert.ok(scriptContent.includes("function formatAiCacheTime("), "must define formatAiCacheTime");
+  assert.ok(scriptContent.includes("function openAiHistoryDialog()"), "must define openAiHistoryDialog");
+
+  // 3. Verify Dialog template tab & pane structure
+  assert.ok(scriptContent.includes('data-tab="history">🕒 历史记录</button>'), "dialog must include 🕒 历史记录 tab button");
+  assert.ok(scriptContent.includes('class="wecom-ai-history-pane"'), "dialog must include .wecom-ai-history-pane container");
+  assert.ok(scriptContent.includes('data-history-filter="all"'), "toolbar must include all filter chip");
+  assert.ok(scriptContent.includes('data-history-filter="summary"'), "toolbar must include summary filter chip");
+  assert.ok(scriptContent.includes('data-history-filter="image"'), "toolbar must include image filter chip");
+  assert.ok(scriptContent.includes('wecom-ai-history-search-input'), "toolbar must include search input");
+  assert.ok(scriptContent.includes('wecom-ai-btn-clear-all-history'), "dialog foot must include clear all history button");
+
+  // 4. Verify Chat Header Dropdown menu entry & click handler
+  assert.ok(scriptContent.includes("wecom-chat-ai-history-menu"), "chat header dropdown must include wecom-chat-ai-history-menu");
+  assert.ok(
+    scriptContent.includes('event.target.closest(".wecom-chat-ai-history-menu")') &&
+    scriptContent.includes("openAiHistoryDialog()"),
+    "handleChatHeaderClick must open AI history dialog when wecom-chat-ai-history-menu clicked"
+  );
+
+  // 5. Verify triggerTopicAiSummary fallback & history redirection
+  assert.ok(
+    scriptContent.includes('if (initialTab === "history") {') &&
+    scriptContent.includes("openAiHistoryDialog();"),
+    "triggerTopicAiSummary must open history dialog when initialTab === history"
+  );
+  assert.ok(
+    scriptContent.includes("openAiHistoryDialog()") &&
+    scriptContent.includes("未检测到当前话题"),
+    "triggerTopicAiSummary must redirect to AI history dialog when no active topic is loaded"
+  );
+
+  // 6. Functional simulation of AI History cache, filter, search, and time format
+  const mockStorage = {};
+  const MOCK_AI_CACHE_KEY = "test-ai-topic-cache";
+
+  function simSaveTopicAiCache(topicId, data) {
+    const raw = mockStorage[MOCK_AI_CACHE_KEY];
+    const map = raw ? JSON.parse(raw) : {};
+    map[String(topicId)] = {
+      ...(map[String(topicId)] || {}),
+      updatedAt: data.updatedAt || Date.now(),
+      ...data
+    };
+    mockStorage[MOCK_AI_CACHE_KEY] = JSON.stringify(map);
+  }
+
+  function simGetAllAiTopicCaches() {
+    const raw = mockStorage[MOCK_AI_CACHE_KEY];
+    if (!raw) return [];
+    const map = JSON.parse(raw);
+    const list = Object.keys(map).map((k) => ({
+      topicId: k,
+      ...map[k]
+    }));
+    list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    return list;
+  }
+
+  function simDeleteTopicAiCache(topicId) {
+    const raw = mockStorage[MOCK_AI_CACHE_KEY];
+    if (!raw) return;
+    const map = JSON.parse(raw);
+    delete map[String(topicId)];
+    mockStorage[MOCK_AI_CACHE_KEY] = JSON.stringify(map);
+  }
+
+  function simClearAllAiTopicCaches() {
+    delete mockStorage[MOCK_AI_CACHE_KEY];
+  }
+
+  // Populate test caches with distinct timestamps
+  const now = Date.now();
+  simSaveTopicAiCache("101", {
+    topicTitle: "Linux Do 新手入门指南",
+    summaryMarkdown: "这是关于 Linux Do 社区注册与新手任务的 AI 总结内容。",
+    summaryStyle: "sharp",
+    summaryAt: now - 30000,
+    updatedAt: now - 30000
+  });
+
+  simSaveTopicAiCache("102", {
+    topicTitle: "AI 绘画与大模型讨论",
+    imageUrl: "https://example.com/comic-102.png",
+    imagePrompt: "4格分镜漫画：程序员在电脑前与AI激烈辩论",
+    imageStyle: "comic_4panel",
+    imageAt: now - 10000,
+    updatedAt: now - 10000
+  });
+
+  simSaveTopicAiCache("103", {
+    topicTitle: "云原生与微服务架构全解析",
+    summaryMarkdown: "分析 Kubernetes 与微服务拆分要点。",
+    imageUrl: "https://example.com/comic-103.png",
+    imagePrompt: "竖版单张插画：集群节点互相连接",
+    imageStyle: "splash_single",
+    updatedAt: now
+  });
+
+  const list = simGetAllAiTopicCaches();
+  assert.equal(list.length, 3, "should have 3 cached topics");
+  assert.equal(list[0].topicId, "103", "newest item should be first");
+
+  // Filtering simulation
+  function simFilter(items, filter, q) {
+    const query = (q || "").trim().toLowerCase();
+    return items.filter((item) => {
+      if (filter === "summary" && !item.summaryMarkdown) return false;
+      if (filter === "image" && !item.imageUrl) return false;
+      if (filter === "all" && !item.summaryMarkdown && !item.imageUrl) return false;
+      if (query) {
+        const matchTitle = (item.topicTitle || "").toLowerCase().includes(query);
+        const matchSummary = (item.summaryMarkdown || "").toLowerCase().includes(query);
+        const matchPrompt = (item.imagePrompt || "").toLowerCase().includes(query);
+        if (!matchTitle && !matchSummary && !matchPrompt) return false;
+      }
+      return true;
+    });
+  }
+
+  assert.equal(simFilter(list, "all").length, 3, "all filter should return all 3");
+  assert.equal(simFilter(list, "summary").length, 2, "summary filter should return 2");
+  assert.equal(simFilter(list, "image").length, 2, "image filter should return 2");
+
+  // Search keyword simulation
+  assert.equal(simFilter(list, "all", "入门").length, 1, "searching '入门' should match topic 101");
+  assert.equal(simFilter(list, "all", "Kubernetes").length, 1, "searching 'Kubernetes' in summary should match topic 103");
+  assert.equal(simFilter(list, "all", "程序员").length, 1, "searching '程序员' in imagePrompt should match topic 102");
+  assert.equal(simFilter(list, "all", "不存在的关键字").length, 0, "non-existent keyword should return 0");
+
+  // Deletion simulation
+  simDeleteTopicAiCache("102");
+  const afterDel = simGetAllAiTopicCaches();
+  assert.equal(afterDel.length, 2, "after deleting 102, 2 items remain");
+  assert.ok(!afterDel.some((x) => x.topicId === "102"), "102 should be removed");
+
+  // Clear all simulation
+  simClearAllAiTopicCaches();
+  assert.equal(simGetAllAiTopicCaches().length, 0, "clearAll should remove all records");
+
+  // 7. formatAiCacheTime simulation
+  function simFormatTime(ts) {
+    if (!ts) return "";
+    const diff = Date.now() - ts;
+    if (diff < 60000) return "刚刚";
+    if (diff < 3600000) return `${Math.floor(diff / 60000)} 分钟前`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`;
+    const d = new Date(ts);
+    return `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  }
+
+  assert.equal(simFormatTime(Date.now() - 10000), "刚刚");
+  assert.equal(simFormatTime(Date.now() - 180000), "3 分钟前");
+  assert.equal(simFormatTime(Date.now() - 7200000), "2 小时前");
+  assert.equal(simFormatTime(null), "");
+});
+
+test("Test 130: Zhihu (知乎) platform support covering routing, adapters, pagination, WeCom shell, and dual-site coexistence", () => {
+  // 1. Userscript Metadata & Matching
+  assert.ok(scriptContent.includes("// @match        *://*.zhihu.com/*"), "metadata must declare @match for *.zhihu.com");
+  assert.ok(scriptContent.includes("// @connect      www.zhihu.com"), "metadata must declare @connect for www.zhihu.com");
+  assert.ok(scriptContent.includes("const IS_ZHIHU = /(?:^|\\.)zhihu\\.com$/i.test(CURRENT_HOST);"), "must define IS_ZHIHU regex constant");
+  assert.ok(scriptContent.includes('CURRENT_PLATFORM = IS_ZHIHU ? "zhihu" :'), "must include zhihu in CURRENT_PLATFORM");
+
+  // 2. Route Helpers & Topic detection
+  assert.ok(scriptContent.includes("if (typeof IS_ZHIHU !== \"undefined\" && IS_ZHIHU) return /^\\/(?:question|p)\\//.test(pathname);"), "isTopicPath must match question and p for Zhihu");
+  assert.ok(scriptContent.includes("raw.match(/\\/question\\/(\\d+)(?:\\/answer\\/(\\d+))?/)"), "topicRouteFromPath must match question and optional answer");
+  assert.ok(scriptContent.includes("raw.match(/\\/p\\/([0-9a-zA-Z_-]+)/)"), "topicRouteFromPath must match article /p/:id");
+
+  // Test route function simulation
+  function simIsTopicPath(pathname) {
+    return /^\/(?:question|p)\//.test(pathname);
+  }
+  function simTopicRoute(pathname) {
+    const raw = String(pathname || "");
+    const qm = raw.match(/\/question\/(\d+)(?:\/answer\/(\d+))?/);
+    if (qm) return { topicId: qm[1], answerId: qm[2] || null, slug: "question" };
+    const pm = raw.match(/\/p\/([0-9a-zA-Z_-]+)/);
+    if (pm) return { topicId: `p_${pm[1]}`, slug: "article" };
+    return { topicId: null, slug: "" };
+  }
+
+  assert.ok(simIsTopicPath("/question/123456"), "question route matches topic");
+  assert.ok(simIsTopicPath("/question/123456/answer/7890"), "question answer route matches topic");
+  assert.ok(simIsTopicPath("/p/98765432"), "zhuanlan article route matches topic");
+  assert.ok(!simIsTopicPath("/hot"), "/hot is list route");
+  assert.ok(!simIsTopicPath("/"), "/ is list route");
+
+  const qRoute = simTopicRoute("/question/654321/answer/112233");
+  assert.equal(qRoute.topicId, "654321");
+  assert.equal(qRoute.answerId, "112233");
+  assert.equal(qRoute.slug, "question");
+
+  const pRoute = simTopicRoute("/p/art_9999");
+  assert.equal(pRoute.topicId, "p_art_9999");
+  assert.equal(pRoute.slug, "article");
+
+  // 3. Data layer & API adapters
+  assert.ok(scriptContent.includes("async function zhihuApi("), "must define zhihuApi helper");
+  assert.ok(scriptContent.includes("async function fetchZhihuTopicData("), "must define fetchZhihuTopicData");
+  assert.ok(scriptContent.includes("function mapZhihuHotItemToTopic("), "must define mapZhihuHotItemToTopic");
+  assert.ok(scriptContent.includes("function mapZhihuRecommendItemToTopic("), "must define mapZhihuRecommendItemToTopic");
+  assert.ok(scriptContent.includes("function mapZhihuQuestionToPost("), "must define mapZhihuQuestionToPost");
+  assert.ok(scriptContent.includes("function mapZhihuAnswerToPost("), "must define mapZhihuAnswerToPost");
+
+  // 4. Pagination & Infinite scroll
+  assert.ok(scriptContent.includes("chatState.zhihuOffset = Number(data.zhihu_offset) || 0;"), "loadTopic must record zhihuOffset");
+  assert.ok(scriptContent.includes("chatState.zhihuHasMore = Boolean(data.zhihu_has_more);"), "loadTopic must record zhihuHasMore");
+  assert.ok(scriptContent.includes("chatState.zhihuType = data.zhihu_type || \"\";"), "loadTopic must record zhihuType");
+  assert.ok(scriptContent.includes("if (IS_ZHIHU) {\n      if (!chatState.zhihuHasMore) return;\n    }"), "loadNewerPosts must check zhihuHasMore");
+  assert.ok(scriptContent.includes("/api/v4/comment_v5/articles/"), "loadNewerPosts must query article comments");
+  assert.ok(scriptContent.includes("/api/v4/questions/"), "loadNewerPosts must query question answers");
+
+  // 5. CSS Hiding Rules
+  assert.ok(scriptContent.includes(".${ROOT_CLASS}.${LOCK_CLASS} .AppHeader,"), "RAW_CSS must hide Zhihu .AppHeader");
+  assert.ok(scriptContent.includes(".${ROOT_CLASS}.${LOCK_CLASS} .QuestionHeader,"), "RAW_CSS must hide Zhihu .QuestionHeader");
+  assert.ok(scriptContent.includes(".${ROOT_CLASS}.${LOCK_CLASS} .Question-main,"), "RAW_CSS must hide Zhihu .Question-main");
+  assert.ok(scriptContent.includes(".${ROOT_CLASS}.${LOCK_CLASS} .Topstory,"), "RAW_CSS must hide Zhihu .Topstory");
+
+  // 6. Composer read-only notice & original site link
+  assert.ok(scriptContent.includes("知乎只读浏览中（写回答/评论请前往原站）"), "composer textarea must show Zhihu readonly notice in placeholder");
+  assert.ok(scriptContent.includes("知乎回答/评论操作需安全校验，请在原站网页端发表"), "composer submission on Zhihu must guide user to original site");
+});
+
+test("Test 131: Zhihu 403-free SSR & initialData topic opening, background feed interception, and pagination persistence", () => {
+  // 1. Off-screen layout allows background IntersectionObserver and React scroll listeners without UI leaking
+  assert.ok(
+    scriptContent.includes("position: fixed !important;\n      left: 0 !important;\n      top: 0 !important;\n      width: 100vw !important;\n      height: 100vh !important;\n      overflow-y: scroll !important;\n      opacity: 0 !important;\n      pointer-events: none !important;\n      z-index: -99999 !important;"),
+    "#root off-screen layout must be placed within viewport with opacity 0 and overflow scroll to maintain background React layout"
+  );
+
+  // 2. Fetch and XMLHttpRequest interceptor and response data pool
+  assert.ok(scriptContent.includes("zhihuCapturedFeedPool"), "must have zhihuCapturedFeedPool");
+  assert.ok(scriptContent.includes("zhihuCapturedAnswersPool"), "must have zhihuCapturedAnswersPool");
+  assert.ok(scriptContent.includes("_nativeZhihuFetch"), "must intercept window.fetch on Zhihu");
+  assert.ok(scriptContent.includes("_origXhrOpen"), "must intercept XMLHttpRequest on Zhihu");
+
+  // 3. Same-origin HTML document fetching for SSR data bypass & 404 wasteland protection
+  assert.ok(scriptContent.includes("fetchZhihuPageDoc"), "must have fetchZhihuPageDoc");
+  assert.ok(scriptContent.includes("parseZhihuHtml"), "must have parseZhihuHtml");
+  assert.ok(scriptContent.includes("const pageUrl = isArticle ? `/p/${rawId}` : `/question/${rawId}`;"), "must fetch same-origin page paths without cross-origin subdomain");
+  assert.ok(scriptContent.includes("没有知识存在的荒原"), "must filter out Zhihu 404 wasteland error page");
+
+  // 4. Extract real question ID from answers instead of answer ID to prevent 404 wasteland
+  assert.ok(scriptContent.includes("target.question && target.question.id"), "mapZhihuRecommendItemToTopic must extract question.id for answers");
+  assert.ok(scriptContent.includes("const topicFromList = listState.topics.find((t) => String(t.id) === String(topicId));"), "fetchZhihuTopicData must check topicFromList");
+  assert.ok(scriptContent.includes("id: `preview_${rawId}`"), "fetchZhihuTopicData must support fallback preview answer when answers empty");
+
+  // 5. Native feed scroll trigger and pagination polling
+  assert.ok(scriptContent.includes("triggerZhihuNativeFeedScroll();"), "must trigger native feed scroll on pagination");
+  assert.ok(scriptContent.includes("listState.moreUrl = freshRaw.length > 0 ? `zhihu_offset_${listState.zhihuOffset}` : `zhihu_offset_${offset}`;"), "loadMoreList must not destroy moreUrl when pagination items are empty or retrying");
+
+  // 6. replaceTopicPostUrl guards against unwanted history apply recursion
+  assert.ok(scriptContent.includes("suppressHistoryApply = true;\n        try { history.replaceState(history.state, \"\", targetUrl); } catch { /* ignore */ }\n        finally { suppressHistoryApply = false; }"), "replaceTopicPostUrl on Zhihu must wrap replaceState in suppressHistoryApply");
+});
+
+test("Test 132: Zhihu answer pagination, DOM extraction, creators rank hot supplement, and footer bar (v0.7.91)", () => {
+  // 1. Interceptor captures answers and creator rank hot
+  assert.ok(scriptContent.includes("zhihuCapturedAnswersPool"), "must maintain zhihuCapturedAnswersPool");
+  assert.ok(scriptContent.includes("/creators/rank/hot"), "interceptor must capture /creators/rank/hot");
+  assert.ok(scriptContent.includes("/answers"), "interceptor must capture /answers");
+
+  // 2. DOM extraction & creator hot mapping
+  assert.ok(scriptContent.includes("extractZhihuAnswersFromDom"), "must have extractZhihuAnswersFromDom");
+  assert.ok(scriptContent.includes("mapZhihuCreatorHotItemToTopic"), "must have mapZhihuCreatorHotItemToTopic");
+
+  // 3. Multi-domain creator hot supplement in left list
+  assert.ok(scriptContent.includes("/api/v4/creators/rank/hot?domain="), "must query creator rank hot across domains");
+
+  // 4. Background layout preservation (opacity: 0 instead of display: none)
+  assert.ok(scriptContent.includes(".TopstoryMain"), "must include .TopstoryMain");
+  assert.ok(scriptContent.includes("Question-main") && scriptContent.includes("pointer-events: none !important"), "must preserve native layout with opacity: 0 for Question-main");
+
+  // 5. Zhihu pagination footer bar
+  assert.ok(scriptContent.includes("syncZhihuPaginationFooter"), "must have syncZhihuPaginationFooter");
+  assert.ok(scriptContent.includes(".wecom-zhihu-more-bar"), "must have CSS for .wecom-zhihu-more-bar");
+  assert.ok(scriptContent.includes('event.target.closest(".wecom-v2ex-more-bar, .wecom-zhihu-more-bar")'), "must handle click on .wecom-zhihu-more-bar to loadNewerPosts");
+
+  // 6. 19-digit question ID string comparison guard
+  assert.ok(scriptContent.includes("(IS_JUEJIN || IS_ZHIHU) ? String(body.dataset.topicId) !== String(chatState.topicId)"), "must use string comparison for topicId on Zhihu to avoid precision loss on 19-digit IDs");
+});
+
+test("Test 133: Zhihu endless topic list loading, persistent pool caching, and creator hot multi-domain pagination (v0.7.95)", () => {
+  // 1. Persistent pool and seen tracking
+  assert.ok(scriptContent.includes("const zhihuRecommendPool = [];"), "must define zhihuRecommendPool");
+  assert.ok(scriptContent.includes("const zhihuRecommendSeen = new Set();"), "must define zhihuRecommendSeen");
+  assert.ok(scriptContent.includes("let zhihuCreatorDomainOffset = 0;"), "must track zhihuCreatorDomainOffset");
+
+  // 2. Creators rank hot dynamic pagination
+  assert.ok(
+    scriptContent.includes("/api/v4/creators/rank/hot?domain=${d}&limit=20&offset=${zhihuCreatorDomainOffset}"),
+    "must query creators rank hot with dynamic domainOffset"
+  );
+  assert.ok(
+    scriptContent.includes("zhihuCreatorDomainOffset += 20;"),
+    "must advance zhihuCreatorDomainOffset on pagination rounds"
+  );
+
+  // 3. Hot list pagination enablement
+  assert.ok(
+    scriptContent.includes("zhihuRecommendPool.length = 0;\n        zhihuRecommendSeen.clear();\n        zhihuCreatorDomainOffset = 0;"),
+    "loadZhihuList must reset pool on tab switch or force reload"
+  );
+
+  // 4. Verification that 19-digit snowflake IDs are not filtered out
+  assert.ok(!scriptContent.includes("String(rawId).length > 12"), "must not restrict topic IDs to 12 digits (snowflake IDs are 19 digits)");
+});
+
+test("Test 134: Elimination of intermediate '下滑或点击加载更多' button bar in reply list to prevent content jitter (v0.7.96)", () => {
+  // 1. Verification that intermediate '下滑或点击加载更多' prompts are eliminated from syncZhihuPaginationFooter and syncV2exPaginationFooter
+  assert.ok(
+    !scriptContent.includes("下滑或点击加载更多知乎回答"),
+    "must not render intermediate '下滑或点击加载更多知乎回答' in reply list"
+  );
+  assert.ok(
+    !scriptContent.includes("下滑或点击加载下一页"),
+    "must not render intermediate '下滑或点击加载下一页' in reply list"
+  );
+
+  // 2. Both sync functions remove bar on loading or hasMore to allow seamless infinite scroll
+  assert.ok(
+    scriptContent.includes("if (loading || hasMore) {\n      if (bar) bar.remove();\n      return;\n    }"),
+    "sync functions must remove bar during loading and when hasMore is true to prevent layout shift"
+  );
+
+  // 3. End-of-topic marker is preserved when hasMore is false
+  assert.ok(
+    scriptContent.includes("— 已加载全部知乎回答"),
+    "syncZhihuPaginationFooter must retain end of topic marker when all answers loaded"
+  );
+  assert.ok(
+    scriptContent.includes("— 已加载全部回复"),
+    "syncV2exPaginationFooter must retain end of topic marker when all replies loaded"
+  );
+});
+
+test("Test 135: Zhihu long answer folding/clamping and comment discussion thread layer (v0.7.97)", () => {
+  // 1. Long answer clamping & expansion styles
+  assert.ok(
+    scriptContent.includes(".wecom-msg-bubble.wecom-zhihu-clamped") &&
+    scriptContent.includes(".wecom-msg-bubble.wecom-zhihu-expanded"),
+    "must include CSS rules for clamped and expanded Zhihu answer bubbles"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-zhihu-expand-bar") &&
+    scriptContent.includes(".wecom-zhihu-expand-btn"),
+    "must include CSS rules for Zhihu expand bar and button"
+  );
+
+  // 2. Clamping logic and expansion persistence
+  assert.ok(scriptContent.includes("function applyZhihuAnswerClamping(container)"), "must define applyZhihuAnswerClamping");
+  assert.ok(scriptContent.includes("const zhihuExpandedAnswerIds = new Set();"), "must track zhihuExpandedAnswerIds");
+  assert.ok(scriptContent.includes("body.scrollHeight > 240"), "must clamp answers when scrollHeight exceeds 240px");
+  assert.ok(scriptContent.includes("data-clamp-watched"), "must watch images loading to re-evaluate clamping");
+
+  // 3. Comments entry button & styling
+  assert.ok(
+    scriptContent.includes(".wecom-zhihu-comments-entry") &&
+    scriptContent.includes(".wecom-zhihu-comments-btn"),
+    "must style Zhihu comments entry button"
+  );
+  assert.ok(
+    scriptContent.includes('data-action="zhihu-open-comments"'),
+    "must attach data-action='zhihu-open-comments' to comments button"
+  );
+
+  // 4. Comment fetching with fallbacks & caching
+  assert.ok(scriptContent.includes("function fetchZhihuAnswerComments(answerId, offset = 0)"), "must define fetchZhihuAnswerComments");
+  assert.ok(scriptContent.includes("/comment_v5/answers/${cleanId}/root_comment"), "must query primary v5 answer root comments endpoint");
+  assert.ok(scriptContent.includes("/answers/${cleanId}/root_comments"), "must fallback to legacy answers root comments endpoint");
+  assert.ok(scriptContent.includes("const zhihuAnswerCommentsCache = new Map();"), "must maintain zhihuAnswerCommentsCache");
+
+  // 5. Discussion layer transitions (open & close)
+  assert.ok(scriptContent.includes("function openZhihuCommentThread("), "must define openZhihuCommentThread");
+  assert.ok(scriptContent.includes("function closeZhihuCommentThread("), "must define closeZhihuCommentThread");
+  assert.ok(scriptContent.includes("renderZhihuThreadParentCard"), "must define renderZhihuThreadParentCard");
+  assert.ok(scriptContent.includes("renderZhihuCommentBubble"), "must define renderZhihuCommentBubble");
+
+  // 6. Navigation controls: Back button, Reply tool redirect, and Escape key
+  assert.ok(scriptContent.includes(".wecom-chat-back-btn"), "must include .wecom-chat-back-btn");
+  assert.ok(scriptContent.includes('event.key === "Escape" && zhihuCommentThreadState.active'), "Escape key must close Zhihu comment thread");
+  assert.ok(
+    scriptContent.includes("Number(message.dataset.postNumber) > 1") &&
+    scriptContent.includes("openZhihuCommentThread(message.dataset.postId, Number(message.dataset.postNumber))"),
+    "Reply tool on Zhihu answer must open comment thread"
+  );
+});
+
+test("Test 136: Zhihu answer comment count multi-source extraction, v5 abstract_comment 200 OK endpoint, and automatic backfill (v0.7.98)", () => {
+  // 1. Dedicated count pool & interceptor
+  assert.ok(scriptContent.includes("const zhihuCommentCountsMap = new Map();"), "must define zhihuCommentCountsMap");
+  assert.ok(scriptContent.includes('url.includes("abstract_comment")'), "fetch & XHR interceptors must capture abstract_comment");
+  assert.ok(scriptContent.includes("zhihuCommentCountsMap.set(String(targetId), Number(json.counts.total_counts))"), "interceptor must store total_counts");
+
+  // 2. Answer object multi-field extraction (camelCase commentCount, commentsCount, comment_count, etc.)
+  assert.ok(scriptContent.includes("raw.commentCount ??"), "mapZhihuAnswerToPost must check camelCase commentCount");
+  assert.ok(scriptContent.includes("raw.commentsCount ??"), "mapZhihuAnswerToPost must check commentsCount");
+
+  // 3. Background DOM comment count extraction
+  assert.ok(scriptContent.includes("item.querySelector('meta[itemprop=\"commentCount\"]')"), "DOM answer extractor must read meta[itemprop=commentCount]");
+  assert.ok(scriptContent.includes('b.textContent.includes("评论")'), "DOM answer extractor must fallback to comment button text");
+
+  // 4. Primary official 200 OK endpoint without login/signature restriction
+  assert.ok(scriptContent.includes("/comment_v5/answers/${cleanId}/abstract_comment?limit=20"), "fetchZhihuAnswerComments must call abstract_comment first");
+  assert.ok(scriptContent.includes("absResp?.counts?.total_counts != null"), "must capture total_counts from abstract_comment response");
+
+  // 5. Automatic zero-comment backfill for bubble button
+  assert.ok(scriptContent.includes("commentCount === 0 && postId && /^\\d+$/.test(postId) && !bubble.dataset.countFetched"), "must backfill real count when answer bubble has 0 comments");
+  assert.ok(scriptContent.includes("/comment_v5/answers/${postId}/abstract_comment?limit=1"), "must call lightweight abstract_comment to backfill count");
+});
+
+test("Test 137: Zhihu answer discussion count consistency, multi-offset abstract_comment batching, and child comment resolution (v0.7.99)", () => {
+  // 1. Multi-offset concurrent batching for abstract_comment
+  assert.ok(
+    scriptContent.includes("abstract_comment?limit=2&offset=${o}") ||
+    scriptContent.includes("abstract_comment?limit=2&offset="),
+    "must fetch subsequent offsets of abstract_comment"
+  );
+  assert.ok(
+    scriptContent.includes("extraOffsets") && scriptContent.includes("Promise.all"),
+    "must batch extra offsets concurrently using Promise.all"
+  );
+
+  // 2. Child comment resolution via child_comment endpoint
+  assert.ok(
+    scriptContent.includes("/comment_v5/comment/${c.id}/child_comment?limit=20"),
+    "must fetch child comments for root comments with un-expanded child replies"
+  );
+  assert.ok(
+    scriptContent.includes("child_comment_count"),
+    "must check child_comment_count before resolving child comments"
+  );
+
+  // 3. Accurate hasMore calculation based on effectiveTotal
+  assert.ok(
+    scriptContent.includes("hasMore = flattened.length < effectiveTotal;"),
+    "hasMore must be strictly determined by flattened comments count vs effectiveTotal"
+  );
+
+  // 4. Thread and outer bubble count synchronization
+  assert.ok(
+    scriptContent.includes('.wecom-zhihu-comments-btn[data-answer-id="'),
+    "openZhihuCommentThread must find and synchronize outer answer bubble button"
+  );
+  assert.ok(
+    scriptContent.includes("outerBtn.textContent = `回复 ：${effectiveTotal}`"),
+    "must update outer button text to match effectiveTotal"
+  );
+  assert.ok(
+    scriptContent.includes("parentCardCount.textContent = `评论与讨论 (${effectiveTotal})`"),
+    "must update parent card divider to match effectiveTotal"
+  );
+
+  // 5. Loaded status indicators
+  assert.ok(
+    scriptContent.includes("已加载全部 ${effectiveTotal} 条评论") ||
+    scriptContent.includes("已加载全部 ${total} 条评论"),
+    "must show all comments loaded status"
+  );
+  assert.ok(
+    scriptContent.includes("加载更多评论 (已显示"),
+    "more comments button must show currently loaded vs total comments"
+  );
+
+  // 6. applyZhihuAnswerClamping outer button sync on re-render
+  assert.ok(
+    scriptContent.includes("btn.textContent !== expectedText"),
+    "applyZhihuAnswerClamping must update outer button text whenever knownCount changes"
+  );
+});
 
 
