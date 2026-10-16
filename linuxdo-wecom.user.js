@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.7.99
+// @version      0.8.0
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -4999,6 +4999,19 @@
     html.wecom-dark .wecom-zhihu-thread-parent-body,
     html.${ROOT_CLASS}.wecom-dark .wecom-zhihu-thread-parent-body {
       color: #aaa;
+    }
+    .wecom-zhihu-thread-comments {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 100%;
+      min-width: 0;
+      padding-top: 4px;
+    }
+    .wecom-zhihu-thread-comments .wecom-msg {
+      max-width: min(76%, 820px);
+      align-self: flex-start;
+      margin-bottom: 0;
     }
     .wecom-zhihu-thread-divider {
       display: flex;
@@ -20048,7 +20061,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.7.99";
+  const SCRIPT_VERSION = "0.8.0";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -38824,33 +38837,36 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const avatarHtml = comm.authorAvatar
       ? `<img src="${escapeHtml(comm.authorAvatar)}" alt="" loading="lazy">`
       : escapeHtml(avatarLetter(authorName));
-    const timeStr = comm.createdTime ? formatTime(comm.createdTime * 1000) : "";
+    const timeStr = comm.createdTime ? formatTime(comm.createdTime * 1000) : (comm.timeStr || "");
+    const floorNum = idx + 1;
     const likeHtml = comm.voteCount > 0
       ? `<span class="wecom-msg-likes" title="赞同：${comm.voteCount}"><span class="wecom-msg-like-icon">${ICONS.heart || "♥"}</span><span class="wecom-msg-like-num">${comm.voteCount}</span></span>`
       : "";
-    const replyRefHtml = comm.replyTo
-      ? `<div class="wecom-msg-reply-ref" style="font-size:12px;color:#1677ff;margin-bottom:4px;">回复 @${escapeHtml(comm.replyTo)}:</div>`
+    const replyInd = comm.replyTo
+      ? `<span class="wecom-msg-reply-indicator">回复 <span class="wecom-msg-reply-indicator-user">@${escapeHtml(comm.replyTo)}</span></span>`
       : "";
     const contentHtml = String(comm.content || "").startsWith("<")
       ? formatZhihuCookedContent(comm.content)
       : `<p>${escapeHtml(comm.content || "")}</p>`;
     const childClass = comm.isChild ? " is-thread-child" : "";
-    const childStyle = comm.isChild ? ' style="margin-left:24px;"' : "";
     return `
-      <div class="wecom-msg wecom-msg-other${childClass}"${childStyle} data-comment-id="${escapeHtml(String(comm.id || ''))}">
+      <div class="wecom-msg wecom-msg-other${childClass}" data-comment-id="${escapeHtml(String(comm.id || ''))}" data-post-number="${floorNum}" data-floor="${floorNum}" data-username="${authorName}">
         <span class="wecom-msg-avatar" style="background:${avatarBg}">${avatarHtml}</span>
         <div class="wecom-msg-content">
           <div class="wecom-msg-header">
             <span class="wecom-msg-name">${authorName}</span>
+            ${replyInd}
             <span class="wecom-msg-meta">
               <span class="wecom-msg-time">${escapeHtml(timeStr)}</span>
-              <span class="wecom-msg-floor">#${idx + 1}</span>
+              <span class="wecom-msg-floor" data-floor="${floorNum}" title="${floorNum}楼">#${floorNum}</span>
               ${likeHtml}
             </span>
           </div>
           <div class="wecom-msg-bubble">
-            ${replyRefHtml}
             <div class="wecom-msg-body">${contentHtml}</div>
+          </div>
+          <div class="wecom-msg-tools">
+            <button type="button" class="wecom-msg-tool" data-action="reply" title="回复">${ICONS.reply}</button>
           </div>
         </div>
       </div>`;
@@ -39208,10 +39224,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       chipsEl.innerHTML = `<span class="wecom-chat-chip" style="background:#e6f4ff;color:#0958d9;border:1px solid #91caff;">评论讨论层</span>`;
     }
 
-    // 2. Render initial thread layout
+    // 2. Render initial thread layout (omit parent answer card per user request)
     body.scrollTop = 0;
     body.innerHTML = `
-      ${renderZhihuThreadParentCard(post)}
       <div class="wecom-zhihu-thread-comments"></div>
       <div class="wecom-zhihu-thread-loading" style="text-align:center;padding:32px 0;color:var(--wc-text-3);font-size:13px;">正在加载评论与讨论...</div>
     `;

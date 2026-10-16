@@ -11432,4 +11432,37 @@ test("Test 137: Zhihu answer discussion count consistency, multi-offset abstract
   );
 });
 
+test("Test 138: Zhihu reply thread pure comments view (omit parent answer card) and unified floor typesetting (v0.8.0)", () => {
+  // 1. Direct entry into comments list without parent card clutter
+  assert.ok(
+    scriptContent.includes("// 2. Render initial thread layout (omit parent answer card per user request)"),
+    "openZhihuCommentThread must omit parent answer card from initial thread layout"
+  );
+
+  // 2. Container flex typesetting consistency
+  assert.ok(
+    scriptContent.includes(".wecom-zhihu-thread-comments {") &&
+    scriptContent.includes("gap: 16px;"),
+    "must style .wecom-zhihu-thread-comments with standard flex gap layout"
+  );
+
+  // 3. Floor attributes and reply indicator matching other platforms
+  assert.ok(
+    scriptContent.includes('data-floor="${floorNum}" title="${floorNum}楼">#${floorNum}</span>'),
+    "must render standard floor number and title matching Discourse/V2EX/Juejin"
+  );
+  assert.ok(
+    scriptContent.includes("wecom-msg-reply-indicator") &&
+    scriptContent.includes("wecom-msg-reply-indicator-user"),
+    "must format sub-reply mentions with standard .wecom-msg-reply-indicator"
+  );
+
+  // 4. Action tools toolbar on hover
+  assert.ok(
+    scriptContent.includes('<div class="wecom-msg-tools">') &&
+    scriptContent.includes('data-action="reply" title="回复"'),
+    "must include .wecom-msg-tools with reply action on comment bubble"
+  );
+});
+
 
