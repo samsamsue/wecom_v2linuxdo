@@ -38943,7 +38943,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
       // If more comments exist in this batch, fetch remaining offsets concurrently
       const targetEnd = Math.min(fetchedTotal, offset + batchLimit);
-      if (targetEnd > offset + 2) {
+      if (rawComments.length < targetEnd && targetEnd > offset + 2) {
         const extraOffsets = [];
         for (let o = offset + 2; o < targetEnd + 2; o += 2) {
           extraOffsets.push(o);
@@ -38987,43 +38987,45 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       } catch (_) {}
     }
 
-    // 2. Direct API request with fallback for full pagination
+    // 2. Direct API request with fallback for full pagination (only when comments not yet retrieved)
     let resp = null;
-    try {
-      resp = await zhihuApi(`/api/v4/comment_v5/answers/${cleanId}/root_comment?order_by=score&limit=20&offset=${offset}`, {
-        headers: {
-          "x-requested-with": "fetch",
-          "Referer": location.href || "https://www.zhihu.com/",
-          ...(zhihuLastSignedHeaders ? { "x-zse-93": zhihuLastSignedHeaders["x-zse-93"] } : {})
-        }
-      });
-    } catch (err1) {
-      if (String(err1?.message || "").includes("403")) {
-        if (rawComments.length === 0) needLogin = true;
-      }
+    if (rawComments.length === 0) {
       try {
-        resp = await zhihuApi(`/api/v4/answers/${cleanId}/root_comments?order=normal&limit=20&offset=${offset}`);
-      } catch (_) {
+        resp = await zhihuApi(`/api/v4/comment_v5/answers/${cleanId}/root_comment?order_by=score&limit=20&offset=${offset}`, {
+          headers: {
+            "x-requested-with": "fetch",
+            "Referer": location.href || "https://www.zhihu.com/",
+            ...(zhihuLastSignedHeaders ? { "x-zse-93": zhihuLastSignedHeaders["x-zse-93"] } : {})
+          }
+        });
+      } catch (err1) {
+        if (String(err1?.message || "").includes("403")) {
+          if (rawComments.length === 0) needLogin = true;
+        }
         try {
-          resp = await zhihuApi(`/api/v4/comment_v5/articles/${cleanId}/root_comment?order_by=score&limit=20&offset=${offset}`);
-        } catch (_) {}
-      }
-    }
-    if (resp?.data && Array.isArray(resp.data) && resp.data.length > 0) {
-      for (const c of resp.data) {
-        if (c && !rawComments.some((e) => String(e.id) === String(c.id))) {
-          rawComments.push(c);
+          resp = await zhihuApi(`/api/v4/answers/${cleanId}/root_comments?order=normal&limit=20&offset=${offset}`);
+        } catch (_) {
+          try {
+            resp = await zhihuApi(`/api/v4/comment_v5/articles/${cleanId}/root_comment?order_by=score&limit=20&offset=${offset}`);
+          } catch (_) {}
         }
       }
-      needLogin = false;
-      if (resp.counts?.total_counts != null) {
-        fetchedTotal = Number(resp.counts.total_counts);
-        zhihuCommentCountsMap.set(cleanId, fetchedTotal);
+      if (resp?.data && Array.isArray(resp.data) && resp.data.length > 0) {
+        for (const c of resp.data) {
+          if (c && !rawComments.some((e) => String(e.id) === String(c.id))) {
+            rawComments.push(c);
+          }
+        }
+        needLogin = false;
+        if (resp.counts?.total_counts != null) {
+          fetchedTotal = Number(resp.counts.total_counts);
+          zhihuCommentCountsMap.set(cleanId, fetchedTotal);
+        }
       }
     }
 
     // 3. Trigger native comment button in background DOM if comments still missing
-    if (rawComments.length < fetchedTotal && typeof document !== "undefined") {
+    if (rawComments.length === 0 && typeof document !== "undefined") {
       try {
         const nativeItem = document.querySelector(`
           .ContentItem.AnswerItem[data-zop*='"itemId":${cleanId}'],
@@ -39039,8 +39041,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           );
           if (nativeBtn) {
             nativeBtn.click();
-            for (let i = 0; i < 10; i++) {
-              await new Promise((r) => setTimeout(r, 100));
+            for (let i = 0; i < 5; i++) {
+              await new Promise((r) => setTimeout(r, 60));
               const pool = zhihuCapturedCommentsPool.get(cleanId) || [];
               if (pool.length > rawComments.length) {
                 for (const c of pool) {
@@ -39057,7 +39059,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       } catch (_) {}
     }
 
-    // 4. Fetch child comments for comments that have child comments not yet populated
+    // 4. Fetch child comments concurrently for comments that have child comments not yet populated
+    const childFetches = [];
     for (const c of rawComments) {
       const childCount = Number(c.child_comment_count || 0);
       if (childCount > 0 && (!Array.isArray(c.child_comments) || c.child_comments.length === 0)) {
@@ -39065,19 +39068,23 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         if (Array.isArray(pooled) && pooled.length > 0) {
           c.child_comments = pooled;
         } else {
-          try {
-            const childResp = await zhihuApi(`/api/v4/comment_v5/comment/${c.id}/child_comment?limit=20`, {
+          childFetches.push(
+            zhihuApi(`/api/v4/comment_v5/comment/${c.id}/child_comment?limit=20`, {
               headers: {
                 "x-requested-with": "fetch",
                 "Referer": location.href || "https://www.zhihu.com/"
               }
-            });
-            if (Array.isArray(childResp?.data) && childResp.data.length > 0) {
-              c.child_comments = childResp.data;
-            }
-          } catch (_) {}
+            }).then((childResp) => {
+              if (Array.isArray(childResp?.data) && childResp.data.length > 0) {
+                c.child_comments = childResp.data;
+              }
+            }).catch(() => {})
+          );
         }
       }
+    }
+    if (childFetches.length > 0) {
+      await Promise.all(childFetches);
     }
 
     const rootComments = [];
