@@ -11613,6 +11613,45 @@ test("Test 141: Disguise title and avatar high-entropy hash seed (hashTopicSeed)
   assert.ok(identicalCount < 2, "must not collapse all titles to '产品需求评审群'");
 });
 
+test("Test 142: Zhihu answer pagination & comment drawer deep pagination recovery (SSR HTML fallback and pooled slice) (v0.8.4)", () => {
+  // 1. Comments drawer pooled slicing at any offset
+  assert.ok(
+    scriptContent.includes("const pooled = zhihuCapturedCommentsPool.get(cleanId) || [];") &&
+    scriptContent.includes("let rawComments = pooled.length > offset ? pooled.slice(offset, offset + batchLimit) : [];"),
+    "fetchZhihuAnswerComments must slice comments from captured pool at offset > 0"
+  );
+
+  // 2. Comments drawer native container scroll at offset > 0
+  assert.ok(
+    scriptContent.includes("if (offset > 0) {") &&
+    scriptContent.includes(".CommentsV2, .CommentListV2, .Modal-content, .NestComment") &&
+    scriptContent.includes(".PaginationButton-next, .Pagination-next, .CommentsV2-footer button"),
+    "fetchZhihuAnswerComments must scroll native comment container and click next page instead of toggling closed"
+  );
+
+  // 3. Comments drawer offset increment strictly by newComments.length
+  assert.ok(
+    scriptContent.includes("zhihuCommentThreadState.offset = offset + newComments.length;"),
+    "loadMoreZhihuComments must only advance offset by newComments.length when comments are found"
+  );
+
+  // 4. Main answers feed SSR HTML page fallback
+  assert.ok(
+    scriptContent.includes("Math.floor(chatState.postsByNumber.size / 5) + 1") &&
+    scriptContent.includes("fetchZhihuPageDoc(`/question/${rawId}?page=${currentPageNum}`)") &&
+    scriptContent.includes("parseZhihuHtml(pageHtml, rawId, false)"),
+    "loadNewerPosts must fallback to SSR HTML pagination /question/:id?page=X when background scroll does not yield new answers"
+  );
+
+  // 5. Interceptor query-string and item-level question ID extraction
+  assert.ok(
+    scriptContent.includes("url.match(/[?&]question_id=(\\d+)/)") &&
+    scriptContent.includes("it?.target?.question || it?.question"),
+    "fetch & XHR interceptors must extract question ID from query params or data items"
+  );
+});
+
+
 
 
 

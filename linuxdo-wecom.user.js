@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.3
+// @version      0.8.4
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -118,8 +118,15 @@
               const clone = resp.clone();
               clone.json().then((json) => {
                 if (Array.isArray(json?.data) && json.data.length > 0) {
-                  const qm = url.match(/questions\/(\d+)/);
-                  const qId = qm ? qm[1] : null;
+                  const qm = url.match(/questions\/(\d+)/) || url.match(/[?&]question_id=(\d+)/) || url.match(/[?&]question=(\d+)/);
+                  let qId = qm ? qm[1] : null;
+                  if (!qId) {
+                    for (const it of json.data) {
+                      const q = it?.target?.question || it?.question;
+                      const extracted = q && (typeof q === "object" ? q.id : q);
+                      if (extracted) { qId = String(extracted); break; }
+                    }
+                  }
                   if (qId) {
                     const arr = zhihuCapturedAnswersPool.get(qId) || [];
                     for (const item of json.data) {
@@ -182,8 +189,15 @@
               } else if (url && (url.includes("/answers") || url.includes("/feeds"))) {
                 const json = JSON.parse(this.responseText);
                 if (Array.isArray(json?.data) && json.data.length > 0) {
-                  const qm = url.match(/questions\/(\d+)/);
-                  const qId = qm ? qm[1] : null;
+                  const qm = url.match(/questions\/(\d+)/) || url.match(/[?&]question_id=(\d+)/) || url.match(/[?&]question=(\d+)/);
+                  let qId = qm ? qm[1] : null;
+                  if (!qId) {
+                    for (const it of json.data) {
+                      const q = it?.target?.question || it?.question;
+                      const extracted = q && (typeof q === "object" ? q.id : q);
+                      if (extracted) { qId = String(extracted); break; }
+                    }
+                  }
                   if (qId) {
                     const arr = zhihuCapturedAnswersPool.get(qId) || [];
                     for (const item of json.data) {
@@ -20095,7 +20109,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.3";
+  const SCRIPT_VERSION = "0.8.4";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -38968,64 +38982,22 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       return zhihuAnswerCommentsCache.get(cleanId);
     }
 
-    let rawComments = offset === 0 ? (zhihuCapturedCommentsPool.get(cleanId) || []) : [];
+    const pooled = zhihuCapturedCommentsPool.get(cleanId) || [];
+    let rawComments = pooled.length > offset ? pooled.slice(offset, offset + batchLimit) : [];
     let needLogin = false;
     let hasMore = false;
     let fetchedTotal = zhihuCommentCountsMap.get(cleanId) || 0;
     const batchLimit = 10;
 
     // 1. First, fetch from official v5 abstract_comment (returns 200 OK without requiring login or x-zse-96 signature)
-    try {
-      const absResp = await zhihuApi(`/api/v4/comment_v5/answers/${cleanId}/abstract_comment?limit=20&offset=${offset}`, {
-        headers: {
-          "x-requested-with": "fetch",
-          "Referer": location.href || "https://www.zhihu.com/"
-        }
-      });
-      if (absResp?.counts?.total_counts != null) {
-        fetchedTotal = Number(absResp.counts.total_counts);
-        zhihuCommentCountsMap.set(cleanId, fetchedTotal);
-      }
-      if (Array.isArray(absResp?.data) && absResp.data.length > 0) {
-        for (const c of absResp.data) {
-          if (c && !rawComments.some((e) => String(e.id) === String(c.id))) {
-            rawComments.push(c);
-          }
-        }
-      }
-
-      // If more comments exist in this batch, fetch remaining offsets concurrently
-      const targetEnd = Math.min(fetchedTotal, offset + batchLimit);
-      if (rawComments.length < targetEnd && targetEnd > offset + 2) {
-        const extraOffsets = [];
-        for (let o = offset + 2; o < targetEnd + 2; o += 2) {
-          extraOffsets.push(o);
-        }
-        if (extraOffsets.length > 0) {
-          const extraResults = await Promise.all(
-            extraOffsets.map((o) =>
-              zhihuApi(`/api/v4/comment_v5/answers/${cleanId}/abstract_comment?limit=2&offset=${o}`, {
-                headers: {
-                  "x-requested-with": "fetch",
-                  "Referer": location.href || "https://www.zhihu.com/"
-                }
-              }).catch(() => null)
-            )
-          );
-          for (const res of extraResults) {
-            if (Array.isArray(res?.data)) {
-              for (const c of res.data) {
-                if (c && !rawComments.some((e) => String(e.id) === String(c.id))) {
-                  rawComments.push(c);
-                }
-              }
-            }
-          }
-        }
-      }
-    } catch (_) {
+    if (rawComments.length === 0) {
       try {
-        const absResp = await zhihuApi(`/api/v4/comment_v5/articles/${cleanId}/abstract_comment?limit=20&offset=${offset}`);
+        const absResp = await zhihuApi(`/api/v4/comment_v5/answers/${cleanId}/abstract_comment?limit=20&offset=${offset}`, {
+          headers: {
+            "x-requested-with": "fetch",
+            "Referer": location.href || "https://www.zhihu.com/"
+          }
+        });
         if (absResp?.counts?.total_counts != null) {
           fetchedTotal = Number(absResp.counts.total_counts);
           zhihuCommentCountsMap.set(cleanId, fetchedTotal);
@@ -39037,7 +39009,52 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             }
           }
         }
-      } catch (_) {}
+
+        // If more comments exist in this batch, fetch remaining offsets concurrently
+        const targetEnd = Math.min(fetchedTotal, offset + batchLimit);
+        if (rawComments.length < targetEnd && targetEnd > offset + 2) {
+          const extraOffsets = [];
+          for (let o = offset + 2; o < targetEnd + 2; o += 2) {
+            extraOffsets.push(o);
+          }
+          if (extraOffsets.length > 0) {
+            const extraResults = await Promise.all(
+              extraOffsets.map((o) =>
+                zhihuApi(`/api/v4/comment_v5/answers/${cleanId}/abstract_comment?limit=2&offset=${o}`, {
+                  headers: {
+                    "x-requested-with": "fetch",
+                    "Referer": location.href || "https://www.zhihu.com/"
+                  }
+                }).catch(() => null)
+              )
+            );
+            for (const res of extraResults) {
+              if (Array.isArray(res?.data)) {
+                for (const c of res.data) {
+                  if (c && !rawComments.some((e) => String(e.id) === String(c.id))) {
+                    rawComments.push(c);
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (_) {
+        try {
+          const absResp = await zhihuApi(`/api/v4/comment_v5/articles/${cleanId}/abstract_comment?limit=20&offset=${offset}`);
+          if (absResp?.counts?.total_counts != null) {
+            fetchedTotal = Number(absResp.counts.total_counts);
+            zhihuCommentCountsMap.set(cleanId, fetchedTotal);
+          }
+          if (Array.isArray(absResp?.data) && absResp.data.length > 0) {
+            for (const c of absResp.data) {
+              if (c && !rawComments.some((e) => String(e.id) === String(c.id))) {
+                rawComments.push(c);
+              }
+            }
+          }
+        } catch (_) {}
+      }
     }
 
     // 2. Direct API request with fallback for full pagination (only when comments not yet retrieved)
@@ -39077,35 +39094,48 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       }
     }
 
-    // 3. Trigger native comment button in background DOM if comments still missing
+    // 3. Trigger native comment button / scroll in background DOM if comments still missing
     if (rawComments.length === 0 && typeof document !== "undefined") {
       try {
-        const nativeItem = document.querySelector(`
-          .ContentItem.AnswerItem[data-zop*='"itemId":${cleanId}'],
-          .ContentItem.AnswerItem[data-zop*='"itemId":"${cleanId}"'],
-          .ContentItem.AnswerItem[name="${cleanId}"],
-          [data-zop*="${cleanId}"]
-        `);
-        if (nativeItem) {
-          const nativeBtn = Array.from(nativeItem.querySelectorAll("button")).find((b) =>
-            (b.textContent && (b.textContent.includes("评论") || b.textContent.includes("条回复"))) ||
-            b.getAttribute("aria-label")?.includes("评论") ||
-            b.classList.contains("ContentItem-action")
-          );
-          if (nativeBtn) {
-            nativeBtn.click();
-            for (let i = 0; i < 5; i++) {
-              await new Promise((r) => setTimeout(r, 60));
-              const pool = zhihuCapturedCommentsPool.get(cleanId) || [];
-              if (pool.length > rawComments.length) {
-                for (const c of pool) {
-                  if (c && !rawComments.some((e) => String(e.id) === String(c.id))) {
-                    rawComments.push(c);
-                  }
-                }
-                needLogin = false;
-                break;
+        if (offset > 0) {
+          const scrollables = document.querySelectorAll(".CommentsV2, .CommentListV2, .Modal-content, .NestComment");
+          scrollables.forEach((sc) => {
+            sc.scrollTop = sc.scrollHeight;
+            sc.dispatchEvent(new Event("scroll", { bubbles: true }));
+          });
+          const nextBtn = document.querySelector(".PaginationButton-next, .Pagination-next, .CommentsV2-footer button");
+          if (nextBtn && typeof nextBtn.click === "function") {
+            nextBtn.click();
+          }
+        } else {
+          const nativeItem = document.querySelector(`
+            .ContentItem.AnswerItem[data-zop*='"itemId":${cleanId}'],
+            .ContentItem.AnswerItem[data-zop*='"itemId":"${cleanId}"'],
+            .ContentItem.AnswerItem[name="${cleanId}"],
+            [data-zop*="${cleanId}"]
+          `);
+          if (nativeItem) {
+            const nativeBtn = Array.from(nativeItem.querySelectorAll("button")).find((b) =>
+              (b.textContent && (b.textContent.includes("评论") || b.textContent.includes("条回复"))) ||
+              b.getAttribute("aria-label")?.includes("评论") ||
+              b.classList.contains("ContentItem-action")
+            );
+            if (nativeBtn) nativeBtn.click();
+          }
+        }
+        for (let i = 0; i < 12; i++) {
+          await new Promise((r) => setTimeout(r, 100));
+          const pool = zhihuCapturedCommentsPool.get(cleanId) || [];
+          if (pool.length > offset) {
+            const freshChunk = pool.slice(offset, offset + batchLimit);
+            for (const c of freshChunk) {
+              if (c && !rawComments.some((e) => String(e.id) === String(c.id))) {
+                rawComments.push(c);
               }
+            }
+            if (rawComments.length > 0) {
+              needLogin = false;
+              break;
             }
           }
         }
@@ -39246,9 +39276,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       const newComments = (commData.comments || []).filter(
         (c) => !zhihuCommentThreadState.comments.some((e) => String(e.id) === String(c.id))
       );
-      zhihuCommentThreadState.hasMore = Boolean(commData.hasMore);
-      zhihuCommentThreadState.offset = offset + (newComments.length || 10);
       if (newComments.length > 0) {
+        zhihuCommentThreadState.offset = offset + newComments.length;
         const commentsContainer = body.querySelector(".wecom-zhihu-thread-comments");
         if (commentsContainer) {
           const currentTotal = countZhihuComments(zhihuCommentThreadState.comments);
@@ -39261,6 +39290,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           hydrateChatImages(commentsContainer);
         }
       }
+      const totalCount = Number(zhihuCommentThreadState.parentPost?.reply_count || commData.totalCount || countZhihuComments(zhihuCommentThreadState.comments));
+      zhihuCommentThreadState.hasMore = totalCount > 0 ? (countZhihuComments(zhihuCommentThreadState.comments) < totalCount) : Boolean(commData.hasMore);
     } catch (err) {
       console.warn("[Zhihu] Load more comments failed:", err);
     } finally {
@@ -39596,8 +39627,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
           if (unrendered.length === 0) {
             triggerZhihuQuestionScroll(rawId);
-            for (let i = 0; i < 6; i++) {
-              await new Promise((r) => setTimeout(r, 200));
+            for (let i = 0; i < 10; i++) {
+              await new Promise((r) => setTimeout(r, 150));
               const freshCap = zhihuCapturedAnswersPool.get(rawId) || [];
               unrendered = freshCap.filter((a) => a && a.id && !existingIds.has(String(a.id)));
               if (unrendered.length > 0) break;
@@ -39609,6 +39640,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             }
           }
 
+          // Fallback 1: Direct question feeds API
           if (unrendered.length === 0) {
             try {
               const ansResp = await zhihuApi(`/api/v4/questions/${rawId}/feeds?include=data[*].content,voteup_count,comment_count,author.headline,badge&limit=10&offset=${offset}&order=default&platform=desktop`);
@@ -39618,11 +39650,34 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             } catch (_) {}
           }
 
+          // Fallback 2: Direct question answers API
           if (unrendered.length === 0) {
             try {
               const ansResp = await zhihuApi(`/api/v4/questions/${rawId}/answers?include=data[*].content,voteup_count,comment_count,author.headline,badge&limit=10&offset=${offset}&platform=desktop&sort_by=default`);
               const feedAns = (ansResp?.data || []).filter((a) => a && (a.id || a.content));
               unrendered = feedAns.filter((a) => !existingIds.has(String(a.id)));
+            } catch (_) {}
+          }
+
+          // Fallback 3: Multi-page SSR HTML pagination (/question/:id?page=X)
+          if (unrendered.length === 0) {
+            try {
+              const currentPageNum = Math.floor(chatState.postsByNumber.size / 5) + 1;
+              const pageDoc = await fetchZhihuPageDoc(`/question/${rawId}?page=${currentPageNum}`);
+              const pageHtml = typeof pageDoc === "string" ? pageDoc : pageDoc?.html;
+              if (pageHtml && !pageHtml.includes("没有知识存在的荒原") && !pageHtml.includes("<title>404")) {
+                const parsed = parseZhihuHtml(pageHtml, rawId, false);
+                if (Array.isArray(parsed?.answers) && parsed.answers.length > 0) {
+                  const poolArr = zhihuCapturedAnswersPool.get(rawId) || [];
+                  parsed.answers.forEach((pa) => {
+                    if (!poolArr.some((e) => String(e.id) === String(pa.id))) {
+                      poolArr.push(pa);
+                    }
+                  });
+                  zhihuCapturedAnswersPool.set(rawId, poolArr);
+                  unrendered = poolArr.filter((a) => a && a.id && !existingIds.has(String(a.id)));
+                }
+              }
             } catch (_) {}
           }
 
@@ -39632,10 +39687,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           if (freshPosts.length) {
             chatState.stream = chatState.stream.concat(freshPosts.map((p) => p.id));
             appendFreshPosts(freshPosts, body, { scroll: false, flat: true });
+            chatState.zhihuOffset = offset + freshPosts.length;
           }
-          chatState.zhihuOffset = offset + (freshPosts.length || 5);
           const totalAns = Number(chatState.topicData?.reply_count || chatState.topicData?.posts_count || 0);
-          chatState.zhihuHasMore = totalAns > 0 ? (chatState.zhihuOffset < totalAns) : (freshPosts.length > 0);
+          chatState.zhihuHasMore = totalAns > 0 ? (chatState.postsByNumber.size < totalAns + 1) : (freshPosts.length > 0);
           chatState.hasNewer = chatState.zhihuHasMore;
         }
       } catch (err) {
