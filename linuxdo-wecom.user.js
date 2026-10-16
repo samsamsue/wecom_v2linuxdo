@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.4
+// @version      0.8.5
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -20748,6 +20748,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         if (m) raw = parseInt(m[0], 10);
         else if (text) raw = 1;
       }
+      if (raw === 0) {
+        const initial = getZhihuInitialData();
+        const cnt = initial?.initialState?.common?.notificationsCount || initial?.initialState?.common?.inboxCount || 0;
+        if (cnt > 0) raw = cnt;
+      }
     } else if (IS_V2EX) {
       const notifLink = document.querySelector("#Top a[href^='/notifications'], #Rightbar a[href^='/notifications']");
       if (notifLink) {
@@ -21116,7 +21121,14 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     }
 
     if (IS_ZHIHU) {
-      window.open("https://www.zhihu.com/notifications", "_blank", "noopener,noreferrer");
+      const body = document.querySelector(".wecom-list-body");
+      if (location.pathname !== "/notifications") {
+        if (body) body.innerHTML = `<div class="wecom-list-status">正在加载知乎通知…</div>`;
+        navigateInApp("/notifications");
+      } else {
+        if (body) body.innerHTML = `<div class="wecom-list-status">正在加载知乎通知…</div>`;
+        loadList("/notifications", true);
+      }
     } else if (IS_V2EX) {
       const body = document.querySelector(".wecom-list-body");
       if (location.pathname !== "/notifications") {
@@ -22608,6 +22620,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const title = q.title || "知乎问答";
     const detail = formatZhihuCookedContent(q.detail || q.excerpt || "");
     const cookedContent = detail ? `<div>${detail}</div>` : `<p style="color:var(--wecom-text-secondary, #999);font-style:italic;">该问题暂无补充说明</p>`;
+    const followers = Number(q.follower_count || q.followers || 0);
+    const views = Number(q.visit_count || q.views || 0);
+    const answers = Number(q.answer_count || q.answers || 0);
+    const urlToken = author.url_token || author.urlToken || author.id || "";
     return {
       id: String(q.id),
       post_number: 1,
@@ -22618,7 +22634,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       raw: q.detail || q.excerpt || title,
       created_at: new Date(Number(q.created || Date.now() / 1000) * 1000).toISOString(),
       like_count: Number(q.visit_count || q.answer_count) || 0,
-      user_id: author.id || "",
+      user_id: author.id || urlToken,
+      url_token: urlToken,
+      author_id: author.id || urlToken,
+      zhihu_topic_stats: { followers, views, answers },
       is_op: true
     };
   }
@@ -22630,6 +22649,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const headline = author.headline ? ` · ${author.headline}` : "";
     const voteCount = Number(raw.voteup_count || raw.voteupCount || 0);
     const ansId = String(raw.id || postNumber);
+    const urlToken = author.url_token || author.urlToken || author.id || "";
     const commentCount = Number(
       raw.commentCount ??
       raw.comment_count ??
@@ -22652,7 +22672,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       created_at: new Date(Number(raw.created_time || raw.updated_time || Date.now() / 1000) * 1000).toISOString(),
       like_count: voteCount,
       liked: Boolean(raw.relationship?.voting === 1),
-      user_id: author.id || "",
+      user_id: author.id || urlToken,
+      url_token: urlToken,
+      author_id: author.id || urlToken,
       reply_count: commentCount
     };
   }
@@ -22748,6 +22770,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const author = art.author || {};
     const title = art.title || "知乎专栏文章";
     const content = formatZhihuCookedContent(art.content || art.excerpt || "");
+    const voteCount = Number(art.voteup_count || art.voteupCount || 0);
+    const commentCount = Number(art.comment_count || art.commentCount || 0);
+    const urlToken = author.url_token || author.urlToken || author.id || "";
     return {
       id: String(art.id),
       post_number: 1,
@@ -22757,8 +22782,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       cooked: content ? `<div>${content}</div>` : `<p style="color:var(--wecom-text-secondary, #999);font-style:italic;">文章内容加载中…</p>`,
       raw: art.content || art.excerpt || title,
       created_at: new Date(Number(art.created || Date.now() / 1000) * 1000).toISOString(),
-      like_count: Number(art.voteup_count || art.voteupCount || 0),
-      user_id: author.id || "",
+      like_count: voteCount,
+      user_id: author.id || urlToken,
+      url_token: urlToken,
+      author_id: author.id || urlToken,
+      zhihu_topic_stats: { voteup: voteCount, comments: commentCount, isArticle: true },
       is_op: true
     };
   }
@@ -23488,6 +23516,134 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     };
   }
 
+  async function fetchZhihuNotifications() {
+    try {
+      const resp = await zhihuApi("/api/v4/notifications/v2/timeline?limit=25");
+      const items = resp?.data || [];
+      if (Array.isArray(items) && items.length > 0) {
+        return items.map((item, idx) => {
+          const actionText = item.action_text || item.content_title || item.title || "知乎通知";
+          const op = item.operators?.[0] || {};
+          const author = op.name || "知友";
+          const avatar = op.avatar_url || "";
+          const target = item.target || {};
+          const linkStr = String(item.link || target.url || "");
+          const qMatch = linkStr.match(/question\/(\d+)/);
+          const pMatch = linkStr.match(/\/p\/([0-9a-zA-Z_-]+)/);
+          const isArt = Boolean(pMatch || target.type === "article");
+          const rawId = isArt ? (pMatch ? pMatch[1] : (target.id || String(idx))) : (qMatch ? qMatch[1] : (target.question?.id || target.id || String(idx)));
+          const topicId = isArt ? `p_${rawId}` : String(rawId);
+          let notifType = "reply";
+          let notifLabel = "回复";
+          const rawType = String(item.action_type || "").toUpperCase();
+          if (rawType.includes("VOTE") || rawType.includes("LIKE") || rawType.includes("THANK")) {
+            notifType = "thank";
+            notifLabel = "赞同";
+          } else if (rawType.includes("FOLLOW")) {
+            notifType = "fav";
+            notifLabel = "关注";
+          } else if (rawType.includes("INVITE")) {
+            notifType = "mention";
+            notifLabel = "邀请";
+          } else if (rawType.includes("COMMENT")) {
+            notifType = "reply";
+            notifLabel = "评论";
+          }
+          return {
+            id: topicId,
+            title: target.title || target.question?.title || actionText,
+            raw_content: actionText,
+            last_poster_username: author,
+            v2ex_author: author,
+            v2ex_avatar: avatar,
+            avatar_template: avatar,
+            node_name: "通知",
+            notif_type: notifType,
+            notif_label: notifLabel,
+            notification_text: `${author} ${actionText}`,
+            posts_count: 1,
+            reply_count: 0,
+            bumped_at: (item.created || Date.now() / 1000) * 1000,
+            created_at: (item.created || Date.now() / 1000) * 1000,
+            slug: isArt ? "article" : "question"
+          };
+        });
+      }
+    } catch (_) {}
+
+    // Fallback: check DOM or initialData
+    const initial = getZhihuInitialData();
+    const notifs = initial?.initialState?.entities?.notifications;
+    if (notifs && typeof notifs === "object") {
+      const list = Object.values(notifs);
+      if (list.length > 0) {
+        return list.map((item, idx) => ({
+          id: String(item.targetId || idx),
+          title: item.title || "知乎通知",
+          raw_content: item.content || item.title || "",
+          last_poster_username: item.authorName || "知友",
+          v2ex_author: item.authorName || "知友",
+          v2ex_avatar: item.authorAvatar || "",
+          avatar_template: item.authorAvatar || "",
+          node_name: "通知",
+          notif_type: "reply",
+          notif_label: "提醒",
+          notification_text: item.content || item.title || "",
+          posts_count: 1,
+          reply_count: 0,
+          bumped_at: Date.now(),
+          created_at: Date.now(),
+          slug: "question"
+        }));
+      }
+    }
+    return [];
+  }
+
+  async function fetchZhihuFollowList() {
+    try {
+      const resp = await zhihuApi("/api/v3/feed/topstory/follow?limit=15");
+      const list = resp?.data || [];
+      if (list.length > 0) {
+        return list.map(mapZhihuRecommendItemToTopic).filter(Boolean);
+      }
+    } catch (_) {}
+    return fetchZhihuRecommendList(0);
+  }
+
+  async function fetchZhihuExploreList() {
+    try {
+      const doc = await fetchZhihuPageDoc("/explore");
+      const html = typeof doc === "string" ? doc : doc.html;
+      const match = html.match(/<script\s+id=["']js-initialData["'][^>]*>([\s\S]*?)<\/script>/i);
+      if (match && match[1]) {
+        const parsed = JSON.parse(match[1]);
+        const topics = extractZhihuRecommendTopicsFromInitial(parsed);
+        if (topics.length > 0) return topics;
+      }
+    } catch (_) {}
+    return fetchZhihuRecommendList(0);
+  }
+
+  function pollZhihuNotifications() {
+    if (!IS_ZHIHU || document.visibilityState !== "visible") return;
+    try {
+      let count = 0;
+      const badgeEl = document.querySelector(".AppHeader-notifications .Badge, .AppHeader-messages .Badge, [class*='Notification'] .Badge, [class*='Badge-count']");
+      if (badgeEl) {
+        count = parseInt(badgeEl.textContent.trim(), 10) || 0;
+      } else {
+        const initial = getZhihuInitialData();
+        count = initial?.initialState?.common?.notificationsCount || initial?.initialState?.common?.inboxCount || 0;
+      }
+      if (count > lastKnownRawNotifCount) {
+        notificationCountOverride = null;
+      }
+      lastKnownRawNotifCount = count;
+      syncRail();
+    } catch (_) {}
+  }
+
   async function loadZhihuList(apiPath, force) {
     if (!force && listState.loadedApiPath === apiPath && Array.isArray(listState.topics) && listState.topics.length) {
       syncListActive();
@@ -23499,13 +23655,22 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     listState.apiPath = apiPath;
     try {
       let topics = [];
+      const isNotif = apiPath === "/notifications" || apiPath.startsWith("/notifications");
       const isHot = apiPath === "/hot" || apiPath.includes("hot");
+      const isFollow = apiPath === "/follow" || apiPath.includes("follow");
+      const isExplore = apiPath === "/explore" || apiPath.includes("explore");
+
       if (force || listState.loadedApiPath !== apiPath) {
         zhihuRecommendPool.length = 0;
         zhihuRecommendSeen.clear();
         zhihuCreatorDomainOffset = 0;
       }
-      if (isHot) {
+
+      if (isNotif) {
+        topics = await fetchZhihuNotifications();
+        listState.zhihuOffset = topics.length;
+        listState.moreUrl = null;
+      } else if (isHot) {
         topics = await fetchZhihuHotList();
         topics.forEach((t) => {
           if (t && t.id && !zhihuRecommendSeen.has(String(t.id))) {
@@ -23513,6 +23678,14 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             zhihuRecommendPool.push(t);
           }
         });
+        listState.zhihuOffset = topics.length;
+        listState.moreUrl = topics.length > 0 ? `zhihu_offset_${topics.length}` : null;
+      } else if (isFollow) {
+        topics = await fetchZhihuFollowList();
+        listState.zhihuOffset = topics.length;
+        listState.moreUrl = topics.length > 0 ? `zhihu_offset_${topics.length}` : null;
+      } else if (isExplore) {
+        topics = await fetchZhihuExploreList();
         listState.zhihuOffset = topics.length;
         listState.moreUrl = topics.length > 0 ? `zhihu_offset_${topics.length}` : null;
       } else {
@@ -25803,6 +25976,260 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     });
   }
 
+  /* ============================== 知乎 用户资料卡片 (Member Card) ============================== */
+
+  const zhihuProfileCache = new Map();
+
+  function closeZhihuMemberCard() {
+    const card = document.querySelector(".wecom-zhihu-member-card");
+    if (card) card.remove();
+  }
+
+  async function fetchZhihuUserProfile(userTokenOrId) {
+    if (!userTokenOrId) return null;
+    const token = String(userTokenOrId).trim();
+    if (zhihuProfileCache.has(token)) return zhihuProfileCache.get(token);
+
+    // 1. Try reading from initialState.entities.users
+    const initial = getZhihuInitialData();
+    const entityUser = initial?.initialState?.entities?.users?.[token];
+    if (entityUser) {
+      const profile = {
+        username: entityUser.name || "知友",
+        avatarUrl: entityUser.avatarUrl || entityUser.avatar_url || "",
+        headline: entityUser.headline || "",
+        description: entityUser.description || "",
+        urlToken: entityUser.urlToken || entityUser.url_token || token,
+        badge: entityUser.badge?.[0]?.topics?.[0]?.name || entityUser.badge?.[0]?.description || (entityUser.isOrg ? "机构认证" : ""),
+        answerCount: Number(entityUser.answerCount ?? entityUser.answer_count ?? 0),
+        articlesCount: Number(entityUser.articlesCount ?? entityUser.articles_count ?? 0),
+        followerCount: Number(entityUser.followerCount ?? entityUser.follower_count ?? 0),
+        voteupCount: Number(entityUser.voteupCount ?? entityUser.voteup_count ?? 0),
+        isFollowed: Boolean(entityUser.isFollowing)
+      };
+      zhihuProfileCache.set(token, profile);
+      return profile;
+    }
+
+    // 2. Try fetching from Zhihu API
+    try {
+      const resp = await zhihuApi(`/api/v4/members/${encodeURIComponent(token)}?include=headline,badge,voteup_count,follower_count,answer_count,articles_count,description,is_following`);
+      if (resp && (resp.name || resp.id)) {
+        const profile = {
+          username: resp.name || "知友",
+          avatarUrl: resp.avatar_url || resp.avatarUrl || "",
+          headline: resp.headline || "",
+          description: resp.description || "",
+          urlToken: resp.url_token || token,
+          badge: resp.badge?.[0]?.topics?.[0]?.name || resp.badge?.[0]?.description || "",
+          answerCount: Number(resp.answer_count || 0),
+          articlesCount: Number(resp.articles_count || 0),
+          followerCount: Number(resp.follower_count || 0),
+          voteupCount: Number(resp.voteup_count || 0),
+          isFollowed: Boolean(resp.is_following)
+        };
+        zhihuProfileCache.set(token, profile);
+        return profile;
+      }
+    } catch (_) {}
+
+    return {
+      username: token,
+      avatarUrl: "",
+      headline: "知乎知友",
+      description: "",
+      urlToken: token,
+      badge: "",
+      answerCount: 0,
+      articlesCount: 0,
+      followerCount: 0,
+      voteupCount: 0,
+      isFollowed: false
+    };
+  }
+
+  function openZhihuMemberCard(username, userTokenOrId, triggerEl, event) {
+    if (!username && !userTokenOrId) {
+      username = "知友";
+    }
+    closeZhihuMemberCard();
+    closeV2exMemberCard();
+    closeJuejinMemberCard();
+
+    const triggerImg = triggerEl?.querySelector?.("img") || (triggerEl?.tagName === "IMG" ? triggerEl : null);
+    const initialAvatarSrc = triggerImg?.src || "";
+    const cleanUsername = username && username !== "知友" ? username.split(" · ")[0] : (username || "知友");
+
+    const card = document.createElement("div");
+    card.className = "wecom-v2ex-member-card wecom-zhihu-member-card";
+    card.setAttribute("role", "dialog");
+    card.setAttribute("aria-label", `${cleanUsername} 的个人资料`);
+
+    card.innerHTML = `
+      <button type="button" class="wecom-member-card-close" title="关闭" aria-label="关闭">×</button>
+
+      <div class="wecom-member-card-header">
+        <div class="wecom-member-avatar-box">
+          ${initialAvatarSrc
+            ? `<img class="wecom-member-avatar-img" src="${escapeHtml(initialAvatarSrc)}" alt="${escapeHtml(cleanUsername)}">`
+            : `<div class="wecom-member-avatar-img" style="display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:700;">${escapeHtml(avatarLetter(cleanUsername))}</div>`}
+        </div>
+        <div class="wecom-member-title-box">
+          <div class="wecom-member-name-row">
+            <span class="wecom-member-username">${escapeHtml(cleanUsername)}</span>
+            <span class="wecom-member-badge" style="display:none">知乎答主</span>
+          </div>
+          <div class="wecom-member-tagline"><span class="wecom-member-loading-text">${userTokenOrId ? "正在获取资料…" : "知乎知友"}</span></div>
+        </div>
+      </div>
+
+      <div class="wecom-member-card-actions" style="display:none">
+        <button type="button" class="wecom-member-action-btn wecom-member-follow-btn" title="关注此人">+ 关注知友</button>
+      </div>
+
+      <div class="wecom-member-meta-pills" style="display:none"></div>
+      <div class="wecom-member-intro" style="display:none"></div>
+
+      <div class="wecom-member-card-footer">
+        <a class="wecom-member-btn primary wecom-member-home-link" href="${userTokenOrId ? `https://www.zhihu.com/people/${encodeURIComponent(userTokenOrId)}` : 'https://www.zhihu.com'}" target="_blank">查看完整主页 ↗</a>
+        <button type="button" class="wecom-member-btn secondary wecom-copy-username-btn">复制用户名</button>
+      </div>
+    `;
+
+    document.body.appendChild(card);
+
+    if (triggerEl && typeof triggerEl.getBoundingClientRect === "function") {
+      const rect = triggerEl.getBoundingClientRect();
+      const cardWidth = 320;
+      const cardHeight = card.offsetHeight || 280;
+      const margin = 10;
+
+      let left = rect.right + margin;
+      let top = rect.top;
+
+      if (left + cardWidth > window.innerWidth - margin) {
+        left = rect.left - cardWidth - margin;
+        if (left < margin) {
+          left = Math.max(margin, (window.innerWidth - cardWidth) / 2);
+          top = rect.bottom + margin;
+        }
+      }
+
+      if (top + cardHeight > window.innerHeight - margin) {
+        top = Math.max(margin, window.innerHeight - cardHeight - margin);
+      }
+      if (top < margin) top = margin;
+
+      card.style.position = "fixed";
+      card.style.left = `${Math.round(left)}px`;
+      card.style.top = `${Math.round(top)}px`;
+      card.style.zIndex = "100005";
+    } else {
+      card.style.position = "fixed";
+      card.style.left = "50%";
+      card.style.top = "50%";
+      card.style.transform = "translate(-50%, -50%)";
+      card.style.zIndex = "100005";
+    }
+
+    card.querySelector(".wecom-member-card-close")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeZhihuMemberCard();
+    });
+
+    card.querySelector(".wecom-copy-username-btn")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      try {
+        navigator.clipboard.writeText(cleanUsername);
+        showWecomToast(`已复制用户名：${cleanUsername}`, "success");
+      } catch {
+        showWecomToast(cleanUsername, "info");
+      }
+    });
+
+    const onOutsideClick = (e) => {
+      if (!card.contains(e.target) && (!triggerEl || !triggerEl.contains(e.target))) {
+        closeZhihuMemberCard();
+        document.removeEventListener("click", onOutsideClick, true);
+      }
+    };
+    setTimeout(() => {
+      document.addEventListener("click", onOutsideClick, true);
+    }, 10);
+
+    fetchZhihuUserProfile(userTokenOrId).then((profile) => {
+      if (!profile || !card.isConnected) return;
+
+      if (profile.urlToken) {
+        const homeLink = card.querySelector(".wecom-member-home-link");
+        if (homeLink) homeLink.href = `https://www.zhihu.com/people/${encodeURIComponent(profile.urlToken)}`;
+      }
+
+      if (profile.avatarUrl) {
+        const avatarImg = card.querySelector(".wecom-member-avatar-img");
+        if (avatarImg && avatarImg.tagName === "IMG") {
+          avatarImg.src = profile.avatarUrl;
+        }
+      }
+
+      if (profile.username) {
+        const nameEl = card.querySelector(".wecom-member-username");
+        if (nameEl) nameEl.textContent = profile.username;
+      }
+
+      if (profile.badge) {
+        const badge = card.querySelector(".wecom-member-badge");
+        if (badge) {
+          badge.textContent = profile.badge;
+          badge.style.display = "";
+        }
+      }
+
+      const tagline = card.querySelector(".wecom-member-tagline");
+      if (tagline) {
+        tagline.textContent = profile.headline || "知乎知友";
+      }
+
+      const pills = card.querySelector(".wecom-member-meta-pills");
+      if (pills) {
+        const items = [];
+        if (profile.answerCount > 0) items.push(`<span class="wecom-member-pill">回答 <strong>${profile.answerCount}</strong></span>`);
+        if (profile.articlesCount > 0) items.push(`<span class="wecom-member-pill">文章 <strong>${profile.articlesCount}</strong></span>`);
+        if (profile.voteupCount > 0) {
+          const vFmt = profile.voteupCount > 10000 ? `${(profile.voteupCount / 10000).toFixed(1)}万` : String(profile.voteupCount);
+          items.push(`<span class="wecom-member-pill">赞同 <strong>${vFmt}</strong></span>`);
+        }
+        if (profile.followerCount > 0) {
+          const fFmt = profile.followerCount > 10000 ? `${(profile.followerCount / 10000).toFixed(1)}万` : String(profile.followerCount);
+          items.push(`<span class="wecom-member-pill">关注者 <strong>${fFmt}</strong></span>`);
+        }
+        if (items.length > 0) {
+          pills.innerHTML = items.join("");
+          pills.style.display = "flex";
+        }
+      }
+
+      if (profile.description) {
+        const introBox = card.querySelector(".wecom-member-intro");
+        if (introBox) {
+          introBox.innerHTML = `<div style="color:#8F959E;margin-bottom:4px;font-size:11px;">简介</div><div>${escapeHtml(profile.description)}</div>`;
+          introBox.style.display = "block";
+        }
+      }
+
+      if (triggerEl && typeof triggerEl.getBoundingClientRect === "function") {
+        const rect = card.getBoundingClientRect();
+        if (rect.bottom > window.innerHeight - 10) {
+          const newTop = Math.max(10, window.innerHeight - rect.height - 10);
+          card.style.top = `${Math.round(newTop)}px`;
+        }
+      }
+    }).catch(() => {
+      const tagline = card.querySelector(".wecom-member-tagline");
+      if (tagline) tagline.textContent = "知乎知友";
+    });
+  }
+
   /* ============================== LINUX DO Connect 弹窗 ============================== */
 
   let linuxDoConnectDataCache = null;
@@ -27928,9 +28355,13 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     let fullUrl = href;
     try { fullUrl = new URL(href, location.origin).href; } catch {}
 
+    const tip = IS_ZHIHU
+      ? (postNumber > 1 ? "已复制回答直达链接" : "已复制问题直达链接")
+      : "已复制楼层直达链接";
+
     try {
       await navigator.clipboard.writeText(fullUrl);
-      showMiniToast("已复制楼层直达链接");
+      showMiniToast(tip);
     } catch {
       const input = document.createElement("input");
       input.value = fullUrl;
@@ -27938,7 +28369,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       input.select();
       document.execCommand("copy");
       input.remove();
-      showMiniToast("已复制楼层直达链接");
+      showMiniToast(tip);
     }
   }
 
@@ -28743,6 +29174,12 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   }
 
   function getNativeSearchInput() {
+    if (IS_ZHIHU) {
+      return document.querySelector(".SearchBar-input input, .SearchBar input, input[aria-label*='搜索'], input[placeholder*='搜索']");
+    }
+    if (IS_JUEJIN) {
+      return document.querySelector(".search-input input, .search-form input, input.search-input");
+    }
     return document.querySelector(
       "#welcome-banner-search-input, .welcome-banner__search-menu .search-term__input, .search-menu .search-term__input, input.search-term__input"
     );
@@ -28769,6 +29206,25 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     if (!q) return;
     if (IS_V2EX) {
       window.open(`https://www.google.com/search?q=site:v2ex.com/t%20${encodeURIComponent(q)}`, "_blank");
+      return;
+    }
+    if (IS_ZHIHU) {
+      const input = syncSearchToNative(q) || getNativeSearchInput();
+      if (input) {
+        try {
+          input.focus();
+          const form = input.closest("form");
+          if (form) {
+            form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+            return;
+          }
+        } catch (_) {}
+      }
+      window.open(`https://www.zhihu.com/search?type=content&q=${encodeURIComponent(q)}`, "_blank");
+      return;
+    }
+    if (IS_JUEJIN) {
+      window.open(`https://juejin.cn/search?query=${encodeURIComponent(q)}`, "_blank");
       return;
     }
     const input = syncSearchToNative(q) || getNativeSearchInput();
@@ -30653,6 +31109,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const candidates = [
       image.getAttribute("data-large-src"),
       image.getAttribute("data-orig-src"),
+      image.getAttribute("data-actualsrc"),
       image.getAttribute("data-original"),
       lightbox?.getAttribute("href"),
       isImageLink ? linkHref : null,
@@ -33132,7 +33589,13 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     if (event.target.closest(".wecom-topic-bookmark")) {
       consumeClick(event);
       closeAllPlatformDropdowns();
-      if (IS_JUEJIN || IS_ZHIHU) return true;
+      if (IS_JUEJIN) return true;
+      if (IS_ZHIHU) {
+        toggleZhihuTopicFollow().catch((error) => {
+          showWecomToast(error?.message || "操作失败", "error", 2500);
+        });
+        return true;
+      }
       if (IS_V2EX) {
         const wasFavorited = Boolean(chatState.v2exTopicFavorited);
         toggleV2exTopicFavorite().catch((error) => {
@@ -33199,6 +33662,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     if (action === "like") return toggleLike(Number(message.dataset.postId), button, message);
     if (action === "reply") {
       if (IS_ZHIHU) {
+        if (zhihuCommentThreadState.active) {
+          return replyToPost(Number(message.dataset.postNumber));
+        }
         if (Number(message.dataset.postNumber) > 1) {
           return openZhihuCommentThread(message.dataset.postId, Number(message.dataset.postNumber));
         }
@@ -34068,7 +34534,17 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     if (IS_ZHIHU) {
       const isArt = String(chatState.topicId).startsWith("p_") || chatState.slug === "article";
       const rawId = isArt && String(chatState.topicId).startsWith("p_") ? String(chatState.topicId).slice(2) : String(chatState.topicId);
-      return isArt ? `/p/${rawId}` : `/question/${rawId}`;
+      if (isArt) return `/p/${rawId}`;
+      const post = chatState.postsByNumber?.get(Number(postNumber));
+      if (post && post.id && Number(postNumber) > 1 && !String(post.id).startsWith("preview_")) {
+        return `/question/${rawId}/answer/${post.id}`;
+      }
+      return `/question/${rawId}`;
+    }
+    if (IS_V2EX) {
+      const post = chatState.postsByNumber?.get(Number(postNumber));
+      const floor = (post && post.floor) ? post.floor : (Number(postNumber) > 1 ? Number(postNumber) - 1 : 0);
+      return floor > 0 ? `/t/${chatState.topicId}#reply${floor}` : `/t/${chatState.topicId}`;
     }
     if (IS_JUEJIN) return `/pin/${chatState.topicId}`;
     const topicId = Number(chatState.topicId) || 0;
@@ -34972,9 +35448,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const deleteButton = canDelete
       ? `<button type="button" class="wecom-msg-tool" data-action="delete" title="撤回 / 删除">${ICONS.trash}</button>`
       : "";
-    const shareButton = IS_LINUXDO
-      ? `<button type="button" class="wecom-msg-tool" data-action="share" title="分享 / 复制链接">${ICONS.share}</button>`
-      : "";
+    const shareButton = `<button type="button" class="wecom-msg-tool" data-action="share" title="分享 / 复制链接">${ICONS.share}</button>`;
     const canFlag = IS_LINUXDO && !me && post.id && (post.can_flag !== false);
     const flagButton = canFlag
       ? `<button type="button" class="wecom-msg-tool" data-action="flag" title="举报 / 反馈">${ICONS.flag}</button>`
@@ -34999,7 +35473,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       ? `<button type="button" class="wecom-msg-tool" data-action="boost" title="添加 Boost">${ICONS.boost}</button>`
       : "";
     const likeCount = Number(post.like_count) || (post.actions_summary || []).find((a) => a.id === 2)?.count || 0;
-    const likeLabel = IS_V2EX ? "感谢回复" : "点赞";
+    const likeLabel = IS_V2EX ? "感谢回复" : (IS_ZHIHU ? "赞同" : "点赞");
     const likeToolIcon = IS_V2EX ? ICONS.heart : ICONS.like;
     const likesBadgeHtml = likeCount > 0
       ? `<span class="wecom-msg-likes" title="${likeLabel}：${likeCount}"><span class="wecom-msg-like-icon">${ICONS.heart}</span><span class="wecom-msg-like-num">${likeCount}</span></span>`
@@ -35013,10 +35487,22 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const timeHtml = `<span class="wecom-msg-time"${timeAttr}>${escapeHtml(formatTime(post.created_at))}</span>`;
     const floorNum = IS_V2EX && post.floor != null && post.floor > 0 ? post.floor : post.post_number;
     const floorHtml = `<span class="wecom-msg-floor" data-floor="${floorNum}" title="${floorNum}楼">#${floorNum}</span>`;
-    const topicStats = IS_V2EX && Number(post.post_number) === 1 ? post.v2ex_topic_stats : null;
-    const topicStatsHtml = topicStats && (topicStats.views || topicStats.favorites || topicStats.thanks)
-      ? `<span class="wecom-v2ex-topic-stats" title="浏览 ${topicStats.views || 0}，收藏 ${topicStats.favorites || 0}，感谢 ${topicStats.thanks || 0}">浏览 ${topicStats.views || 0} · 收藏 ${topicStats.favorites || 0} · 感谢 ${topicStats.thanks || 0}</span>`
-      : "";
+    const topicStats = Number(post.post_number) === 1
+      ? (IS_V2EX ? post.v2ex_topic_stats : (IS_ZHIHU ? post.zhihu_topic_stats : null))
+      : null;
+    let topicStatsHtml = "";
+    if (IS_V2EX && topicStats && (topicStats.views || topicStats.favorites || topicStats.thanks)) {
+      topicStatsHtml = `<span class="wecom-v2ex-topic-stats" title="浏览 ${topicStats.views || 0}，收藏 ${topicStats.favorites || 0}，感谢 ${topicStats.thanks || 0}">浏览 ${topicStats.views || 0} · 收藏 ${topicStats.favorites || 0} · 感谢 ${topicStats.thanks || 0}</span>`;
+    } else if (IS_ZHIHU && topicStats) {
+      if (topicStats.isArticle) {
+        const vFmt = topicStats.voteup > 10000 ? `${(topicStats.voteup / 10000).toFixed(1)}万` : String(topicStats.voteup || 0);
+        topicStatsHtml = `<span class="wecom-v2ex-topic-stats wecom-zhihu-topic-stats" title="获赞 ${topicStats.voteup || 0}，评论 ${topicStats.comments || 0}">获赞 ${vFmt} · 评论 ${topicStats.comments || 0}</span>`;
+      } else if (topicStats.followers || topicStats.views || topicStats.answers) {
+        const fFmt = topicStats.followers > 10000 ? `${(topicStats.followers / 10000).toFixed(1)}万` : String(topicStats.followers || 0);
+        const vFmt = topicStats.views > 10000 ? `${(topicStats.views / 10000).toFixed(1)}万` : String(topicStats.views || 0);
+        topicStatsHtml = `<span class="wecom-v2ex-topic-stats wecom-zhihu-topic-stats" title="关注者 ${topicStats.followers || 0}，浏览 ${topicStats.views || 0}，回答 ${topicStats.answers || 0}">关注者 ${fFmt} · 浏览 ${vFmt} · 回答 ${topicStats.answers || 0}</span>`;
+      }
+    }
     const bodyHtml = replyBodyHtml(post, Boolean(replyInd));
     const metaParts = [
       timeHtml,
@@ -35614,7 +36100,77 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
     try {
       if (IS_ZHIHU) {
-        showWecomToast("知乎赞同/点赞需在原站网页端进行", "info", 2000);
+        const commentId = msg?.dataset?.commentId;
+        const isOp = Number(msg?.dataset?.postNumber) === 1;
+        const targetId = commentId || (isOp ? String(chatState.topicId || postId) : String(msg?.dataset?.postId || postId));
+        const isLiked = btn.classList.contains("liked");
+        activeLikingPosts.add(targetId);
+        try {
+          if (commentId) {
+            // Comment like
+            try {
+              await zhihuApi(`/api/v4/comment_v5/comments/${commentId}/like`, {
+                method: isLiked ? "DELETE" : "POST"
+              });
+            } catch (_) {}
+          } else {
+            // Answer upvote
+            let clickedNative = false;
+            try {
+              const nativeVoteBtn = document.querySelector(
+                `[name="${targetId}"] button.VoteButton--up, [data-zop*='"${targetId}"'] button.VoteButton--up, [data-za-extra-module*='"${targetId}"'] button.VoteButton--up, .ContentItem[data-zop*='"${targetId}"'] button.VoteButton--up`
+              );
+              if (nativeVoteBtn) {
+                nativeVoteBtn.click();
+                clickedNative = true;
+              }
+            } catch (_) {}
+
+            if (!clickedNative) {
+              try {
+                await zhihuApi(`/api/v4/answers/${targetId}/voters`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ type: isLiked ? "neutral" : "up" })
+                });
+              } catch (_) {}
+            }
+          }
+
+          let likeNumEl = msg?.querySelector(".wecom-msg-like-num");
+          let likesBadge = msg?.querySelector(".wecom-msg-likes");
+          if (isLiked) {
+            btn.classList.remove("liked");
+            likedPosts.delete(targetId);
+            if (likeNumEl) {
+              const current = parseInt(likeNumEl.textContent.trim(), 10) || 1;
+              const next = Math.max(0, current - 1);
+              likeNumEl.textContent = String(next);
+              if (next === 0 && likesBadge) likesBadge.style.display = "none";
+            }
+            showWecomToast("已取消赞同", "info", 1500);
+          } else {
+            btn.classList.add("liked");
+            likedPosts.add(targetId);
+            if (likeNumEl) {
+              const current = parseInt(likeNumEl.textContent.trim(), 10) || 0;
+              likeNumEl.textContent = String(current + 1);
+              if (likesBadge) likesBadge.style.display = "";
+            } else {
+              const meta = msg?.querySelector(".wecom-msg-meta");
+              if (meta) {
+                const badge = document.createElement("span");
+                badge.className = "wecom-msg-likes";
+                badge.title = "赞同：1";
+                badge.innerHTML = `<span class="wecom-msg-like-icon">${ICONS.heart}</span><span class="wecom-msg-like-num">1</span>`;
+                meta.appendChild(badge);
+              }
+            }
+            showWecomToast("赞同成功", "success", 1500);
+          }
+        } finally {
+          activeLikingPosts.delete(targetId);
+        }
         return;
       }
       if (IS_JUEJIN) {
@@ -35968,13 +36524,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       if (!uid && msg) {
         const postNumber = Number(msg.dataset?.postNumber);
         const post = chatState.postsByNumber?.get(postNumber);
-        if (post?.author_id || post?.user_id) uid = String(post.author_id || post.user_id);
+        if (post?.url_token || post?.author_id || post?.user_id) {
+          uid = String(post.url_token || post.author_id || post.user_id);
+        }
       }
-      if (uid) {
-        window.open(`https://www.zhihu.com/people/${uid}`, "_blank", "noopener,noreferrer");
-      } else {
-        showWecomToast(`知友: ${username}`, "info");
-      }
+      openZhihuMemberCard(username, uid, trigger, event);
       return;
     }
     if (IS_JUEJIN) {
@@ -36862,11 +37416,42 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const replyTo = composerBridgeState.replyToPostNumber;
     try {
       if (IS_ZHIHU) {
-        showWecomToast("知乎回答/评论操作需安全校验，请在原站网页端发表", "info", 3500);
-        composerBridgeState.submitting = false;
-        updateComposeSendState();
-        setComposeStatus("知乎为只读模式", "idle", false);
-        return;
+        if (zhihuCommentThreadState.active && zhihuCommentThreadState.answerId) {
+          const ansId = zhihuCommentThreadState.answerId;
+          const replyToPostNumber = composerBridgeState.replyToPostNumber;
+          let replyCommentId = null;
+          if (replyToPostNumber) {
+            const targetComment = zhihuCommentThreadState.comments?.find(
+              (c) => Number(c.floorNum || c.floor) === Number(replyToPostNumber) || String(c.id) === String(replyToPostNumber)
+            );
+            if (targetComment) replyCommentId = targetComment.id;
+          }
+          try {
+            await postZhihuComment(ansId, "answers", raw, replyCommentId);
+            completeComposerSubmission(input);
+            showWecomToast("评论发表成功！", "success", 2000);
+            if (typeof fetchZhihuAnswerComments === "function") {
+              const res = await fetchZhihuAnswerComments(ansId, 0);
+              if (res?.comments) {
+                zhihuCommentThreadState.comments = res.comments;
+                const commentsContainer = document.querySelector(".wecom-zhihu-thread-comments");
+                if (commentsContainer) {
+                  assignZhihuCommentFloors(zhihuCommentThreadState.comments, 1);
+                  commentsContainer.innerHTML = zhihuCommentThreadState.comments.map((c, idx) => renderZhihuCommentBubble(c, idx)).join("");
+                  hydrateChatImages(commentsContainer);
+                }
+              }
+            }
+            return;
+          } catch (err) {
+            console.warn("[Zhihu] post comment error:", err);
+            showWecomToast("知乎评论发表受限（需在原站通过安全校验）", "info", 3500);
+            return;
+          }
+        } else {
+          showWecomToast("知乎主贴回答请前往原站网页端发表", "info", 3000);
+          return;
+        }
       }
       if (IS_JUEJIN) {
         await submitJuejinComment(chatState.topicId, raw);
@@ -37705,6 +38290,50 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     }
   }
 
+  async function toggleZhihuTopicFollow() {
+    if (!chatState.topicId) {
+      showWecomToast("未打开问题", "info");
+      return;
+    }
+    const isArt = String(chatState.topicId).startsWith("p_") || chatState.slug === "article";
+    const rawId = isArt && String(chatState.topicId).startsWith("p_") ? String(chatState.topicId).slice(2) : String(chatState.topicId);
+    if (isArt) {
+      showWecomToast("专栏文章收藏请前往原站网页端", "info", 1500);
+      return;
+    }
+
+    let clickedNative = false;
+    try {
+      const nativeBtn = document.querySelector(".QuestionHeader-actions button.FollowButton, button.QuestionHeader-follow, button.NumberBoard-itemInner");
+      if (nativeBtn) {
+        nativeBtn.click();
+        clickedNative = true;
+      }
+    } catch (_) {}
+
+    const isFollowed = Boolean(chatState.zhihuTopicFollowed);
+    if (!clickedNative) {
+      try {
+        await zhihuApi(`/api/v4/questions/${rawId}/followers`, {
+          method: isFollowed ? "DELETE" : "POST"
+        });
+      } catch (err) {
+        if (!clickedNative) {
+          throw new Error("关注操作需要知乎安全校验，请在原生页操作");
+        }
+      }
+    }
+
+    chatState.zhihuTopicFollowed = !isFollowed;
+    const bookmarkBtn = document.querySelector(".wecom-topic-bookmark");
+    if (bookmarkBtn) {
+      bookmarkBtn.classList.toggle("is-active", chatState.zhihuTopicFollowed);
+      bookmarkBtn.classList.toggle("is-bookmarked", chatState.zhihuTopicFollowed);
+      bookmarkBtn.title = chatState.zhihuTopicFollowed ? "已关注该问题（点击取消关注）" : "关注问题";
+    }
+    showWecomToast(chatState.zhihuTopicFollowed ? "已关注该问题" : "已取消关注", "success", 1500);
+  }
+
   function mapV2exTopicApiResponse(topicObj, replies = []) {
     if (!topicObj) return null;
     const opUsername = (topicObj.member?.username && topicObj.member.username !== "楼主") ? topicObj.member.username : "v2ex_user";
@@ -38481,6 +39110,18 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       chatState.acceptedAnswerPostNumber = (data.accepted_answer && (data.accepted_answer.post_number || data.accepted_answer.postNumber)) || null;
       if (IS_V2EX) {
         setV2exTopicFavoriteState(Boolean(data.v2ex_favorited));
+      } else if (IS_ZHIHU) {
+        const isArt = String(topicId).startsWith("p_");
+        const rawId = isArt ? String(topicId).slice(2) : String(topicId);
+        const initial = getZhihuInitialData();
+        const qEntity = !isArt ? initial?.initialState?.entities?.questions?.[rawId] : null;
+        chatState.zhihuTopicFollowed = Boolean(qEntity?.relationship?.isFollowing);
+        const bookmarkBtn = document.querySelector(".wecom-topic-bookmark");
+        if (bookmarkBtn) {
+          bookmarkBtn.classList.toggle("is-active", chatState.zhihuTopicFollowed);
+          bookmarkBtn.classList.toggle("is-bookmarked", chatState.zhihuTopicFollowed);
+          bookmarkBtn.title = chatState.zhihuTopicFollowed ? "已关注该问题（点击取消关注）" : (isArt ? "专栏文章" : "关注问题");
+        }
       } else {
         setTopicBookmarkState(Boolean(topicBookmarkFrom(data)));
         bindBookmarkEvents();
@@ -38973,6 +39614,58 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           </div>
         </div>
       </div>`;
+  }
+
+  async function postZhihuComment(targetId, type = "answers", content = "", replyCommentId = null) {
+    const cleanId = String(targetId).replace(/[^\d]/g, "");
+    const cleanType = type === "articles" ? "articles" : (type === "questions" ? "questions" : "answers");
+    const payload = {
+      content: content.trim(),
+      type: "normal"
+    };
+    if (replyCommentId) {
+      payload.reply_comment_id = String(replyCommentId);
+    }
+
+    // 1. Try REST API
+    try {
+      const resp = await zhihuApi(`/api/v4/comment_v5/${cleanType}/${cleanId}/comment`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-requested-with": "fetch",
+          "Referer": location.href || "https://www.zhihu.com/"
+        },
+        body: JSON.stringify(payload)
+      });
+      if (resp && (resp.id || resp.success || resp.data)) {
+        return resp;
+      }
+    } catch (_) {}
+
+    // 2. Fallback to native comment input in background DOM
+    let nativeInput = document.querySelector(".CommentEditor-input, .CommentBox-input, .Editable-content[contenteditable='true']");
+    if (!nativeInput) {
+      const nativeItem = document.querySelector(`[data-zop*='"itemId":${cleanId}'], [data-zop*='"itemId":"${cleanId}"'], [name="${cleanId}"]`);
+      const btn = nativeItem?.querySelector(".ContentItem-actions button, button.ContentItem-action");
+      if (btn) btn.click();
+      await delay(200);
+      nativeInput = document.querySelector(".CommentEditor-input, .CommentBox-input, .Editable-content[contenteditable='true']");
+    }
+
+    if (nativeInput) {
+      nativeInput.focus();
+      document.execCommand("insertText", false, content);
+      nativeInput.dispatchEvent(new Event("input", { bubbles: true }));
+      await delay(100);
+      const submitBtn = document.querySelector(".CommentEditor-singleButton, .CommentBox-submitButton, button[type='submit']");
+      if (submitBtn) {
+        submitBtn.click();
+        return { success: true };
+      }
+    }
+
+    throw new Error("知乎发布评论需要安全校验");
   }
 
   async function fetchZhihuAnswerComments(answerId, offset = 0) {
@@ -40591,6 +41284,27 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     }
   }
 
+  /* ============================== 知乎 未读通知后台静默轮询 ============================== */
+
+  let zhihuNotifPollTimer = null;
+  const ZHIHU_NOTIF_POLL_INTERVAL_MS = 60000;
+
+  function startZhihuNotificationPolling() {
+    if (zhihuNotifPollTimer) clearInterval(zhihuNotifPollTimer);
+    zhihuNotifPollTimer = setInterval(() => {
+      if (IS_ZHIHU && document.visibilityState === "visible") {
+        pollZhihuNotifications();
+      }
+    }, ZHIHU_NOTIF_POLL_INTERVAL_MS);
+  }
+
+  function stopZhihuNotificationPolling() {
+    if (zhihuNotifPollTimer) {
+      clearInterval(zhihuNotifPollTimer);
+      zhihuNotifPollTimer = null;
+    }
+  }
+
   /* ============================== 列表与对话相对时间实时刷新 ============================== */
 
   let relativeTimeRefreshTimer = null;
@@ -41516,6 +42230,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
                 pollJuejinCurrentTopicOnce();
               }
             }
+            if (IS_ZHIHU) {
+              pollZhihuNotifications();
+            }
           }
         }
       });
@@ -41649,6 +42366,13 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
     if (IS_JUEJIN) {
       startJuejinTopicPolling();
+    }
+
+    if (IS_ZHIHU) {
+      setTimeout(() => {
+        pollZhihuNotifications();
+      }, 1000);
+      startZhihuNotificationPolling();
     }
 
     // ⌘/Ctrl+K → 会话栏搜索（并同步原生 welcome-banner）
