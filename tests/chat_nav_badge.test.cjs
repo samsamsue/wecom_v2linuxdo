@@ -11465,4 +11465,47 @@ test("Test 138: Zhihu reply thread pure comments view (omit parent answer card) 
   );
 });
 
+test("Test 139: Zhihu reply thread nested bubble hierarchy (.wecom-reply-children inside .wecom-msg-bubble) and floor synchronization (v0.8.1)", () => {
+  // 1. Bubble hierarchy: childrenHtml nested inside .wecom-msg-bubble
+  assert.ok(
+    scriptContent.includes('<div class="wecom-msg-bubble">') &&
+    scriptContent.includes("${childrenHtml}") &&
+    scriptContent.includes('<div class="wecom-reply-children">'),
+    "renderZhihuCommentBubble must nest .wecom-reply-children directly inside .wecom-msg-bubble"
+  );
+
+  // 2. Thread child class and depth attribute
+  assert.ok(
+    scriptContent.includes('const childClass = (comm.isChild || depth > 0) ? " is-thread-child" : "";') &&
+    scriptContent.includes('const depthAttr = depth > 0 ? ` data-thread-depth="${depth}"` : "";'),
+    "child comments must receive is-thread-child class and data-thread-depth attribute"
+  );
+
+  // 3. Root comments tree structure with attached children
+  assert.ok(
+    scriptContent.includes("rootItem.children.push(childItem);") &&
+    scriptContent.includes("rootComments.push(rootItem);"),
+    "fetchZhihuAnswerComments must attach child comments to root comments tree"
+  );
+
+  // 4. Comment count and floor number assignment across both roots and nested children
+  assert.ok(
+    scriptContent.includes("function countZhihuComments(commentsList)") &&
+    scriptContent.includes("function assignZhihuCommentFloors(commentsList, startFloor = 1)"),
+    "must define helpers to count and sequentially number all comments including nested children"
+  );
+  assert.ok(
+    scriptContent.includes("const displayedCount = countZhihuComments(zhihuCommentThreadState.comments);"),
+    "must track total displayed comments across all hierarchy levels"
+  );
+
+  // 5. CSS ensures full-width stretch for child messages inside .wecom-reply-children
+  assert.ok(
+    scriptContent.includes(".wecom-zhihu-thread-comments .wecom-reply-children .wecom-msg {") &&
+    scriptContent.includes("max-width: 100% !important;"),
+    "must style child comments inside .wecom-reply-children to take 100% width"
+  );
+});
+
+
 
