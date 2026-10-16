@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.1
+// @version      0.8.2
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -4915,21 +4915,37 @@
       margin-left: auto;
       display: inline-flex;
       align-items: center;
-      padding: 0;
+      gap: 3px;
+      padding: 2px 6px;
       font-size: 12px;
       color: var(--wc-text-3, #8c8c8c);
       background: transparent;
       border: none;
-      border-radius: 0;
+      border-radius: 4px;
       cursor: pointer;
-      transition: color 0.15s ease;
+      transition: all 0.15s ease;
       user-select: none;
       font-family: inherit;
+      line-height: 1;
+    }
+    .wecom-zhihu-comments-btn svg,
+    .wecom-zhihu-comments-btn .wecom-zhihu-comments-icon {
+      width: 13px;
+      height: 13px;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wecom-zhihu-comments-btn .wecom-zhihu-comments-num {
+      font-size: 12px;
+      line-height: 1;
+      font-weight: 400;
     }
     .wecom-zhihu-comments-btn:hover {
       color: #1677ff;
-      text-decoration: underline;
-      background: transparent;
+      background: rgba(22, 119, 255, 0.08);
+      text-decoration: none;
     }
     html.wecom-dark .wecom-zhihu-comments-btn,
     html.${ROOT_CLASS}.wecom-dark .wecom-zhihu-comments-btn {
@@ -4938,7 +4954,7 @@
     html.wecom-dark .wecom-zhihu-comments-btn:hover,
     html.${ROOT_CLASS}.wecom-dark .wecom-zhihu-comments-btn:hover {
       color: #4096ff;
-      background: transparent;
+      background: rgba(64, 150, 255, 0.12);
     }
 
     .wecom-zhihu-thread-parent-card {
@@ -20066,7 +20082,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.1";
+  const SCRIPT_VERSION = "0.8.2";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -38718,6 +38734,33 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     mainTitle: ""
   };
 
+  const ZHIHU_COMMENT_ICON = `<svg class="wecom-zhihu-comments-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
+
+  function formatZhihuCommentBtnHtml(count) {
+    const num = Number(count || 0);
+    if (num <= 0) return "";
+    return `${ZHIHU_COMMENT_ICON}<span class="wecom-zhihu-comments-num">${num}</span>`;
+  }
+
+  function syncZhihuCommentButton(btn, count) {
+    if (!btn) return;
+    const num = Number(count || 0);
+    if (num > 0) {
+      btn.innerHTML = formatZhihuCommentBtnHtml(num);
+      btn.style.display = "inline-flex";
+      btn.title = `查看回复讨论 (${num})`;
+    } else {
+      btn.innerHTML = "";
+      btn.style.display = "none";
+      btn.title = "";
+    }
+    const footer = btn.closest(".wecom-zhihu-comments-entry");
+    if (footer) {
+      const hasExpand = Boolean(footer.querySelector(".wecom-zhihu-expand-btn"));
+      footer.style.display = (num > 0 || hasExpand) ? "" : "none";
+    }
+  }
+
   function applyZhihuAnswerClamping(container) {
     if (!IS_ZHIHU || !container) return;
     const msgEls = container.querySelectorAll(".wecom-msg[data-post-number]:not([data-post-number='1'])");
@@ -38737,7 +38780,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         let commentCount = Number(post?.reply_count || (postId ? zhihuCommentCountsMap.get(postId) : 0) || 0);
         footer = document.createElement("div");
         footer.className = "wecom-zhihu-comments-entry wecom-zhihu-bubble-footer";
-        footer.innerHTML = `<button type="button" class="wecom-zhihu-comments-btn" data-action="zhihu-open-comments" data-post-number="${postNumber}" data-answer-id="${escapeHtml(postId)}" title="查看回复讨论">回复 ：${commentCount}</button>`;
+        footer.innerHTML = `<button type="button" class="wecom-zhihu-comments-btn" data-action="zhihu-open-comments" data-post-number="${postNumber}" data-answer-id="${escapeHtml(postId)}" title="查看回复讨论">${formatZhihuCommentBtnHtml(commentCount)}</button>`;
+        const btn = footer.querySelector(".wecom-zhihu-comments-btn");
+        syncZhihuCommentButton(btn, commentCount);
         bubble.appendChild(footer);
 
         if (commentCount === 0 && postId && /^\d+$/.test(postId) && !bubble.dataset.countFetched) {
@@ -38748,8 +38793,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
               if (realCount > 0) {
                 zhihuCommentCountsMap.set(postId, realCount);
                 if (post) post.reply_count = realCount;
-                const btn = footer.querySelector(".wecom-zhihu-comments-btn");
-                if (btn) btn.textContent = `回复 ：${realCount}`;
+                const targetBtn = footer.querySelector(".wecom-zhihu-comments-btn");
+                syncZhihuCommentButton(targetBtn, realCount);
               }
             }
           }).catch(() => {});
@@ -38761,12 +38806,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         }
         const knownCount = Number(post?.reply_count || (postId ? zhihuCommentCountsMap.get(postId) : 0) || 0);
         const btn = footer.querySelector(".wecom-zhihu-comments-btn");
-        if (btn) {
-          const expectedText = `回复 ：${knownCount}`;
-          if (btn.textContent !== expectedText) {
-            btn.textContent = expectedText;
-          }
-        }
+        syncZhihuCommentButton(btn, knownCount);
       }
 
       const isAlreadyExpanded = postId && zhihuExpandedAnswerIds.has(postId);
@@ -39315,7 +39355,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       if (parentCardCount) parentCardCount.textContent = `评论与讨论 (${effectiveTotal})`;
       const outerBtn = document.querySelector(`.wecom-zhihu-comments-btn[data-answer-id="${escapeHtml(String(post.id))}"]`);
       if (outerBtn) {
-        outerBtn.textContent = `回复 ：${effectiveTotal}`;
+        syncZhihuCommentButton(outerBtn, effectiveTotal);
       }
 
       const commentsContainer = body.querySelector(".wecom-zhihu-thread-comments");

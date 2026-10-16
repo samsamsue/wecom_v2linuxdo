@@ -11406,6 +11406,7 @@ test("Test 137: Zhihu answer discussion count consistency, multi-offset abstract
     "openZhihuCommentThread must find and synchronize outer answer bubble button"
   );
   assert.ok(
+    scriptContent.includes("syncZhihuCommentButton(outerBtn, effectiveTotal)") ||
     scriptContent.includes("outerBtn.textContent = `回复 ：${effectiveTotal}`"),
     "must update outer button text to match effectiveTotal"
   );
@@ -11427,6 +11428,7 @@ test("Test 137: Zhihu answer discussion count consistency, multi-offset abstract
 
   // 6. applyZhihuAnswerClamping outer button sync on re-render
   assert.ok(
+    scriptContent.includes("syncZhihuCommentButton(btn, knownCount)") ||
     scriptContent.includes("btn.textContent !== expectedText"),
     "applyZhihuAnswerClamping must update outer button text whenever knownCount changes"
   );
@@ -11506,6 +11508,34 @@ test("Test 139: Zhihu reply thread nested bubble hierarchy (.wecom-reply-childre
     "must style child comments inside .wecom-reply-children to take 100% width"
   );
 });
+
+test("Test 140: Zhihu answer reply count button formatted as icon + number and hidden when 0 (v0.8.2)", () => {
+  // 1. Icon + number format helper
+  assert.ok(
+    scriptContent.includes("function formatZhihuCommentBtnHtml(count)") &&
+    scriptContent.includes("wecom-zhihu-comments-icon") &&
+    scriptContent.includes("wecom-zhihu-comments-num"),
+    "must define formatZhihuCommentBtnHtml to render icon and number"
+  );
+
+  // 2. Hide when 0
+  assert.ok(
+    scriptContent.includes("function syncZhihuCommentButton(btn, count)"),
+    "must define syncZhihuCommentButton to manage icon format and visibility"
+  );
+  assert.ok(
+    scriptContent.includes('btn.style.display = "none";') &&
+    scriptContent.includes('btn.style.display = "inline-flex";'),
+    "must hide button when count is 0 and show inline-flex when count > 0"
+  );
+
+  // 3. Footer visibility sync
+  assert.ok(
+    scriptContent.includes('footer.style.display = (num > 0 || hasExpand) ? "" : "none";'),
+    "footer must hide when comment count is 0 and no expand button is present"
+  );
+});
+
 
 
 
