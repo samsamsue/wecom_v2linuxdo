@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.6
+// @version      0.8.7
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -69,27 +69,72 @@
   const zhihuCapturedAnswersPool = new Map();
   const zhihuCapturedCommentsPool = new Map();
   const zhihuCommentCountsMap = new Map();
+  const zhihuCommentPagingMap = new Map();
   let zhihuLastSignedHeaders = null;
 
   let zhihuInternalClient = null;
 
   function getZhihuInternalClient() {
-    if (zhihuInternalClient) return zhihuInternalClient;
+    if (zhihuInternalClient && typeof zhihuInternalClient.get === "function") return zhihuInternalClient;
     try {
       const chunkKey = typeof window !== "undefined" && Object.keys(window).find((k) => k.startsWith("webpackChunk"));
       if (!chunkKey || !window[chunkKey] || typeof window[chunkKey].push !== "function") return null;
       let wpRequire = null;
       window[chunkKey].push([[Symbol()], {}, (r) => { wpRequire = r; }]);
-      if (!wpRequire || !wpRequire.c) return null;
+      if (!wpRequire) return null;
 
-      for (const id in wpRequire.c) {
-        const exp = wpRequire.c[id]?.exports;
-        if (!exp) continue;
-        const candidates = [exp, exp.default, exp.client, exp.request, exp.api];
-        for (const c of candidates) {
-          if (c && typeof c.get === "function" && (c.interceptors || c.defaults)) {
-            zhihuInternalClient = c;
-            return c;
+      // Tier 1a: Check loaded modules in wpRequire.c for an Axios instance with request interceptors for zse
+      if (wpRequire.c) {
+        for (const id in wpRequire.c) {
+          const exp = wpRequire.c[id]?.exports;
+          if (!exp) continue;
+          const candidates = [exp, exp.default, exp.client, exp.request, exp.api].filter(Boolean);
+          for (const cand of candidates) {
+            if (cand && typeof cand.get === "function") {
+              const handlers = cand.interceptors?.request?.handlers || [];
+              const hasZse = handlers.some((h) => {
+                const s = h?.fulfilled?.toString() || "";
+                return s.includes("zse") || s.includes("sign") || s.includes("headers");
+              });
+              if (hasZse) {
+                zhihuInternalClient = cand;
+                return cand;
+              }
+            }
+          }
+        }
+      }
+
+      // Tier 1b: Search module sources in wpRequire.m for the API module that handles "x-zse-96"
+      if (wpRequire.m) {
+        for (const id in wpRequire.m) {
+          const code = wpRequire.m[id]?.toString() || "";
+          if (code.includes("x-zse-96") || code.includes("101_3_3.0")) {
+            try {
+              const mod = wpRequire(id);
+              const candidates = [mod, mod?.default, mod?.client, mod?.request, mod?.api].filter(Boolean);
+              for (const cand of candidates) {
+                if (cand && typeof cand.get === "function") {
+                  zhihuInternalClient = cand;
+                  return cand;
+                }
+              }
+            } catch (_) {}
+          }
+        }
+      }
+
+      // Tier 1c: Fallback to any axios instance with interceptors or defaults
+      if (wpRequire.c) {
+        for (const id in wpRequire.c) {
+          const exp = wpRequire.c[id]?.exports;
+          if (!exp) continue;
+          const candidates = [exp, exp.default, exp.client, exp.request, exp.api].filter(Boolean);
+          for (const cand of candidates) {
+            if (cand && typeof cand.get === "function" && (cand.interceptors || cand.defaults)) {
+              zhihuInternalClient = cand;
+              return cand;
+            }
           }
         }
       }
@@ -131,8 +176,13 @@
                 const idMatch = url.match(/(?:answers|articles|questions|comment_v5\/comment|comment)\/(\d+)/) ||
                                 url.match(/(?:answers|articles|questions)\/([a-zA-Z0-9_-]+)/);
                 const targetId = idMatch ? idMatch[1] : null;
-                if (targetId && json?.counts?.total_counts != null) {
-                  zhihuCommentCountsMap.set(String(targetId), Number(json.counts.total_counts));
+                if (targetId) {
+                  if (json?.counts?.total_counts != null) {
+                    zhihuCommentCountsMap.set(String(targetId), Number(json.counts.total_counts));
+                  }
+                  if (json?.paging) {
+                    zhihuCommentPagingMap.set(String(targetId), json.paging);
+                  }
                 }
                 const items = Array.isArray(json?.data) ? json.data : (Array.isArray(json?.comments) ? json.comments : []);
                 if (targetId && items.length > 0) {
@@ -39429,6 +39479,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     loading: false,
     hasMore: false,
     offset: 0,
+    nextCursor: "",
+    nextUrl: "",
+    pageIndex: 1,
     mainScrollTop: 0,
     mainTopicId: null,
     mainTitle: ""
@@ -39700,13 +39753,13 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     throw new Error("知乎发布评论需要安全校验");
   }
 
-  function triggerZhihuNativeCommentLoad(cleanId, isNextPage = false) {
+  function triggerZhihuNativeCommentLoad(cleanId, pageNum = 1) {
     if (typeof document === "undefined") return false;
     const targetId = String(cleanId || "").replace(/[^\d]/g, "");
     if (!targetId) return false;
 
-    if (isNextPage) {
-      // Look for pagination buttons in the native comment component
+    if (pageNum > 1) {
+      // 1. Look for pagination buttons in the native comment component
       const nextSelectors = [
         ".CommentsV2 .PaginationButton-next",
         ".CommentsV2 .Pagination-next",
@@ -39716,7 +39769,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         ".CommentListV2 .PaginationButton-next",
         ".PaginationButton-next",
         ".Pagination-next",
-        ".CommentsV2-footer button"
+        ".CommentsV2-footer button",
+        "button[aria-label*='下一页']"
       ];
       for (const sel of nextSelectors) {
         const btn = document.querySelector(sel);
@@ -39725,7 +39779,14 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           return true;
         }
       }
-      // Or scroll down comment containers
+      // 2. Look for page number button in pagination
+      const pageBtns = Array.from(document.querySelectorAll(".CommentsV2 .PaginationButton, .CommentsV2 .Pagination button, .Pagination button"));
+      const targetBtn = pageBtns.find((b) => b.textContent.trim() === String(pageNum));
+      if (targetBtn && typeof targetBtn.click === "function") {
+        targetBtn.click();
+        return true;
+      }
+      // 3. Scroll down comment containers
       const scrollables = document.querySelectorAll(
         ".CommentsV2, .CommentListV2, .CommentsV2-list, .CommentsV2-content, .NestComment, .Modal-content"
       );
@@ -39738,7 +39799,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       }
     }
 
-    // Try finding the native comment button for this answer
+    // Try finding the native comment button for this answer to open comments
     const itemSelectors = [
       `.ContentItem.AnswerItem[data-zop*='"itemId":${targetId}']`,
       `.ContentItem.AnswerItem[data-zop*='"itemId":"${targetId}"']`,
@@ -39781,107 +39842,134 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     return false;
   }
 
-  async function fetchZhihuAnswerComments(answerId, offset = 0) {
+  async function fetchZhihuAnswerComments(answerId, options = {}) {
     const cleanId = String(answerId || "").replace(/[^\d]/g, "");
-    if (!cleanId) return { comments: [], hasMore: false };
-    const batchLimit = 20;
+    if (!cleanId) return { comments: [], hasMore: false, nextCursor: "", nextUrl: "", totalCount: 0 };
 
-    if (offset === 0 && zhihuAnswerCommentsCache.has(cleanId)) {
+    let cursor = "";
+    let nextUrl = "";
+    let pageNum = 1;
+    if (typeof options === "object" && options !== null) {
+      cursor = options.cursor || "";
+      nextUrl = options.nextUrl || "";
+      pageNum = Number(options.page || 1);
+    } else if (typeof options === "string") {
+      cursor = options;
+    } else if (typeof options === "number") {
+      if (options === 0) {
+        cursor = "";
+        pageNum = 1;
+      } else {
+        cursor = zhihuCommentThreadState.nextCursor || "";
+        nextUrl = zhihuCommentThreadState.nextUrl || "";
+        pageNum = zhihuCommentThreadState.pageIndex || 2;
+      }
+    }
+
+    // Cache hit only for initial page with more than 2 comments
+    if (pageNum === 1 && !cursor && zhihuAnswerCommentsCache.has(cleanId)) {
       const cached = zhihuAnswerCommentsCache.get(cleanId);
-      if (cached && (cached.comments?.length > 2 || cached.totalCount <= cached.comments?.length)) {
+      if (cached && (cached.comments?.length > 2 || (cached.totalCount > 0 && cached.totalCount <= cached.comments?.length))) {
         return cached;
       }
     }
 
-    let pooled = zhihuCapturedCommentsPool.get(cleanId) || [];
-    let rawComments = pooled.length > offset ? pooled.slice(offset, offset + batchLimit) : [];
-    let needLogin = false;
+    let rawComments = [];
+    let paging = null;
     let fetchedTotal = zhihuCommentCountsMap.get(cleanId) || 0;
+    let needLogin = false;
 
-    // 1. If not enough comments in pool, try internal Webpack client
-    if (rawComments.length === 0) {
-      try {
-        const client = getZhihuInternalClient();
-        if (client) {
-          const resp = await client.get(`/api/v4/comment_v5/answers/${cleanId}/root_comment?order_by=score&limit=20&offset=${offset}`);
-          const data = resp?.data?.data || resp?.data || [];
-          if (Array.isArray(data) && data.length > 0) {
-            const existing = zhihuCapturedCommentsPool.get(cleanId) || [];
-            const merged = [...existing];
-            for (const c of data) {
-              if (c && !merged.some((e) => String(e.id) === String(c.id))) {
-                merged.push(c);
-              }
-            }
-            zhihuCapturedCommentsPool.set(cleanId, merged);
-            pooled = merged;
-            rawComments = pooled.slice(offset, offset + batchLimit);
-            if (resp?.data?.counts?.total_counts != null) {
-              fetchedTotal = Number(resp.data.counts.total_counts);
-              zhihuCommentCountsMap.set(cleanId, fetchedTotal);
-            }
+    // Build the request URL matching Zhihu's native comment_v5 API
+    const reqUrl = nextUrl || `/api/v4/comment_v5/answers/${cleanId}/root_comment?order_by=score&limit=20&offset=${encodeURIComponent(cursor)}`;
+
+    // Tier 1: Zhihu internal Webpack Axios client (authenticates with current session & signs headers automatically)
+    try {
+      const client = getZhihuInternalClient();
+      if (client) {
+        let resp = null;
+        try {
+          resp = await client.get(reqUrl);
+        } catch (e1) {
+          if (String(e1?.message || "").includes("404")) {
+            const artUrl = reqUrl.replace("/answers/", "/articles/");
+            resp = await client.get(artUrl);
+          } else {
+            throw e1;
           }
         }
-      } catch (_) {}
+        const resData = resp?.data?.data != null ? resp.data : (resp?.data || resp);
+        const dataArr = Array.isArray(resData?.data) ? resData.data : (Array.isArray(resData?.comments) ? resData.comments : []);
+        if (dataArr.length > 0) {
+          rawComments = dataArr;
+          paging = resData?.paging || null;
+          if (resData?.counts?.total_counts != null) {
+            fetchedTotal = Number(resData.counts.total_counts);
+            zhihuCommentCountsMap.set(cleanId, fetchedTotal);
+          }
+          if (paging) {
+            zhihuCommentPagingMap.set(cleanId, paging);
+          }
+          // Merge into global captured pool
+          const existing = zhihuCapturedCommentsPool.get(cleanId) || [];
+          const merged = [...existing];
+          for (const c of rawComments) {
+            if (c && !merged.some((e) => String(e.id) === String(c.id))) {
+              merged.push(c);
+            }
+          }
+          zhihuCapturedCommentsPool.set(cleanId, merged);
+        }
+      }
+    } catch (err) {
+      if (String(err?.message || "").includes("403") || err?.response?.status === 403) {
+        needLogin = true;
+      }
     }
 
-    // 2. Trigger native comment button or next page button in background DOM
+    // Tier 2: Trigger native DOM button / pagination & poll intercepted pool
     if (rawComments.length === 0) {
-      triggerZhihuNativeCommentLoad(cleanId, offset > 0);
-      for (let i = 0; i < 18; i++) {
-        await new Promise((r) => setTimeout(r, 80));
-        pooled = zhihuCapturedCommentsPool.get(cleanId) || [];
-        if (pooled.length > offset) {
-          rawComments = pooled.slice(offset, offset + batchLimit);
+      const initialPoolLen = (zhihuCapturedCommentsPool.get(cleanId) || []).length;
+      triggerZhihuNativeCommentLoad(cleanId, pageNum);
+      for (let i = 0; i < 8; i++) {
+        await new Promise((r) => setTimeout(r, 60));
+        const curPool = zhihuCapturedCommentsPool.get(cleanId) || [];
+        if (curPool.length > initialPoolLen || (pageNum === 1 && curPool.length > 0)) {
+          rawComments = curPool.slice(initialPoolLen);
+          if (rawComments.length === 0 && pageNum === 1) rawComments = curPool.slice(0, 20);
+          paging = zhihuCommentPagingMap.get(cleanId) || null;
+          fetchedTotal = zhihuCommentCountsMap.get(cleanId) || fetchedTotal;
           if (rawComments.length > 0) break;
         }
       }
     }
 
-    // 3. Try official API endpoints directly
+    // Tier 3: Direct API fetch fallback
     if (rawComments.length === 0) {
-      let resp = null;
       try {
-        resp = await zhihuApi(`/api/v4/comment_v5/answers/${cleanId}/root_comment?order_by=score&limit=20&offset=${offset}`, {
+        const resp = await zhihuApi(reqUrl, {
           headers: {
             "x-requested-with": "fetch",
-            "Referer": location.href || "https://www.zhihu.com/",
-            ...(zhihuLastSignedHeaders ? { "x-zse-93": zhihuLastSignedHeaders["x-zse-93"] } : {})
+            "Referer": location.href || "https://www.zhihu.com/"
           }
         });
-      } catch (err1) {
-        if (String(err1?.message || "").includes("403")) {
-          needLogin = true;
-        }
-        try {
-          resp = await zhihuApi(`/api/v4/answers/${cleanId}/root_comments?order=normal&limit=20&offset=${offset}`);
-        } catch (_) {
-          try {
-            resp = await zhihuApi(`/api/v4/comment_v5/articles/${cleanId}/root_comment?order_by=score&limit=20&offset=${offset}`);
-          } catch (_) {}
-        }
-      }
-      if (resp?.data && Array.isArray(resp.data) && resp.data.length > 0) {
-        const existing = zhihuCapturedCommentsPool.get(cleanId) || [];
-        const merged = [...existing];
-        for (const c of resp.data) {
-          if (c && !merged.some((e) => String(e.id) === String(c.id))) {
-            merged.push(c);
+        if (Array.isArray(resp?.data) && resp.data.length > 0) {
+          rawComments = resp.data;
+          paging = resp.paging || null;
+          if (resp.counts?.total_counts != null) {
+            fetchedTotal = Number(resp.counts.total_counts);
+            zhihuCommentCountsMap.set(cleanId, fetchedTotal);
+          }
+          if (paging) {
+            zhihuCommentPagingMap.set(cleanId, paging);
           }
         }
-        zhihuCapturedCommentsPool.set(cleanId, merged);
-        pooled = merged;
-        rawComments = pooled.slice(offset, offset + batchLimit);
-        needLogin = false;
-        if (resp.counts?.total_counts != null) {
-          fetchedTotal = Number(resp.counts.total_counts);
-          zhihuCommentCountsMap.set(cleanId, fetchedTotal);
-        }
+      } catch (err) {
+        if (String(err?.message || "").includes("403")) needLogin = true;
       }
     }
 
-    // 4. Fallback for offset 0: try abstract_comment to at least show preview comments
-    if (rawComments.length === 0 && offset === 0) {
+    // Tier 4: Abstract comment fallback - ONLY for initial page 1
+    if (rawComments.length === 0 && pageNum === 1 && !cursor) {
       try {
         const absResp = await zhihuApi(`/api/v4/comment_v5/answers/${cleanId}/abstract_comment?limit=20&offset=0`, {
           headers: {
@@ -39894,58 +39982,15 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           zhihuCommentCountsMap.set(cleanId, fetchedTotal);
         }
         if (Array.isArray(absResp?.data) && absResp.data.length > 0) {
-          for (const c of absResp.data) {
-            if (c && !rawComments.some((e) => String(e.id) === String(c.id))) {
-              rawComments.push(c);
-            }
-          }
+          rawComments = absResp.data;
         }
-      } catch (_) {
-        try {
-          const absResp = await zhihuApi(`/api/v4/comment_v5/articles/${cleanId}/abstract_comment?limit=20&offset=0`);
-          if (absResp?.counts?.total_counts != null) {
-            fetchedTotal = Number(absResp.counts.total_counts);
-            zhihuCommentCountsMap.set(cleanId, fetchedTotal);
-          }
-          if (Array.isArray(absResp?.data) && absResp.data.length > 0) {
-            for (const c of absResp.data) {
-              if (c && !rawComments.some((e) => String(e.id) === String(c.id))) {
-                rawComments.push(c);
-              }
-            }
-          }
-        } catch (_) {}
-      }
+      } catch (_) {}
     }
 
-    // 5. Fetch child comments concurrently for items with child comments
-    const childFetches = [];
-    for (const c of rawComments) {
-      const childCount = Number(c.child_comment_count || 0);
-      if (childCount > 0 && (!Array.isArray(c.child_comments) || c.child_comments.length === 0)) {
-        const p = zhihuCapturedCommentsPool.get(String(c.id));
-        if (Array.isArray(p) && p.length > 0) {
-          c.child_comments = p;
-        } else {
-          childFetches.push(
-            zhihuApi(`/api/v4/comment_v5/comment/${c.id}/child_comment?limit=20`, {
-              headers: {
-                "x-requested-with": "fetch",
-                "Referer": location.href || "https://www.zhihu.com/"
-              }
-            }).then((childResp) => {
-              if (Array.isArray(childResp?.data) && childResp.data.length > 0) {
-                c.child_comments = childResp.data;
-              }
-            }).catch(() => {})
-          );
-        }
-      }
-    }
-    if (childFetches.length > 0) {
-      await Promise.all(childFetches);
-    }
+    // Note: Zhihu comment_v5 API already returns root comments with their preview child_comments!
+    // We avoid making 20 parallel blocking network requests here so drawer loads instantaneously.
 
+    // Format root and child comments for UI
     const rootComments = [];
     const flattened = [];
     rawComments.forEach((c) => {
@@ -40029,16 +40074,33 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       } catch (_) {}
     }
 
-    const effectiveTotal = Math.max(fetchedTotal, (pooled.length || 0), (offset + rawComments.length));
-    const hasMore = (offset + rawComments.length) < effectiveTotal && rawComments.length > 0;
+    // Extract nextCursor and nextUrl from paging
+    let nextPagingUrl = paging?.next || "";
+    let extractedCursor = "";
+    if (nextPagingUrl) {
+      const cm = nextPagingUrl.match(/[?&]offset=([^&]+)/);
+      if (cm) extractedCursor = decodeURIComponent(cm[1]);
+    }
+    if (!extractedCursor && rawComments.length > 0) {
+      const last = rawComments[rawComments.length - 1];
+      if (last?.id) extractedCursor = `0_${last.id}_0`;
+    }
+
+    const isEnd = Boolean(paging?.is_end);
+    const effectiveTotal = Math.max(fetchedTotal, (rawComments.length || 0));
+    const hasMore = !isEnd && rawComments.length > 0 && Boolean(extractedCursor || nextPagingUrl);
+
     const result = {
       comments: rootComments,
       flattened,
       hasMore,
-      needLogin: needLogin && rawComments.length === 0,
+      nextCursor: extractedCursor,
+      nextUrl: nextPagingUrl,
+      needLogin: needLogin && rootComments.length === 0,
       totalCount: effectiveTotal
     };
-    if (offset === 0 && rootComments.length > 2) {
+
+    if (pageNum === 1 && !cursor && rootComments.length > 2) {
       zhihuAnswerCommentsCache.set(cleanId, result);
     }
     return result;
@@ -40047,7 +40109,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   async function loadMoreZhihuComments() {
     if (!zhihuCommentThreadState.active || zhihuCommentThreadState.loading || !zhihuCommentThreadState.hasMore) return;
     const answerId = zhihuCommentThreadState.answerId;
-    const offset = zhihuCommentThreadState.offset;
     zhihuCommentThreadState.loading = true;
     const body = document.querySelector(".wecom-chat-body");
     const moreBtn = body?.querySelector(".wecom-zhihu-comments-more-btn");
@@ -40056,13 +40117,21 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       moreBtn.textContent = "正在加载更多评论...";
     }
     try {
-      const commData = await fetchZhihuAnswerComments(answerId, offset);
+      const commData = await fetchZhihuAnswerComments(answerId, {
+        cursor: zhihuCommentThreadState.nextCursor,
+        nextUrl: zhihuCommentThreadState.nextUrl,
+        page: zhihuCommentThreadState.pageIndex
+      });
       if (!zhihuCommentThreadState.active || zhihuCommentThreadState.answerId !== answerId) return;
+
       const newComments = (commData.comments || []).filter(
         (c) => !zhihuCommentThreadState.comments.some((e) => String(e.id) === String(c.id))
       );
       if (newComments.length > 0) {
-        zhihuCommentThreadState.offset = offset + newComments.length;
+        zhihuCommentThreadState.pageIndex += 1;
+        zhihuCommentThreadState.nextCursor = commData.nextCursor || "";
+        zhihuCommentThreadState.nextUrl = commData.nextUrl || "";
+        zhihuCommentThreadState.offset = zhihuCommentThreadState.comments.length + newComments.length;
         const commentsContainer = body.querySelector(".wecom-zhihu-thread-comments");
         if (commentsContainer) {
           const currentTotal = countZhihuComments(zhihuCommentThreadState.comments);
@@ -40136,6 +40205,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     zhihuCommentThreadState.mainTitle = chatState.title;
     zhihuCommentThreadState.comments = [];
     zhihuCommentThreadState.offset = 0;
+    zhihuCommentThreadState.nextCursor = "";
+    zhihuCommentThreadState.nextUrl = "";
+    zhihuCommentThreadState.pageIndex = 1;
     zhihuCommentThreadState.hasMore = false;
     zhihuCommentThreadState.loading = true;
 
@@ -40175,13 +40247,16 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
     // 3. Fetch comments
     try {
-      const commData = await fetchZhihuAnswerComments(post.id, 0);
+      const commData = await fetchZhihuAnswerComments(post.id, { cursor: "", page: 1 });
       if (!zhihuCommentThreadState.active || zhihuCommentThreadState.answerId !== String(post.id)) return;
       const loadingEl = body.querySelector(".wecom-zhihu-thread-loading");
       if (loadingEl) loadingEl.remove();
 
       zhihuCommentThreadState.comments = commData.comments || [];
-      zhihuCommentThreadState.hasMore = Boolean(commData.hasMore);
+      zhihuCommentThreadState.nextCursor = commData.nextCursor || "";
+      zhihuCommentThreadState.nextUrl = commData.nextUrl || "";
+      zhihuCommentThreadState.pageIndex = 2;
+      zhihuCommentThreadState.hasMore = Boolean(commData.hasMore) && (Boolean(commData.nextCursor) || Boolean(commData.nextUrl));
       zhihuCommentThreadState.offset = zhihuCommentThreadState.comments.length;
 
       const displayedCount = countZhihuComments(zhihuCommentThreadState.comments);
