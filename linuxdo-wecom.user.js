@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.7
+// @version      0.8.8
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -3480,6 +3480,11 @@
     .${ROOT_CLASS}.${LOCK_CLASS} .main-container,
     .${ROOT_CLASS}.${LOCK_CLASS} .global-component-box,
     .${ROOT_CLASS}.${LOCK_CLASS} .suspension-panel,
+    .${ROOT_CLASS}.${LOCK_CLASS} .CommentsV2-modal,
+    .${ROOT_CLASS}.${LOCK_CLASS} .CommentsV2[role="dialog"],
+    .${ROOT_CLASS}.${LOCK_CLASS} .Comments-container,
+    .${ROOT_CLASS}.${LOCK_CLASS} .Modal:has(.CommentsV2, .CommentListV2),
+    .${ROOT_CLASS}.${LOCK_CLASS} div[role="dialog"]:has(.CommentsV2, .CommentListV2, .CommentEditor),
     .${ROOT_CLASS}.${LOCK_CLASS} .Modal-wrapper:not(:has([class*='Verification'], [class*='Captcha'], [class*='unhuman'], .yidun_modal, .geetest_holder)),
     .${ROOT_CLASS}.${LOCK_CLASS} .Modal-backdrop:not(:has([class*='Verification'], [class*='Captcha'], [class*='unhuman'], .yidun_modal, .geetest_holder)),
     .${ROOT_CLASS}.${LOCK_CLASS} .signFlowModal,
@@ -39753,13 +39758,39 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     throw new Error("知乎发布评论需要安全校验");
   }
 
+  function dismissZhihuNativeModals() {
+    if (typeof document === "undefined") return;
+    try {
+      const modals = document.querySelectorAll(`
+        .Modal-wrapper:not(:has([class*='Verification'], [class*='Captcha'], [class*='unhuman'], .yidun_modal, .geetest_holder)),
+        .Modal-backdrop:not(:has([class*='Verification'], [class*='Captcha'], [class*='unhuman'], .yidun_modal, .geetest_holder)),
+        .CommentsV2-modal,
+        .CommentsV2[role="dialog"],
+        .Comments-container,
+        div[role="dialog"]:has(.CommentsV2, .CommentListV2, .CommentEditor),
+        .Modal:has(.CommentsV2, .CommentListV2)
+      `);
+      modals.forEach((m) => {
+        const closeBtn = m.querySelector(".Modal-closeButton, button[aria-label*='关闭']");
+        if (closeBtn && typeof closeBtn.click === "function") {
+          closeBtn.click();
+        } else {
+          m.remove();
+        }
+      });
+    } catch (_) {}
+  }
+
   function triggerZhihuNativeCommentLoad(cleanId, pageNum = 1) {
     if (typeof document === "undefined") return false;
     const targetId = String(cleanId || "").replace(/[^\d]/g, "");
     if (!targetId) return false;
 
+    // Dismiss any accidental native modal dialog immediately
+    dismissZhihuNativeModals();
+
+    // Only attempt DOM pagination if pageNum > 1 and comment container is already mounted
     if (pageNum > 1) {
-      // 1. Look for pagination buttons in the native comment component
       const nextSelectors = [
         ".CommentsV2 .PaginationButton-next",
         ".CommentsV2 .Pagination-next",
@@ -39768,9 +39799,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         ".CommentsV2 .Pagination button:last-child",
         ".CommentListV2 .PaginationButton-next",
         ".PaginationButton-next",
-        ".Pagination-next",
-        ".CommentsV2-footer button",
-        "button[aria-label*='下一页']"
+        ".Pagination-next"
       ];
       for (const sel of nextSelectors) {
         const btn = document.querySelector(sel);
@@ -39779,16 +39808,14 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           return true;
         }
       }
-      // 2. Look for page number button in pagination
       const pageBtns = Array.from(document.querySelectorAll(".CommentsV2 .PaginationButton, .CommentsV2 .Pagination button, .Pagination button"));
       const targetBtn = pageBtns.find((b) => b.textContent.trim() === String(pageNum));
       if (targetBtn && typeof targetBtn.click === "function") {
         targetBtn.click();
         return true;
       }
-      // 3. Scroll down comment containers
       const scrollables = document.querySelectorAll(
-        ".CommentsV2, .CommentListV2, .CommentsV2-list, .CommentsV2-content, .NestComment, .Modal-content"
+        ".CommentsV2, .CommentListV2, .CommentsV2-list, .CommentsV2-content, .NestComment"
       );
       if (scrollables.length > 0) {
         scrollables.forEach((sc) => {
@@ -39797,46 +39824,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         });
         return true;
       }
-    }
-
-    // Try finding the native comment button for this answer to open comments
-    const itemSelectors = [
-      `.ContentItem.AnswerItem[data-zop*='"itemId":${targetId}']`,
-      `.ContentItem.AnswerItem[data-zop*='"itemId":"${targetId}"']`,
-      `.ContentItem.AnswerItem[name="${targetId}"]`,
-      `[data-zop*="${targetId}"]`,
-      `[data-za-extra-module*="${targetId}"]`
-    ];
-    let answerEl = null;
-    for (const sel of itemSelectors) {
-      answerEl = document.querySelector(sel);
-      if (answerEl) break;
-    }
-    if (answerEl) {
-      const commentBtn = Array.from(answerEl.querySelectorAll("button")).find((b) => {
-        const text = (b.textContent || "").trim();
-        const label = (b.getAttribute("aria-label") || "").trim();
-        return (
-          text.includes("评论") ||
-          text.includes("条回复") ||
-          label.includes("评论") ||
-          b.classList.contains("ContentItem-action")
-        );
-      });
-      if (commentBtn && typeof commentBtn.click === "function") {
-        commentBtn.click();
-        return true;
-      }
-    }
-
-    // Fallback: any visible comment button
-    const anyBtn = Array.from(document.querySelectorAll("button.ContentItem-action, button")).find((b) => {
-      const text = (b.textContent || "").trim();
-      return text.includes("条评论") || text.includes("评论");
-    });
-    if (anyBtn && typeof anyBtn.click === "function") {
-      anyBtn.click();
-      return true;
     }
 
     return false;
@@ -40211,6 +40198,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     zhihuCommentThreadState.hasMore = false;
     zhihuCommentThreadState.loading = true;
 
+    // 0. Dismiss any background native comment modals immediately
+    dismissZhihuNativeModals();
+
     // 1. Update header
     const backBtn = panel.querySelector(".wecom-chat-back-btn");
     if (backBtn) {
@@ -40324,6 +40314,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   function closeZhihuCommentThread(panel = document.querySelector(".wecom-chat-panel")) {
     if (!zhihuCommentThreadState.active) return;
     zhihuCommentThreadState.active = false;
+    dismissZhihuNativeModals();
 
     if (panel) {
       const backBtn = panel.querySelector(".wecom-chat-back-btn");
