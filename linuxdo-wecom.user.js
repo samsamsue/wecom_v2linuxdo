@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.2
+// @version      0.8.3
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -726,14 +726,26 @@
     "上线检查清单"
   ];
 
+  function hashTopicSeed(topic) {
+    if (!topic) return 0;
+    const raw = topic.id != null && topic.id !== "" ? topic.id : (topic.title || "0");
+    const str = String(raw);
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+      hash ^= str.charCodeAt(i);
+      hash = Math.imul(hash, 0x01000193);
+    }
+    return hash >>> 0;
+  }
+
   function disguiseTitleForTopic(topic) {
-    const tid = Math.abs(Number(topic && topic.id) || 0);
-    const seed = tid * 2654435761 >>> 0;
+    if (!topic) return "";
+    const seed = hashTopicSeed(topic);
     if (seed % 2 === 0) {
       const org = MASK_WORK_ORGS[seed % MASK_WORK_ORGS.length];
-      const obj = MASK_WORK_OBJS[(seed >>> 3) % MASK_WORK_OBJS.length];
-      const act = MASK_WORK_ACTS[(seed >>> 7) % MASK_WORK_ACTS.length];
-      const mode = (seed >>> 11) % 3;
+      const obj = MASK_WORK_OBJS[(seed >>> 4) % MASK_WORK_OBJS.length];
+      const act = MASK_WORK_ACTS[(seed >>> 8) % MASK_WORK_ACTS.length];
+      const mode = (seed >>> 12) % 3;
       if (mode === 0) return `${org}${obj}${act}`;
       if (mode === 1) return `${org}·${obj}${act}`;
       return `【${org}】${obj}${act}`;
@@ -784,7 +796,8 @@
   ];
 
   function surnameForTopic(topic) {
-    const idx = Math.abs(Number(topic.id) || 0) % SURNAMES.length;
+    const seed = hashTopicSeed(topic);
+    const idx = seed % SURNAMES.length;
     return SURNAMES[idx];
   }
 
@@ -794,7 +807,7 @@
    */
   function disguiseAvatarForTopic(topic) {
     const ch = surnameForTopic(topic);
-    const color = avatarColor(ch + String(topic.id || 0));
+    const color = avatarColor(ch + String(topic?.id || topic?.title || 0));
     return {
       html: `<span class="wecom-avatar-text" data-len="1">${escapeHtml(ch)}</span>`,
       bg: color,
@@ -805,7 +818,7 @@
 
   /** 隐私模式下随机一半话题使用九宫格姓氏头像 */
   function isGridMaskTopic(topic) {
-    return isMaskAvatar() && (Math.abs(Number(topic.id) || 0) % 2 === 0);
+    return isMaskAvatar() && (hashTopicSeed(topic) % 2 === 0);
   }
 
   const MASK_GRID_BLUES = [
@@ -815,7 +828,7 @@
 
   function disguiseGridAvatar(topic) {
     const cells = [];
-    const seed = Math.abs(Number(topic.id) || 0);
+    const seed = hashTopicSeed(topic);
     for (let i = 0; i < 9; i++) {
       const ch = SURNAMES[(seed + i * 17) % SURNAMES.length];
       const color = MASK_GRID_BLUES[(seed + i) % MASK_GRID_BLUES.length];
@@ -20082,7 +20095,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.2";
+  const SCRIPT_VERSION = "0.8.3";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -29694,7 +29707,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   }
 
   function isGroupConversation(topic) {
-    return Math.abs(Number(topic.id) || 0) % 2 === 1;
+    return hashTopicSeed(topic) % 2 === 1;
   }
 
   function mulberry32(a) {
@@ -29721,8 +29734,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const all = Object.values(usersById || {})
       .filter((u) => u && u.avatar_template)
       .map((u) => u.avatar_template);
-    const tpls = seededShuffle(all, Number(topic.id) || 1).slice(0, 9);
-    const seed = Math.abs(Number(topic.id) || 0);
+    const seed = hashTopicSeed(topic);
+    const tpls = seededShuffle(all, seed || 1).slice(0, 9);
     const placeholder = surnameForTopic(topic);
     const cells = [];
     for (let i = 0; i < 9; i++) {

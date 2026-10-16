@@ -11536,6 +11536,84 @@ test("Test 140: Zhihu answer reply count button formatted as icon + number and h
   );
 });
 
+test("Test 141: Disguise title and avatar high-entropy hash seed (hashTopicSeed) prevents uniform '产品需求评审群' collapse (v0.8.3)", () => {
+  // 1. Definition of hashTopicSeed in scriptContent
+  assert.ok(
+    scriptContent.includes("function hashTopicSeed(topic)") &&
+    scriptContent.includes("0x811c9dc5") &&
+    scriptContent.includes("Math.imul(hash, 0x01000193)"),
+    "must implement 32-bit FNV-1a hashTopicSeed helper"
+  );
+
+  // 2. Integration with disguiseTitleForTopic, surnameForTopic, isGridMaskTopic, disguiseGridAvatar, isGroupConversation
+  assert.ok(
+    scriptContent.includes("const seed = hashTopicSeed(topic);") &&
+    scriptContent.includes("function surnameForTopic(topic) {\n    const seed = hashTopicSeed(topic);") &&
+    scriptContent.includes("function isGridMaskTopic(topic) {\n    return isMaskAvatar() && (hashTopicSeed(topic) % 2 === 0);") &&
+    scriptContent.includes("function isGroupConversation(topic) {\n    return hashTopicSeed(topic) % 2 === 1;"),
+    "must use hashTopicSeed across title, surname, grid avatar and group conversation detection"
+  );
+
+  // 3. Verify simulated hashTopicSeed on string IDs, snowflake IDs, numeric IDs
+  function simHashTopicSeed(topic) {
+    if (!topic) return 0;
+    const raw = topic.id != null && topic.id !== "" ? topic.id : (topic.title || "0");
+    const str = String(raw);
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+      hash ^= str.charCodeAt(i);
+      hash = Math.imul(hash, 0x01000193);
+    }
+    return hash >>> 0;
+  }
+
+  const MASK_WORK_ORGS = ["产品", "研发", "前端", "后端", "客户端", "测试", "QA", "运维", "架构", "中台", "数据", "平台"];
+  const MASK_WORK_OBJS = ["需求", "接口", "契约", "用例", "缺陷", "分支", "版本", "变更", "工单", "告警", "故障", "发布"];
+  const MASK_WORK_ACTS = ["评审群", "联调群", "值班群", "提测群", "发布群", "复盘群", "迭代群", "排期群", "需求池", "对齐会", "跟进群", "项目组"];
+  const MASK_WORK_TITLES = [
+    "需求评审排期", "技术方案讨论", "接口联调对齐", "代码评审意见", "主干合并冲突",
+    "发版窗口确认", "灰度比例调整", "回归范围确认", "提测准入检查", "缺陷定级讨论",
+    "线上告警跟进", "监控大盘调整", "值班交接记录", "故障复盘纪要", "降级预案演练",
+    "容量水位评估", "慢查询治理", "配置变更同步", "依赖版本升级", "循环依赖治理",
+    "单测覆盖率达标", "Mock 数据联调", "冒烟用例执行", "压测结果同步", "埋点方案评审",
+    "SDK 版本对齐", "网关路由变更", "缓存命中率排查", "队列积压处理", "日志脱敏改造",
+    "数据库迁移演练", "容器资源扩容", "发布回滚演练", "需求验收清单", "接口文档补全",
+    "迭代任务盘点", "技术债清理周", "编码规范宣讲", "方案设计评审", "上线检查清单"
+  ];
+
+  function simDisguiseTitleForTopic(topic) {
+    if (!topic) return "";
+    const seed = simHashTopicSeed(topic);
+    if (seed % 2 === 0) {
+      const org = MASK_WORK_ORGS[seed % MASK_WORK_ORGS.length];
+      const obj = MASK_WORK_OBJS[(seed >>> 4) % MASK_WORK_OBJS.length];
+      const act = MASK_WORK_ACTS[(seed >>> 8) % MASK_WORK_ACTS.length];
+      const mode = (seed >>> 12) % 3;
+      if (mode === 0) return `${org}${obj}${act}`;
+      if (mode === 1) return `${org}·${obj}${act}`;
+      return `【${org}】${obj}${act}`;
+    }
+    return MASK_WORK_TITLES[seed % MASK_WORK_TITLES.length];
+  }
+
+  const sampleTopics = [
+    { id: "p_123456", title: "知乎专栏 1" },
+    { id: "p_789012", title: "知乎专栏 2" },
+    { id: "7345678901234567890", title: "掘金沸点 1" },
+    { id: "7345678901234567891", title: "掘金沸点 2" },
+    { id: 583920194, title: "知乎问答 1" },
+    { id: 12345, title: "Linuxdo 话题 1" },
+    { id: 67890, title: "Linuxdo 话题 2" }
+  ];
+
+  const titles = sampleTopics.map(simDisguiseTitleForTopic);
+  const uniqueTitles = new Set(titles);
+  assert.ok(uniqueTitles.size >= 5, "sample topics must produce diverse disguised titles without collapsing to a single name");
+  const identicalCount = titles.filter((t) => t === "产品需求评审群").length;
+  assert.ok(identicalCount < 2, "must not collapse all titles to '产品需求评审群'");
+});
+
+
 
 
 
