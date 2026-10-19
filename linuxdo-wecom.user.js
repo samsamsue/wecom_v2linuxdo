@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.11
+// @version      0.8.12
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -762,7 +762,7 @@
     }
     refreshMaskedChatTitle();
     syncThemeControls();
-    if (IS_V2EX) syncV2exNav2();
+    if (!IS_LINUXDO) syncV2exNav2();
   }
 
   function setMaskTitle(on) {
@@ -15290,9 +15290,6 @@
   })();
 
   function isNav2Open() {
-    if (IS_JUEJIN || IS_ZHIHU) {
-      return Boolean(listNavOpen || (typeof document !== "undefined" && document.querySelector?.(".wecom-list-panel.wecom-list-nav-open")));
-    }
     if (typeof document !== "undefined" && document.documentElement?.classList.contains("wecom-nav2-open")) {
       return true;
     }
@@ -15323,10 +15320,6 @@
   }
 
   function setNav2Open(open) {
-    if (IS_JUEJIN || IS_ZHIHU) {
-      setListNavOpen(open);
-      return;
-    }
     const shouldOpen = Boolean(open);
     try { localStorage.setItem(NAV2_KEY, shouldOpen ? "1" : "0"); } catch { /* ignore */ }
     document.documentElement.classList.toggle("wecom-nav2-open", shouldOpen);
@@ -15337,7 +15330,7 @@
       moreBtn.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
       moreBtn.title = shouldOpen ? "收回分栏" : "展开分栏";
     }
-    if (IS_V2EX && shouldOpen) {
+    if (!IS_LINUXDO && shouldOpen) {
       ensureV2exNav2();
       syncV2exNav2();
     }
@@ -23952,16 +23945,17 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   }
 
   function ensureV2exNav2() {
-    if (!IS_V2EX) return null;
+    if (IS_LINUXDO) return null;
     let nav2 = document.querySelector(".wecom-v2ex-nav2");
     if (nav2) return nav2;
     nav2 = document.createElement("nav");
     nav2.className = "wecom-v2ex-nav2";
     nav2.setAttribute("role", "navigation");
     nav2.setAttribute("aria-label", "话题分类导航");
+    const defaultTitle = IS_ZHIHU ? "知乎导航" : (IS_JUEJIN ? "沸点话题" : "话题分类");
     nav2.innerHTML = `
       <div class="wecom-v2ex-nav2-header">
-        <span class="wecom-v2ex-nav2-title">${isMaskTitleList() ? "部门架构" : "话题分类"}</span>
+        <span class="wecom-v2ex-nav2-title">${isMaskTitleList() ? "部门架构" : defaultTitle}</span>
         <button type="button" class="wecom-nav2-close-btn" title="收回分栏 (Esc)" aria-label="收回分栏">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12m0 -12l12 12"/></svg>
         </button>
@@ -23998,13 +23992,13 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   }
 
   function syncV2exNav2() {
-    if (!IS_V2EX) return;
+    if (IS_LINUXDO) return;
     const nav2 = ensureV2exNav2();
     if (!nav2) return;
     const listEl = nav2.querySelector(".wecom-v2ex-nav2-list");
     const titleEl = nav2.querySelector(".wecom-v2ex-nav2-title");
     if (titleEl) {
-      titleEl.textContent = isMaskTitleList() ? "部门架构" : "话题分类";
+      titleEl.textContent = isMaskTitleList() ? "部门架构" : (IS_ZHIHU ? "知乎导航" : (IS_JUEJIN ? "沸点话题" : "话题分类"));
     }
     if (!listEl) return;
     const items = collectListNavItems();
@@ -29827,11 +29821,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         if (action === "new-topic") {
           openNewTopic();
         } else if (action === "nav") {
-          if (IS_JUEJIN || IS_ZHIHU) {
-            setListNavOpen(!listNavOpen);
-          } else {
-            setNav2Open(!isNav2Open());
-          }
+          setNav2Open(!isNav2Open());
         }
         return;
       }
@@ -41953,7 +41943,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       document.querySelector(".wecom-member-panel")?.remove();
       document.querySelector(".wecom-list-resizer")?.remove();
       document.documentElement.classList.remove("wecom-members-open");
-      if (IS_V2EX) {
+      if (!IS_LINUXDO) {
         ensureV2exNav2();
         syncV2exNav2();
       }
@@ -41966,7 +41956,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     restoreListWidth();
     syncListNav();
     startRelativeTimeRefresh();
-    if (IS_V2EX) {
+    if (!IS_LINUXDO) {
       ensureV2exNav2();
       syncV2exNav2();
     }
