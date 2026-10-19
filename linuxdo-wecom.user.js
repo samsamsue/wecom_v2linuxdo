@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.10
+// @version      0.8.11
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -1826,6 +1826,42 @@
       font-weight: 600;
       color: var(--wc-text-3);
       letter-spacing: 0.5px;
+      flex: 1;
+    }
+    .wecom-nav2-close-btn,
+    .wecom-sidebar-close-btn {
+      width: 24px;
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: none !important;
+      background: transparent !important;
+      color: var(--wc-text-3) !important;
+      border-radius: 4px;
+      cursor: pointer;
+      padding: 0;
+      transition: background-color 0.15s, color 0.15s;
+    }
+    .wecom-sidebar-close-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+    }
+    .wecom-nav2-close-btn:hover,
+    .wecom-sidebar-close-btn:hover {
+      background-color: var(--wc-hover) !important;
+      color: var(--wc-text) !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-nav2-close-btn,
+    html.${ROOT_CLASS}.wecom-dark .wecom-sidebar-close-btn {
+      color: #959CA6 !important;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-nav2-close-btn:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-sidebar-close-btn:hover {
+      background-color: rgba(255, 255, 255, 0.08) !important;
+      color: #ECEFF4 !important;
     }
     .wecom-v2ex-nav2-list {
       flex: 1;
@@ -15247,11 +15283,43 @@
 
   /* ============================== 最左图标 rail ============================== */
 
-  const NAV2_KEY = "linuxdo-wecom-nav2"; // "1" = 展开原生侧栏
+  const NAV2_KEY = "linuxdo-wecom-nav2"; // "1" = 展开原生侧栏 / 分栏
+  const LIST_NAV_KEY = "linuxdo-wecom-list-nav"; // "1" = 展开中栏筛选
+  let listNavOpen = (() => {
+    try { return localStorage.getItem(LIST_NAV_KEY) === "1"; } catch { return false; }
+  })();
 
   function isNav2Open() {
-    if (IS_JUEJIN || IS_ZHIHU) return false;
+    if (IS_JUEJIN || IS_ZHIHU) {
+      return Boolean(listNavOpen || (typeof document !== "undefined" && document.querySelector?.(".wecom-list-panel.wecom-list-nav-open")));
+    }
+    if (typeof document !== "undefined" && document.documentElement?.classList.contains("wecom-nav2-open")) {
+      return true;
+    }
     try { return localStorage.getItem(NAV2_KEY) === "1"; } catch { return false; }
+  }
+
+  function ensureSidebarCloseBtn() {
+    if (!IS_LINUXDO) return;
+    const attach = () => {
+      const sidebar = document.querySelector(".sidebar-wrapper");
+      if (!sidebar || sidebar.querySelector(".wecom-sidebar-close-btn")) return;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "wecom-sidebar-close-btn";
+      btn.title = "收回分栏 (Esc)";
+      btn.setAttribute("aria-label", "收回分栏");
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12m0 -12l12 12"/></svg>`;
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setNav2Open(false);
+      });
+      sidebar.appendChild(btn);
+    };
+    attach();
+    setTimeout(attach, 100);
+    setTimeout(attach, 300);
   }
 
   function setNav2Open(open) {
@@ -15259,18 +15327,22 @@
       setListNavOpen(open);
       return;
     }
-    try { localStorage.setItem(NAV2_KEY, open ? "1" : "0"); } catch { /* ignore */ }
-    document.documentElement.classList.toggle("wecom-nav2-open", open);
+    const shouldOpen = Boolean(open);
+    try { localStorage.setItem(NAV2_KEY, shouldOpen ? "1" : "0"); } catch { /* ignore */ }
+    document.documentElement.classList.toggle("wecom-nav2-open", shouldOpen);
     const moreBtn = document.querySelector(".wecom-rail-more, [data-rail-key='group']");
     if (moreBtn) {
-      moreBtn.classList.toggle("is-on", open);
-      moreBtn.classList.toggle("active", open);
-      moreBtn.setAttribute("aria-expanded", open ? "true" : "false");
-      moreBtn.title = open ? "收起话题导航" : "展开话题导航";
+      moreBtn.classList.toggle("is-on", shouldOpen);
+      moreBtn.classList.toggle("active", shouldOpen);
+      moreBtn.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+      moreBtn.title = shouldOpen ? "收回分栏" : "展开分栏";
     }
-    if (IS_V2EX && open) {
+    if (IS_V2EX && shouldOpen) {
       ensureV2exNav2();
       syncV2exNav2();
+    }
+    if (IS_LINUXDO && shouldOpen) {
+      ensureSidebarCloseBtn();
     }
   }
 
@@ -20710,7 +20782,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           renderedGroup = true;
           return (
             itemHtml +
-            `<button type="button" class="wecom-rail-item wecom-rail-more" data-rail-key="group" title="展开/收起话题导航" aria-expanded="false">` +
+            `<button type="button" class="wecom-rail-item wecom-rail-more" data-rail-key="group" title="展开/收起分栏" aria-expanded="false">` +
             `<div class="wecom-rail-icon">${ICONS.group}</div>` +
             `<span class="wecom-rail-label">分组</span></button>`
           );
@@ -20718,7 +20790,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         return itemHtml;
       }).join("") +
       (!renderedGroup
-        ? `<button type="button" class="wecom-rail-item wecom-rail-more" data-rail-key="group" title="展开/收起话题导航" aria-expanded="false">` +
+        ? `<button type="button" class="wecom-rail-item wecom-rail-more" data-rail-key="group" title="展开/收起分栏" aria-expanded="false">` +
           `<div class="wecom-rail-icon">${ICONS.group}</div>` +
           `<span class="wecom-rail-label">分组</span></button>`
         : "");
@@ -20732,9 +20804,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     ensureThemeControls(rail);
     bindRailAvatarNotif(rail);
     bindRailNavClicks(rail);
-
-    const groupBtn = rail.querySelector('[data-rail-key="group"]');
-    groupBtn?.addEventListener("click", () => setNav2Open(!isNav2Open()));
+    bindRailGroupClick(rail);
 
     setNav2Open(isNav2Open());
     syncRail();
@@ -20983,6 +21053,15 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     // 「消息」项角标：显示新主题数（从 .show-more.has-topics 提取）
     syncChatBadge();
     syncRailNavActive();
+
+    const moreBtn = document.querySelector(".wecom-rail-more, [data-rail-key='group']");
+    if (moreBtn) {
+      const open = isNav2Open();
+      moreBtn.classList.toggle("is-on", open);
+      moreBtn.classList.toggle("active", open);
+      moreBtn.setAttribute("aria-expanded", open ? "true" : "false");
+      moreBtn.title = open ? "收回分栏" : "展开分栏";
+    }
 
     if (IS_V2EX) {
       extractV2exMoneyFromDom(document);
@@ -21274,8 +21353,20 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     });
   }
 
+  function bindRailGroupClick(rail) {
+    const groupBtn = rail?.querySelector('[data-rail-key="group"]');
+    if (!groupBtn || groupBtn.dataset.clickBound === "1") return;
+    groupBtn.dataset.clickBound = "1";
+    groupBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setNav2Open(!isNav2Open());
+    });
+  }
+
   function bindRailNavClicks(rail) {
     bindRailChatClick(rail);
+    bindRailGroupClick(rail);
     bindRailHistoryClick(rail);
     bindRailNotifClick(rail);
     if (IS_LINUXDO) {
@@ -22019,12 +22110,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     topics: [],
     usersById: {}
   };
-
-  const LIST_NAV_KEY = "linuxdo-wecom-list-nav"; // "1" = 展开中栏筛选
-  // 内存态优先，避免 MutationObserver 回写时把展开瞬间打回去
-  let listNavOpen = (() => {
-    try { return localStorage.getItem(LIST_NAV_KEY) === "1"; } catch { return false; }
-  })();
 
   const DEFAULT_JUEJIN_LIST_NAV = [
     { href: "/pins/recommended", label: "推荐" },
@@ -23877,10 +23962,19 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     nav2.innerHTML = `
       <div class="wecom-v2ex-nav2-header">
         <span class="wecom-v2ex-nav2-title">${isMaskTitleList() ? "部门架构" : "话题分类"}</span>
+        <button type="button" class="wecom-nav2-close-btn" title="收回分栏 (Esc)" aria-label="收回分栏">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12m0 -12l12 12"/></svg>
+        </button>
       </div>
       <div class="wecom-v2ex-nav2-list"></div>
     `;
     document.body.appendChild(nav2);
+    const closeBtn = nav2.querySelector(".wecom-nav2-close-btn");
+    closeBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setNav2Open(false);
+    });
     nav2.addEventListener("click", (e) => {
       const link = e.target.closest("a.wecom-v2ex-nav2-item");
       if (!link) return;
@@ -29193,7 +29287,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         moreBtn.classList.toggle("is-on", listNavOpen);
         moreBtn.classList.toggle("active", listNavOpen);
         moreBtn.setAttribute("aria-expanded", listNavOpen ? "true" : "false");
-        moreBtn.title = listNavOpen ? "收起话题筛选" : "展开话题筛选";
+        moreBtn.title = listNavOpen ? "收回分栏" : "展开分栏";
       }
     }
   }
@@ -41841,6 +41935,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     ensureStrip();
     ensureRailResizer();
     applyRailWidth(getRailWidth());
+    if (IS_LINUXDO && isNav2Open()) {
+      ensureSidebarCloseBtn();
+    }
 
     const isTopic = isTopicPath(pathname);
     const isHome = isHomePath(pathname);
@@ -41945,11 +42042,19 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   }
 
   function handleChatNavigationKeydown(event) {
-    if (event.key === "Escape" && zhihuCommentThreadState.active) {
-      event.preventDefault();
-      event.stopPropagation();
-      closeZhihuCommentThread();
-      return;
+    if (event.key === "Escape") {
+      if (zhihuCommentThreadState.active) {
+        event.preventDefault();
+        event.stopPropagation();
+        closeZhihuCommentThread();
+        return;
+      }
+      if (isNav2Open()) {
+        event.preventDefault();
+        event.stopPropagation();
+        setNav2Open(false);
+        return;
+      }
     }
     const isHome = event.key === "Home" || event.keyCode === 36;
     const isEnd = event.key === "End" || event.keyCode === 35;
