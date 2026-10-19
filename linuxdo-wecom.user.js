@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.8
+// @version      0.8.9
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -16598,10 +16598,10 @@
   const AI_IMAGE_STYLES = Object.freeze({
     comic_4panel: {
       id: "comic_4panel",
-      label: "💥 动感非对称漫",
-      name: "动感非对称漫",
-      desc: "现代漫画专业非对称动态分镜，主副格大小强烈对比、斜切边框与破格外显，绝非死板网格",
-      promptModifier: "现代专业漫画非对称动态分镜叙事风格，主副分镜大小强烈对比，斜切边框与破格外显，戏剧张力十足，带中文对白气泡框"
+      label: "💥 现代热血漫",
+      name: "现代热血漫",
+      desc: "现代漫画专业动态叙事，主次画格大小强烈对比、斜切边框与破格外显，剧情张力十足，带中文对白气泡框",
+      promptModifier: "现代专业漫画动态分镜叙事风格，主次画格强烈对比，斜切边框与破格外显，剧情张力十足，带中文对白气泡框与完整剧情交代"
     },
     comic_color: {
       id: "comic_color",
@@ -16641,6 +16641,13 @@
   });
 
   const AI_IMAGE_LAYOUTS = Object.freeze({
+    adaptive_story: {
+      id: "adaptive_story",
+      label: "🎬 剧情自适应 (依故事定格数与结局)",
+      name: "剧情自适应分镜",
+      desc: "不限死板格数，由故事自身起伏决定分镜数量（2~5格动态起伏），主副错落，必须交代完整前因后果与最终收尾结局，绝不缺斤少两",
+      promptModifier: "根据故事原剧情节奏自主安排分镜数量（2~5格动态镜头，严禁死板固定格数），主副画格大小错落对比，镜头层次丰富，包含完整的事件起因、曲折发展、戏剧高潮与明确的最终收尾结局，故事闭环有始有终"
+    },
     dynamic_asym: {
       id: "dynamic_asym",
       label: "💥 动感非对称 (主格+斜切破格)",
@@ -16652,8 +16659,15 @@
       id: "narrative_multi",
       label: "📜 连贯叙事多格 (情节递进)",
       name: "连贯叙事多格",
-      desc: "多镜头自然分镜，3~6格连贯推进，全景、中景、特写丰富交织，展现完整剧情脉络",
-      promptModifier: "经典连环画多格分镜排布，3~6个镜头自然流转，远景环境、中景对话与特写神态层次分明，生动呈现连贯剧情脉络与人物互动"
+      desc: "多镜头自然分镜，3~6格连贯推进，全景、中景、特写丰富交织，展现完整剧情脉络与最终收尾",
+      promptModifier: "经典连环画多格分镜排布，3~6个镜头自然流转，远景环境、中景对话与特写神态层次分明，生动呈现连贯剧情脉络、人物互动与明确结局"
+    },
+    vertical_strip: {
+      id: "vertical_strip",
+      label: "📱 垂直流式长漫 (条漫排布)",
+      name: "垂直流式长漫",
+      desc: "现代彩色条漫/Webtoon流式排布，无死板网格，垂直纵向贯通叙事，适合手机竖屏完整长剧情",
+      promptModifier: "现代彩色条漫垂直流式叙事排布（vertical webtoon layout），无死板黑边网格线，纵向贯通的自然分镜流动，大特写与全景交替穿插，流畅递进，尾镜收束终局"
     },
     splash_single: {
       id: "splash_single",
@@ -16661,13 +16675,6 @@
       name: "单幅高光大画",
       desc: "单张完整全景大插画，禁止任何画框切割，将戏剧冲突集中在一幅高光大场面中",
       promptModifier: "单幅电影级全景高光大插画（splash art），严禁任何分镜网格线条或画框切割，单张完整宏大画面，聚焦故事最核心的高光戏剧冲突与饱满细节"
-    },
-    vertical_strip: {
-      id: "vertical_strip",
-      label: "📱 垂直流式长漫 (条漫排布)",
-      name: "垂直流式长漫",
-      desc: "现代彩色条漫/Webtoon流式排布，无死板网格，垂直纵向贯通叙事，适合手机竖屏",
-      promptModifier: "现代彩色条漫垂直流式叙事排布（vertical webtoon layout），无死板黑边网格线，纵向贯通的自然分镜流动，大特写与全景交替穿插，流畅递进"
     }
   });
 
@@ -17240,8 +17247,8 @@
     const includeReplies = Boolean(options.includeReplies);
     const styleKey = options.styleKey || "comic_4panel";
     const styleDef = AI_IMAGE_STYLES[styleKey] || AI_IMAGE_STYLES.comic_4panel;
-    const layoutKey = options.layoutKey || "dynamic_asym";
-    const layoutDef = AI_IMAGE_LAYOUTS[layoutKey] || AI_IMAGE_LAYOUTS.dynamic_asym;
+    const layoutKey = options.layoutKey || "adaptive_story";
+    const layoutDef = AI_IMAGE_LAYOUTS[layoutKey] || AI_IMAGE_LAYOUTS.adaptive_story;
     const customStyle = (options.customStyle || "").trim();
 
     if (isAiConfigured()) {
@@ -17259,16 +17266,20 @@
 【选定漫画艺术风格】：${styleDef.name} (${styleDef.promptModifier})${customStyle ? `\n【用户自定义风格/要求】：${customStyle}` : ""}
 【选定分镜版式结构】：${layoutDef.name} (${layoutDef.promptModifier})
 
-【核心分镜构图与生图规则】：
-1. 【分镜版式与不限制固定格数】：
-   - 版式要求：${layoutDef.desc}。根据剧情起伏自由构图，不限制固定格数。
-   - ${layoutKey === "splash_single" ? "禁止任何画框分割线条，必须采用单张宏大全景大画表现高潮戏剧场景。" : "严禁生成死板等宽的 2x2 对称田字网格或棋盘格！必须采用具有强烈张力与呼吸感的现代专业漫画分镜，主副分镜大小强烈错落对比（震撼高潮大主格 + 穿插斜切小镜头与特写），打破传统单调网格，镜头错落有致。"}
-2. 【生成纯中文画面与中文台词】：
+【核心分镜构图与叙事闭环规则】：
+1. 【情节驱动分镜与不设固定格数】：
+   - 版式要求：${layoutDef.desc}。
+   - 严禁死板等宽的 2x2 对称田字格或死板方块棋盘！不限制死板的四格或固定格数，请根据原帖故事情节的发展与起伏，自由设定最契合的分镜数量（例如2~5格动态主副画格）。
+   - 主副画格必须大小错落有致（高潮主格突出 + 辅助小镜头/斜切特写），具有强烈的呼吸感与视觉冲击力。${layoutKey === "splash_single" ? "（注意：当前为单幅高光大画模式，禁止任何画框分割线，以单幅宏大全景完整呈现高潮冲突与结局）" : ""}
+2. 【起承转合与必须交代完整结局（核心，严禁缺少结局）】：
+   - 故事情节必须具有清晰完整的叙事闭环：事件起因（起） -> 波折与窘境（承） -> 社区神评或戏剧反转（转） -> 最终解决与收尾定格（合）。
+   - 画面中最后一个分镜必须明确画出故事的结局/收场（例如：问题成功解决、真相大白、彻底破防的滑稽收尾或戏剧性定格），严禁故事情节戛然而止、缺少下文或半途截断！
+3. 【生成纯中文画面与中文台词气泡】：
    - 必须直接输出纯中文生图描述，严禁输出任何英文单词。
-   - 生图模型支持直接渲染中文！请在画面描述中，为主要角色设计带有尖角或圆角的【漫画对话气泡框】与【内心独白方框】，并在提示词中明确写出框内的精炼中文对白（用引号标出，如：对话气泡中写着“代码怎么又崩了？！”、“赶紧上车！”）。
+   - 生图模型支持直接渲染中文！请在画面描述中，为主要角色设计带有尖角或圆角的【漫画对话气泡框】与【内心独白方框】，并在提示词中明确写出框内的精炼中文对白（用引号标出，如：对话气泡中写着“代码怎么又崩了？！”、“神操作，居然搞定了！”）。
    - 场景中可自然融入地道中文元素，如带有中文字样的招牌、横幅、电脑屏幕中文代码报错或中文拟声词（如“轰！”、“哈哈”），让画面自然生成纯正的中文漫画。
-3. 【戏剧冲突与人物表现】：${includeReplies ? "画面需生动展现楼主经历的窘境/难题，以及社区热心网友或犀利神评的戏剧性互动与吐槽，形成弹幕般热闹的讨论氛围。" : "画面紧紧围绕楼主的亲身经历展开，突出主角丰富夸张的面部表情与剧情反转。"}
-4. 【输出格式】：只输出最终生成的中文提示词本身（字数约 150~280 汉字），严禁输出任何前缀、解释、Markdown 引用标记或多余客套话。
+4. 【戏剧冲突与人物表现】：${includeReplies ? "画面需生动展现楼主经历的窘境/难题，以及社区热心网友或犀利神评的戏剧性互动与吐槽，形成弹幕般热闹的讨论氛围。" : "画面紧紧围绕楼主的亲身经历展开，突出主角丰富夸张的面部表情与剧情反转。"}
+5. 【输出格式】：只输出最终生成的中文提示词本身（字数约 180~320 汉字，确保写完所有分镜与最终收尾），严禁输出任何前缀、解释、Markdown 引用标记或多余客套话。
 
 【论坛原帖内容】：
 ${textToSummarize}`;
@@ -17285,7 +17296,7 @@ ${textToSummarize}`;
 
     const cleanTitle = (title || "").replace(/["']/g, "").slice(0, 100);
     const cleanSnippet = (mainPostText || "").replace(/[\r\n]+/g, " ").replace(/["']/g, "").slice(0, 250);
-    let fallback = `现代漫画专业分镜叙事图，生动呈现故事《${cleanTitle}》，${styleDef.promptModifier}，${layoutDef.promptModifier}。分镜剧情构图自然编排，主副画格错落，各分镜画面中角色表情丰富生动，带有漫画对话气泡框，气泡中清晰写有简短中文台词。主线剧情：“${cleanSnippet}”`;
+    let fallback = `现代漫画专业分镜叙事图，完整讲述故事《${cleanTitle}》（情节自适应镜头，包含完整起承转合叙事与明确最终结局），${styleDef.promptModifier}，${layoutDef.promptModifier}。分镜依剧情起伏自然编排，主副画格大小错落，各分镜角色表情丰富生动，带有漫画对话气泡框，气泡中清晰写有简短中文台词。主线剧情：“${cleanSnippet}”`;
     if (includeReplies) {
       fallback += `，伴随分镜展示社区热心网友与犀利神评的精彩互动吐槽、弹幕式中文对话气泡`;
     }
@@ -18566,7 +18577,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     let currentTab = initialTab === "image" ? "image" : (initialTab === "history" ? "history" : "summary");
     let currentStyle = topicCache?.summaryStyle || pref.style || "sharp";
     let currentImgStyle = topicCache?.imageStyle || "comic_4panel";
-    let currentImgLayout = topicCache?.imageLayout || "dynamic_asym";
+    let currentImgLayout = topicCache?.imageLayout || "adaptive_story";
     let currentImgRatio = topicCache?.imageRatio || imgConfig.size || "1024x1024";
 
     const overlay = document.createElement("div");
