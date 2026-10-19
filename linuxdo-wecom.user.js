@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.9
+// @version      0.8.10
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -39109,6 +39109,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       chatState.stream = [];
       chatState.hasOlder = false;
       chatState.hasNewer = false;
+      chatState.zhihuArticleCursor = "";
+      chatState.zhihuArticlePage = 1;
       chatState.lastJumpScrollTop = null;
       chatState.lastJumpPostNumber = 0;
       closeEditDialog(true);
@@ -39800,8 +39802,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     // Dismiss any accidental native modal dialog immediately
     dismissZhihuNativeModals();
 
-    // Only attempt DOM pagination if pageNum > 1 and comment container is already mounted
+    // Only attempt scoped DOM pagination if pageNum > 1 and comment container is strictly scoped to targetId
     if (pageNum > 1) {
+      const container = document.querySelector(`.AnswerItem[name="${targetId}"], [data-id="${targetId}"], [data-zop*="${targetId}"]`);
+      if (!container) return false;
       const nextSelectors = [
         ".CommentsV2 .PaginationButton-next",
         ".CommentsV2 .Pagination-next",
@@ -39813,27 +39817,12 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         ".Pagination-next"
       ];
       for (const sel of nextSelectors) {
-        const btn = document.querySelector(sel);
+        const btn = container.querySelector(sel);
         if (btn && !btn.disabled && typeof btn.click === "function") {
           btn.click();
+          dismissZhihuNativeModals();
           return true;
         }
-      }
-      const pageBtns = Array.from(document.querySelectorAll(".CommentsV2 .PaginationButton, .CommentsV2 .Pagination button, .Pagination button"));
-      const targetBtn = pageBtns.find((b) => b.textContent.trim() === String(pageNum));
-      if (targetBtn && typeof targetBtn.click === "function") {
-        targetBtn.click();
-        return true;
-      }
-      const scrollables = document.querySelectorAll(
-        ".CommentsV2, .CommentListV2, .CommentsV2-list, .CommentsV2-content, .NestComment"
-      );
-      if (scrollables.length > 0) {
-        scrollables.forEach((sc) => {
-          sc.scrollTop = sc.scrollHeight;
-          sc.dispatchEvent(new Event("scroll", { bubbles: true }));
-        });
-        return true;
       }
     }
 
@@ -39847,10 +39836,12 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     let cursor = "";
     let nextUrl = "";
     let pageNum = 1;
+    let targetType = "";
     if (typeof options === "object" && options !== null) {
       cursor = options.cursor || "";
       nextUrl = options.nextUrl || "";
       pageNum = Number(options.page || 1);
+      targetType = options.targetType || "";
     } else if (typeof options === "string") {
       cursor = options;
     } else if (typeof options === "number") {
@@ -39861,7 +39852,24 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         cursor = zhihuCommentThreadState.nextCursor || "";
         nextUrl = zhihuCommentThreadState.nextUrl || "";
         pageNum = zhihuCommentThreadState.pageIndex || 2;
+        targetType = zhihuCommentThreadState.targetType || "";
       }
+    }
+
+    if (!targetType) {
+      if (options.isArticle || (IS_ZHIHU && String(chatState.topicId).startsWith("p_"))) {
+        targetType = "articles";
+      } else if (options.isQuestion || (Number(options.postNumber) === 1 && !String(chatState.topicId).startsWith("p_"))) {
+        targetType = "questions";
+      } else {
+        targetType = "answers";
+      }
+    }
+
+    // Extract cursor if embedded in nextUrl
+    if (nextUrl && !cursor) {
+      const cm = nextUrl.match(/[?&]offset=([^&]+)/);
+      if (cm) cursor = decodeURIComponent(cm[1]);
     }
 
     // Cache hit only for initial page with more than 2 comments
@@ -39877,8 +39885,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     let fetchedTotal = zhihuCommentCountsMap.get(cleanId) || 0;
     let needLogin = false;
 
-    // Build the request URL matching Zhihu's native comment_v5 API
-    const reqUrl = nextUrl || `/api/v4/comment_v5/answers/${cleanId}/root_comment?order_by=score&limit=20&offset=${encodeURIComponent(cursor)}`;
+    // Build canonical request URL on www.zhihu.com (always relative, avoiding CORS to api.zhihu.com)
+    let reqUrl = `/api/v4/comment_v5/${targetType}/${cleanId}/root_comment?order_by=score&limit=20`;
+    if (cursor) {
+      reqUrl += `&offset=${encodeURIComponent(cursor)}`;
+    }
 
     // Tier 1: Zhihu internal Webpack Axios client (authenticates with current session & signs headers automatically)
     try {
@@ -39888,9 +39899,18 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         try {
           resp = await client.get(reqUrl);
         } catch (e1) {
-          if (String(e1?.message || "").includes("404")) {
-            const artUrl = reqUrl.replace("/answers/", "/articles/");
-            resp = await client.get(artUrl);
+          const errMsg = String(e1?.message || "");
+          const status = e1?.response?.status;
+          if (status === 404 || errMsg.includes("404")) {
+            // Swap target type (answers <-> articles)
+            const altType = targetType === "answers" ? "articles" : "answers";
+            const altUrl = reqUrl.replace(`/${targetType}/`, `/${altType}/`);
+            try {
+              resp = await client.get(altUrl);
+              targetType = altType;
+            } catch (e2) {
+              throw e1;
+            }
           } else {
             throw e1;
           }
@@ -39924,16 +39944,16 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       }
     }
 
-    // Tier 2: Trigger native DOM button / pagination & poll intercepted pool
-    if (rawComments.length === 0) {
+    // Tier 2: Scoped DOM check strictly for initial page 1
+    if (rawComments.length === 0 && pageNum === 1 && !cursor) {
       const initialPoolLen = (zhihuCapturedCommentsPool.get(cleanId) || []).length;
       triggerZhihuNativeCommentLoad(cleanId, pageNum);
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < 6; i++) {
         await new Promise((r) => setTimeout(r, 60));
         const curPool = zhihuCapturedCommentsPool.get(cleanId) || [];
-        if (curPool.length > initialPoolLen || (pageNum === 1 && curPool.length > 0)) {
+        if (curPool.length > initialPoolLen || curPool.length > 0) {
           rawComments = curPool.slice(initialPoolLen);
-          if (rawComments.length === 0 && pageNum === 1) rawComments = curPool.slice(0, 20);
+          if (rawComments.length === 0) rawComments = curPool.slice(0, 20);
           paging = zhihuCommentPagingMap.get(cleanId) || null;
           fetchedTotal = zhihuCommentCountsMap.get(cleanId) || fetchedTotal;
           if (rawComments.length > 0) break;
@@ -39944,12 +39964,25 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     // Tier 3: Direct API fetch fallback
     if (rawComments.length === 0) {
       try {
-        const resp = await zhihuApi(reqUrl, {
-          headers: {
-            "x-requested-with": "fetch",
-            "Referer": location.href || "https://www.zhihu.com/"
-          }
-        });
+        let resp = null;
+        try {
+          resp = await zhihuApi(reqUrl, {
+            headers: {
+              "x-requested-with": "fetch",
+              "Referer": location.href || "https://www.zhihu.com/"
+            }
+          });
+        } catch (e1) {
+          const altType = targetType === "answers" ? "articles" : "answers";
+          const altUrl = reqUrl.replace(`/${targetType}/`, `/${altType}/`);
+          resp = await zhihuApi(altUrl, {
+            headers: {
+              "x-requested-with": "fetch",
+              "Referer": location.href || "https://www.zhihu.com/"
+            }
+          });
+          targetType = altType;
+        }
         if (Array.isArray(resp?.data) && resp.data.length > 0) {
           rawComments = resp.data;
           paging = resp.paging || null;
@@ -39969,7 +40002,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     // Tier 4: Abstract comment fallback - ONLY for initial page 1
     if (rawComments.length === 0 && pageNum === 1 && !cursor) {
       try {
-        const absResp = await zhihuApi(`/api/v4/comment_v5/answers/${cleanId}/abstract_comment?limit=20&offset=0`, {
+        const absResp = await zhihuApi(`/api/v4/comment_v5/${targetType}/${cleanId}/abstract_comment?limit=20&offset=0`, {
           headers: {
             "x-requested-with": "fetch",
             "Referer": location.href || "https://www.zhihu.com/"
@@ -39984,9 +40017,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         }
       } catch (_) {}
     }
-
-    // Note: Zhihu comment_v5 API already returns root comments with their preview child_comments!
-    // We avoid making 20 parallel blocking network requests here so drawer loads instantaneously.
 
     // Format root and child comments for UI
     const rootComments = [];
@@ -40030,70 +40060,78 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       rootComments.push(rootItem);
     });
 
-    // 6. Direct DOM extraction fallback if still empty
-    if (flattened.length === 0 && typeof document !== "undefined") {
+    // Tier 5: Direct DOM extraction fallback (STRICTLY for page 1 initial load, and MUST be scoped to cleanId)
+    if (flattened.length === 0 && pageNum === 1 && !cursor && typeof document !== "undefined") {
       try {
-        const domItems = document.querySelectorAll(".CommentItemV2, .NestComment, .CommentsV2 .CommentItem");
-        if (domItems.length > 0) {
-          domItems.forEach((el, idx) => {
-            const domId = el.dataset?.id || `dom_comm_${idx}`;
-            if (!flattened.some((existing) => String(existing.id) === String(domId))) {
-              const author = el.querySelector(".UserLink-link, .CommentItemV2-name, .AuthorInfo-name")?.textContent?.trim() || "知友";
-              const avatar = el.querySelector("img.Avatar, .Avatar img")?.getAttribute("src") || "";
-              const content = el.querySelector(".CommentItemV2-content, .CommentContent, .RichText")?.innerHTML || el.textContent || "";
-              const time = el.querySelector(".CommentItemV2-time")?.textContent?.trim() || "";
-              const votes = parseInt(el.querySelector(".CommentItemV2-likeBtn")?.textContent?.replace(/[^\d]/g, "") || "0", 10) || 0;
-              const replyTo = el.querySelector(".CommentItemV2-replyTo")?.textContent?.replace("回复", "")?.trim() || null;
-              const isChild = el.classList.contains("NestComment") || Boolean(replyTo) || Boolean(el.closest(".NestComment, .CommentsV2-childList"));
-              if (content) {
-                const item = {
-                  id: domId,
-                  authorName: author,
-                  authorAvatar: avatar,
-                  content,
-                  createdTime: 0,
-                  timeStr: time,
-                  voteCount: votes,
-                  replyTo,
-                  isChild,
-                  children: []
-                };
-                flattened.push(item);
-                if (isChild && rootComments.length > 0) {
-                  rootComments[rootComments.length - 1].children.push(item);
-                } else {
-                  rootComments.push(item);
+        const scopedContainer = document.querySelector(
+          `.AnswerItem[name="${cleanId}"], [data-id="${cleanId}"], .Comments-container[data-target-id="${cleanId}"], [data-zop*="${cleanId}"]`
+        );
+        if (scopedContainer) {
+          const domItems = scopedContainer.querySelectorAll(".CommentItemV2, .NestComment, .CommentsV2 .CommentItem");
+          if (domItems.length > 0) {
+            domItems.forEach((el, idx) => {
+              const domId = el.dataset?.id || `dom_comm_${cleanId}_${idx}`;
+              if (!flattened.some((existing) => String(existing.id) === String(domId))) {
+                const author = el.querySelector(".UserLink-link, .CommentItemV2-name, .AuthorInfo-name")?.textContent?.trim() || "知友";
+                const avatar = el.querySelector("img.Avatar, .Avatar img")?.getAttribute("src") || "";
+                const content = el.querySelector(".CommentItemV2-content, .CommentContent, .RichText")?.innerHTML || el.textContent || "";
+                const time = el.querySelector(".CommentItemV2-time")?.textContent?.trim() || "";
+                const votes = parseInt(el.querySelector(".CommentItemV2-likeBtn")?.textContent?.replace(/[^\d]/g, "") || "0", 10) || 0;
+                const replyTo = el.querySelector(".CommentItemV2-replyTo")?.textContent?.replace("回复", "")?.trim() || null;
+                const isChild = el.classList.contains("NestComment") || Boolean(replyTo) || Boolean(el.closest(".NestComment, .CommentsV2-childList"));
+                if (content) {
+                  const item = {
+                    id: domId,
+                    authorName: author,
+                    authorAvatar: avatar,
+                    content,
+                    createdTime: 0,
+                    timeStr: time,
+                    voteCount: votes,
+                    replyTo,
+                    isChild,
+                    children: []
+                  };
+                  flattened.push(item);
+                  if (isChild && rootComments.length > 0) {
+                    rootComments[rootComments.length - 1].children.push(item);
+                  } else {
+                    rootComments.push(item);
+                  }
                 }
               }
-            }
-          });
-          if (flattened.length > 0) needLogin = false;
+            });
+            if (flattened.length > 0) needLogin = false;
+          }
         }
       } catch (_) {}
     }
 
-    // Extract nextCursor and nextUrl from paging
+    // Extract nextCursor and canonical nextUrl from paging
     let nextPagingUrl = paging?.next || "";
     let extractedCursor = "";
     if (nextPagingUrl) {
       const cm = nextPagingUrl.match(/[?&]offset=([^&]+)/);
       if (cm) extractedCursor = decodeURIComponent(cm[1]);
     }
-    if (!extractedCursor && rawComments.length > 0) {
+    if (!extractedCursor && rawComments.length > 0 && Boolean(paging && !paging.is_end)) {
       const last = rawComments[rawComments.length - 1];
       if (last?.id) extractedCursor = `0_${last.id}_0`;
     }
 
     const isEnd = Boolean(paging?.is_end);
     const effectiveTotal = Math.max(fetchedTotal, (rawComments.length || 0));
-    const hasMore = !isEnd && rawComments.length > 0 && Boolean(extractedCursor || nextPagingUrl);
+    const hasMore = !isEnd && rawComments.length > 0 && Boolean(extractedCursor);
+    const canonicalNextUrl = (hasMore && extractedCursor)
+      ? `/api/v4/comment_v5/${targetType}/${cleanId}/root_comment?order_by=score&limit=20&offset=${encodeURIComponent(extractedCursor)}`
+      : "";
 
     const result = {
       comments: rootComments,
       flattened,
       hasMore,
       nextCursor: extractedCursor,
-      nextUrl: nextPagingUrl,
+      nextUrl: canonicalNextUrl,
       needLogin: needLogin && rootComments.length === 0,
       totalCount: effectiveTotal
     };
@@ -40118,7 +40156,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       const commData = await fetchZhihuAnswerComments(answerId, {
         cursor: zhihuCommentThreadState.nextCursor,
         nextUrl: zhihuCommentThreadState.nextUrl,
-        page: zhihuCommentThreadState.pageIndex
+        page: zhihuCommentThreadState.pageIndex,
+        targetType: zhihuCommentThreadState.targetType
       });
       if (!zhihuCommentThreadState.active || zhihuCommentThreadState.answerId !== answerId) return;
 
@@ -40194,10 +40233,17 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       };
     }
 
+    const isArticle = (chatState.zhihuType === "article") ||
+                      Boolean(post?.zhihu_topic_stats?.isArticle) ||
+                      String(chatState.topicId).startsWith("p_");
+    const isQuestion = !isArticle && (Number(postNumber || post?.post_number) === 1);
+    const targetType = isArticle ? "articles" : (isQuestion ? "questions" : "answers");
+
     zhihuCommentThreadState.active = true;
     zhihuCommentThreadState.parentPost = post;
     zhihuCommentThreadState.parentPostNumber = postNumber || post.post_number;
     zhihuCommentThreadState.answerId = String(answerId || post.id);
+    zhihuCommentThreadState.targetType = targetType;
     zhihuCommentThreadState.mainScrollTop = body.scrollTop;
     zhihuCommentThreadState.mainTopicId = chatState.topicId;
     zhihuCommentThreadState.mainTitle = chatState.title;
@@ -40248,7 +40294,12 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
     // 3. Fetch comments
     try {
-      const commData = await fetchZhihuAnswerComments(post.id, { cursor: "", page: 1 });
+      const commData = await fetchZhihuAnswerComments(post.id, {
+        cursor: "",
+        page: 1,
+        targetType,
+        postNumber: postNumber || post.post_number
+      });
       if (!zhihuCommentThreadState.active || zhihuCommentThreadState.answerId !== String(post.id)) return;
       const loadingEl = body.querySelector(".wecom-zhihu-thread-loading");
       if (loadingEl) loadingEl.remove();
@@ -40462,29 +40513,37 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       const offset = Number(chatState.zhihuOffset) || 5;
       try {
         if (isArticle) {
-          let comments = [];
+          let commData = null;
           try {
-            const commResp = await zhihuApi(`/api/v4/comment_v5/articles/${rawId}/root_comment?order_by=score&limit=20&offset=${offset}`);
-            comments = commResp?.data || [];
+            commData = await fetchZhihuAnswerComments(rawId, {
+              targetType: "articles",
+              cursor: chatState.zhihuArticleCursor || "",
+              page: chatState.zhihuArticlePage || 1
+            });
           } catch (_) {}
+          const comments = commData?.comments || [];
+          const existingIds = new Set(chatState.stream.map(String));
+          const unrendered = comments.filter((c) => c && c.id && !existingIds.has(String(c.id)));
           const currentMaxNumber = Math.max(...[...chatState.postsByNumber.keys()], 1);
-          const freshPosts = comments.map((comm, idx) => ({
-            id: String(comm.id || `c_${offset + idx}`),
+          const freshPosts = unrendered.map((comm, idx) => ({
+            id: String(comm.id),
             post_number: currentMaxNumber + idx + 1,
-            username: comm.author?.name || "知友",
-            avatar: comm.author?.avatar_url || "",
-            avatar_template: comm.author?.avatar_url || "",
-            created_at: comm.created_time ? new Date(comm.created_time * 1000).toISOString() : new Date().toISOString(),
-            cooked: `<p>${escapeHtml(comm.content || "")}</p>`,
-            reply_count: comm.child_comment_count || 0,
-            like_count: comm.vote_count || 0
+            username: comm.authorName || "知友",
+            name: comm.authorName || "知友",
+            avatar: comm.authorAvatar || "",
+            avatar_template: comm.authorAvatar || "",
+            created_at: comm.createdTime ? new Date(comm.createdTime * 1000).toISOString() : new Date().toISOString(),
+            cooked: formatZhihuCookedContent(comm.content || ""),
+            reply_count: (comm.children || []).length,
+            like_count: comm.voteCount || 0
           }));
           if (freshPosts.length) {
             chatState.stream = chatState.stream.concat(freshPosts.map((p) => p.id));
             appendFreshPosts(freshPosts, body, { scroll: false, flat: true });
           }
-          chatState.zhihuOffset = offset + comments.length;
-          chatState.zhihuHasMore = comments.length >= 20;
+          chatState.zhihuArticleCursor = commData?.nextCursor || "";
+          chatState.zhihuArticlePage = (chatState.zhihuArticlePage || 1) + 1;
+          chatState.zhihuHasMore = Boolean(commData?.hasMore) && freshPosts.length > 0;
           chatState.hasNewer = chatState.zhihuHasMore;
         } else {
           let answers = [];
