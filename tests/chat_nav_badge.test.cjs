@@ -11741,8 +11741,59 @@ test("Test 144: Zhihu comment and discussion timestamp parsing and formatting (n
   );
 });
 
+test("Test 145: Zhihu child comment pagination, floor reply expansion, and avoidance of premature comment drawer end prompt (v0.8.15)", () => {
+  // 1. fetchZhihuChildComments function definition and endpoint
+  assert.ok(
+    scriptContent.includes("async function fetchZhihuChildComments(rootId, options = {})") &&
+    scriptContent.includes("/comment_v5/comment/${cleanId}/child_comment?order_by=ts&limit=20"),
+    "must define fetchZhihuChildComments targeting /api/v4/comment_v5/comment/${cleanId}/child_comment"
+  );
 
+  // 2. childCommentCount extraction and childHasMore tracking on root comment items
+  assert.ok(
+    scriptContent.includes("child_comment_count") &&
+    scriptContent.includes("childCommentCount: childCount,") &&
+    scriptContent.includes("childHasMore: Boolean(childCount > (c.child_comments ? c.child_comments.length : 0))"),
+    "fetchZhihuAnswerComments must extract childCommentCount and initialize childHasMore"
+  );
 
+  // 3. Child more entry button inside renderZhihuCommentBubble
+  assert.ok(
+    scriptContent.includes(".wecom-zhihu-child-more-entry") &&
+    scriptContent.includes('data-action="zhihu-load-more-child-comments"') &&
+    scriptContent.includes("展开剩余"),
+    "renderZhihuCommentBubble must render '展开剩余 X 条回复 ▾' button for root comments with unexpanded replies"
+  );
 
+  // 4. Multi-stage bottom container: load next child batch, expand all child comments, and honest end prompt
+  assert.ok(
+    scriptContent.includes("function updateZhihuBottomMoreContainer()") &&
+    scriptContent.includes('data-action="zhihu-load-next-child-batch"') &&
+    scriptContent.includes('data-action="zhihu-expand-all-child-comments"') &&
+    scriptContent.includes("一键展开全部回复"),
+    "must provide bottom actions to load floor reply batches and expand all replies when root comments finish"
+  );
+
+  // 5. Never show premature '已加载全部 178 条评论' when displayedCount < total
+  assert.ok(
+    scriptContent.includes("已加载全部可用主评论及回复（共 ${displayedCount} 条${totalCount > displayedCount ? \"，其余部分可能已被原站过滤或删除\" : \"\"}）") ||
+    scriptContent.includes("其余部分可能已被原站过滤或删除"),
+    "bottom footer must differentiate genuinely exhausted comments vs unfiltered total discrepancies"
+  );
+
+  // 6. Sequential floor badges re-numbering
+  assert.ok(
+    scriptContent.includes("function updateZhihuCommentFloorBadges("),
+    "must define updateZhihuCommentFloorBadges to re-badge floor numbers after inserting child replies"
+  );
+
+  // 7. Event delegation in handleChatPanelClick
+  assert.ok(
+    scriptContent.includes('data-action="zhihu-load-more-child-comments"') &&
+    scriptContent.includes('data-action="zhihu-load-next-child-batch"') &&
+    scriptContent.includes('data-action="zhihu-expand-all-child-comments"'),
+    "handleChatPanelClick must handle child expansion, batch loading, and expand all actions"
+  );
+});
 
 
