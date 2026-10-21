@@ -11934,6 +11934,31 @@ test("Test 148: Borderless icon+number button and no left border line when child
   );
 });
 
+test("Test 149: Zhihu child comment expansion button right alignment (v0.8.19)", () => {
+  // 1. Right alignment styles for .wecom-zhihu-child-more-entry
+  assert.ok(
+    scriptContent.includes(".wecom-zhihu-child-more-entry {") &&
+    scriptContent.includes("display: flex;") &&
+    scriptContent.includes("justify-content: flex-end;"),
+    ".wecom-zhihu-child-more-entry must use flex layout with justify-content: flex-end"
+  );
+
+  // 2. margin-left: auto on .wecom-zhihu-child-more-btn
+  assert.ok(
+    scriptContent.includes(".wecom-zhihu-child-more-btn {") &&
+    scriptContent.includes("margin-left: auto;"),
+    ".wecom-zhihu-child-more-btn must use margin-left: auto for solid right alignment"
+  );
+
+  // 3. has-no-children state preserves right alignment
+  assert.ok(
+    scriptContent.includes(".wecom-reply-children.has-no-children .wecom-zhihu-child-more-entry") &&
+    scriptContent.includes("justify-content: flex-end !important;"),
+    "must preserve right alignment when has-no-children is active"
+  );
+});
+
+
 
 
 

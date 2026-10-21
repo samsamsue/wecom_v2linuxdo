@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.18
+// @version      0.8.19
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -5296,7 +5296,10 @@
       border-color: var(--wc-border-strong, #bfbfbf);
     }
     .wecom-zhihu-child-more-entry {
-      padding: 4px 0 2px 24px;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 3px 0 1px 0;
     }
     .wecom-reply-children.has-no-children,
     .wecom-reply-children:not(:has(.wecom-msg)) {
@@ -5307,9 +5310,11 @@
     }
     .wecom-reply-children.has-no-children .wecom-zhihu-child-more-entry,
     .wecom-reply-children:not(:has(.wecom-msg)) .wecom-zhihu-child-more-entry {
-      padding: 2px 0 !important;
+      padding: 2px 0 0 0 !important;
+      justify-content: flex-end !important;
     }
     .wecom-zhihu-child-more-btn {
+      margin-left: auto;
       background: transparent;
       border: none !important;
       color: var(--wc-text-3, #8c8c8c);
