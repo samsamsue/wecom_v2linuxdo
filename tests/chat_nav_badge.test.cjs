@@ -11958,6 +11958,59 @@ test("Test 149: Zhihu child comment expansion button right alignment (v0.8.19)",
   );
 });
 
+test("Test 150: Category and group selection instant loading, loading skeleton, multi-channel Zhihu/Linux.do/V2EX routing, and retry support (v0.8.20)", () => {
+  // 1. Version must be 0.8.20
+  assert.ok(
+    scriptContent.includes("// @version      0.8.20"),
+    "userscript version must be 0.8.20"
+  );
+
+  // 2. listApiForPath on Zhihu supports /notifications, /hot, /follow, /explore, /waiting
+  assert.ok(
+    scriptContent.includes("pathname.includes(\"/notifications\") || search.includes(\"notifications\")") &&
+    scriptContent.includes("pathname.includes(\"/explore\") || search.includes(\"explore\")") &&
+    scriptContent.includes("pathname.includes(\"/waiting\") || search.includes(\"waiting\")"),
+    "listApiForPath on Zhihu must support notifications, explore, and waiting channels"
+  );
+
+  // 3. scopedListApiForPath on Discourse supports /none, /c/slug/id, /g/
+  assert.ok(
+    scriptContent.includes("(?:c|tag|g)") &&
+    scriptContent.includes("clean.endsWith(\"/none\")"),
+    "scopedListApiForPath must support categories, tags, and groups"
+  );
+
+  // 4. ensureV2exNav2 click triggers immediate list loading with force=true and loading skeleton
+  assert.ok(
+    scriptContent.includes("nav2.addEventListener(\"click\", (e) => {") &&
+    scriptContent.includes("loadList(targetApiPath, true);") &&
+    scriptContent.includes("正在加载列表…"),
+    "ensureV2exNav2 click must show loading skeleton and call loadList(targetApiPath, true)"
+  );
+
+  // 5. loadZhihuList handles explore and waiting channels, and displays loading skeleton
+  assert.ok(
+    scriptContent.includes("isWaiting = apiPath === \"/waiting\" || apiPath.includes(\"waiting\")") &&
+    scriptContent.includes("topics = await fetchZhihuWaitingList();") &&
+    scriptContent.includes("正在加载知乎列表…"),
+    "loadZhihuList must support waiting channel and show loading skeleton"
+  );
+
+  // 6. statusEl click handler retries loadList when is-clickable is active
+  assert.ok(
+    scriptContent.includes("else if (statusEl.classList.contains(\"is-clickable\") && !listState.loading)") &&
+    scriptContent.includes("loadList(apiPath, true);"),
+    "clicking a clickable status element must retry loadList(apiPath, true)"
+  );
+
+  // 7. Linux.do Discourse sidebar click binds category navigation and triggers loadList
+  assert.ok(
+    scriptContent.includes("sidebar.dataset.navBound = \"1\";") &&
+    scriptContent.includes("a.sidebar-section-link, a[href*='/c/'], a[href*='/tag/'], a[href*='/g/']"),
+    "ensureSidebarCloseBtn must bind sidebar link clicks to load category lists"
+  );
+});
+
 
 
 

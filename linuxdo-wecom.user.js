@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.19
+// @version      0.8.20
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -1615,7 +1615,7 @@
     }
     return pathname === "/" ||
       /^\/(latest|new|unread|unseen|top|categories|hot|posted|read|bookmarks|notifications)\b/.test(pathname) ||
-      /^\/c\//.test(pathname) || /^\/tag\//.test(pathname);
+      /^\/(?:c|tag|g)\//.test(pathname);
   }
 
   const LIST_API_BY_PATH = Object.freeze({
@@ -1635,14 +1635,23 @@
   });
 
   function scopedListApiForPath(pathname) {
-    if (!/^\/(?:c|tag)\/[^/]+/.test(pathname)) return "";
-    return pathname.endsWith(".json") ? pathname : `${pathname}.json`;
+    if (!/^\/(?:c|tag|g)\/[^/]+/.test(pathname)) return "";
+    let clean = pathname.replace(/\/+$/, "");
+    if (clean.endsWith("/none")) {
+      clean = clean.replace(/\/none$/, "/none/l/latest");
+    } else if (/^\/c\/[^/]+\/\d+$/.test(clean) || /^\/c\/\d+$/.test(clean)) {
+      clean = `${clean}/l/latest`;
+    }
+    return clean.endsWith(".json") ? clean : `${clean}.json`;
   }
 
   function listApiForPath(pathname, search = "") {
     if (IS_ZHIHU) {
+      if (pathname.includes("/notifications") || search.includes("notifications")) return "/notifications";
       if (pathname.includes("/hot") || search.includes("hot")) return "/hot";
       if (pathname.includes("/follow") || search.includes("follow")) return "/follow";
+      if (pathname.includes("/explore") || search.includes("explore")) return "/explore";
+      if (pathname.includes("/waiting") || search.includes("waiting")) return "/waiting";
       return "/";
     }
     if (IS_JUEJIN) {
@@ -15468,19 +15477,45 @@
     if (!IS_LINUXDO) return;
     const attach = () => {
       const sidebar = document.querySelector(".sidebar-wrapper");
-      if (!sidebar || sidebar.querySelector(".wecom-sidebar-close-btn")) return;
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "wecom-sidebar-close-btn";
-      btn.title = "收回分栏 (Esc)";
-      btn.setAttribute("aria-label", "收回分栏");
-      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12m0 -12l12 12"/></svg>`;
-      btn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setNav2Open(false);
-      });
-      sidebar.appendChild(btn);
+      if (!sidebar) return;
+      if (!sidebar.querySelector(".wecom-sidebar-close-btn")) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "wecom-sidebar-close-btn";
+        btn.title = "收回分栏 (Esc)";
+        btn.setAttribute("aria-label", "收回分栏");
+        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12m0 -12l12 12"/></svg>`;
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setNav2Open(false);
+        });
+        sidebar.appendChild(btn);
+      }
+      if (sidebar.dataset.navBound !== "1") {
+        sidebar.dataset.navBound = "1";
+        sidebar.addEventListener("click", (e) => {
+          const link = e.target.closest("a.sidebar-section-link, a[href*='/c/'], a[href*='/tag/'], a[href*='/g/']");
+          if (!link) return;
+          const href = link.getAttribute("href");
+          if (!href || href === "#" || href.startsWith("javascript:")) return;
+
+          document.documentElement.classList.remove("wecom-topic-open");
+          renderChatEmpty();
+          chatState.topicId = null;
+
+          const fullUrl = new URL(href, location.origin);
+          const targetApiPath = listApiForPath(fullUrl.pathname, fullUrl.search);
+
+          const listBody = document.querySelector(".wecom-list-body");
+          if (listBody) {
+            listBody.innerHTML = '<div class="wecom-list-status">正在加载列表…</div>';
+          }
+
+          loadList(targetApiPath, true);
+          syncListNav();
+        });
+      }
     };
     attach();
     setTimeout(attach, 100);
@@ -21521,7 +21556,12 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     groupBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      setNav2Open(!isNav2Open());
+      const willOpen = !isNav2Open();
+      setNav2Open(willOpen);
+      if (willOpen && (!listState.topics || listState.topics.length === 0)) {
+        const apiPath = listState.apiPath || listApiForPath(location.pathname, location.search);
+        loadList(apiPath, true);
+      }
     });
   }
 
@@ -23508,6 +23548,18 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       return hotList.map(mapZhihuHotItemToTopic).filter(Boolean);
     }
     try {
+      const resp = await zhihuApi("/api/v3/feed/topstory/hot-lists/total?limit=50");
+      const list = resp?.data || [];
+      if (list.length > 0) return list.map(mapZhihuHotItemToTopic).filter(Boolean);
+    } catch (_) {}
+    try {
+      const rankResp = await zhihuApi("/api/v4/creators/rank/hot?domain=0&limit=50");
+      const rankItems = rankResp?.data || [];
+      if (rankItems.length > 0) {
+        return rankItems.map(mapZhihuCreatorHotItemToTopic).filter(Boolean);
+      }
+    } catch (_) {}
+    try {
       const pageDoc = await fetchZhihuPageDoc("/hot");
       const html = typeof pageDoc === "string" ? pageDoc : pageDoc.html;
       const match = html.match(/<script\s+id=["']js-initialData["'][^>]*>([\s\S]*?)<\/script>/i);
@@ -23521,11 +23573,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     } catch (e) {
       console.warn("[zhihu-wecom] fetch /hot html failed", e);
     }
-    try {
-      const resp = await zhihuApi("/api/v3/feed/topstory/hot-lists/total?limit=50");
-      const list = resp?.data || [];
-      if (list.length > 0) return list.map(mapZhihuHotItemToTopic).filter(Boolean);
-    } catch (_) {}
     return [];
   }
 
@@ -23544,6 +23591,21 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           zhihuRecommendPool.push(t);
         }
       });
+
+      // Try creators rank hot as primary API source (domain 0: all, limit 30)
+      if (zhihuRecommendPool.length <= offset + 10) {
+        try {
+          const rankResp = await zhihuApi(`/api/v4/creators/rank/hot?domain=0&limit=30&offset=0`);
+          const items = rankResp?.data || [];
+          items.forEach((item, i) => {
+            const mapped = mapZhihuCreatorHotItemToTopic(item, i);
+            if (mapped && mapped.id && !zhihuRecommendSeen.has(String(mapped.id))) {
+              zhihuRecommendSeen.add(String(mapped.id));
+              zhihuRecommendPool.push(mapped);
+            }
+          });
+        } catch (_) {}
+      }
 
       // Supplement with hot list so pool always has 50+ items right away
       if (zhihuRecommendPool.length <= offset + 10) {
@@ -23657,6 +23719,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           });
         }
       } catch (_) {}
+    }
+
+    if (zhihuRecommendPool.length === 0 && offset === 0) {
+      const hotFallback = await fetchZhihuHotList();
+      if (hotFallback.length > 0) return hotFallback.slice(0, 20);
     }
 
     return zhihuRecommendPool.slice(offset, offset + 20);
@@ -24007,6 +24074,17 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   async function fetchZhihuExploreList() {
     try {
+      const resp = await zhihuApi("/api/v4/creators/rank/hot?domain=1&limit=30");
+      const items = resp?.data || [];
+      if (items.length > 0) {
+        return items.map((item, idx) => {
+          const mapped = mapZhihuCreatorHotItemToTopic(item, idx);
+          if (mapped) mapped.node_name = "发现";
+          return mapped;
+        }).filter(Boolean);
+      }
+    } catch (_) {}
+    try {
       const doc = await fetchZhihuPageDoc("/explore");
       const html = typeof doc === "string" ? doc : doc.html;
       const match = html.match(/<script\s+id=["']js-initialData["'][^>]*>([\s\S]*?)<\/script>/i);
@@ -24014,6 +24092,44 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         const parsed = JSON.parse(match[1]);
         const topics = extractZhihuRecommendTopicsFromInitial(parsed);
         if (topics.length > 0) return topics;
+      }
+    } catch (_) {}
+    return fetchZhihuRecommendList(0);
+  }
+
+  async function fetchZhihuWaitingList() {
+    try {
+      const resp = await zhihuApi("/api/v4/creators/rank/question?domain=0&limit=30");
+      const items = resp?.data || [];
+      if (items.length > 0) {
+        return items.map((item, idx) => {
+          const mapped = mapZhihuCreatorHotItemToTopic(item, idx);
+          if (mapped) mapped.node_name = "等你来答";
+          return mapped;
+        }).filter(Boolean);
+      }
+    } catch (_) {}
+    try {
+      const resp = await zhihuApi("/api/v4/questions/waiting/feeds?limit=20");
+      const items = resp?.data || [];
+      if (items.length > 0) {
+        return items.map((item, idx) => {
+          const q = item.target || item.question || item;
+          if (!q?.id) return null;
+          return {
+            id: String(q.id),
+            title: q.title || "知乎问答",
+            slug: "question",
+            posts_count: 1,
+            reply_count: Number(q.answer_count || 0),
+            node_name: "等你来答",
+            hot_metric: `${q.answer_count || 0} 回答`,
+            v2ex_author: q.author?.name || "知友",
+            last_poster_username: q.author?.name || "知友",
+            bumped_at: Date.now() - idx * 60000,
+            created_at: Date.now() - idx * 60000
+          };
+        }).filter(Boolean);
       }
     } catch (_) {}
     return fetchZhihuRecommendList(0);
@@ -24047,12 +24163,19 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const requestSerial = ++listState.requestSerial;
     listState.loading = true;
     listState.apiPath = apiPath;
+
+    const body = document.querySelector(".wecom-list-body");
+    if (body && (!listState.topics || !listState.topics.length || force)) {
+      body.innerHTML = '<div class="wecom-list-status">正在加载知乎列表…</div>';
+    }
+
     try {
       let topics = [];
       const isNotif = apiPath === "/notifications" || apiPath.startsWith("/notifications");
       const isHot = apiPath === "/hot" || apiPath.includes("hot");
       const isFollow = apiPath === "/follow" || apiPath.includes("follow");
       const isExplore = apiPath === "/explore" || apiPath.includes("explore");
+      const isWaiting = apiPath === "/waiting" || apiPath.includes("waiting");
 
       if (force || listState.loadedApiPath !== apiPath) {
         zhihuRecommendPool.length = 0;
@@ -24082,21 +24205,37 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         topics = await fetchZhihuExploreList();
         listState.zhihuOffset = topics.length;
         listState.moreUrl = topics.length > 0 ? `zhihu_offset_${topics.length}` : null;
+      } else if (isWaiting) {
+        topics = await fetchZhihuWaitingList();
+        listState.zhihuOffset = topics.length;
+        listState.moreUrl = topics.length > 0 ? `zhihu_offset_${topics.length}` : null;
       } else {
         topics = await fetchZhihuRecommendList(0);
         listState.zhihuOffset = topics.length;
         listState.moreUrl = topics.length > 0 ? `zhihu_offset_${topics.length}` : null;
       }
       if (requestSerial !== listState.requestSerial) return;
-      listState.topics = topics;
+      if (Array.isArray(topics) && topics.length > 0) {
+        listState.topics = topics;
+        listState.loadedApiPath = apiPath;
+      } else if (!listState.topics || !listState.topics.length) {
+        const hotFallback = await fetchZhihuHotList();
+        if (hotFallback.length > 0) {
+          listState.topics = hotFallback;
+          listState.loadedApiPath = apiPath;
+        } else {
+          listState.topics = [];
+        }
+      }
       renderListRows();
       syncRail();
-      listState.loadedApiPath = apiPath;
     } catch (error) {
       if (requestSerial !== listState.requestSerial) return;
       console.error("[zhihu-wecom] list load failed", error);
-      const body = document.querySelector(".wecom-list-body");
-      if (body) body.innerHTML = `<div class="wecom-list-status">知乎列表加载失败：${escapeHtml(error.message)}</div>`;
+      if (body) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        body.innerHTML = `<div class="wecom-list-status is-clickable">知乎列表加载失败：${escapeHtml(errorMsg)}，点击重试</div>`;
+      }
     } finally {
       if (requestSerial === listState.requestSerial) listState.loading = false;
     }
@@ -24193,7 +24332,31 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       e.preventDefault();
       const href = link.getAttribute("href");
       if (!href) return;
-      navigateInApp(href);
+
+      nav2.querySelectorAll(".wecom-v2ex-nav2-item").forEach((it) => {
+        it.classList.toggle("active", it === link);
+      });
+
+      if (IS_ZHIHU && zhihuCommentThreadState.active) {
+        closeZhihuCommentThread(document.querySelector(".wecom-chat-panel"), { restoreContent: false });
+      }
+      document.documentElement.classList.remove("wecom-topic-open");
+      renderChatEmpty();
+      chatState.topicId = null;
+
+      try {
+        history.pushState({}, "", href);
+      } catch (_) {}
+
+      const fullUrl = new URL(href, location.origin);
+      const targetApiPath = listApiForPath(fullUrl.pathname, fullUrl.search);
+
+      const listBody = document.querySelector(".wecom-list-body");
+      if (listBody) {
+        listBody.innerHTML = '<div class="wecom-list-status">正在加载列表…</div>';
+      }
+
+      loadList(targetApiPath, true);
       syncV2exNav2();
       syncListNav();
     });
@@ -29546,10 +29709,20 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     }
     if (IS_ZHIHU) {
       const path = location.pathname.replace(/\/$/, "") || "/";
-      return DEFAULT_ZHIHU_LIST_NAV.map((it) => ({
-        ...it,
-        active: path === it.href || (it.href === "/hot" && path === "/hot") || (it.href === "/" && path === "")
-      }));
+      return DEFAULT_ZHIHU_LIST_NAV.map((it) => {
+        let active = path === it.href;
+        if (!active) {
+          if (it.href === "/hot" && (path.includes("/hot") || (listState.loadedApiPath && listState.loadedApiPath.includes("hot")))) active = true;
+          else if (it.href === "/" && (path === "" || path === "/" || (listState.loadedApiPath && listState.loadedApiPath === "/"))) active = true;
+          else if (it.href === "/follow" && (path.includes("/follow") || (listState.loadedApiPath && listState.loadedApiPath.includes("follow")))) active = true;
+          else if (it.href === "/explore" && (path.includes("/explore") || (listState.loadedApiPath && listState.loadedApiPath.includes("explore")))) active = true;
+          else if (it.href === "/waiting" && (path.includes("/waiting") || (listState.loadedApiPath && listState.loadedApiPath.includes("waiting")))) active = true;
+        }
+        return {
+          ...it,
+          active
+        };
+      });
     }
     if (IS_JUEJIN) {
       const path = location.pathname.replace(/\/$/, "") || "/";
@@ -30087,6 +30260,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       if (statusEl && panel.contains(statusEl)) {
         if (listState.moreUrl && !listState.loading) {
           loadMoreList();
+        } else if (statusEl.classList.contains("is-clickable") && !listState.loading) {
+          const apiPath = listState.apiPath || listApiForPath(location.pathname, location.search);
+          loadList(apiPath, true);
         }
         return;
       }
@@ -30248,7 +30424,26 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       e.preventDefault();
       e.stopPropagation();
       try { link.blur(); } catch { /* ignore */ }
+
+      if (IS_ZHIHU && zhihuCommentThreadState.active) {
+        closeZhihuCommentThread(document.querySelector(".wecom-chat-panel"), { restoreContent: false });
+      }
+      document.documentElement.classList.remove("wecom-topic-open");
+      renderChatEmpty();
+      chatState.topicId = null;
+
+      const fullUrl = new URL(href, location.origin);
+      const targetApiPath = listApiForPath(fullUrl.pathname, fullUrl.search);
+
+      const listBody = document.querySelector(".wecom-list-body");
+      if (listBody) {
+        listBody.innerHTML = '<div class="wecom-list-status">正在加载列表…</div>';
+      }
+
       navigateInApp(href);
+      loadList(targetApiPath, true);
+      syncListNav();
+      if (!IS_LINUXDO) syncV2exNav2();
     });
     panel.addEventListener("keydown", (e) => {
       if (e.key !== "Enter" && e.key !== " ") return;
