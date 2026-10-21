@@ -11796,4 +11796,61 @@ test("Test 145: Zhihu child comment pagination, floor reply expansion, and avoid
   );
 });
 
+test("Test 146: Zhihu comment image parsing, thumbnail layout, and bubble image rendering (v0.8.16)", () => {
+  // 1. CSS styles for comment image thumbnail wrapper and img
+  assert.ok(
+    scriptContent.includes(".wecom-zhihu-comment-image-wrap") &&
+    scriptContent.includes(".wecom-zhihu-comment-image") &&
+    scriptContent.includes("cursor: zoom-in;"),
+    "must include CSS rules for .wecom-zhihu-comment-image-wrap and .wecom-zhihu-comment-image"
+  );
+
+  // 2. formatZhihuCookedContent transforms comment_img links into img tags
+  assert.ok(
+    scriptContent.includes("isCommentImg") &&
+    scriptContent.includes("comment_img") &&
+    scriptContent.includes("wecom-zhihu-comment-image"),
+    "formatZhihuCookedContent must parse <a class='comment_img'> links into wecom-zhihu-comment-image"
+  );
+
+  // 3. formatZhihuCommentContent helper definition
+  assert.ok(
+    scriptContent.includes("function formatZhihuCommentContent(raw)") &&
+    scriptContent.includes("hasHtmlTags"),
+    "must define formatZhihuCommentContent to safely process both pure text and rich comment markup"
+  );
+
+  // 4. renderZhihuCommentBubble uses formatZhihuCommentContent
+  assert.ok(
+    scriptContent.includes("const contentHtml = formatZhihuCommentContent(comm.content);"),
+    "renderZhihuCommentBubble must format comment content via formatZhihuCommentContent"
+  );
+
+  // 5. Functional simulation of the user's specific comment with image
+  const extractFn = (name) => {
+    const fnRegex = new RegExp(`function ${name}\\([\\s\\S]*?\\n  \\}`, "m");
+    const m = scriptContent.match(fnRegex);
+    return m ? m[0] : "";
+  };
+  const cookedFnCode = extractFn("formatZhihuCookedContent");
+  const commentFnCode = extractFn("formatZhihuCommentContent");
+
+  const runner = new Function(
+    "escapeHtml",
+    `${cookedFnCode}\n${commentFnCode}\nreturn { formatZhihuCookedContent, formatZhihuCommentContent };`
+  );
+  const escapeHtmlMock = (str) => String(str || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const { formatZhihuCommentContent } = runner(escapeHtmlMock);
+
+  const sampleComment = '想起以前QQ空间的事，幸好当年完成了，一个人骑三天，吴川到广州。<a href="https://pic1.zhimg.com/v2-faafb055b29f2c79de217c10f97f2565_qhd.jpg?source=1d2f5c51" class="comment_img" data-width="1080" data-height="2400">查看图片</a>';
+  const parsed = formatZhihuCommentContent(sampleComment);
+
+  assert.ok(parsed.includes('<img class="wecom-zhihu-comment-image"'), "parsed output must contain <img> tag with wecom-zhihu-comment-image class");
+  assert.ok(parsed.includes('src="https://pic1.zhimg.com/v2-faafb055b29f2c79de217c10f97f2565_qhd.jpg?source=1d2f5c51"'), "parsed output must preserve image URL in src attribute");
+  assert.ok(parsed.includes('data-width="1080"') && parsed.includes('data-height="2400"'), "parsed output must retain data-width and data-height attributes");
+  assert.ok(!parsed.includes("查看图片"), "literal '查看图片' anchor text must be replaced with the image");
+  assert.ok(parsed.includes("想起以前QQ空间的事"), "comment text must be preserved");
+});
+
+
 

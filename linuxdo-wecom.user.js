@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.15
+// @version      0.8.16
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -5319,6 +5319,29 @@
     .wecom-zhihu-child-more-btn:disabled {
       opacity: 0.6;
       cursor: not-allowed;
+    }
+    .wecom-zhihu-comment-image-wrap {
+      display: block;
+      margin: 6px 0 2px 0;
+    }
+    .wecom-zhihu-comment-image {
+      display: block;
+      max-width: min(280px, 100%);
+      max-height: 260px;
+      border-radius: 6px;
+      cursor: zoom-in;
+      object-fit: cover;
+      background: rgba(0, 0, 0, 0.04);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      transition: opacity 0.15s, transform 0.15s;
+    }
+    .wecom-zhihu-comment-image:hover {
+      opacity: 0.92;
+    }
+    html.wecom-dark .wecom-zhihu-comment-image,
+    html.${ROOT_CLASS}.wecom-dark .wecom-zhihu-comment-image {
+      background: rgba(255, 255, 255, 0.05);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
     }
     html.wecom-dark .wecom-zhihu-comments-more-btn,
     html.${ROOT_CLASS}.wecom-dark .wecom-zhihu-comments-more-btn {
@@ -22744,8 +22767,50 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       return match;
     });
     clean = clean.replace(/<noscript\b[^>]*>([\s\S]*?)<\/noscript>/gi, "");
+    // Transform Zhihu comment image links: <a href="..." class="comment_img" ...>查看图片</a> into <img>
+    clean = clean.replace(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi, (match, attrs, innerText) => {
+      const isCommentImg = /\bclass=["'][^"']*\b(?:comment_img|comment-img|comment_sticker)\b[^"']*["']/i.test(attrs) ||
+        (/\bhref=["'][^"']*(?:\.zhimg\.com\/|[\/.](?:jpg|jpeg|png|gif|webp)(?:\?|$))[^"']*["']/i.test(attrs) && /^(?:查看图片|图片|\[图片\])?$/i.test(innerText.trim()));
+      if (isCommentImg) {
+        const srcMatch = attrs.match(/\b(?:href|data-original|data-actualsrc|data-href)="([^"]+)"/i);
+        let imgSrc = srcMatch ? srcMatch[1] : "";
+        if (!imgSrc) {
+          const innerImgMatch = innerText.match(/<img\b[^>]*\bsrc="([^"]+)"/i);
+          if (innerImgMatch) imgSrc = innerImgMatch[1];
+        }
+        if (imgSrc) {
+          const widthMatch = attrs.match(/\bdata-width="([^"]+)"/i);
+          const heightMatch = attrs.match(/\bdata-height="([^"]+)"/i);
+          const widthAttr = widthMatch ? ` data-width="${escapeHtml(widthMatch[1])}"` : "";
+          const heightAttr = heightMatch ? ` data-height="${escapeHtml(heightMatch[1])}"` : "";
+          return `<span class="wecom-zhihu-comment-image-wrap"><img class="wecom-zhihu-comment-image" src="${escapeHtml(imgSrc)}" data-original="${escapeHtml(imgSrc)}" alt="评论图片" loading="lazy"${widthAttr}${heightAttr}></span>`;
+        }
+      }
+      return match;
+    });
     clean = clean.replace(/<a\b(?![^>]*\btarget=)([^>]*?)>/gi, '<a target="_blank" rel="noopener noreferrer"$1>');
     return clean;
+  }
+
+  function formatZhihuCommentContent(raw) {
+    if (!raw) return "";
+    let str = String(raw).trim();
+    if (!str) return "";
+
+    const hasHtmlTags = /<\/?(?:a|p|div|span|img|b|i|strong|em|br|ul|ol|li|blockquote|pre|code|table|tr|td|th)\b/i.test(str);
+    if (!hasHtmlTags) {
+      return `<p>${escapeHtml(str).replace(/\r?\n/g, "<br>")}</p>`;
+    }
+
+    let formatted = formatZhihuCookedContent(str);
+    if (!/<(?:p|div|br)\b/i.test(formatted)) {
+      formatted = formatted.replace(/\r?\n/g, "<br>");
+    }
+
+    if (!/^\s*<(?:p|div|blockquote|pre|table)\b/i.test(formatted)) {
+      formatted = `<p>${formatted}</p>`;
+    }
+    return formatted;
   }
 
   function mapZhihuHotItemToTopic(item, idx = 0) {
@@ -39921,9 +39986,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const replyInd = comm.replyTo
       ? `<span class="wecom-msg-reply-indicator">回复 <span class="wecom-msg-reply-indicator-user">@${escapeHtml(comm.replyTo)}</span></span>`
       : "";
-    const contentHtml = String(comm.content || "").startsWith("<")
-      ? formatZhihuCookedContent(comm.content)
-      : `<p>${escapeHtml(comm.content || "")}</p>`;
+    const contentHtml = formatZhihuCommentContent(comm.content);
     const childClass = (comm.isChild || depth > 0) ? " is-thread-child" : "";
     const depthAttr = depth > 0 ? ` data-thread-depth="${depth}"` : "";
 
