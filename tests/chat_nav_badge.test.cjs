@@ -11684,6 +11684,63 @@ test("Test 143: Zhihu comment thread instant single-click list navigation and mo
   );
 });
 
+test("Test 144: Zhihu comment and discussion timestamp parsing and formatting (no 2000/2001 fallback, data-time persistence) (v0.8.14)", () => {
+  // Extract parseTimestamp and formatTime from scriptContent
+  const fnMatch = scriptContent.match(/function parseTimestamp\(val\) \{[\s\S]*?\n  \}/);
+  assert.ok(fnMatch, "parseTimestamp function must be present");
+  const fmtMatch = scriptContent.match(/function formatTime\(iso\) \{[\s\S]*?\n  \}/);
+  assert.ok(fmtMatch, "formatTime function must be present");
+
+  const runCode = new Function(`${fnMatch[0]}\n${fmtMatch[0]}\nreturn { parseTimestamp, formatTime };`);
+  const { parseTimestamp, formatTime } = runCode();
+
+  // 1. "0", "1", "00", "01" must return null, never 2000 or 2001
+  assert.strictEqual(parseTimestamp(0), null, "0 number must return null");
+  assert.strictEqual(parseTimestamp("0"), null, "'0' string must return null");
+  assert.strictEqual(parseTimestamp("1"), null, "'1' string must return null");
+  assert.strictEqual(parseTimestamp("00"), null, "'00' string must return null");
+  assert.strictEqual(parseTimestamp("01"), null, "'01' string must return null");
+
+  // 2. Month-day strings must parse with current year (never 2000/2001)
+  const currentYear = new Date().getFullYear();
+  const t1 = parseTimestamp("05-12");
+  assert.ok(t1, "05-12 must parse successfully");
+  const d1 = new Date(t1);
+  assert.strictEqual(d1.getMonth(), 4, "month must be May (index 4)");
+  assert.strictEqual(d1.getDate(), 12, "date must be 12");
+  assert.ok(d1.getFullYear() >= currentYear - 1, "year must be current or previous year, not 2001");
+
+  const t2 = parseTimestamp("发布于 10-21 20:01");
+  assert.ok(t2, "发布于 10-21 20:01 must parse successfully");
+  const d2 = new Date(t2);
+  assert.strictEqual(d2.getMonth(), 9, "month must be Oct (index 9)");
+  assert.strictEqual(d2.getDate(), 21, "date must be 21");
+  assert.strictEqual(d2.getHours(), 20, "hour must be 20");
+  assert.strictEqual(d2.getMinutes(), 1, "minute must be 1");
+
+  // 3. formatTime output must never produce '2001-' or '2000-'
+  const formatted1 = formatTime("05-12");
+  assert.ok(!formatted1.startsWith("2001-") && !formatted1.startsWith("2000-"), "formatTime(05-12) must not start with 2001- or 2000-");
+  const formatted2 = formatTime("10-21 20:01");
+  assert.ok(!formatted2.startsWith("2001-") && !formatted2.startsWith("2000-"), "formatTime(10-21 20:01) must not start with 2001- or 2000-");
+
+  // 4. renderZhihuCommentBubble attaches data-time attribute
+  assert.ok(
+    scriptContent.includes("const rawCommTime = comm.createdTime || comm.created_time || comm.created_at || comm.timeStr;") &&
+    scriptContent.includes("const commTimeMs = parseTimestamp(rawCommTime);") &&
+    scriptContent.includes("const timeAttr = commTimeMs ? ` data-time=\"${commTimeMs}\"` : \"\";") &&
+    scriptContent.includes("<span class=\"wecom-msg-time\"${timeAttr}>${escapeHtml(timeStr)}</span>"),
+    "renderZhihuCommentBubble must bind data-time to preserve exact ms timestamp for relative time refreshing"
+  );
+
+  // 5. fetchZhihuAnswerComments extracts multi-field timestamps
+  assert.ok(
+    scriptContent.includes("const rawCreated = c.created_time ?? c.createdTime ?? c.created_at ?? c.createdAt ?? c.publish_time ?? c.time ?? c.created ?? 0;") &&
+    scriptContent.includes("const parsedTime = parseTimestamp(rawCreated);"),
+    "fetchZhihuAnswerComments must check all common timestamp property variants and parse via parseTimestamp"
+  );
+});
+
 
 
 

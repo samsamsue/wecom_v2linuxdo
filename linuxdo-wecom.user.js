@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.13
+// @version      0.8.14
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -1005,11 +1005,12 @@
   }
 
   function parseTimestamp(val) {
-    if (!val) return null;
-    if (typeof val === "number" && !Number.isNaN(val)) {
+    if (val == null || val === "" || val === 0 || val === "0" || val === "1") return null;
+    if (typeof val === "number") {
+      if (Number.isNaN(val) || val <= 0) return null;
       return val < 1e11 ? val * 1000 : val;
     }
-    const str = String(val).trim();
+    let str = String(val).trim();
     if (!str) return null;
 
     if (/^\d{10,13}$/.test(str)) {
@@ -1017,46 +1018,102 @@
       return num < 1e11 ? num * 1000 : num;
     }
 
-    const directDate = new Date(str);
-    const directTime = directDate.getTime();
-    if (!Number.isNaN(directTime) && directTime > 0) {
-      return directTime;
-    }
+    // Strip common Chinese / English status prefixes (e.g. "发布于 05-12", "编辑于 14:30")
+    str = str.replace(/^(?:发布于|发表于|编辑于|创建于|更新于|回复于|posted\s+at|created\s+at|updated\s+at)\s*/i, "").trim();
 
     const now = Date.now();
     if (str === "刚刚" || str === "just now" || str === "几秒前") {
       return now;
     }
 
-    const secMatch = str.match(/(\d+)\s*(?:秒前|secs?\s*ago|seconds?\s*ago)/i);
+    const secMatch = str.match(/^(\d+)\s*(?:秒前|secs?\s*ago|seconds?\s*ago)$/i);
     if (secMatch) {
       return now - parseInt(secMatch[1], 10) * 1000;
     }
 
-    const minMatch = str.match(/(\d+)\s*(?:分钟前|分前|mins?\s*ago|minutes?\s*ago)/i);
+    const minMatch = str.match(/^(\d+)\s*(?:分钟前|分前|mins?\s*ago|minutes?\s*ago)$/i);
     if (minMatch) {
       return now - parseInt(minMatch[1], 10) * 60 * 1000;
     }
 
-    const hrMinMatch = str.match(/(\d+)\s*小时(?:\s*(\d+)\s*分钟)?前/i) ||
-      str.match(/(\d+)\s*(?:hours?|hrs?)\s*ago/i);
+    const hrMinMatch = str.match(/^(\d+)\s*小时(?:\s*(\d+)\s*分钟)?前$/i) ||
+      str.match(/^(\d+)\s*(?:hours?|hrs?)\s*ago$/i);
     if (hrMinMatch) {
       const hours = parseInt(hrMinMatch[1], 10) || 0;
       const mins = parseInt(hrMinMatch[2], 10) || 0;
       return now - (hours * 3600 + mins * 60) * 1000;
     }
 
-    const dayMatch = str.match(/(\d+)\s*(?:天前|days?\s*ago)/i);
+    const dayMatch = str.match(/^(\d+)\s*(?:天前|days?\s*ago)$/i);
     if (dayMatch) {
       return now - parseInt(dayMatch[1], 10) * 86400 * 1000;
     }
 
-    const yestMatch = str.match(/(昨天|前天)\s*(\d{1,2}):(\d{2})/i);
+    const yestMatch = str.match(/^(昨天|前天)(?:\s*(\d{1,2}):(\d{2}))?$/i);
     if (yestMatch) {
       const isDayBefore = yestMatch[1] === "前天";
       const targetDate = new Date(now - (isDayBefore ? 2 : 1) * 86400 * 1000);
-      targetDate.setHours(parseInt(yestMatch[2], 10), parseInt(yestMatch[3], 10), 0, 0);
+      const h = yestMatch[2] != null ? parseInt(yestMatch[2], 10) : 12;
+      const m = yestMatch[3] != null ? parseInt(yestMatch[3], 10) : 0;
+      targetDate.setHours(h, m, 0, 0);
       return targetDate.getTime();
+    }
+
+    // Time-only string: HH:mm or HH:mm:ss (e.g. "20:01", "14:30") -> today at HH:mm
+    const timeOnlyMatch = str.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (timeOnlyMatch) {
+      const d = new Date(now);
+      d.setHours(parseInt(timeOnlyMatch[1], 10), parseInt(timeOnlyMatch[2], 10), parseInt(timeOnlyMatch[3] || "0", 10), 0);
+      if (d.getTime() > now + 60000) {
+        d.setDate(d.getDate() - 1);
+      }
+      return d.getTime();
+    }
+
+    // Month-Day without year: MM-DD or MM-DD HH:mm or M月D日 (e.g. "05-12", "10-21 20:01", "5月12日 14:30")
+    const mdMatch = str.match(/^(?:(\d{1,2})[-/月](\d{1,2})(?:日)?)(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+    if (mdMatch) {
+      const nowDate = new Date(now);
+      const curYear = nowDate.getFullYear();
+      const month = parseInt(mdMatch[1], 10);
+      const day = parseInt(mdMatch[2], 10);
+      const hour = mdMatch[3] != null ? parseInt(mdMatch[3], 10) : 0;
+      const min = mdMatch[4] != null ? parseInt(mdMatch[4], 10) : 0;
+      const sec = mdMatch[5] != null ? parseInt(mdMatch[5], 10) : 0;
+      let target = new Date(curYear, month - 1, day, hour, min, sec);
+      // If parsed date is significantly in the future (> 1 day), it must belong to last year
+      if (target.getTime() > now + 86400000) {
+        target = new Date(curYear - 1, month - 1, day, hour, min, sec);
+      }
+      return target.getTime();
+    }
+
+    // Full Chinese date: YYYY年M月D日 HH:mm
+    const cnFullMatch = str.match(/^(\d{4})年(\d{1,2})月(\d{1,2})日(?:\s*(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+    if (cnFullMatch) {
+      const y = parseInt(cnFullMatch[1], 10);
+      const m = parseInt(cnFullMatch[2], 10);
+      const d = parseInt(cnFullMatch[3], 10);
+      const h = cnFullMatch[4] != null ? parseInt(cnFullMatch[4], 10) : 0;
+      const min = cnFullMatch[5] != null ? parseInt(cnFullMatch[5], 10) : 0;
+      const s = cnFullMatch[6] != null ? parseInt(cnFullMatch[6], 10) : 0;
+      return new Date(y, m - 1, d, h, min, s).getTime();
+    }
+
+    // Explicit full 4-digit year date formats: YYYY-MM-DD or ISO 8601
+    if (/^\d{4}[-/.]/.test(str) || /^\d{4}-\d{2}-\d{2}T/.test(str)) {
+      const directDate = new Date(str);
+      const directTime = directDate.getTime();
+      if (!Number.isNaN(directTime) && directTime > 0) {
+        return directTime;
+      }
+    }
+
+    // Strict fallback: never allow year < 2010 (guards against JS Date("0") -> 2000, Date("1") -> 2001 quirks)
+    const fbDate = new Date(str);
+    const fbTime = fbDate.getTime();
+    if (!Number.isNaN(fbTime) && fbTime > 0 && fbDate.getFullYear() >= 2010) {
+      return fbTime;
     }
 
     return null;
@@ -1071,8 +1128,8 @@
     const now = Date.now();
     const diff = now - timeMs;
     const minute = 60e3, hour = 3600e3, day = 86400e3;
-    if (diff < minute) return "刚刚";
-    if (diff < hour) return `${Math.max(1, Math.floor(diff / minute))} 分钟前`;
+    if (diff >= -30000 && diff < minute) return "刚刚";
+    if (diff >= minute && diff < hour) return `${Math.max(1, Math.floor(diff / minute))} 分钟前`;
 
     const date = new Date(timeMs);
     const today = new Date();
@@ -1098,7 +1155,9 @@
   }
 
   function formatClock(iso) {
-    const date = new Date(iso);
+    const timeMs = parseTimestamp(iso);
+    if (!timeMs) return "";
+    const date = new Date(timeMs);
     if (Number.isNaN(date.getTime())) return "";
     return `${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
   }
@@ -22800,6 +22859,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const views = Number(q.visit_count || q.views || 0);
     const answers = Number(q.answer_count || q.answers || 0);
     const urlToken = author.url_token || author.urlToken || author.id || "";
+    const qTimeMs = parseTimestamp(q.created ?? q.created_time ?? q.createdTime ?? q.updated_time) || Date.now();
     return {
       id: String(q.id),
       post_number: 1,
@@ -22808,7 +22868,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       avatar_template: author.avatar_url || author.avatarUrl || "",
       cooked: cookedContent,
       raw: q.detail || q.excerpt || title,
-      created_at: new Date(Number(q.created || Date.now() / 1000) * 1000).toISOString(),
+      created_at: new Date(qTimeMs).toISOString(),
       like_count: Number(q.visit_count || q.answer_count) || 0,
       user_id: author.id || urlToken,
       url_token: urlToken,
@@ -22837,6 +22897,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       raw.commentNum ??
       (typeof raw.comments === "number" ? raw.comments : (Array.isArray(raw.comments) ? raw.comments.length : 0))
     ) || (ansId ? (zhihuCommentCountsMap.get(ansId) || 0) : 0);
+    const rawTime = raw.created_time ?? raw.createdTime ?? raw.created ?? raw.updated_time ?? raw.updatedTime ?? 0;
+    const ansTimeMs = parseTimestamp(rawTime) || Date.now();
     return {
       id: ansId,
       post_number: postNumber,
@@ -22845,7 +22907,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       avatar_template: author.avatar_url || author.avatarUrl || "",
       cooked: content,
       raw: raw.content || raw.excerpt || "",
-      created_at: new Date(Number(raw.created_time || raw.updated_time || Date.now() / 1000) * 1000).toISOString(),
+      created_at: new Date(ansTimeMs).toISOString(),
       like_count: voteCount,
       liked: Boolean(raw.relationship?.voting === 1),
       user_id: author.id || urlToken,
@@ -22927,6 +22989,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           commentCount = zhihuCommentCountsMap.get(String(answerId)) || 0;
         }
 
+        const timeEl = item.querySelector(".ContentItem-time, [itemprop='dateCreated'], [itemprop='datePublished'], [itemprop='dateModified']");
+        const domTimeText = timeEl?.getAttribute("content") || timeEl?.getAttribute("title") || timeEl?.textContent?.trim() || "";
+        const domTimeMs = parseTimestamp(domTimeText);
+
         if (content) {
           answers.push({
             id: String(answerId),
@@ -22934,7 +23000,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             content,
             voteup_count: voteCount,
             comment_count: commentCount,
-            created_time: Date.now() / 1000
+            created_time: domTimeMs ? domTimeMs / 1000 : (Date.now() / 1000)
           });
         }
       } catch (_) {}
@@ -22949,6 +23015,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const voteCount = Number(art.voteup_count || art.voteupCount || 0);
     const commentCount = Number(art.comment_count || art.commentCount || 0);
     const urlToken = author.url_token || author.urlToken || author.id || "";
+    const artTimeMs = parseTimestamp(art.created ?? art.created_time ?? art.createdTime ?? art.updated) || Date.now();
     return {
       id: String(art.id),
       post_number: 1,
@@ -22957,7 +23024,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       avatar_template: author.avatar_url || author.avatarUrl || "",
       cooked: content ? `<div>${content}</div>` : `<p style="color:var(--wecom-text-secondary, #999);font-style:italic;">文章内容加载中…</p>`,
       raw: art.content || art.excerpt || title,
-      created_at: new Date(Number(art.created || Date.now() / 1000) * 1000).toISOString(),
+      created_at: new Date(artTimeMs).toISOString(),
       like_count: voteCount,
       user_id: author.id || urlToken,
       url_token: urlToken,
@@ -39723,7 +39790,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       ? `<img src="${escapeHtml(fullAvatarUrl(post.avatar_template))}" alt="" loading="lazy">`
       : escapeHtml(avatarLetter(authorName));
     const avatarBg = post?.avatar_template ? "transparent" : avatarColor(authorName);
-    const timeStr = post?.created_at ? formatTime(post.created_at) : "";
+    const parentTimeMs = parseTimestamp(post?.created_at);
+    const timeStr = parentTimeMs ? formatTime(parentTimeMs) : (post?.created_at ? formatTime(post.created_at) : "");
+    const timeAttr = parentTimeMs ? ` data-time="${parentTimeMs}"` : "";
     const likes = post?.like_count ? `赞同 ${post.like_count}` : "";
     const content = post?.cooked || "<p>（知乎回答）</p>";
     const commentCount = Number(post?.reply_count || (post?.id ? zhihuCommentCountsMap.get(String(post.id)) : 0) || 0);
@@ -39734,7 +39803,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           <span class="wecom-msg-avatar" style="background:${avatarBg}">${avatar}</span>
           <div class="wecom-zhihu-thread-parent-meta">
             <div class="wecom-zhihu-thread-parent-name">${authorName}</div>
-            <div class="wecom-zhihu-thread-parent-time">${escapeHtml(timeStr)}${likes ? ` · ${likes}` : ""}</div>
+            <div class="wecom-zhihu-thread-parent-time"${timeAttr}>${escapeHtml(timeStr)}${likes ? ` · ${likes}` : ""}</div>
           </div>
         </div>
         <div class="wecom-zhihu-thread-parent-body">${content}</div>
@@ -39774,7 +39843,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const avatarHtml = comm.authorAvatar
       ? `<img src="${escapeHtml(comm.authorAvatar)}" alt="" loading="lazy">`
       : escapeHtml(avatarLetter(authorName));
-    const timeStr = comm.createdTime ? formatTime(comm.createdTime * 1000) : (comm.timeStr || "");
+    const rawCommTime = comm.createdTime || comm.created_time || comm.created_at || comm.timeStr;
+    const commTimeMs = parseTimestamp(rawCommTime);
+    const timeStr = commTimeMs ? formatTime(commTimeMs) : (comm.timeStr ? String(comm.timeStr) : "");
+    const timeAttr = commTimeMs ? ` data-time="${commTimeMs}"` : "";
     const floorNum = comm.floorNum || (idx + 1);
     const likeHtml = comm.voteCount > 0
       ? `<span class="wecom-msg-likes" title="赞同：${comm.voteCount}"><span class="wecom-msg-like-icon">${ICONS.heart || "♥"}</span><span class="wecom-msg-like-num">${comm.voteCount}</span></span>`
@@ -39800,7 +39872,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             <span class="wecom-msg-name">${authorName}</span>
             ${replyInd}
             <span class="wecom-msg-meta">
-              <span class="wecom-msg-time">${escapeHtml(timeStr)}</span>
+              <span class="wecom-msg-time"${timeAttr}>${escapeHtml(timeStr)}</span>
               <span class="wecom-msg-floor" data-floor="${floorNum}" title="${floorNum}楼">#${floorNum}</span>
               ${likeHtml}
             </span>
@@ -40116,12 +40188,15 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     rawComments.forEach((c) => {
       if (!c) return;
       const author = c.author?.member || c.author || {};
+      const rawCreated = c.created_time ?? c.createdTime ?? c.created_at ?? c.createdAt ?? c.publish_time ?? c.time ?? c.created ?? 0;
+      const parsedTime = parseTimestamp(rawCreated);
       const rootItem = {
         id: String(c.id || Math.random()),
         authorName: author.name || "知友",
         authorAvatar: author.avatar_url || author.avatarUrl || "",
         content: c.content || "",
-        createdTime: c.created_time || 0,
+        createdTime: parsedTime || 0,
+        timeStr: parsedTime ? "" : String(rawCreated || ""),
         voteCount: c.vote_count || c.voteCount || c.like_count || 0,
         replyTo: null,
         isChild: false,
@@ -40134,12 +40209,15 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           if (!cc) return;
           const childAuthor = cc.author?.member || cc.author || {};
           const replyToAuthor = cc.reply_to_author?.member || cc.reply_to_author || {};
+          const rawChildCreated = cc.created_time ?? cc.createdTime ?? cc.created_at ?? cc.createdAt ?? cc.publish_time ?? cc.time ?? cc.created ?? 0;
+          const parsedChildTime = parseTimestamp(rawChildCreated);
           const childItem = {
             id: String(cc.id || Math.random()),
             authorName: childAuthor.name || "知友",
             authorAvatar: childAuthor.avatar_url || childAuthor.avatarUrl || "",
             content: cc.content || "",
-            createdTime: cc.created_time || 0,
+            createdTime: parsedChildTime || 0,
+            timeStr: parsedChildTime ? "" : String(rawChildCreated || ""),
             voteCount: cc.vote_count || cc.voteCount || cc.like_count || 0,
             replyTo: replyToAuthor.name || null,
             isChild: true,
@@ -40167,7 +40245,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
                 const author = el.querySelector(".UserLink-link, .CommentItemV2-name, .AuthorInfo-name")?.textContent?.trim() || "知友";
                 const avatar = el.querySelector("img.Avatar, .Avatar img")?.getAttribute("src") || "";
                 const content = el.querySelector(".CommentItemV2-content, .CommentContent, .RichText")?.innerHTML || el.textContent || "";
-                const time = el.querySelector(".CommentItemV2-time")?.textContent?.trim() || "";
+                const timeEl = el.querySelector(".CommentItemV2-time, time, .CommentItem-time");
+                const time = timeEl?.getAttribute("data-tooltip") || timeEl?.getAttribute("title") || timeEl?.getAttribute("datetime") || timeEl?.textContent?.trim() || "";
+                const domTimeMs = parseTimestamp(time);
                 const votes = parseInt(el.querySelector(".CommentItemV2-likeBtn")?.textContent?.replace(/[^\d]/g, "") || "0", 10) || 0;
                 const replyTo = el.querySelector(".CommentItemV2-replyTo")?.textContent?.replace("回复", "")?.trim() || null;
                 const isChild = el.classList.contains("NestComment") || Boolean(replyTo) || Boolean(el.closest(".NestComment, .CommentsV2-childList"));
@@ -40177,7 +40257,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
                     authorName: author,
                     authorAvatar: avatar,
                     content,
-                    createdTime: 0,
+                    createdTime: domTimeMs || 0,
                     timeStr: time,
                     voteCount: votes,
                     replyTo,
@@ -40629,7 +40709,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             name: comm.authorName || "知友",
             avatar: comm.authorAvatar || "",
             avatar_template: comm.authorAvatar || "",
-            created_at: comm.createdTime ? new Date(comm.createdTime * 1000).toISOString() : new Date().toISOString(),
+            created_at: (() => {
+              const ms = parseTimestamp(comm.createdTime || comm.timeStr);
+              return ms ? new Date(ms).toISOString() : new Date().toISOString();
+            })(),
             cooked: formatZhihuCookedContent(comm.content || ""),
             reply_count: (comm.children || []).length,
             like_count: comm.voteCount || 0
