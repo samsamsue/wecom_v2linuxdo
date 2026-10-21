@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.12
+// @version      0.8.13
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -29525,6 +29525,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   function navigateInApp(url) {
     if (!url) return;
+    if (IS_ZHIHU && zhihuCommentThreadState.active) {
+      closeZhihuCommentThread(document.querySelector(".wecom-chat-panel"), { restoreContent: false });
+    }
     // 绝对地址收成站内路径
     let path = url;
     try {
@@ -29931,6 +29934,15 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         ensureChatPanel();
         const body = document.querySelector(".wecom-chat-body");
         const isSame = isSameTopic(chatState.topicId, topicId);
+
+        if (IS_ZHIHU && zhihuCommentThreadState.active) {
+          if (isSame) {
+            closeZhihuCommentThread(document.querySelector(".wecom-chat-panel"), { restoreContent: true });
+            return;
+          }
+          closeZhihuCommentThread(document.querySelector(".wecom-chat-panel"), { restoreContent: false });
+        }
+
         const hasRendered = isSame && Boolean(
           body &&
           isSameTopic(body.dataset.topicId, topicId) &&
@@ -39095,7 +39107,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     topicId = numericTopicId;
     removeLoadingSliderDom();
     if (zhihuCommentThreadState.active) {
-      closeZhihuCommentThread();
+      const isSame = isSameTopic(chatState.topicId, topicId);
+      closeZhihuCommentThread(document.querySelector(".wecom-chat-panel"), { restoreContent: isSame });
     }
     if (!isSameTopic(chatState.topicId, topicId)) {
       zhihuExpandedAnswerIds.clear();
@@ -39868,12 +39881,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         .Modal:has(.CommentsV2, .CommentListV2)
       `);
       modals.forEach((m) => {
-        const closeBtn = m.querySelector(".Modal-closeButton, button[aria-label*='关闭']");
-        if (closeBtn && typeof closeBtn.click === "function") {
-          closeBtn.click();
-        } else {
-          m.remove();
-        }
+        try { m.remove(); } catch (_) {}
       });
     } catch (_) {}
   }
@@ -40457,10 +40465,12 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     }
   }
 
-  function closeZhihuCommentThread(panel = document.querySelector(".wecom-chat-panel")) {
+  function closeZhihuCommentThread(panel = document.querySelector(".wecom-chat-panel"), options = {}) {
     if (!zhihuCommentThreadState.active) return;
     zhihuCommentThreadState.active = false;
     dismissZhihuNativeModals();
+
+    const restoreContent = options.restoreContent !== false;
 
     if (panel) {
       const backBtn = panel.querySelector(".wecom-chat-back-btn");
@@ -40468,36 +40478,39 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         backBtn.style.display = "none";
         backBtn.classList.remove("is-active");
       }
-      const title = panel.querySelector(".wecom-chat-title");
-      const sub = panel.querySelector(".wecom-chat-sub");
       const count = panel.querySelector(".wecom-chat-count");
-      const maskDetail = isMaskTitleDetail();
-      const displayTitle = maskDetail ? disguiseTitleForTopic({ id: chatState.topicId, title: chatState.title }) : chatState.title;
-      if (title) {
-        title.textContent = displayTitle;
-        title.title = maskDetail ? "" : (chatState.title || "");
-      }
-      if (sub) {
-        sub.textContent = maskDetail
-          ? `企业内部群 · ${chatState.replyTotal || 0} 条消息`
-          : `归属于 zhihu.com · ${chatState.replyTotal || 0} 条回答`;
-      }
       if (count) {
         count.style.display = "none";
       }
-      updateHeaderChips();
 
-      const body = panel.querySelector(".wecom-chat-body");
-      if (body && chatState.postsByNumber) {
-        const posts = [...chatState.postsByNumber.values()].sort((a, b) => postNumberOf(a) - postNumberOf(b));
-        body.innerHTML = renderBubbles(posts, getCurrentUsername()) ||
-          `<div class="wecom-chat-empty">${ICONS.msg}<div>暂无消息</div></div>`;
-        hydrateChatImages(body);
-        syncZhihuPaginationFooter(body, false);
-        applyZhihuAnswerClamping(body);
-        syncRenderedWindow(body);
-        body.scrollTop = zhihuCommentThreadState.mainScrollTop || 0;
-        syncChatFloatNav(body);
+      if (restoreContent) {
+        const title = panel.querySelector(".wecom-chat-title");
+        const sub = panel.querySelector(".wecom-chat-sub");
+        const maskDetail = isMaskTitleDetail();
+        const displayTitle = maskDetail ? disguiseTitleForTopic({ id: chatState.topicId, title: chatState.title }) : chatState.title;
+        if (title) {
+          title.textContent = displayTitle;
+          title.title = maskDetail ? "" : (chatState.title || "");
+        }
+        if (sub) {
+          sub.textContent = maskDetail
+            ? `企业内部群 · ${chatState.replyTotal || 0} 条消息`
+            : `归属于 zhihu.com · ${chatState.replyTotal || 0} 条回答`;
+        }
+        updateHeaderChips();
+
+        const body = panel.querySelector(".wecom-chat-body");
+        if (body && chatState.postsByNumber) {
+          const posts = [...chatState.postsByNumber.values()].sort((a, b) => postNumberOf(a) - postNumberOf(b));
+          body.innerHTML = renderBubbles(posts, getCurrentUsername()) ||
+            `<div class="wecom-chat-empty">${ICONS.msg}<div>暂无消息</div></div>`;
+          hydrateChatImages(body);
+          syncZhihuPaginationFooter(body, false);
+          applyZhihuAnswerClamping(body);
+          syncRenderedWindow(body);
+          body.scrollTop = zhihuCommentThreadState.mainScrollTop || 0;
+          syncChatFloatNav(body);
+        }
       }
     }
   }

@@ -11651,6 +11651,39 @@ test("Test 142: Zhihu answer pagination & comment drawer deep pagination recover
   );
 });
 
+test("Test 143: Zhihu comment thread instant single-click list navigation and modal dismissal (v0.8.13)", () => {
+  // 1. dismissZhihuNativeModals must use safe element removal instead of closeBtn.click()
+  assert.ok(
+    scriptContent.includes("function dismissZhihuNativeModals()") &&
+    scriptContent.includes("modals.forEach((m) => {") &&
+    scriptContent.includes("try { m.remove(); } catch (_) {}") &&
+    !scriptContent.includes("closeBtn.click()"),
+    "dismissZhihuNativeModals must remove native modal elements without simulating clicks that trigger history navigation"
+  );
+
+  // 2. closeZhihuCommentThread must accept options.restoreContent
+  assert.ok(
+    scriptContent.includes("function closeZhihuCommentThread(panel = document.querySelector(\".wecom-chat-panel\"), options = {})") &&
+    scriptContent.includes("const restoreContent = options.restoreContent !== false;"),
+    "closeZhihuCommentThread must support conditional restoreContent"
+  );
+
+  // 3. bindListPanelClicks must handle zhihuCommentThreadState.active on list clicks
+  assert.ok(
+    scriptContent.includes("if (IS_ZHIHU && zhihuCommentThreadState.active) {") &&
+    scriptContent.includes("closeZhihuCommentThread(document.querySelector(\".wecom-chat-panel\"), { restoreContent: true });") &&
+    scriptContent.includes("closeZhihuCommentThread(document.querySelector(\".wecom-chat-panel\"), { restoreContent: false });"),
+    "bindListPanelClicks must deactivate comment thread immediately on clicking any list item"
+  );
+
+  // 4. navigateInApp must deactivate zhihuCommentThreadState.active
+  assert.ok(
+    scriptContent.includes("function navigateInApp(url) {") &&
+    scriptContent.includes("if (IS_ZHIHU && zhihuCommentThreadState.active) {"),
+    "navigateInApp must cleanly deactivate comment thread"
+  );
+});
+
 
 
 
