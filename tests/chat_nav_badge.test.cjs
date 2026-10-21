@@ -11898,6 +11898,43 @@ test("Test 147: Zhihu child comment expansion button subtle gray styling and com
   assert.ok(renderedHtml.includes('▾'), "button must include subtle expansion arrow");
 });
 
+test("Test 148: Borderless icon+number button and no left border line when child replies are not displayed (v0.8.18)", () => {
+  // 1. Borderless .wecom-zhihu-child-more-btn in light and dark modes
+  assert.ok(
+    scriptContent.includes(".wecom-zhihu-child-more-btn {") &&
+    scriptContent.includes("border: none !important;"),
+    ".wecom-zhihu-child-more-btn must not have an outer border box"
+  );
+  assert.ok(
+    scriptContent.includes("html.wecom-dark .wecom-zhihu-child-more-btn") &&
+    scriptContent.includes("border: none !important;"),
+    "dark mode .wecom-zhihu-child-more-btn must not have an outer border box"
+  );
+
+  // 2. CSS rules to hide left border line when no child comments are rendered
+  assert.ok(
+    scriptContent.includes(".wecom-reply-children.has-no-children") &&
+    scriptContent.includes(".wecom-reply-children:not(:has(.wecom-msg))") &&
+    scriptContent.includes("border-left: none !important;"),
+    "must hide border-left when .wecom-reply-children has no rendered children"
+  );
+
+  // 3. renderZhihuCommentBubble dynamically attaches has-no-children class when renderedChildren is empty
+  assert.ok(
+    scriptContent.includes("const hasRenderedChildren = Boolean(renderedChildren);") &&
+    scriptContent.includes("const noChildrenClass = !hasRenderedChildren ? \" has-no-children\" : \"\";") &&
+    scriptContent.includes("`<div class=\"wecom-reply-children${noChildrenClass}\">${renderedChildren}${childMoreHtml}</div>`"),
+    "renderZhihuCommentBubble must attach has-no-children class when no child replies are rendered"
+  );
+
+  // 4. loadMoreZhihuChildComments removes has-no-children class when child replies are loaded
+  assert.ok(
+    scriptContent.includes("replyChildrenEl.classList.remove(\"has-no-children\");"),
+    "loadMoreZhihuChildComments must remove has-no-children class when child replies are added"
+  );
+});
+
+
 
 
 

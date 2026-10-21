@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.17
+// @version      0.8.18
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -5298,20 +5298,31 @@
     .wecom-zhihu-child-more-entry {
       padding: 4px 0 2px 24px;
     }
+    .wecom-reply-children.has-no-children,
+    .wecom-reply-children:not(:has(.wecom-msg)) {
+      border-left: none !important;
+      padding-left: 0 !important;
+      margin-top: 4px !important;
+      padding-top: 0 !important;
+    }
+    .wecom-reply-children.has-no-children .wecom-zhihu-child-more-entry,
+    .wecom-reply-children:not(:has(.wecom-msg)) .wecom-zhihu-child-more-entry {
+      padding: 2px 0 !important;
+    }
     .wecom-zhihu-child-more-btn {
       background: transparent;
-      border: 1px solid var(--wc-border-light, rgba(0, 0, 0, 0.08));
+      border: none !important;
       color: var(--wc-text-3, #8c8c8c);
       font-size: 11.5px;
       font-weight: 400;
       cursor: pointer;
-      padding: 2px 7px;
+      padding: 2px 6px;
       border-radius: 11px;
       display: inline-flex;
       align-items: center;
       gap: 3px;
       line-height: 1;
-      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      transition: background 0.15s, color 0.15s;
     }
     .wecom-zhihu-child-more-btn svg,
     .wecom-zhihu-child-more-btn .wecom-zhihu-comments-icon {
@@ -5334,7 +5345,6 @@
     .wecom-zhihu-child-more-btn:hover {
       background: var(--wc-hover, rgba(0, 0, 0, 0.05));
       color: var(--wc-text-2, #595959);
-      border-color: var(--wc-border-strong, rgba(0, 0, 0, 0.15));
     }
     .wecom-zhihu-child-more-btn:disabled {
       opacity: 0.5;
@@ -5378,14 +5388,13 @@
     html.wecom-dark .wecom-zhihu-child-more-btn,
     html.${ROOT_CLASS}.wecom-dark .wecom-zhihu-child-more-btn {
       color: rgba(255, 255, 255, 0.45);
-      border-color: rgba(255, 255, 255, 0.12);
+      border: none !important;
       background: transparent;
     }
     html.wecom-dark .wecom-zhihu-child-more-btn:hover,
     html.${ROOT_CLASS}.wecom-dark .wecom-zhihu-child-more-btn:hover {
       background: rgba(255, 255, 255, 0.08);
       color: rgba(255, 255, 255, 0.85);
-      border-color: rgba(255, 255, 255, 0.2);
     }
 
     .wecom-chat-error-actions {
@@ -40043,8 +40052,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       }
     }
 
+    const hasRenderedChildren = Boolean(renderedChildren);
+    const noChildrenClass = !hasRenderedChildren ? " has-no-children" : "";
     const childrenHtml = (renderedChildren || childMoreHtml)
-      ? `<div class="wecom-reply-children">${renderedChildren}${childMoreHtml}</div>`
+      ? `<div class="wecom-reply-children${noChildrenClass}">${renderedChildren}${childMoreHtml}</div>`
       : "";
 
     return `
@@ -40764,6 +40775,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           replyChildrenEl.className = "wecom-reply-children";
           const bubble = rootEl.querySelector(".wecom-msg-bubble");
           if (bubble) bubble.appendChild(replyChildrenEl);
+        }
+        if (added.length > 0) {
+          replyChildrenEl.classList.remove("has-no-children");
         }
         const moreEntry = replyChildrenEl.querySelector(".wecom-zhihu-child-more-entry");
         for (const child of added) {
