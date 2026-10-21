@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.16
+// @version      0.8.17
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -5300,24 +5300,44 @@
     }
     .wecom-zhihu-child-more-btn {
       background: transparent;
-      border: none;
-      color: var(--wc-accent, #1677ff);
+      border: 1px solid var(--wc-border-light, rgba(0, 0, 0, 0.08));
+      color: var(--wc-text-3, #8c8c8c);
       font-size: 11.5px;
-      font-weight: 500;
+      font-weight: 400;
       cursor: pointer;
-      padding: 2px 6px;
-      border-radius: 4px;
+      padding: 2px 7px;
+      border-radius: 11px;
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      transition: background 0.15s, color 0.15s;
+      gap: 3px;
+      line-height: 1;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .wecom-zhihu-child-more-btn svg,
+    .wecom-zhihu-child-more-btn .wecom-zhihu-comments-icon {
+      width: 12px;
+      height: 12px;
+      flex-shrink: 0;
+      color: inherit;
+    }
+    .wecom-zhihu-child-more-btn .wecom-zhihu-child-more-num {
+      font-size: 11.5px;
+      line-height: 1;
+      color: inherit;
+    }
+    .wecom-zhihu-child-more-btn .wecom-zhihu-child-more-arrow {
+      font-size: 9px;
+      opacity: 0.75;
+      margin-left: 1px;
+      line-height: 1;
     }
     .wecom-zhihu-child-more-btn:hover {
-      background: rgba(22, 119, 255, 0.08);
-      color: #0958d9;
+      background: var(--wc-hover, rgba(0, 0, 0, 0.05));
+      color: var(--wc-text-2, #595959);
+      border-color: var(--wc-border-strong, rgba(0, 0, 0, 0.15));
     }
     .wecom-zhihu-child-more-btn:disabled {
-      opacity: 0.6;
+      opacity: 0.5;
       cursor: not-allowed;
     }
     .wecom-zhihu-comment-image-wrap {
@@ -5355,10 +5375,17 @@
       color: #dfdfdf;
       border-color: rgba(255, 255, 255, 0.2);
     }
+    html.wecom-dark .wecom-zhihu-child-more-btn,
+    html.${ROOT_CLASS}.wecom-dark .wecom-zhihu-child-more-btn {
+      color: rgba(255, 255, 255, 0.45);
+      border-color: rgba(255, 255, 255, 0.12);
+      background: transparent;
+    }
     html.wecom-dark .wecom-zhihu-child-more-btn:hover,
     html.${ROOT_CLASS}.wecom-dark .wecom-zhihu-child-more-btn:hover {
-      background: rgba(22, 119, 255, 0.18);
-      color: #69b1ff;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.85);
+      border-color: rgba(255, 255, 255, 0.2);
     }
 
     .wecom-chat-error-actions {
@@ -39809,6 +39836,12 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     return `${ZHIHU_COMMENT_ICON}<span class="wecom-zhihu-comments-num">${num}</span>`;
   }
 
+  function formatZhihuChildMoreBtnHtml(remaining) {
+    const num = Number(remaining || 0);
+    const numText = num > 0 ? String(num) : "更多";
+    return `${ZHIHU_COMMENT_ICON}<span class="wecom-zhihu-child-more-num">${numText}</span><span class="wecom-zhihu-child-more-arrow">▾</span>`;
+  }
+
   function syncZhihuCommentButton(btn, count) {
     if (!btn) return;
     const num = Number(count || 0);
@@ -40000,10 +40033,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       const loadedCount = (comm.children || []).length;
       const remaining = Math.max(0, childTotal - loadedCount);
       if (remaining > 0 || comm.childHasMore) {
+        const titleText = `展开剩余 ${remaining > 0 ? `${remaining} 条` : ""}回复`;
         childMoreHtml = `
           <div class="wecom-zhihu-child-more-entry" data-root-id="${escapeHtml(String(comm.id))}">
-            <button type="button" class="wecom-zhihu-child-more-btn" data-action="zhihu-load-more-child-comments" data-root-id="${escapeHtml(String(comm.id))}">
-              <span>展开剩余 ${remaining > 0 ? remaining : "更多"} 条回复 ▾</span>
+            <button type="button" class="wecom-zhihu-child-more-btn" data-action="zhihu-load-more-child-comments" data-root-id="${escapeHtml(String(comm.id))}" title="${escapeHtml(titleText)}">
+              ${formatZhihuChildMoreBtnHtml(remaining)}
             </button>
           </div>`;
       }
@@ -40699,7 +40733,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
     if (btn) {
       btn.disabled = true;
-      btn.textContent = "正在展开回复...";
+      btn.innerHTML = `<span style="font-size:11px;opacity:0.65;">加载中...</span>`;
     }
 
     try {
@@ -40747,7 +40781,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             const moreBtn = moreEntry.querySelector(".wecom-zhihu-child-more-btn");
             if (moreBtn) {
               moreBtn.disabled = false;
-              moreBtn.innerHTML = `<span>展开剩余 ${remainingCount > 0 ? remainingCount : "更多"} 条回复 ▾</span>`;
+              moreBtn.innerHTML = formatZhihuChildMoreBtnHtml(remainingCount);
+              moreBtn.title = `展开剩余 ${remainingCount > 0 ? `${remainingCount} 条` : ""}回复`;
             }
           } else {
             moreEntry.remove();
@@ -40762,7 +40797,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       showWecomToast("展开回复失败", "info", 1500);
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = `<span>展开剩余回复 ▾</span>`;
+        btn.innerHTML = formatZhihuChildMoreBtnHtml(rootItem.childCommentCount ? Math.max(0, rootItem.childCommentCount - rootItem.children.length) : 0);
+        btn.title = "展开剩余回复";
       }
     }
   }

@@ -11852,5 +11852,52 @@ test("Test 146: Zhihu comment image parsing, thumbnail layout, and bubble image 
   assert.ok(parsed.includes("想起以前QQ空间的事"), "comment text must be preserved");
 });
 
+test("Test 147: Zhihu child comment expansion button subtle gray styling and compact icon + number format (v0.8.17)", () => {
+  // 1. formatZhihuChildMoreBtnHtml helper and icon + number structure
+  assert.ok(
+    scriptContent.includes("function formatZhihuChildMoreBtnHtml(remaining)") &&
+    scriptContent.includes("wecom-zhihu-child-more-num") &&
+    scriptContent.includes("wecom-zhihu-child-more-arrow"),
+    "must define formatZhihuChildMoreBtnHtml returning icon + number format"
+  );
+
+  // 2. Subtle gray CSS instead of glaring blue
+  assert.ok(
+    scriptContent.includes(".wecom-zhihu-child-more-btn {") &&
+    scriptContent.includes("color: var(--wc-text-3, #8c8c8c);") &&
+    scriptContent.includes("border-radius: 11px;"),
+    ".wecom-zhihu-child-more-btn must use subtle gray text color and compact rounded pill style"
+  );
+
+  // 3. Dark mode neutral gray
+  assert.ok(
+    scriptContent.includes("html.wecom-dark .wecom-zhihu-child-more-btn") &&
+    scriptContent.includes("color: rgba(255, 255, 255, 0.45);"),
+    "dark mode must use unobtrusive white-alpha gray for .wecom-zhihu-child-more-btn"
+  );
+
+  // 4. Hover state does not turn blue
+  assert.ok(
+    !scriptContent.includes(".wecom-zhihu-child-more-btn:hover {\n      background: rgba(22, 119, 255, 0.08);\n      color: #0958d9;\n    }"),
+    "button hover must not use glaring blue hover text color"
+  );
+
+  // 5. Functional test of formatZhihuChildMoreBtnHtml
+  const extractFn = (name) => {
+    const fnRegex = new RegExp(`function ${name}\\([\\s\\S]*?\\n  \\}`, "m");
+    const m = scriptContent.match(fnRegex);
+    return m ? m[0] : "";
+  };
+  const iconDecl = 'const ZHIHU_COMMENT_ICON = `<svg class="wecom-zhihu-comments-icon" width="13" height="13" viewBox="0 0 24 24"><path d="M21 15..."/></svg>`;';
+  const helperFnCode = extractFn("formatZhihuChildMoreBtnHtml");
+  const testFn = new Function(`${iconDecl}\n${helperFnCode}\nreturn formatZhihuChildMoreBtnHtml;`)();
+
+  const renderedHtml = testFn(12);
+  assert.ok(renderedHtml.includes('wecom-zhihu-comments-icon'), "button must include comment icon");
+  assert.ok(renderedHtml.includes('>12<'), "button must display the number of remaining replies");
+  assert.ok(renderedHtml.includes('▾'), "button must include subtle expansion arrow");
+});
+
+
 
 
