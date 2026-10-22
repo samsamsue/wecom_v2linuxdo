@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.22
+// @version      0.8.23
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -1317,18 +1317,33 @@
   function getCurrentUserIdentity() {
     if (cachedUsername || cachedUserId) return { username: cachedUsername, id: cachedUserId };
     if (IS_ZHIHU) {
-      if (document.querySelector(".AppHeader-login, button.AppHeader-login, .SignContainer, .SignFlowModal")) {
-        return { username: "", id: "" };
+      // 1. Positive DOM signals: Profile links and avatar in AppHeader
+      const profileLink = document.querySelector(
+        ".AppHeader-profile a[href*='/people/'], a.AppHeader-profileEntry[href*='/people/'], .AppHeader a[href*='/people/'], header a[href*='/people/']"
+      );
+      if (profileLink) {
+        const match = (profileLink.getAttribute("href") || "").match(/\/people\/([^/?#]+)/);
+        if (match && match[1]) {
+          const img = profileLink.querySelector("img") || document.querySelector(".AppHeader img.Avatar, .AppHeader-profile img");
+          const name = (img?.alt || "").trim() || match[1];
+          rememberCurrentUser({ username: name, id: match[1] });
+          return { username: cachedUsername, id: cachedUserId };
+        }
       }
+
+      const headerAvatar = document.querySelector(".AppHeader img.Avatar, .AppHeader-profile img, a.AppHeader-profileEntry img");
+      if (headerAvatar && headerAvatar.alt && !/avatar|头像/i.test(headerAvatar.alt.trim())) {
+        rememberCurrentUser({ username: headerAvatar.alt.trim(), id: headerAvatar.alt.trim() });
+        return { username: cachedUsername, id: cachedUserId };
+      }
+
+      // 2. Initial state data: only use when currentUser is a non-empty string or object
       try {
         const init = getZhihuInitialData();
         const currentUrlToken = init?.initialState?.common?.currentUser;
-        if (currentUrlToken === "" || currentUrlToken === null) {
-          return { username: "", id: "" };
-        }
-        if (currentUrlToken && init?.initialState?.entities?.users?.[currentUrlToken]) {
-          const u = init.initialState.entities.users[currentUrlToken];
-          rememberCurrentUser({ username: u.name || currentUrlToken, id: u.id || currentUrlToken });
+        if (typeof currentUrlToken === "string" && currentUrlToken.trim().length > 0) {
+          const u = init?.initialState?.entities?.users?.[currentUrlToken];
+          rememberCurrentUser({ username: u?.name || currentUrlToken, id: u?.id || currentUrlToken });
           return { username: cachedUsername, id: cachedUserId };
         }
         const me = init?.initialState?.currentUser || init?.initialState?.entities?.users?.[init?.initialState?.currentUser];
@@ -1337,22 +1352,14 @@
           return { username: cachedUsername, id: cachedUserId };
         }
       } catch {}
-      const profileLink = document.querySelector(".AppHeader-profile a[href*='/people/'], a.AppHeader-profileEntry[href*='/people/']");
-      if (profileLink) {
-        const match = (profileLink.getAttribute("href") || "").match(/\/people\/([^/?#]+)/);
-        if (match && match[1]) {
-          const img = profileLink.querySelector("img");
-          const name = img?.alt || match[1];
-          rememberCurrentUser({ username: name, id: match[1] });
-          return { username: cachedUsername, id: cachedUserId };
-        }
+
+      // 3. If AppHeader explicitly shows login button and no profile exists, then not logged in
+      if (document.querySelector(".AppHeader-login, button.AppHeader-login, .AppHeader .AppHeader-login")) {
+        return { username: "", id: "" };
       }
       return { username: "", id: "" };
     }
     if (IS_JUEJIN) {
-      if (document.querySelector(".login-button, button.login-button, .nav-item.auth")) {
-        return { username: "", id: "" };
-      }
       const userLink = document.querySelector(".avatar-wrapper a[href*='/user/'], .user-dropdown a[href*='/user/'], a.user-link[href*='/user/'], .nav-item a[href*='/user/']");
       if (userLink) {
         const match = (userLink.getAttribute("href") || "").match(/\/user\/([^/?#]+)/);
@@ -1363,12 +1370,12 @@
           return { username: cachedUsername, id: cachedUserId };
         }
       }
+      if (document.querySelector(".login-button, button.login-button, .nav-item.auth")) {
+        return { username: "", id: "" };
+      }
       return { username: "", id: "" };
     }
     if (IS_V2EX) {
-      if (document.querySelector("a[href='/signin'], a[href*='/signin']")) {
-        return { username: "", id: "" };
-      }
       const memberLink = document.querySelector("#Rightbar a[href^='/member/'], #Top a[href^='/member/']");
       if (memberLink) {
         const match = (memberLink.getAttribute("href") || "").match(/\/member\/([^/?#]+)/);
@@ -1376,6 +1383,9 @@
           rememberCurrentUser({ username: match[1], id: match[1] });
           return { username: cachedUsername, id: cachedUserId };
         }
+      }
+      if (document.querySelector("a[href='/signin'], a[href*='/signin']")) {
+        return { username: "", id: "" };
       }
       return { username: "", id: "" };
     }
@@ -24761,44 +24771,70 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     if (isAuthPath()) return false;
 
     if (IS_ZHIHU) {
-      if (document.querySelector(".AppHeader-login, button.AppHeader-login, .SignContainer, .SignFlowModal")) {
-        return false;
+      // 1. Positive signal: z_c0 authentication ticket cookie (present when logged in)
+      try {
+        if (typeof document !== "undefined" && /(?:^|;\s*)z_c0=([^;]+)/.test(document.cookie || "")) {
+          const val = RegExp.$1 ? decodeURIComponent(RegExp.$1).trim() : "";
+          if (val && val !== '""') return true;
+        }
+      } catch {}
+
+      // 2. Positive signal: AppHeader profile, entry, menu, notifications, messages or avatar
+      if (document.querySelector(
+        ".AppHeader-profile, a.AppHeader-profileEntry, .AppHeader-profileEntry, .AppHeader-userMenu, .AppHeader-notifications, .AppHeader-messages, .AppHeader img.Avatar, .AppHeader a[href*='/people/'], header a[href*='/people/']"
+      )) {
+        return true;
       }
+
+      // 3. Positive signal: Initial state non-empty user data
       try {
         const init = getZhihuInitialData();
         const userToken = init?.initialState?.common?.currentUser;
-        if (userToken === "" || userToken === null) return false;
-        if (typeof userToken === "string" && userToken.length > 0) return true;
+        if (typeof userToken === "string" && userToken.trim().length > 0) return true;
         const me = init?.initialState?.currentUser;
         if (me && (me.name || me.urlToken || me.id)) return true;
+        if (init?.initialState?.entities?.users && userToken && init.initialState.entities.users[userToken]) return true;
       } catch {}
-      if (document.querySelector(".AppHeader-profile, a.AppHeader-profileEntry, .AppHeader-userMenu")) {
+
+      // 4. Positive signal: valid cached or DOM-extracted username
+      const username = getCurrentUsername();
+      if (username && !/^(undefined|null|none|guest|知乎用户)$/i.test(username)) {
         return true;
       }
-      const username = getCurrentUsername();
-      return Boolean(username && !/^(undefined|null|none|guest|知乎用户)$/i.test(username));
+
+      // 5. Negative check: explicit AppHeader login button exists
+      if (document.querySelector(".AppHeader-login, button.AppHeader-login, .AppHeader .AppHeader-login")) {
+        return false;
+      }
+      return false;
     }
 
     if (IS_JUEJIN) {
-      if (document.querySelector(".login-button, button.login-button, .nav-item.auth, .auth-item .login-button")) {
-        return false;
-      }
       if (document.querySelector(".avatar-wrapper, .user-dropdown, .nav-item a[href*='/user/'], .user-avatar, img[src*='user-avatar']")) {
         return true;
       }
       const username = getCurrentUsername();
-      return Boolean(username && !/^(undefined|null|none|guest|稀土掘金)$/i.test(username));
+      if (username && !/^(undefined|null|none|guest|稀土掘金)$/i.test(username)) {
+        return true;
+      }
+      if (document.querySelector(".login-button, button.login-button, .nav-item.auth, .auth-item .login-button")) {
+        return false;
+      }
+      return false;
     }
 
     if (IS_V2EX) {
-      if (document.querySelector("a[href='/signin'], a[href*='/signin'], #Top a[href='/signin']")) {
-        return false;
-      }
       if (document.querySelector("#Rightbar a[href^='/member/'], #Top a[href^='/member/'], a[href='/balance'], a[href='/notifications']")) {
         return true;
       }
       const username = getCurrentUsername();
-      return Boolean(username && username !== "V2EX 用户" && !/^(undefined|null|none|guest)$/i.test(username));
+      if (username && username !== "V2EX 用户" && !/^(undefined|null|none|guest)$/i.test(username)) {
+        return true;
+      }
+      if (document.querySelector("a[href='/signin'], a[href*='/signin'], #Top a[href='/signin']")) {
+        return false;
+      }
+      return false;
     }
 
     // Linux.do (Discourse)
@@ -24810,14 +24846,15 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       if (svcUser && (svcUser.username || svcUser.id || svcUser.get?.("username"))) return true;
     } catch {}
 
-    if (document.querySelector(".login-button, #login-link, .header-buttons .login-button, .d-header .login-button, header .login-button")) {
-      return false;
-    }
     if (document.querySelector("#current-user, .header-dropdown-toggle.current-user")) {
       return true;
     }
     const preloaded = preloadedCurrentUser();
     if (preloaded && (preloaded.username || preloaded.id)) return true;
+
+    if (document.querySelector(".login-button, #login-link, .header-buttons .login-button, .d-header .login-button, header .login-button")) {
+      return false;
+    }
     try {
       const preloadedEl = document.getElementById("data-preloaded");
       if (preloadedEl) {
@@ -24859,6 +24896,26 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         window.location.href = "/login";
       }
       return true;
+    }
+
+    if (IS_ZHIHU && !newTab) {
+      const btn = document.querySelector(".AppHeader-login, button.AppHeader-login, .AppHeader button.AppHeader-login");
+      if (btn && typeof btn.click === "function") {
+        try {
+          btn.click();
+          return true;
+        } catch {}
+      }
+    }
+
+    if (IS_JUEJIN && !newTab) {
+      const btn = document.querySelector(".login-button, button.login-button, .nav-item.auth .login-button");
+      if (btn && typeof btn.click === "function") {
+        try {
+          btn.click();
+          return true;
+        } catch {}
+      }
     }
 
     const info = getPlatformInfo();
@@ -24928,6 +24985,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       });
     }
   }
+
+  const SESSION_DISMISSED_LOGIN_KEY = "linuxdo-wecom-dismissed-login-prompt";
 
   function showWecomLoginDialog(options = {}) {
     hasAutoPromptedLoginInPage = true;
@@ -25002,6 +25061,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       const onKey = (e) => {
         if (e.key === "Escape") {
           e.preventDefault();
+          try { sessionStorage.setItem(SESSION_DISMISSED_LOGIN_KEY, "true"); } catch {}
           document.removeEventListener("keydown", onKey);
           closeWecomLoginDialog(false);
         } else if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
@@ -25026,11 +25086,13 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             closeWecomLoginDialog("signup");
             triggerPlatformSignup(isNewTab);
           } else {
+            try { sessionStorage.setItem(SESSION_DISMISSED_LOGIN_KEY, "true"); } catch {}
             closeWecomLoginDialog(false);
           }
           return;
         }
         if (e.target === dialog) {
+          try { sessionStorage.setItem(SESSION_DISMISSED_LOGIN_KEY, "true"); } catch {}
           document.removeEventListener("keydown", onKey);
           closeWecomLoginDialog(false);
         }
@@ -25046,10 +25108,16 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     if (hasAutoPromptedLoginInPage) return;
     if (isAuthPath()) return;
     if (getViewMode() === "native" || otherThemeActive()) return;
+    try {
+      if (sessionStorage.getItem(SESSION_DISMISSED_LOGIN_KEY) === "true") return;
+    } catch {}
     setTimeout(() => {
       if (hasAutoPromptedLoginInPage) return;
       if (isAuthPath()) return;
       if (getViewMode() === "native" || otherThemeActive()) return;
+      try {
+        if (sessionStorage.getItem(SESSION_DISMISSED_LOGIN_KEY) === "true") return;
+      } catch {}
       if (!isUserLoggedIn()) {
         hasAutoPromptedLoginInPage = true;
         showWecomLoginDialog({ auto: true });

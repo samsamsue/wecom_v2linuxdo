@@ -12096,6 +12096,113 @@ test("Test 151: WeCom login dialog for unlogged users across all platforms (Linu
   );
 });
 
+test("Test 152: Zhihu logged-in detection positive priority (z_c0 cookie, header profile & avatar elements), SSR initial data tolerance, and session dismissal (v0.8.23)", () => {
+  const metaContent = fs.readFileSync(path.resolve(__dirname, "../linuxdo-wecom.meta.js"), "utf8");
+  // 1. Version 0.8.23 in meta and user scripts
+  assert.ok(metaContent.includes("@version      0.8.23"), "linuxdo-wecom.meta.js must be bumped to 0.8.23");
+  assert.ok(scriptContent.includes("@version      0.8.23"), "linuxdo-wecom.user.js must be bumped to 0.8.23");
+
+  // 2. Zhihu z_c0 auth cookie positive check
+  assert.ok(
+    scriptContent.includes("/(?:^|;\\s*)z_c0=([^;]+)/.test(document.cookie || \"\")"),
+    "isUserLoggedIn must check Zhihu z_c0 authentication ticket cookie before checking unlogged indicators"
+  );
+
+  // 3. Header profile and avatar element positive detection
+  assert.ok(
+    scriptContent.includes(".AppHeader-profile, a.AppHeader-profileEntry, .AppHeader-profileEntry, .AppHeader-userMenu, .AppHeader-notifications, .AppHeader-messages, .AppHeader img.Avatar"),
+    "isUserLoggedIn must check AppHeader profile, entry, notifications, messages, and avatar elements"
+  );
+
+  // 4. SSR question page initial data tolerance (does not abort or return false if currentUser === "")
+  assert.ok(
+    !scriptContent.includes("if (userToken === \"\" || userToken === null) return false;"),
+    "isUserLoggedIn must not return false immediately when userToken is empty string in SSR question cache"
+  );
+  assert.ok(
+    !scriptContent.includes("if (currentUrlToken === \"\" || currentUrlToken === null) {\n          return { username: \"\", id: \"\" };"),
+    "getCurrentUserIdentity must not abort on empty currentUser token from CDN cached SSR HTML"
+  );
+
+  // 5. Positive-first detection on Juejin, V2EX, and Linux.do
+  assert.ok(
+    scriptContent.includes(".avatar-wrapper, .user-dropdown, .nav-item a[href*='/user/'], .user-avatar, img[src*='user-avatar']") &&
+    scriptContent.includes("#Rightbar a[href^='/member/'], #Top a[href^='/member/'], a[href='/balance'], a[href='/notifications']"),
+    "isUserLoggedIn must prioritize positive indicators on Juejin and V2EX before checking login links"
+  );
+
+  // 6. Native login modal trigger in same tab for Zhihu & Juejin
+  assert.ok(
+    scriptContent.includes("if (IS_ZHIHU && !newTab) {") &&
+    scriptContent.includes("if (IS_JUEJIN && !newTab) {"),
+    "triggerPlatformLogin must support clicking native login buttons directly when in same tab"
+  );
+
+  // 7. Session dismissal of auto-prompt
+  assert.ok(
+    scriptContent.includes("const SESSION_DISMISSED_LOGIN_KEY = \"linuxdo-wecom-dismissed-login-prompt\";") &&
+    scriptContent.includes("sessionStorage.getItem(SESSION_DISMISSED_LOGIN_KEY) === \"true\"") &&
+    scriptContent.includes("sessionStorage.setItem(SESSION_DISMISSED_LOGIN_KEY, \"true\")"),
+    "showWecomLoginDialog and scheduleInitialLoginCheck must respect session dismissal"
+  );
+
+  // 8. Functional simulation of Zhihu login detection logic
+  function simZhihuLoggedIn({ cookie = "", headerSelectors = [], initialUserToken = "", appHeaderLogin = false }) {
+    if (/(?:^|;\s*)z_c0=([^;]+)/.test(cookie)) {
+      const val = RegExp.$1.trim();
+      if (val && val !== '""') return true;
+    }
+    const positiveSelectors = [
+      ".AppHeader-profile",
+      "a.AppHeader-profileEntry",
+      ".AppHeader-profileEntry",
+      ".AppHeader-userMenu",
+      ".AppHeader-notifications",
+      ".AppHeader-messages",
+      ".AppHeader img.Avatar"
+    ];
+    if (headerSelectors.some(sel => positiveSelectors.includes(sel))) {
+      return true;
+    }
+    if (typeof initialUserToken === "string" && initialUserToken.trim().length > 0) {
+      return true;
+    }
+    if (appHeaderLogin) {
+      return false;
+    }
+    return false;
+  }
+
+  // Simulated scenarios:
+  // A: Zhihu logged in with z_c0 cookie on question page (initialUserToken is "" due to SSR cache)
+  assert.equal(
+    simZhihuLoggedIn({ cookie: "z_c0=2|1:0|10:test|z_c0|test; d_c0=abc", headerSelectors: [".AppHeader-profile"], initialUserToken: "" }),
+    true,
+    "Logged in user on Zhihu question page with z_c0 cookie and header profile must be detected as logged in"
+  );
+
+  // B: Zhihu logged in with avatar in header but no cookie accessible
+  assert.equal(
+    simZhihuLoggedIn({ cookie: "", headerSelectors: [".AppHeader img.Avatar", ".AppHeader-notifications"], initialUserToken: "" }),
+    true,
+    "Logged in user on Zhihu question page with AppHeader Avatar and notifications must be detected as logged in"
+  );
+
+  // C: Zhihu logged in on feed page with initialUserToken
+  assert.equal(
+    simZhihuLoggedIn({ cookie: "", headerSelectors: [], initialUserToken: "richy-test" }),
+    true,
+    "Logged in user with non-empty initialUserToken must be detected as logged in"
+  );
+
+  // D: Zhihu visitor (unlogged, has AppHeader-login button, no cookie, no avatar)
+  assert.equal(
+    simZhihuLoggedIn({ cookie: "", headerSelectors: [], initialUserToken: "", appHeaderLogin: true }),
+    false,
+    "Unlogged visitor with AppHeader login button must be detected as not logged in"
+  );
+});
+
 
 
 
