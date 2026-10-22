@@ -11959,10 +11959,10 @@ test("Test 149: Zhihu child comment expansion button right alignment (v0.8.19)",
 });
 
 test("Test 150: Category and group selection instant loading, loading skeleton, multi-channel Zhihu/Linux.do/V2EX routing, and retry support (v0.8.20)", () => {
-  // 1. Version must be 0.8.20
+  // 1. Version must be 0.8.20 or newer
   assert.ok(
-    scriptContent.includes("// @version      0.8.20"),
-    "userscript version must be 0.8.20"
+    /\/\/ @version\s+0\.8\.(?:2[0-9]|[3-9][0-9])/.test(scriptContent),
+    "userscript version must be 0.8.20 or newer"
   );
 
   // 2. listApiForPath on Zhihu supports /notifications, /hot, /follow, /explore, /waiting
@@ -12010,6 +12010,90 @@ test("Test 150: Category and group selection instant loading, loading skeleton, 
     "ensureSidebarCloseBtn must bind sidebar link clicks to load category lists"
   );
 });
+
+test("Test 151: WeCom login dialog for unlogged users across all platforms (Linux.do, V2EX, Juejin, Zhihu), auto-prompting and interaction guards (v0.8.21)", () => {
+  // 1. isUserLoggedIn logic detects non-logged-in status on all 4 platforms
+  assert.ok(
+    scriptContent.includes("function isUserLoggedIn()") &&
+    scriptContent.includes(".AppHeader-login, button.AppHeader-login") &&
+    scriptContent.includes(".login-button, button.login-button") &&
+    scriptContent.includes("a[href='/signin'], a[href*='/signin']") &&
+    scriptContent.includes(".login-button, #login-link"),
+    "isUserLoggedIn must cover Zhihu, Juejin, V2EX, and Linux.do login indicators"
+  );
+
+  // 2. getPlatformInfo provides metadata, svg icons, URLs and benefits
+  assert.ok(
+    scriptContent.includes("function getPlatformInfo()") &&
+    scriptContent.includes("benefits: \"登录后可参与回答讨论、展开全部回复、点赞互动与同步关注\"") &&
+    scriptContent.includes("benefits: \"登录后可发表沸点文章、收藏内容、点赞回复与每日签到\"") &&
+    scriptContent.includes("benefits: \"登录后可参与主题交流、回复回帖、领取每日银币和查看提醒\"") &&
+    scriptContent.includes("benefits: \"登录后可畅享社区交流、发布主题讨论、回帖与点赞互动\""),
+    "getPlatformInfo must return metadata and benefits for Zhihu, Juejin, V2EX, and Linux.do"
+  );
+
+  // 3. triggerPlatformLogin and triggerPlatformSignup
+  assert.ok(
+    scriptContent.includes("function triggerPlatformLogin()") &&
+    scriptContent.includes("function triggerPlatformSignup()") &&
+    scriptContent.includes("info.loginSelector") &&
+    scriptContent.includes("window.location.href = info.loginUrl"),
+    "triggerPlatformLogin and triggerPlatformSignup must handle native selectors and URLs"
+  );
+
+  // 4. showWecomLoginDialog and closeWecomLoginDialog
+  assert.ok(
+    scriptContent.includes("function showWecomLoginDialog(options = {})") &&
+    scriptContent.includes("function closeWecomLoginDialog(result = false)") &&
+    scriptContent.includes("wecom-confirm-dialog wecom-login-dialog") &&
+    scriptContent.includes("wecom-confirm-card wecom-login-card") &&
+    scriptContent.includes("wecom-login-avatar-placeholder") &&
+    scriptContent.includes("wecom-login-btn-signup") &&
+    scriptContent.includes("暂不登录") &&
+    scriptContent.includes("立即登录"),
+    "showWecomLoginDialog must render Enterprise WeChat style dialog with signup, cancel, and login actions"
+  );
+
+  // 5. Rail avatar sync and click interaction guard
+  assert.ok(
+    scriptContent.includes("} else if (!isUserLoggedIn()) {") &&
+    scriptContent.includes("avatarEl.dataset.bound = \"guest\";") &&
+    scriptContent.includes("当前未登录（点击立即登录）") &&
+    scriptContent.includes("currentName.textContent = \"未登录\";") &&
+    scriptContent.includes("if (!isUserLoggedIn()) {") &&
+    scriptContent.includes("showWecomLoginDialog({ auto: false });"),
+    "syncRail and bindRailAvatarNotif must render guest avatar and intercept unlogged avatar click"
+  );
+
+  // 6. Action guards for openNewTopic, replyToPost, submitComposer, and tool actions
+  assert.ok(
+    scriptContent.includes("function openNewTopic() {\n    if (!isUserLoggedIn()) {\n      showWecomLoginDialog({ auto: false });\n      return;\n    }") &&
+    scriptContent.includes("function replyToPost(postNumber) {\n    if (!isUserLoggedIn()) {\n      showWecomLoginDialog({ auto: false });\n      return;\n    }") &&
+    scriptContent.includes("async function submitComposer() {\n    if (!isUserLoggedIn()) {\n      showWecomLoginDialog({ auto: false });\n      return;\n    }") &&
+    scriptContent.includes("if (action === \"like\" || action === \"boost\" || action === \"bookmark\" || action === \"edit\" || action === \"delete\") {\n      if (!isUserLoggedIn()) {\n        showWecomLoginDialog({ auto: false });\n        return;\n      }\n    }"),
+    "openNewTopic, replyToPost, submitComposer, and message actions must guard against unlogged execution"
+  );
+
+  // 7. Auto-prompting schedule and theme integration
+  assert.ok(
+    scriptContent.includes("function scheduleInitialLoginCheck(delayMs = 1200)") &&
+    scriptContent.includes("scheduleInitialLoginCheck();") &&
+    scriptContent.includes("document.querySelector(\".wecom-login-dialog\")?.remove();") &&
+    scriptContent.includes(".wecom-login-dialog"),
+    "scheduleInitialLoginCheck and teardown must integrate cleanly into theme lifecycle"
+  );
+
+  // 8. CSS styling for dialog and dark mode
+  assert.ok(
+    scriptContent.includes(".wecom-login-dialog {") &&
+    scriptContent.includes(".wecom-login-card {") &&
+    scriptContent.includes(".wecom-login-features {") &&
+    scriptContent.includes("html.wecom-dark .wecom-login-badge,") &&
+    scriptContent.includes("html.wecom-dark .wecom-rail-avatar[data-bound=\"guest\"],"),
+    "RAW_CSS must include styling for login dialog and dark mode"
+  );
+});
+
 
 
 
