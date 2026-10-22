@@ -12095,28 +12095,26 @@ test("Test 152: Smooth automatic infinite scroll loading for Zhihu comment discu
   );
 });
 
-test("Test 153: Auto-streaming Zhihu floor replies on bottom scroll and elimination of Linux.do double reload/flicker (v0.8.27)", () => {
+test("Test 153: Smooth jitter-free Zhihu root comment stream, in-place child replies, and elimination of Linux.do double reload/flicker (v0.8.27)", () => {
   const metaContent = fs.readFileSync(path.resolve(__dirname, "../linuxdo-wecom.meta.js"), "utf8");
   // 1. Version 0.8.27
   assert.ok(metaContent.includes("@version      0.8.27"), "linuxdo-wecom.meta.js must be bumped to 0.8.27");
   assert.ok(scriptContent.includes("@version      0.8.27"), "linuxdo-wecom.user.js must be bumped to 0.8.27");
 
-  // 2. Floor replies auto-trigger on bottom scroll when root comments end
+  // 2. Main timeline stream strictly loads root comments on bottom scroll to prevent child nesting jitter
   assert.ok(
-    scriptContent.includes("else if (!zhihuCommentThreadState.hasMore && !zhihuCommentThreadState.loadingChildBatch && !zhihuCommentThreadState.expandingAll)") &&
-    scriptContent.includes("loadNextZhihuChildBatch();"),
-    "handleChatBodyScroll must automatically call loadNextZhihuChildBatch on bottom scroll when root comments are done"
+    scriptContent.includes("if (zhihuCommentThreadState.hasMore && !zhihuCommentThreadState.loading) {\n        if (body && body.scrollTop + body.clientHeight >= body.scrollHeight - 320) {\n          loadMoreZhihuComments();\n        }\n      }"),
+    "handleChatBodyScroll streams root comments on scroll to eliminate child nesting jitter"
   );
 
-  // 3. Sentinel spacer kept active for floor replies without manual button disruption
+  // 3. Sentinel spacer kept active only while hasMore, and manual bottom buttons removed
   assert.ok(
-    scriptContent.includes("hasMore || unexpandedChildCount > 0") &&
-    scriptContent.includes('<div class="wecom-zhihu-comments-sentinel" style="height:20px;"></div>'),
-    "updateZhihuBottomMoreContainer must render the 20px sentinel spacer when unexpandedChildCount > 0 in idle state"
+    scriptContent.includes("else if (hasMore) {\n      moreContainer.className = \"wecom-zhihu-comments-more is-idle\";\n      html = `<div class=\"wecom-zhihu-comments-sentinel\" style=\"height:20px;\"></div>`;"),
+    "updateZhihuBottomMoreContainer maintains 20px sentinel spacer while hasMore is true"
   );
   assert.ok(
     !scriptContent.includes('class="wecom-zhihu-comments-expand-all-btn" data-action="zhihu-load-next-child-batch"'),
-    "Manual '加载楼层回复' button must be removed in favor of automatic scroll streaming"
+    "Manual bottom '加载楼层回复' button must be removed in favor of in-place bubble expansion"
   );
 
   // 4. Clean navigation without URL hash pollution in navigateWithAiSync
