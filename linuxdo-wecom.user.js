@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.23
+// @version      0.8.24
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -1317,47 +1317,43 @@
   function getCurrentUserIdentity() {
     if (cachedUsername || cachedUserId) return { username: cachedUsername, id: cachedUserId };
     if (IS_ZHIHU) {
-      // 1. Positive DOM signals: Profile links and avatar in AppHeader
-      const profileLink = document.querySelector(
-        ".AppHeader-profile a[href*='/people/'], a.AppHeader-profileEntry[href*='/people/'], .AppHeader a[href*='/people/'], header a[href*='/people/']"
-      );
-      if (profileLink) {
-        const match = (profileLink.getAttribute("href") || "").match(/\/people\/([^/?#]+)/);
-        if (match && match[1]) {
-          const img = profileLink.querySelector("img") || document.querySelector(".AppHeader img.Avatar, .AppHeader-profile img");
-          const name = (img?.alt || "").trim() || match[1];
-          rememberCurrentUser({ username: name, id: match[1] });
-          return { username: cachedUsername, id: cachedUserId };
-        }
-      }
-
-      const headerAvatar = document.querySelector(".AppHeader img.Avatar, .AppHeader-profile img, a.AppHeader-profileEntry img");
-      if (headerAvatar && headerAvatar.alt && !/avatar|头像/i.test(headerAvatar.alt.trim())) {
-        rememberCurrentUser({ username: headerAvatar.alt.trim(), id: headerAvatar.alt.trim() });
-        return { username: cachedUsername, id: cachedUserId };
-      }
-
-      // 2. Initial state data: only use when currentUser is a non-empty string or object
       try {
         const init = getZhihuInitialData();
-        const currentUrlToken = init?.initialState?.common?.currentUser;
-        if (typeof currentUrlToken === "string" && currentUrlToken.trim().length > 0) {
-          const u = init?.initialState?.entities?.users?.[currentUrlToken];
-          rememberCurrentUser({ username: u?.name || currentUrlToken, id: u?.id || currentUrlToken });
-          return { username: cachedUsername, id: cachedUserId };
-        }
         const me = init?.initialState?.currentUser || init?.initialState?.entities?.users?.[init?.initialState?.currentUser];
         if (me && (me.name || me.urlToken || me.id)) {
           rememberCurrentUser({ username: me.name || me.urlToken, id: me.id || me.urlToken });
           return { username: cachedUsername, id: cachedUserId };
         }
       } catch {}
-
-      // 3. If AppHeader explicitly shows login button and no profile exists, then not logged in
-      if (document.querySelector(".AppHeader-login, button.AppHeader-login, .AppHeader .AppHeader-login")) {
-        return { username: "", id: "" };
+      const profileLink = document.querySelector(".AppHeader-profile a[href*='/people/'], a[href*='/people/']");
+      if (profileLink) {
+        const match = (profileLink.getAttribute("href") || "").match(/\/people\/([^/?#]+)/);
+        if (match && match[1]) {
+          const img = profileLink.querySelector("img");
+          const name = img?.alt || match[1];
+          rememberCurrentUser({ username: name, id: match[1] });
+          return { username: cachedUsername, id: cachedUserId };
+        }
       }
-      return { username: "", id: "" };
+    }
+    if (IS_ZHIHU) {
+      const init = getZhihuInitialData();
+      const currentUrlToken = init?.initialState?.common?.currentUser;
+      if (currentUrlToken && init?.initialState?.entities?.users?.[currentUrlToken]) {
+        const u = init.initialState.entities.users[currentUrlToken];
+        rememberCurrentUser({ username: u.name || currentUrlToken, id: u.id || currentUrlToken });
+        return { username: cachedUsername, id: cachedUserId };
+      }
+      const userLink = document.querySelector(".AppHeader-profile a[href*='/people/'], a.AppHeader-profileEntry[href*='/people/'], a[href*='/people/']");
+      if (userLink) {
+        const match = (userLink.getAttribute("href") || "").match(/\/people\/([^/?#]+)/);
+        if (match && match[1]) {
+          const img = userLink.querySelector("img");
+          const name = img?.alt || match[1];
+          rememberCurrentUser({ username: name, id: match[1] });
+          return { username: cachedUsername, id: cachedUserId };
+        }
+      }
     }
     if (IS_JUEJIN) {
       const userLink = document.querySelector(".avatar-wrapper a[href*='/user/'], .user-dropdown a[href*='/user/'], a.user-link[href*='/user/'], .nav-item a[href*='/user/']");
@@ -1370,10 +1366,6 @@
           return { username: cachedUsername, id: cachedUserId };
         }
       }
-      if (document.querySelector(".login-button, button.login-button, .nav-item.auth")) {
-        return { username: "", id: "" };
-      }
-      return { username: "", id: "" };
     }
     if (IS_V2EX) {
       const memberLink = document.querySelector("#Rightbar a[href^='/member/'], #Top a[href^='/member/']");
@@ -1384,13 +1376,6 @@
           return { username: cachedUsername, id: cachedUserId };
         }
       }
-      if (document.querySelector("a[href='/signin'], a[href*='/signin']")) {
-        return { username: "", id: "" };
-      }
-      return { username: "", id: "" };
-    }
-    if (document.querySelector(".login-button, #login-link, .header-buttons .login-button, .d-header .login-button")) {
-      return { username: "", id: "" };
     }
     const selectors = [
       "#current-user",
@@ -1460,31 +1445,6 @@
     const me = normalizeUsername(myName || identity.username);
     const author = normalizeUsername(postUsername(post));
     return Boolean(me && author && me === author);
-  }
-
-  function isAuthPath(pathname = (typeof location !== "undefined" ? location.pathname : "")) {
-    const p = String(pathname || "").toLowerCase();
-    if (typeof IS_ZHIHU !== "undefined" && IS_ZHIHU) {
-      return p === "/signin" || p.startsWith("/signin/") ||
-             p === "/signup" || p.startsWith("/signup/") ||
-             p.startsWith("/account/") || p.startsWith("/passport/");
-    }
-    if (typeof IS_JUEJIN !== "undefined" && IS_JUEJIN) {
-      return p === "/login" || p.startsWith("/login/") ||
-             p === "/passport" || p.startsWith("/passport/") ||
-             p === "/subscribe/auth";
-    }
-    if (typeof IS_V2EX !== "undefined" && IS_V2EX) {
-      return p === "/signin" || p.startsWith("/signin/") ||
-             p === "/signup" || p.startsWith("/signup/") ||
-             p === "/2fa" || p === "/forgot";
-    }
-    if (typeof IS_LINUXDO !== "undefined" && IS_LINUXDO) {
-      return p === "/login" || p.startsWith("/login/") ||
-             p === "/signup" || p.startsWith("/signup/") ||
-             p.startsWith("/invites/") || p.startsWith("/password_reset");
-    }
-    return false;
   }
 
   function isTopicPath(pathname) {
@@ -1644,7 +1604,6 @@
   }
 
   function isHomePath(pathname) {
-    if (isAuthPath(pathname)) return false;
     if (IS_ZHIHU) {
       return !isTopicPath(pathname);
     }
@@ -6385,115 +6344,6 @@
     .wecom-confirm-actions .wecom-confirm-btn-primary:hover {
       background: #1B6EDB;
       border-color: #1B6EDB;
-    }
-
-    /* ---------- 企业微信风格登录弹窗 (.wecom-login-dialog) ---------- */
-    .wecom-login-dialog {
-      z-index: 12600;
-    }
-    .wecom-login-card {
-      width: min(420px, calc(100vw - 32px));
-    }
-    .wecom-login-head-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .wecom-login-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 2px 8px;
-      border-radius: 4px;
-      background: rgba(38, 126, 240, 0.08);
-      color: #267EF0;
-      font-size: 12px;
-      font-weight: 500;
-      line-height: 18px;
-    }
-    .wecom-login-badge svg {
-      width: 14px;
-      height: 14px;
-      fill: currentColor;
-    }
-    .wecom-login-body {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 6px 0 16px;
-      text-align: center;
-    }
-    .wecom-login-avatar-placeholder {
-      width: 58px;
-      height: 58px;
-      border-radius: 50%;
-      background: #F0F4F8;
-      color: #79879C;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 12px;
-    }
-    .wecom-login-prompt {
-      font-size: 16px;
-      font-weight: 600;
-      color: #1F2329;
-      margin-bottom: 6px;
-    }
-    .wecom-login-desc {
-      font-size: 13px;
-      color: #646A73;
-      line-height: 1.5;
-      margin-bottom: 14px;
-      max-width: 340px;
-    }
-    .wecom-login-features {
-      width: 100%;
-      background: #F7F9FC;
-      border: 1px solid #E5E9EF;
-      border-radius: 8px;
-      padding: 10px 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      text-align: left;
-      font-size: 12.5px;
-      color: #4E5969;
-    }
-    .wecom-login-feature-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .wecom-login-feature-icon {
-      font-size: 14px;
-      flex-shrink: 0;
-    }
-    .wecom-login-actions {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      width: 100%;
-      margin-top: 4px;
-    }
-    .wecom-login-actions-right {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .wecom-login-btn-signup {
-      border: 0 !important;
-      background: transparent !important;
-      color: #267EF0 !important;
-      font-size: 13px !important;
-      padding: 0 !important;
-      min-width: auto !important;
-      text-decoration: none;
-      cursor: pointer;
-    }
-    .wecom-login-btn-signup:hover {
-      color: #1B6EDB !important;
-      text-decoration: underline;
     }
 
     /* ---------- 消息编辑弹窗 ---------- */
@@ -14528,44 +14378,6 @@
       color: #FFFFFF !important;
     }
 
-    /* 登录弹窗深色模式 */
-    html.wecom-dark .wecom-login-badge,
-    html.${ROOT_CLASS}.wecom-dark .wecom-login-badge {
-      background: rgba(38, 126, 240, 0.18) !important;
-      color: #4DA0FF !important;
-    }
-    html.wecom-dark .wecom-login-avatar-placeholder,
-    html.${ROOT_CLASS}.wecom-dark .wecom-login-avatar-placeholder {
-      background: #2D333B !important;
-      color: #8C99AA !important;
-    }
-    html.wecom-dark .wecom-login-prompt,
-    html.${ROOT_CLASS}.wecom-dark .wecom-login-prompt {
-      color: #ECEFF4 !important;
-    }
-    html.wecom-dark .wecom-login-desc,
-    html.${ROOT_CLASS}.wecom-dark .wecom-login-desc {
-      color: #9AA7B7 !important;
-    }
-    html.wecom-dark .wecom-login-features,
-    html.${ROOT_CLASS}.wecom-dark .wecom-login-features {
-      background: #252A32 !important;
-      border-color: rgba(255, 255, 255, 0.08) !important;
-      color: #B5C0CD !important;
-    }
-    html.wecom-dark .wecom-login-btn-signup,
-    html.${ROOT_CLASS}.wecom-dark .wecom-login-btn-signup {
-      color: #4DA0FF !important;
-    }
-    html.wecom-dark .wecom-login-btn-signup:hover,
-    html.${ROOT_CLASS}.wecom-dark .wecom-login-btn-signup:hover {
-      color: #79B8FF !important;
-    }
-    html.wecom-dark .wecom-rail-avatar[data-bound="guest"],
-    html.${ROOT_CLASS}.wecom-dark .wecom-rail-avatar[data-bound="guest"] {
-      background: #2D333B !important;
-    }
-
     html.wecom-dark .wecom-edit-dialog-card,
     html.${ROOT_CLASS}.wecom-dark .wecom-edit-dialog-card {
       background: #23272E !important;
@@ -21397,13 +21209,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         avatarEl.style.background = "transparent";
       }
       avatarEl.setAttribute("title", `当前头像：${disguisePreset.name}（右键切换伪装头像样式）`);
-    } else if (!isUserLoggedIn()) {
-      if (avatarEl.dataset.bound !== "guest") {
-        avatarEl.dataset.bound = "guest";
-        avatarEl.innerHTML = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #9aa4b2;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
-        avatarEl.style.background = "#EEF2F6";
-      }
-      avatarEl.setAttribute("title", "当前未登录（点击立即登录）");
     } else {
       // 原生头像兜底（若选择 native）
       const img = document.querySelector(IS_ZHIHU ? ".AppHeader-profile img, .AppHeader-profileEntry img, .Menu-item img, img.Avatar" : (IS_JUEJIN ? ".avatar-wrapper img, .user-dropdown img, .nav-item .avatar, img[src*='user-avatar']" : (IS_V2EX ? "#Rightbar .avatar, #Top .avatar, #current-user img" : "#current-user img")));
@@ -21425,11 +21230,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const name = getCurrentUsername();
     const currentName = document.querySelector(".wecom-current-user-name");
     if (currentName) {
-      if (!isUserLoggedIn()) {
-        currentName.textContent = "未登录";
-      } else {
-        currentName.textContent = (disguisePreset || isMaskAvatar()) ? "企业员工" : (name || getOrgName());
-      }
+      currentName.textContent = (disguisePreset || isMaskAvatar()) ? "企业员工" : (name || getOrgName());
     }
 
     // 头像通知角标
@@ -22299,21 +22100,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       e.stopPropagation();
       cycleRailDisguiseAvatar();
     });
-    // 未登录时统一弹出登录 dialog
-    avatar.addEventListener("click", (event) => {
-      if (event.altKey) {
-        event.preventDefault();
-        event.stopPropagation();
-        cycleRailDisguiseAvatar();
-        return;
-      }
-      if (!isUserLoggedIn()) {
-        event.preventDefault();
-        event.stopPropagation();
-        if (typeof event.stopImmediatePropagation === "function") event.stopImmediatePropagation();
-        showWecomLoginDialog({ auto: false });
-      }
-    }, true);
     if (IS_ZHIHU) {
       avatar.addEventListener("click", (event) => {
         if (event.altKey) {
@@ -22415,7 +22201,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
     avatar.addEventListener("mouseenter", () => {
       if (getViewMode() === "native" || otherThemeActive()) return;
-      if (!isUserLoggedIn()) return;
       if (notifPinned) return;
       if (Date.now() < notifIgnoreHoverUntil) return;
       clearNotifLeaveTimer();
@@ -24712,417 +24497,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
       dialog.querySelector(".wecom-confirm-btn-primary")?.focus();
     });
-  }
-
-  /* ============================== 全局企业微信风格登录弹层 ============================== */
-
-  function getPlatformInfo() {
-    const nextHref = typeof location !== "undefined" ? location.href : "";
-    const nextPath = typeof location !== "undefined" ? (location.pathname + location.search) : "";
-
-    if (IS_ZHIHU) {
-      const loginUrl = `https://www.zhihu.com/signin?next=${encodeURIComponent(nextHref)}`;
-      return {
-        key: "zhihu",
-        name: "知乎",
-        disguiseName: "知识协作中心",
-        iconSvg: `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M5.72 4.41c.21-.4.49-.78.84-1.12.18-.18.44-.29.7-.29h.1c.55 0 1 .45 1 1v5.27h3.69c.55 0 1 .45 1 1s-.45 1-1 1H8.36v7.35c0 .55-.45 1-1 1s-1-.45-1-1v-7.35H2.67c-.55 0-1-.45-1-1s.45-1 1-1h3.69V4.41zM14.65 3.5c.55 0 1 .45 1 1v12.21l3.52-3.52c.39-.39 1.02-.39 1.41 0 .39.39.39 1.02 0 1.41l-4.7 4.7a1 1 0 0 1-1.41 0l-.82-.82a1 1 0 0 1-.29-.71V4.5c0-.55.45-1 1.29-1z"/></svg>`,
-        loginUrl,
-        signupUrl: loginUrl,
-        benefits: "登录后可参与回答讨论、展开全部回复、点赞互动与同步关注"
-      };
-    }
-    if (IS_JUEJIN) {
-      const loginUrl = `https://juejin.cn/login?return_to=${encodeURIComponent(nextHref)}`;
-      return {
-        key: "juejin",
-        name: "稀土掘金",
-        disguiseName: "技术研发社区",
-        iconSvg: `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2.5 4.8 8.2l1.6 1.3L12 5.1l5.6 4.4 1.6-1.3L12 2.5zm0 5.4L6.4 12.3l1.6 1.3 4-3.2 4 3.2 1.6-1.3L12 7.9zm0 5.4-2.4 1.9 2.4 1.9 2.4-1.9-2.4-1.9zm0 5.4-7.2-5.7-1.6 1.3 8.8 7 8.8-7-1.6-1.3-7.2 5.7z"/></svg>`,
-        loginUrl,
-        signupUrl: loginUrl,
-        benefits: "登录后可发表沸点文章、收藏内容、点赞回复与每日签到"
-      };
-    }
-    if (IS_V2EX) {
-      const loginUrl = `https://www.v2ex.com/signin?next=${encodeURIComponent(nextPath)}`;
-      return {
-        key: "v2ex",
-        name: "V2EX",
-        disguiseName: "技术协同平台",
-        iconSvg: `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h4.2l5.8 11.2L17.8 4H22l-8.2 16h-3.6L2 4z"/></svg>`,
-        loginUrl,
-        signupUrl: "https://www.v2ex.com/signup",
-        benefits: "登录后可参与主题交流、回复回帖、领取每日银币和查看提醒"
-      };
-    }
-    return {
-      key: "linuxdo",
-      name: "LINUX DO",
-      disguiseName: "内部交流平台",
-      iconSvg: `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg>`,
-      loginUrl: "/login",
-      signupUrl: "/signup",
-      benefits: "登录后可畅享社区交流、发布主题讨论、回帖与点赞互动"
-    };
-  }
-
-  function isUserLoggedIn() {
-    if (isAuthPath()) return false;
-
-    if (IS_ZHIHU) {
-      // 1. Positive signal: z_c0 authentication ticket cookie (present when logged in)
-      try {
-        if (typeof document !== "undefined" && /(?:^|;\s*)z_c0=([^;]+)/.test(document.cookie || "")) {
-          const val = RegExp.$1 ? decodeURIComponent(RegExp.$1).trim() : "";
-          if (val && val !== '""') return true;
-        }
-      } catch {}
-
-      // 2. Positive signal: AppHeader profile, entry, menu, notifications, messages or avatar
-      if (document.querySelector(
-        ".AppHeader-profile, a.AppHeader-profileEntry, .AppHeader-profileEntry, .AppHeader-userMenu, .AppHeader-notifications, .AppHeader-messages, .AppHeader img.Avatar, .AppHeader a[href*='/people/'], header a[href*='/people/']"
-      )) {
-        return true;
-      }
-
-      // 3. Positive signal: Initial state non-empty user data
-      try {
-        const init = getZhihuInitialData();
-        const userToken = init?.initialState?.common?.currentUser;
-        if (typeof userToken === "string" && userToken.trim().length > 0) return true;
-        const me = init?.initialState?.currentUser;
-        if (me && (me.name || me.urlToken || me.id)) return true;
-        if (init?.initialState?.entities?.users && userToken && init.initialState.entities.users[userToken]) return true;
-      } catch {}
-
-      // 4. Positive signal: valid cached or DOM-extracted username
-      const username = getCurrentUsername();
-      if (username && !/^(undefined|null|none|guest|知乎用户)$/i.test(username)) {
-        return true;
-      }
-
-      // 5. Negative check: explicit AppHeader login button exists
-      if (document.querySelector(".AppHeader-login, button.AppHeader-login, .AppHeader .AppHeader-login")) {
-        return false;
-      }
-      return false;
-    }
-
-    if (IS_JUEJIN) {
-      if (document.querySelector(".avatar-wrapper, .user-dropdown, .nav-item a[href*='/user/'], .user-avatar, img[src*='user-avatar']")) {
-        return true;
-      }
-      const username = getCurrentUsername();
-      if (username && !/^(undefined|null|none|guest|稀土掘金)$/i.test(username)) {
-        return true;
-      }
-      if (document.querySelector(".login-button, button.login-button, .nav-item.auth, .auth-item .login-button")) {
-        return false;
-      }
-      return false;
-    }
-
-    if (IS_V2EX) {
-      if (document.querySelector("#Rightbar a[href^='/member/'], #Top a[href^='/member/'], a[href='/balance'], a[href='/notifications']")) {
-        return true;
-      }
-      const username = getCurrentUsername();
-      if (username && username !== "V2EX 用户" && !/^(undefined|null|none|guest)$/i.test(username)) {
-        return true;
-      }
-      if (document.querySelector("a[href='/signin'], a[href*='/signin'], #Top a[href='/signin']")) {
-        return false;
-      }
-      return false;
-    }
-
-    // Linux.do (Discourse)
-    try {
-      const discourseUser = window.Discourse?.User?.current?.();
-      if (discourseUser && (discourseUser.username || discourseUser.id)) return true;
-      const owner = getEmberOwner();
-      const svcUser = owner ? safeLookup(owner, "service:current-user") : null;
-      if (svcUser && (svcUser.username || svcUser.id || svcUser.get?.("username"))) return true;
-    } catch {}
-
-    if (document.querySelector("#current-user, .header-dropdown-toggle.current-user")) {
-      return true;
-    }
-    const preloaded = preloadedCurrentUser();
-    if (preloaded && (preloaded.username || preloaded.id)) return true;
-
-    if (document.querySelector(".login-button, #login-link, .header-buttons .login-button, .d-header .login-button, header .login-button")) {
-      return false;
-    }
-    try {
-      const preloadedEl = document.getElementById("data-preloaded");
-      if (preloadedEl) {
-        const data = JSON.parse(preloadedEl.dataset.preloaded || "{}");
-        if (data.currentUser === null || data["currentUser"] === null) return false;
-      }
-    } catch {}
-    const username = getCurrentUsername();
-    return Boolean(username && !/^(undefined|null|none|guest)$/i.test(username));
-  }
-
-  function triggerPlatformLogin(newTab = false) {
-    if (IS_LINUXDO) {
-      try {
-        const owner = getEmberOwner();
-        if (owner) {
-          const appRoute = owner.lookup?.("route:application");
-          if (appRoute && typeof appRoute.send === "function") {
-            appRoute.send("showLogin");
-            return true;
-          }
-          const modalService = safeLookup(owner, "service:modal");
-          if (modalService && typeof modalService.show === "function") {
-            modalService.show("login");
-            return true;
-          }
-        }
-      } catch {}
-      const btn = document.querySelector(".d-header .login-button, .header-buttons .login-button, button.login-button, #login-link");
-      if (btn && typeof btn.click === "function") {
-        try {
-          btn.click();
-          return true;
-        } catch {}
-      }
-      if (newTab) {
-        window.open("/login", "_blank", "noopener,noreferrer");
-      } else {
-        window.location.href = "/login";
-      }
-      return true;
-    }
-
-    if (IS_ZHIHU && !newTab) {
-      const btn = document.querySelector(".AppHeader-login, button.AppHeader-login, .AppHeader button.AppHeader-login");
-      if (btn && typeof btn.click === "function") {
-        try {
-          btn.click();
-          return true;
-        } catch {}
-      }
-    }
-
-    if (IS_JUEJIN && !newTab) {
-      const btn = document.querySelector(".login-button, button.login-button, .nav-item.auth .login-button");
-      if (btn && typeof btn.click === "function") {
-        try {
-          btn.click();
-          return true;
-        } catch {}
-      }
-    }
-
-    const info = getPlatformInfo();
-    if (info.loginUrl) {
-      if (newTab) {
-        window.open(info.loginUrl, "_blank", "noopener,noreferrer");
-      } else {
-        window.location.href = info.loginUrl;
-      }
-      return true;
-    }
-    return false;
-  }
-
-  function triggerPlatformSignup(newTab = false) {
-    if (IS_LINUXDO) {
-      try {
-        const owner = getEmberOwner();
-        if (owner) {
-          const appRoute = owner.lookup?.("route:application");
-          if (appRoute && typeof appRoute.send === "function") {
-            appRoute.send("showCreateAccount");
-            return true;
-          }
-        }
-      } catch {}
-      const btn = document.querySelector(".d-header .sign-up-button, .header-buttons .sign-up-button, button.sign-up-button");
-      if (btn && typeof btn.click === "function") {
-        try {
-          btn.click();
-          return true;
-        } catch {}
-      }
-      if (newTab) {
-        window.open("/signup", "_blank", "noopener,noreferrer");
-      } else {
-        window.location.href = "/signup";
-      }
-      return true;
-    }
-
-    const info = getPlatformInfo();
-    if (info.signupUrl) {
-      if (newTab) {
-        window.open(info.signupUrl, "_blank", "noopener,noreferrer");
-      } else {
-        window.location.href = info.signupUrl;
-      }
-      return true;
-    }
-    return false;
-  }
-
-  let wecomLoginDialogResolvers = [];
-
-  function closeWecomLoginDialog(result = false) {
-    const dialog = document.querySelector(".wecom-login-dialog");
-    if (dialog) {
-      dialog.setAttribute("hidden", "hidden");
-      dialog.remove();
-    }
-    if (wecomLoginDialogResolvers.length) {
-      const resolvers = wecomLoginDialogResolvers.slice();
-      wecomLoginDialogResolvers = [];
-      resolvers.forEach((r) => {
-        try { r(result); } catch {}
-      });
-    }
-  }
-
-  const SESSION_DISMISSED_LOGIN_KEY = "linuxdo-wecom-dismissed-login-prompt";
-
-  function showWecomLoginDialog(options = {}) {
-    hasAutoPromptedLoginInPage = true;
-    let dialog = document.querySelector(".wecom-login-dialog");
-    if (dialog && !dialog.hasAttribute("hidden")) {
-      dialog.querySelector(".wecom-confirm-btn-primary")?.focus();
-      return Promise.resolve(false);
-    }
-
-    return new Promise((resolve) => {
-      wecomLoginDialogResolvers.push(resolve);
-
-      if (!dialog) {
-        dialog = document.createElement("div");
-        dialog.className = "wecom-confirm-dialog wecom-login-dialog";
-        document.body.appendChild(dialog);
-      }
-
-      const info = getPlatformInfo();
-      const isDisguised = Boolean(isMaskAvatar?.() || getRailDisguiseAvatarId?.());
-      const platformTitle = isDisguised ? (info.disguiseName || "工作台") : info.name;
-      const promptTitle = isDisguised ? "工作台身份验证" : `您当前尚未登录 ${escapeHtml(platformTitle)}`;
-      const promptDesc = isDisguised
-        ? "登录后可使用全部内网协作、发帖互动及实时消息同步服务"
-        : escapeHtml(info.benefits);
-
-      dialog.innerHTML = `
-        <div class="wecom-confirm-card wecom-login-card" role="dialog" aria-modal="true" aria-labelledby="wecom-login-title">
-          <div class="wecom-confirm-head">
-            <div class="wecom-login-head-left">
-              <span class="wecom-login-badge">${info.iconSvg}<span>${escapeHtml(platformTitle)}</span></span>
-              <strong id="wecom-login-title" class="wecom-confirm-title">${isDisguised ? "登录工作台" : "登录提示"}</strong>
-            </div>
-            <button type="button" class="wecom-confirm-close" data-login-action="cancel" aria-label="关闭">×</button>
-          </div>
-          <div class="wecom-login-body">
-            <div class="wecom-login-avatar-placeholder">
-              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-              </svg>
-            </div>
-            <div class="wecom-login-prompt">${promptTitle}</div>
-            <div class="wecom-login-desc">${promptDesc}</div>
-            <div class="wecom-login-features">
-              <div class="wecom-login-feature-item">
-                <span class="wecom-login-feature-icon">💬</span>
-                <span>参与话题讨论、发布主题与回复交流</span>
-              </div>
-              <div class="wecom-login-feature-item">
-                <span class="wecom-login-feature-icon">🔔</span>
-                <span>接收消息提醒、@通知与私信互动</span>
-              </div>
-              <div class="wecom-login-feature-item">
-                <span class="wecom-login-feature-icon">⭐</span>
-                <span>点赞支持优质内容、收藏与个性化配置</span>
-              </div>
-            </div>
-          </div>
-          <div class="wecom-confirm-actions wecom-login-actions">
-            <button type="button" class="wecom-login-btn-signup" data-login-action="signup">注册账号</button>
-            <div class="wecom-login-actions-right">
-              <button type="button" class="wecom-confirm-btn-cancel" data-login-action="cancel">暂不登录</button>
-              <button type="button" class="wecom-confirm-btn-primary" data-login-action="login">立即登录</button>
-            </div>
-          </div>
-        </div>
-      `;
-
-      dialog.removeAttribute("hidden");
-
-      const onKey = (e) => {
-        if (e.key === "Escape") {
-          e.preventDefault();
-          try { sessionStorage.setItem(SESSION_DISMISSED_LOGIN_KEY, "true"); } catch {}
-          document.removeEventListener("keydown", onKey);
-          closeWecomLoginDialog(false);
-        } else if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
-          e.preventDefault();
-          document.removeEventListener("keydown", onKey);
-          closeWecomLoginDialog(true);
-          triggerPlatformLogin(false);
-        }
-      };
-      document.addEventListener("keydown", onKey);
-
-      dialog.onclick = (e) => {
-        const actionBtn = e.target.closest("[data-login-action]");
-        if (actionBtn) {
-          const action = actionBtn.getAttribute("data-login-action");
-          const isNewTab = Boolean(e.ctrlKey || e.metaKey);
-          document.removeEventListener("keydown", onKey);
-          if (action === "login") {
-            closeWecomLoginDialog(true);
-            triggerPlatformLogin(isNewTab);
-          } else if (action === "signup") {
-            closeWecomLoginDialog("signup");
-            triggerPlatformSignup(isNewTab);
-          } else {
-            try { sessionStorage.setItem(SESSION_DISMISSED_LOGIN_KEY, "true"); } catch {}
-            closeWecomLoginDialog(false);
-          }
-          return;
-        }
-        if (e.target === dialog) {
-          try { sessionStorage.setItem(SESSION_DISMISSED_LOGIN_KEY, "true"); } catch {}
-          document.removeEventListener("keydown", onKey);
-          closeWecomLoginDialog(false);
-        }
-      };
-
-      dialog.querySelector(".wecom-confirm-btn-primary")?.focus();
-    });
-  }
-
-  let hasAutoPromptedLoginInPage = false;
-
-  function scheduleInitialLoginCheck(delayMs = 1200) {
-    if (hasAutoPromptedLoginInPage) return;
-    if (isAuthPath()) return;
-    if (getViewMode() === "native" || otherThemeActive()) return;
-    try {
-      if (sessionStorage.getItem(SESSION_DISMISSED_LOGIN_KEY) === "true") return;
-    } catch {}
-    setTimeout(() => {
-      if (hasAutoPromptedLoginInPage) return;
-      if (isAuthPath()) return;
-      if (getViewMode() === "native" || otherThemeActive()) return;
-      try {
-        if (sessionStorage.getItem(SESSION_DISMISSED_LOGIN_KEY) === "true") return;
-      } catch {}
-      if (!isUserLoggedIn()) {
-        hasAutoPromptedLoginInPage = true;
-        showWecomLoginDialog({ auto: true });
-      }
-    }, delayMs);
   }
 
   /* ============================== V2EX 用户资料卡与财产浮层 (#money) ============================== */
@@ -30709,10 +30083,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   }
 
   function openNewTopic() {
-    if (!isUserLoggedIn()) {
-      showWecomLoginDialog({ auto: false });
-      return;
-    }
     if (IS_ZHIHU) {
       window.open("https://www.zhihu.com/creator", "_blank", "noopener,noreferrer");
       return;
@@ -34896,12 +34266,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     if (!message) return;
     consumeClick(event);
     const action = button.dataset.action;
-    if (action === "like" || action === "boost" || action === "bookmark" || action === "edit" || action === "delete") {
-      if (!isUserLoggedIn()) {
-        showWecomLoginDialog({ auto: false });
-        return;
-      }
-    }
     if (action === "like") return toggleLike(Number(message.dataset.postId), button, message);
     if (action === "reply") {
       if (IS_ZHIHU) {
@@ -38656,10 +38020,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   }
 
   async function submitComposer() {
-    if (!isUserLoggedIn()) {
-      showWecomLoginDialog({ auto: false });
-      return;
-    }
     const { input } = composeUi();
     if (!input || !input.value.trim() || composerBridgeState.submitting || composerBridgeState.uploading) return;
     if (!chatState.topicId) throw new Error("请先打开一个话题");
@@ -38798,10 +38158,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   }
 
   function replyToPost(postNumber) {
-    if (!isUserLoggedIn()) {
-      showWecomLoginDialog({ auto: false });
-      return;
-    }
     showTargetedReply(postNumber);
     const { input } = composeUi();
     if (IS_V2EX && input) {
@@ -43300,7 +42656,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     document.querySelector(".wecom-update-notice")?.remove();
     document.querySelector(".wecom-edit-dialog")?.remove();
     document.querySelector(".wecom-confirm-dialog")?.remove();
-    document.querySelector(".wecom-login-dialog")?.remove();
     document.querySelector(".wecom-v2ex-nav2")?.remove();
     closeV2exUserPopover();
     closeV2exMemberCard();
@@ -43385,12 +42740,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     if (!document.body) return;
 
     const pathname = location.pathname;
-    if (isAuthPath(pathname)) {
-      teardownTheme();
-      document.documentElement.classList.remove(LOCK_CLASS, "wecom-topic-open", "wecom-members-open");
-      return;
-    }
-
     const isV2exNew = IS_V2EX && (pathname === "/new" || pathname.startsWith("/new/"));
     document.documentElement.classList.toggle("wecom-v2ex-new-page", isV2exNew);
 
@@ -43478,7 +42827,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     }
     syncListActive();
     checkInitialNewTopicParam();
-    scheduleInitialLoginCheck();
   }
 
   let scheduled = false;
@@ -44058,7 +43406,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       });
     }
 
-    const WECOM_UI_SEL = ".wecom-toast-container, .wecom-confirm-dialog, .wecom-login-dialog, .wecom-font-picker-dialog, .wecom-shortcut-dialog, .wecom-ai-config-dialog, .wecom-ai-summary-dialog, .wecom-connect-overlay, .wecom-connect-modal, .wecom-base64-insert-dialog, .wecom-v2ex-user-popover, .wecom-v2ex-member-card, .wecom-juejin-member-card, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-rail-resizer, .wecom-list-resizer, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
+    const WECOM_UI_SEL = ".wecom-toast-container, .wecom-confirm-dialog, .wecom-font-picker-dialog, .wecom-shortcut-dialog, .wecom-ai-config-dialog, .wecom-ai-summary-dialog, .wecom-connect-overlay, .wecom-connect-modal, .wecom-base64-insert-dialog, .wecom-v2ex-user-popover, .wecom-v2ex-member-card, .wecom-juejin-member-card, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-rail-resizer, .wecom-list-resizer, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
     const NATIVE_BRIDGE_SEL = "#reply-control, .dialog-holder, .dialog-container, #discourse-modal-container, .d-modal, .bootbox, .autocomplete, .autocomplete-container, .d-editor-popup, [data-identifier='emoji-picker'], .tag-chooser";
 
     function isWecomOrBridgeNode(node) {
