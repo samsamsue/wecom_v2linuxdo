@@ -12025,19 +12025,19 @@ test("Test 151: Removal of login dialog and unlogged popup intercept across all 
   assert.ok(!scriptContent.includes("function isUserLoggedIn()"), "isUserLoggedIn intercept function must be removed");
 });
 
-test("Test 152: Jitter-free bottom loading and status layout in Zhihu comment discussion layer (v0.8.25)", () => {
+test("Test 152: Smooth automatic infinite scroll loading for Zhihu comment discussion layer without manual buttons (v0.8.26)", () => {
   const metaContent = fs.readFileSync(path.resolve(__dirname, "../linuxdo-wecom.meta.js"), "utf8");
-  // 1. Version 0.8.25
-  assert.ok(metaContent.includes("@version      0.8.25"), "linuxdo-wecom.meta.js must be bumped to 0.8.25");
-  assert.ok(scriptContent.includes("@version      0.8.25"), "linuxdo-wecom.user.js must be bumped to 0.8.25");
+  // 1. Version 0.8.26
+  assert.ok(metaContent.includes("@version      0.8.26"), "linuxdo-wecom.meta.js must be bumped to 0.8.26");
+  assert.ok(scriptContent.includes("@version      0.8.26"), "linuxdo-wecom.user.js must be bumped to 0.8.26");
 
   // 2. CSS fixed min-height, overflow-anchor: none, and layout containment for bottom more container
   assert.ok(
     scriptContent.includes(".wecom-zhihu-comments-more {") &&
-    scriptContent.includes("min-height: 52px;") &&
+    scriptContent.includes("min-height: 28px;") &&
     scriptContent.includes("overflow-anchor: none;") &&
     scriptContent.includes("contain: layout style;"),
-    ".wecom-zhihu-comments-more must have min-height: 52px, overflow-anchor: none, and contain: layout style"
+    ".wecom-zhihu-comments-more must have min-height: 28px, overflow-anchor: none, and contain: layout style"
   );
 
   // 3. Status key diffing to avoid layout re-flow and innerHTML rewrite thrashing
@@ -12048,29 +12048,45 @@ test("Test 152: Jitter-free bottom loading and status layout in Zhihu comment di
     "updateZhihuBottomMoreContainer must guard against redundant innerHTML updates via statusKey diffing"
   );
 
-  // 4. Scroll trigger guard in handleChatBodyScroll
+  // 4. Automatic scroll trigger in handleChatBodyScroll without manual clicking
   assert.ok(
-    scriptContent.includes("if (zhihuCommentThreadState.hasMoreRoot && !zhihuCommentThreadState.loading && !zhihuCommentsLoadLock) {") &&
-    scriptContent.includes("if (body && body.scrollTop + body.clientHeight >= body.scrollHeight - 160) {\n          loadMoreZhihuComments();\n        }"),
-    "handleChatBodyScroll must only invoke loadMoreZhihuComments when hasMoreRoot is true, not loading, and not locked"
+    scriptContent.includes("if (zhihuCommentThreadState.hasMore && !zhihuCommentThreadState.loading) {") &&
+    scriptContent.includes("if (body && body.scrollTop + body.clientHeight >= body.scrollHeight - 320) {\n          loadMoreZhihuComments();\n        }"),
+    "handleChatBodyScroll must automatically trigger loadMoreZhihuComments when scrolling near bottom (320px threshold)"
   );
 
-  // 5. loadMoreZhihuComments guard and lock
+  // 5. Sentinel used in idle state instead of manual "加载更多评论" buttons
+  assert.ok(
+    scriptContent.includes('<div class="wecom-zhihu-comments-sentinel" style="height:20px;"></div>'),
+    "Idle state with more comments must render a smooth sentinel spacer instead of manual click buttons"
+  );
+  assert.ok(
+    !scriptContent.includes("加载更多评论 (已显示"),
+    "Manual '加载更多评论 (已显示 ...)' button must not be rendered"
+  );
+
+  // 6. loadMoreZhihuComments guard, hasMore calculation, and continuous scroll chaining
   assert.ok(
     scriptContent.includes("let zhihuCommentsLoadLock = false;") &&
     scriptContent.includes("if (!zhihuCommentThreadState.active || zhihuCommentThreadState.loading || zhihuCommentsLoadLock) return;") &&
-    scriptContent.includes("if (!zhihuCommentThreadState.hasMoreRoot) return;"),
-    "loadMoreZhihuComments must guard with zhihuCommentsLoadLock and must not auto-trigger child reply expansion"
+    scriptContent.includes("if (!zhihuCommentThreadState.hasMore) return;"),
+    "loadMoreZhihuComments must guard with zhihuCommentsLoadLock and hasMore"
   );
 
-  // 6. Zero-candidate guard in loadNextZhihuChildBatch and expandAllZhihuChildComments
+  // 7. Auto-fill initial viewport when comments don't fill the panel
+  assert.ok(
+    scriptContent.includes("if (zhihuCommentThreadState.hasMore && body && (body.scrollHeight <= body.clientHeight + 120)) {"),
+    "openZhihuCommentThread must auto-load next page if initial comments do not fill viewport"
+  );
+
+  // 8. Zero-candidate guard in loadNextZhihuChildBatch and expandAllZhihuChildComments
   assert.ok(
     scriptContent.includes("if (candidates.length === 0) return;") &&
     scriptContent.includes("if (initialCandidates.length === 0) return;"),
     "loadNextZhihuChildBatch and expandAllZhihuChildComments must bail out immediately when no unexpanded child comments exist"
   );
 
-  // 7. Non-shifting spinner indicator
+  // 9. Non-shifting spinner indicator
   assert.ok(
     scriptContent.includes(".wecom-zhihu-spinner {") &&
     scriptContent.includes("is-loading") &&
