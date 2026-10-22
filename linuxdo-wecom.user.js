@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.24
+// @version      0.8.25
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -5280,29 +5280,87 @@
       font-size: 12px;
       color: var(--wc-text-3, #8c8c8c);
     }
+    .wecom-zhihu-comments-more {
+      text-align: center;
+      padding: 16px 12px 24px 12px;
+      min-height: 52px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow-anchor: none;
+      contain: layout style;
+      user-select: none;
+    }
+    .wecom-zhihu-bottom-child-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+    .wecom-zhihu-comments-status-text {
+      font-size: 12px;
+      color: var(--wc-text-3, #8c8c8c);
+      line-height: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
     .wecom-zhihu-comments-more-btn {
       padding: 6px 16px;
       font-size: 12px;
+      min-height: 32px;
+      line-height: 18px;
+      box-sizing: border-box;
       border-radius: 14px;
       border: 1px solid var(--wc-border, rgba(0, 0, 0, 0.12));
       background: var(--wc-bg, #fff);
       color: var(--wc-text-2, #666);
       cursor: pointer;
-      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
     }
-    .wecom-zhihu-comments-more-btn:hover {
+    .wecom-zhihu-comments-more-btn:hover:not(:disabled) {
       background: var(--wc-hover, rgba(0, 0, 0, 0.05));
       color: #1677ff;
       border-color: #1677ff;
+    }
+    .wecom-zhihu-comments-more-btn:disabled {
+      opacity: 0.75;
+      cursor: default;
+      pointer-events: none;
     }
     .wecom-zhihu-comments-more-btn.wecom-btn-secondary {
       background: var(--wc-bg-sidebar, #f0f2f5);
       color: var(--wc-text-1, #262626);
       border: 1px solid var(--wc-border-light, #d9d9d9);
     }
-    .wecom-zhihu-comments-more-btn.wecom-btn-secondary:hover {
+    .wecom-zhihu-comments-more-btn.wecom-btn-secondary:hover:not(:disabled) {
       background: var(--wc-hover, rgba(0, 0, 0, 0.08));
       border-color: var(--wc-border-strong, #bfbfbf);
+    }
+    .wecom-zhihu-spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(0, 0, 0, 0.15);
+      border-top-color: #1677ff;
+      border-radius: 50%;
+      animation: wecom-spin 0.7s linear infinite;
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+    html.wecom-dark .wecom-zhihu-spinner,
+    html.${ROOT_CLASS}.wecom-dark .wecom-zhihu-spinner {
+      border-color: rgba(255, 255, 255, 0.18);
+      border-top-color: #3b82f6;
     }
     .wecom-zhihu-child-more-entry {
       display: flex;
@@ -34586,8 +34644,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   function handleChatBodyScroll(panel) {
     const body = panel.querySelector(".wecom-chat-body");
     if (zhihuCommentThreadState.active) {
-      if (body && body.scrollTop + body.clientHeight >= body.scrollHeight - 160) {
-        loadMoreZhihuComments();
+      if (zhihuCommentThreadState.hasMoreRoot && !zhihuCommentThreadState.loading && !zhihuCommentsLoadLock) {
+        if (body && body.scrollTop + body.clientHeight >= body.scrollHeight - 160) {
+          loadMoreZhihuComments();
+        }
       }
       return;
     }
@@ -40831,8 +40891,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     if (!moreContainer) {
       moreContainer = document.createElement("div");
       moreContainer.className = "wecom-zhihu-comments-more";
-      moreContainer.style.textAlign = "center";
-      moreContainer.style.padding = "16px";
       body.appendChild(moreContainer);
     }
 
@@ -40852,32 +40910,49 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       0
     );
 
-    if (zhihuCommentThreadState.hasMoreRoot) {
-      if (zhihuCommentThreadState.loading) {
-        moreContainer.innerHTML = `<button type="button" class="wecom-zhihu-comments-more-btn" disabled>正在加载更多评论...</button>`;
-      } else {
-        moreContainer.innerHTML = `<button type="button" class="wecom-zhihu-comments-more-btn" data-action="zhihu-more-comments">加载更多评论 (已显示 ${displayedCount} / ${total})</button>`;
-      }
-      return;
-    }
+    const hasMoreRoot = Boolean(zhihuCommentThreadState.hasMoreRoot);
+    const isLoadingRoot = Boolean(zhihuCommentThreadState.loading);
+    const isExpandingAll = Boolean(zhihuCommentThreadState.expandingAll);
+    const isLoadingChildBatch = Boolean(zhihuCommentThreadState.loadingChildBatch);
 
-    if (unexpandedRoots.length > 0) {
-      if (zhihuCommentThreadState.expandingAll) {
-        moreContainer.innerHTML = `
-          <div class="wecom-zhihu-bottom-child-actions" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
-            <button type="button" class="wecom-zhihu-comments-more-btn" disabled>正在展开全部回复...</button>
+    const statusKey = [
+      hasMoreRoot ? "hasMore" : "noMoreRoot",
+      isLoadingRoot ? "loading" : "idle",
+      isExpandingAll ? "expandingAll" : "notExpandingAll",
+      isLoadingChildBatch ? "loadingChild" : "notLoadingChild",
+      displayedCount,
+      total,
+      unexpandedRoots.length,
+      unexpandedChildCount
+    ].join("|");
+
+    if (moreContainer.dataset.statusKey === statusKey) return;
+    moreContainer.dataset.statusKey = statusKey;
+
+    let html = "";
+    if (hasMoreRoot) {
+      if (isLoadingRoot) {
+        html = `<button type="button" class="wecom-zhihu-comments-more-btn is-loading" disabled><span class="wecom-zhihu-spinner"></span><span>正在加载更多评论...</span></button>`;
+      } else {
+        html = `<button type="button" class="wecom-zhihu-comments-more-btn" data-action="zhihu-more-comments">加载更多评论 (已显示 ${displayedCount} / ${total})</button>`;
+      }
+    } else if (unexpandedRoots.length > 0) {
+      if (isExpandingAll) {
+        html = `
+          <div class="wecom-zhihu-bottom-child-actions">
+            <button type="button" class="wecom-zhihu-comments-more-btn is-loading" disabled><span class="wecom-zhihu-spinner"></span><span>正在展开全部回复...</span></button>
           </div>`;
-      } else if (zhihuCommentThreadState.loadingChildBatch) {
-        moreContainer.innerHTML = `
-          <div class="wecom-zhihu-bottom-child-actions" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
-            <button type="button" class="wecom-zhihu-comments-more-btn" disabled>正在加载楼层回复...</button>
+      } else if (isLoadingChildBatch) {
+        html = `
+          <div class="wecom-zhihu-bottom-child-actions">
+            <button type="button" class="wecom-zhihu-comments-more-btn is-loading" disabled><span class="wecom-zhihu-spinner"></span><span>正在加载楼层回复...</span></button>
           </div>`;
       } else {
         const remainingLabel = unexpandedChildCount > 0 ? `剩余 ${unexpandedChildCount} 条未展开` : "尚有楼层回复未展开";
-        moreContainer.innerHTML = `
-          <div class="wecom-zhihu-bottom-child-actions" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
-            <div style="font-size:12px;color:var(--wc-text-3);">主评论已全部载入 (${zhihuCommentThreadState.comments.length} 楼)，${remainingLabel}</div>
-            <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+        html = `
+          <div class="wecom-zhihu-bottom-child-actions">
+            <div class="wecom-zhihu-comments-status-text">主评论已全部载入 (${zhihuCommentThreadState.comments.length} 楼)，${remainingLabel}</div>
+            <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:6px;">
               <button type="button" class="wecom-zhihu-comments-more-btn" data-action="zhihu-load-next-child-batch">
                 加载楼层回复 (${remainingLabel}，已显示 ${displayedCount} / ${total})
               </button>
@@ -40887,14 +40962,15 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             </div>
           </div>`;
       }
-      return;
+    } else {
+      if (displayedCount >= totalCount) {
+        html = `<span class="wecom-zhihu-comments-status-text">— 已加载全部 ${total} 条评论 —</span>`;
+      } else {
+        html = `<span class="wecom-zhihu-comments-status-text">— 已加载全部可用主评论及回复（共 ${displayedCount} 条${totalCount > displayedCount ? "，其余部分可能已被原站过滤或删除" : ""}）—</span>`;
+      }
     }
 
-    if (displayedCount >= totalCount) {
-      moreContainer.innerHTML = `<span style="font-size:12px;color:var(--wc-text-3);">— 已加载全部 ${total} 条评论 —</span>`;
-    } else {
-      moreContainer.innerHTML = `<span style="font-size:12px;color:var(--wc-text-3);">— 已加载全部可用主评论及回复（共 ${displayedCount} 条${totalCount > displayedCount ? "，其余部分可能已被原站过滤或删除" : ""}）—</span>`;
-    }
+    moreContainer.innerHTML = html;
   }
 
   function syncZhihuCommentThreadCounters() {
@@ -41019,14 +41095,15 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   async function loadNextZhihuChildBatch(btn) {
     if (!zhihuCommentThreadState.active || zhihuCommentThreadState.loadingChildBatch || zhihuCommentThreadState.expandingAll) return;
+    const candidates = (zhihuCommentThreadState.comments || []).filter(
+      (c) => Boolean(c.childHasMore) || (Number(c.childCommentCount || 0) > (c.children?.length || 0))
+    ).slice(0, 3);
+    if (candidates.length === 0) return;
+
     zhihuCommentThreadState.loadingChildBatch = true;
     updateZhihuBottomMoreContainer();
 
     try {
-      const candidates = (zhihuCommentThreadState.comments || []).filter(
-        (c) => Boolean(c.childHasMore) || (Number(c.childCommentCount || 0) > (c.children?.length || 0))
-      ).slice(0, 3);
-
       for (const root of candidates) {
         if (!zhihuCommentThreadState.active) break;
         await loadMoreZhihuChildComments(root.id);
@@ -41040,6 +41117,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   async function expandAllZhihuChildComments(btn) {
     if (!zhihuCommentThreadState.active || zhihuCommentThreadState.expandingAll || zhihuCommentThreadState.loadingChildBatch) return;
+    const initialCandidates = (zhihuCommentThreadState.comments || []).filter(
+      (c) => Boolean(c.childHasMore) || (Number(c.childCommentCount || 0) > (c.children?.length || 0))
+    );
+    if (initialCandidates.length === 0) return;
+
     zhihuCommentThreadState.expandingAll = true;
     updateZhihuBottomMoreContainer();
 
@@ -41061,19 +41143,17 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     }
   }
 
+  let zhihuCommentsLoadLock = false;
+
   async function loadMoreZhihuComments() {
-    if (!zhihuCommentThreadState.active || zhihuCommentThreadState.loading) return;
-    if (!zhihuCommentThreadState.hasMoreRoot) {
-      return loadNextZhihuChildBatch();
-    }
+    if (!zhihuCommentThreadState.active || zhihuCommentThreadState.loading || zhihuCommentsLoadLock) return;
+    if (!zhihuCommentThreadState.hasMoreRoot) return;
+
+    zhihuCommentsLoadLock = true;
     const answerId = zhihuCommentThreadState.answerId;
     zhihuCommentThreadState.loading = true;
-    const body = document.querySelector(".wecom-chat-body");
-    const moreBtn = body?.querySelector(".wecom-zhihu-comments-more-btn[data-action='zhihu-more-comments']");
-    if (moreBtn) {
-      moreBtn.disabled = true;
-      moreBtn.textContent = "正在加载更多评论...";
-    }
+    updateZhihuBottomMoreContainer();
+
     try {
       const commData = await fetchZhihuAnswerComments(answerId, {
         cursor: zhihuCommentThreadState.nextCursor,
@@ -41091,7 +41171,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         zhihuCommentThreadState.nextCursor = commData.nextCursor || "";
         zhihuCommentThreadState.nextUrl = commData.nextUrl || "";
         zhihuCommentThreadState.offset = zhihuCommentThreadState.comments.length + newComments.length;
-        const commentsContainer = body.querySelector(".wecom-zhihu-thread-comments");
+        const body = document.querySelector(".wecom-chat-body");
+        const commentsContainer = body?.querySelector(".wecom-zhihu-thread-comments");
         if (commentsContainer) {
           newComments.forEach((c) => {
             zhihuCommentThreadState.comments.push(c);
@@ -41118,6 +41199,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     } finally {
       zhihuCommentThreadState.loading = false;
       updateZhihuBottomMoreContainer();
+      setTimeout(() => {
+        zhihuCommentsLoadLock = false;
+      }, 150);
     }
   }
 
@@ -41168,6 +41252,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     zhihuCommentThreadState.loadingChildBatch = false;
     zhihuCommentThreadState.expandingAll = false;
     zhihuCommentThreadState.loading = true;
+    zhihuCommentsLoadLock = false;
 
     // 0. Dismiss any background native comment modals immediately
     dismissZhihuNativeModals();
@@ -41287,6 +41372,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     zhihuCommentThreadState.active = false;
     zhihuCommentThreadState.loadingChildBatch = false;
     zhihuCommentThreadState.expandingAll = false;
+    zhihuCommentThreadState.loading = false;
+    zhihuCommentsLoadLock = false;
     dismissZhihuNativeModals();
 
     const restoreContent = options.restoreContent !== false;

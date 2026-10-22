@@ -12013,9 +12013,9 @@ test("Test 150: Category and group selection instant loading, loading skeleton, 
 
 test("Test 151: Removal of login dialog and unlogged popup intercept across all platforms (v0.8.24)", () => {
   const metaContent = fs.readFileSync(path.resolve(__dirname, "../linuxdo-wecom.meta.js"), "utf8");
-  // 1. Version must be 0.8.24
-  assert.ok(metaContent.includes("@version      0.8.24"), "linuxdo-wecom.meta.js must be bumped to 0.8.24");
-  assert.ok(scriptContent.includes("@version      0.8.24"), "linuxdo-wecom.user.js must be bumped to 0.8.24");
+  // 1. Version must be 0.8.24 or newer
+  assert.ok(/@version\s+0\.8\.(?:2[4-9]|[3-9][0-9])/.test(metaContent), "linuxdo-wecom.meta.js must be 0.8.24 or newer");
+  assert.ok(/@version\s+0\.8\.(?:2[4-9]|[3-9][0-9])/.test(scriptContent), "linuxdo-wecom.user.js must be 0.8.24 or newer");
 
   // 2. Login dialog functions must be removed
   assert.ok(!scriptContent.includes("function showWecomLoginDialog"), "showWecomLoginDialog must be removed");
@@ -12024,6 +12024,61 @@ test("Test 151: Removal of login dialog and unlogged popup intercept across all 
   assert.ok(!scriptContent.includes(".wecom-login-dialog"), ".wecom-login-dialog must be removed");
   assert.ok(!scriptContent.includes("function isUserLoggedIn()"), "isUserLoggedIn intercept function must be removed");
 });
+
+test("Test 152: Jitter-free bottom loading and status layout in Zhihu comment discussion layer (v0.8.25)", () => {
+  const metaContent = fs.readFileSync(path.resolve(__dirname, "../linuxdo-wecom.meta.js"), "utf8");
+  // 1. Version 0.8.25
+  assert.ok(metaContent.includes("@version      0.8.25"), "linuxdo-wecom.meta.js must be bumped to 0.8.25");
+  assert.ok(scriptContent.includes("@version      0.8.25"), "linuxdo-wecom.user.js must be bumped to 0.8.25");
+
+  // 2. CSS fixed min-height, overflow-anchor: none, and layout containment for bottom more container
+  assert.ok(
+    scriptContent.includes(".wecom-zhihu-comments-more {") &&
+    scriptContent.includes("min-height: 52px;") &&
+    scriptContent.includes("overflow-anchor: none;") &&
+    scriptContent.includes("contain: layout style;"),
+    ".wecom-zhihu-comments-more must have min-height: 52px, overflow-anchor: none, and contain: layout style"
+  );
+
+  // 3. Status key diffing to avoid layout re-flow and innerHTML rewrite thrashing
+  assert.ok(
+    scriptContent.includes("const statusKey = [") &&
+    scriptContent.includes("if (moreContainer.dataset.statusKey === statusKey) return;") &&
+    scriptContent.includes("moreContainer.dataset.statusKey = statusKey;"),
+    "updateZhihuBottomMoreContainer must guard against redundant innerHTML updates via statusKey diffing"
+  );
+
+  // 4. Scroll trigger guard in handleChatBodyScroll
+  assert.ok(
+    scriptContent.includes("if (zhihuCommentThreadState.hasMoreRoot && !zhihuCommentThreadState.loading && !zhihuCommentsLoadLock) {") &&
+    scriptContent.includes("if (body && body.scrollTop + body.clientHeight >= body.scrollHeight - 160) {\n          loadMoreZhihuComments();\n        }"),
+    "handleChatBodyScroll must only invoke loadMoreZhihuComments when hasMoreRoot is true, not loading, and not locked"
+  );
+
+  // 5. loadMoreZhihuComments guard and lock
+  assert.ok(
+    scriptContent.includes("let zhihuCommentsLoadLock = false;") &&
+    scriptContent.includes("if (!zhihuCommentThreadState.active || zhihuCommentThreadState.loading || zhihuCommentsLoadLock) return;") &&
+    scriptContent.includes("if (!zhihuCommentThreadState.hasMoreRoot) return;"),
+    "loadMoreZhihuComments must guard with zhihuCommentsLoadLock and must not auto-trigger child reply expansion"
+  );
+
+  // 6. Zero-candidate guard in loadNextZhihuChildBatch and expandAllZhihuChildComments
+  assert.ok(
+    scriptContent.includes("if (candidates.length === 0) return;") &&
+    scriptContent.includes("if (initialCandidates.length === 0) return;"),
+    "loadNextZhihuChildBatch and expandAllZhihuChildComments must bail out immediately when no unexpanded child comments exist"
+  );
+
+  // 7. Non-shifting spinner indicator
+  assert.ok(
+    scriptContent.includes(".wecom-zhihu-spinner {") &&
+    scriptContent.includes("is-loading") &&
+    scriptContent.includes("html.wecom-dark .wecom-zhihu-spinner"),
+    "RAW_CSS must style .wecom-zhihu-spinner for jitter-free inline rotation across light and dark themes"
+  );
+});
+
 
 
 
