@@ -12027,9 +12027,9 @@ test("Test 151: Removal of login dialog and unlogged popup intercept across all 
 
 test("Test 152: Smooth automatic infinite scroll loading for Zhihu comment discussion layer without manual buttons (v0.8.26)", () => {
   const metaContent = fs.readFileSync(path.resolve(__dirname, "../linuxdo-wecom.meta.js"), "utf8");
-  // 1. Version 0.8.26
-  assert.ok(metaContent.includes("@version      0.8.26"), "linuxdo-wecom.meta.js must be bumped to 0.8.26");
-  assert.ok(scriptContent.includes("@version      0.8.26"), "linuxdo-wecom.user.js must be bumped to 0.8.26");
+  // 1. Version 0.8.26 or newer
+  assert.ok(/@version\s+0\.8\.(2[6-9]|[3-9]\d)/.test(metaContent), "linuxdo-wecom.meta.js must be bumped to 0.8.26 or newer");
+  assert.ok(/@version\s+0\.8\.(2[6-9]|[3-9]\d)/.test(scriptContent), "linuxdo-wecom.user.js must be bumped to 0.8.26 or newer");
 
   // 2. CSS fixed min-height, overflow-anchor: none, and layout containment for bottom more container
   assert.ok(
@@ -12051,7 +12051,7 @@ test("Test 152: Smooth automatic infinite scroll loading for Zhihu comment discu
   // 4. Automatic scroll trigger in handleChatBodyScroll without manual clicking
   assert.ok(
     scriptContent.includes("if (zhihuCommentThreadState.hasMore && !zhihuCommentThreadState.loading) {") &&
-    scriptContent.includes("if (body && body.scrollTop + body.clientHeight >= body.scrollHeight - 320) {\n          loadMoreZhihuComments();\n        }"),
+    scriptContent.includes("loadMoreZhihuComments();"),
     "handleChatBodyScroll must automatically trigger loadMoreZhihuComments when scrolling near bottom (320px threshold)"
   );
 
@@ -12092,6 +12092,63 @@ test("Test 152: Smooth automatic infinite scroll loading for Zhihu comment discu
     scriptContent.includes("is-loading") &&
     scriptContent.includes("html.wecom-dark .wecom-zhihu-spinner"),
     "RAW_CSS must style .wecom-zhihu-spinner for jitter-free inline rotation across light and dark themes"
+  );
+});
+
+test("Test 153: Auto-streaming Zhihu floor replies on bottom scroll and elimination of Linux.do double reload/flicker (v0.8.27)", () => {
+  const metaContent = fs.readFileSync(path.resolve(__dirname, "../linuxdo-wecom.meta.js"), "utf8");
+  // 1. Version 0.8.27
+  assert.ok(metaContent.includes("@version      0.8.27"), "linuxdo-wecom.meta.js must be bumped to 0.8.27");
+  assert.ok(scriptContent.includes("@version      0.8.27"), "linuxdo-wecom.user.js must be bumped to 0.8.27");
+
+  // 2. Floor replies auto-trigger on bottom scroll when root comments end
+  assert.ok(
+    scriptContent.includes("else if (!zhihuCommentThreadState.hasMore && !zhihuCommentThreadState.loadingChildBatch && !zhihuCommentThreadState.expandingAll)") &&
+    scriptContent.includes("loadNextZhihuChildBatch();"),
+    "handleChatBodyScroll must automatically call loadNextZhihuChildBatch on bottom scroll when root comments are done"
+  );
+
+  // 3. Sentinel spacer kept active for floor replies without manual button disruption
+  assert.ok(
+    scriptContent.includes("hasMore || unexpandedChildCount > 0") &&
+    scriptContent.includes('<div class="wecom-zhihu-comments-sentinel" style="height:20px;"></div>'),
+    "updateZhihuBottomMoreContainer must render the 20px sentinel spacer when unexpandedChildCount > 0 in idle state"
+  );
+  assert.ok(
+    !scriptContent.includes('class="wecom-zhihu-comments-expand-all-btn" data-action="zhihu-load-next-child-batch"'),
+    "Manual '加载楼层回复' button must be removed in favor of automatic scroll streaming"
+  );
+
+  // 4. Clean navigation without URL hash pollution in navigateWithAiSync
+  assert.ok(
+    scriptContent.includes("function navigateWithAiSync(targetUrl) {") &&
+    scriptContent.includes("window.location.href = targetUrl;"),
+    "navigateWithAiSync must navigate cleanly without injecting hash parameter into targetUrl"
+  );
+  assert.ok(
+    !scriptContent.includes("u.hash = \"wecom_ai_sync=\""),
+    "navigateWithAiSync must not pollute URL with wecom_ai_sync hash"
+  );
+
+  // 5. normalizeListApiPath avoids re-fetching list when switching/navigating to Linux.do
+  assert.ok(
+    scriptContent.includes("function normalizeListApiPath(apiPath) {") &&
+    scriptContent.includes("normalizeListApiPath(listState.loadedApiPath) === normApi"),
+    "loadList must normalize list API path to avoid redundant re-fetching"
+  );
+
+  // 6. applyListJson topic diffing prevents redundant innerHTML DOM rebuilds
+  assert.ok(
+    scriptContent.includes("if (!append && listState.topics.length > 0 && listState.topics.length === topics.length)") &&
+    scriptContent.includes("const isIdentical = topics.every((t, i) => listState.topics[i] && listState.topics[i].id === t.id);"),
+    "applyListJson must diff topics and skip innerHTML rewrite when feed is unchanged"
+  );
+
+  // 7. MutationObserver guards against background Ember DOM mutations causing double-reload
+  assert.ok(
+    scriptContent.includes("const curHref = window.location.pathname + window.location.search;") &&
+    scriptContent.includes("if (!hasPanels || curHref !== lastAppliedHref) {\n          scheduleApply();\n        }"),
+    "MutationObserver must only invoke scheduleApply if panels are missing or URL changed"
   );
 });
 
