@@ -12032,13 +12032,15 @@ test("Test 151: WeCom login dialog for unlogged users across all platforms (Linu
     "getPlatformInfo must return metadata and benefits for Zhihu, Juejin, V2EX, and Linux.do"
   );
 
-  // 3. triggerPlatformLogin and triggerPlatformSignup
+  // 3. triggerPlatformLogin and triggerPlatformSignup with redirect and auth path handling
   assert.ok(
-    scriptContent.includes("function triggerPlatformLogin()") &&
-    scriptContent.includes("function triggerPlatformSignup()") &&
-    scriptContent.includes("info.loginSelector") &&
-    scriptContent.includes("window.location.href = info.loginUrl"),
-    "triggerPlatformLogin and triggerPlatformSignup must handle native selectors and URLs"
+    scriptContent.includes("function isAuthPath(") &&
+    scriptContent.includes("function triggerPlatformLogin(") &&
+    scriptContent.includes("function triggerPlatformSignup(") &&
+    scriptContent.includes("window.location.href = info.loginUrl") &&
+    scriptContent.includes("next=") &&
+    scriptContent.includes("if (isAuthPath(pathname)) {\n      teardownTheme();"),
+    "triggerPlatformLogin and isAuthPath must bypass WeCom overlay on auth pages and preserve next redirect"
   );
 
   // 4. showWecomLoginDialog and closeWecomLoginDialog

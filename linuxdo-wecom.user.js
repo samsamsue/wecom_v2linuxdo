@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.21
+// @version      0.8.22
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -1452,6 +1452,31 @@
     return Boolean(me && author && me === author);
   }
 
+  function isAuthPath(pathname = (typeof location !== "undefined" ? location.pathname : "")) {
+    const p = String(pathname || "").toLowerCase();
+    if (typeof IS_ZHIHU !== "undefined" && IS_ZHIHU) {
+      return p === "/signin" || p.startsWith("/signin/") ||
+             p === "/signup" || p.startsWith("/signup/") ||
+             p.startsWith("/account/") || p.startsWith("/passport/");
+    }
+    if (typeof IS_JUEJIN !== "undefined" && IS_JUEJIN) {
+      return p === "/login" || p.startsWith("/login/") ||
+             p === "/passport" || p.startsWith("/passport/") ||
+             p === "/subscribe/auth";
+    }
+    if (typeof IS_V2EX !== "undefined" && IS_V2EX) {
+      return p === "/signin" || p.startsWith("/signin/") ||
+             p === "/signup" || p.startsWith("/signup/") ||
+             p === "/2fa" || p === "/forgot";
+    }
+    if (typeof IS_LINUXDO !== "undefined" && IS_LINUXDO) {
+      return p === "/login" || p.startsWith("/login/") ||
+             p === "/signup" || p.startsWith("/signup/") ||
+             p.startsWith("/invites/") || p.startsWith("/password_reset");
+    }
+    return false;
+  }
+
   function isTopicPath(pathname) {
     if (typeof IS_JUEJIN !== "undefined" && IS_JUEJIN) return /^\/pin\//.test(pathname);
     if (typeof IS_ZHIHU !== "undefined" && IS_ZHIHU) return /^\/(?:question|p)\//.test(pathname);
@@ -1609,6 +1634,7 @@
   }
 
   function isHomePath(pathname) {
+    if (isAuthPath(pathname)) return false;
     if (IS_ZHIHU) {
       return !isTopicPath(pathname);
     }
@@ -24681,39 +24707,42 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   /* ============================== 全局企业微信风格登录弹层 ============================== */
 
   function getPlatformInfo() {
+    const nextHref = typeof location !== "undefined" ? location.href : "";
+    const nextPath = typeof location !== "undefined" ? (location.pathname + location.search) : "";
+
     if (IS_ZHIHU) {
+      const loginUrl = `https://www.zhihu.com/signin?next=${encodeURIComponent(nextHref)}`;
       return {
         key: "zhihu",
         name: "知乎",
         disguiseName: "知识协作中心",
         iconSvg: `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M5.72 4.41c.21-.4.49-.78.84-1.12.18-.18.44-.29.7-.29h.1c.55 0 1 .45 1 1v5.27h3.69c.55 0 1 .45 1 1s-.45 1-1 1H8.36v7.35c0 .55-.45 1-1 1s-1-.45-1-1v-7.35H2.67c-.55 0-1-.45-1-1s.45-1 1-1h3.69V4.41zM14.65 3.5c.55 0 1 .45 1 1v12.21l3.52-3.52c.39-.39 1.02-.39 1.41 0 .39.39.39 1.02 0 1.41l-4.7 4.7a1 1 0 0 1-1.41 0l-.82-.82a1 1 0 0 1-.29-.71V4.5c0-.55.45-1 1.29-1z"/></svg>`,
-        loginUrl: "https://www.zhihu.com/signin",
-        signupUrl: "https://www.zhihu.com/signin",
-        loginSelector: ".AppHeader-login, button.AppHeader-login",
+        loginUrl,
+        signupUrl: loginUrl,
         benefits: "登录后可参与回答讨论、展开全部回复、点赞互动与同步关注"
       };
     }
     if (IS_JUEJIN) {
+      const loginUrl = `https://juejin.cn/login?return_to=${encodeURIComponent(nextHref)}`;
       return {
         key: "juejin",
         name: "稀土掘金",
         disguiseName: "技术研发社区",
         iconSvg: `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2.5 4.8 8.2l1.6 1.3L12 5.1l5.6 4.4 1.6-1.3L12 2.5zm0 5.4L6.4 12.3l1.6 1.3 4-3.2 4 3.2 1.6-1.3L12 7.9zm0 5.4-2.4 1.9 2.4 1.9 2.4-1.9-2.4-1.9zm0 5.4-7.2-5.7-1.6 1.3 8.8 7 8.8-7-1.6-1.3-7.2 5.7z"/></svg>`,
-        loginUrl: "https://juejin.cn/login",
-        signupUrl: "https://juejin.cn/login",
-        loginSelector: ".login-button, button.login-button, .nav-item.auth button",
+        loginUrl,
+        signupUrl: loginUrl,
         benefits: "登录后可发表沸点文章、收藏内容、点赞回复与每日签到"
       };
     }
     if (IS_V2EX) {
+      const loginUrl = `https://www.v2ex.com/signin?next=${encodeURIComponent(nextPath)}`;
       return {
         key: "v2ex",
         name: "V2EX",
         disguiseName: "技术协同平台",
         iconSvg: `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h4.2l5.8 11.2L17.8 4H22l-8.2 16h-3.6L2 4z"/></svg>`,
-        loginUrl: "https://v2ex.com/signin",
-        signupUrl: "https://v2ex.com/signup",
-        loginSelector: "a[href='/signin'], a[href*='/signin']",
+        loginUrl,
+        signupUrl: "https://www.v2ex.com/signup",
         benefits: "登录后可参与主题交流、回复回帖、领取每日银币和查看提醒"
       };
     }
@@ -24724,12 +24753,13 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       iconSvg: `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg>`,
       loginUrl: "/login",
       signupUrl: "/signup",
-      loginSelector: ".login-button, #login-link, .d-header .login-button, .header-buttons .login-button",
       benefits: "登录后可畅享社区交流、发布主题讨论、回帖与点赞互动"
     };
   }
 
   function isUserLoggedIn() {
+    if (isAuthPath()) return false;
+
     if (IS_ZHIHU) {
       if (document.querySelector(".AppHeader-login, button.AppHeader-login, .SignContainer, .SignFlowModal")) {
         return false;
@@ -24799,58 +24829,83 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     return Boolean(username && !/^(undefined|null|none|guest)$/i.test(username));
   }
 
-  function triggerPlatformLogin() {
-    const info = getPlatformInfo();
-    if (info.loginSelector) {
-      const el = document.querySelector(info.loginSelector);
-      if (el && typeof el.click === "function") {
-        try {
-          el.click();
-          return true;
-        } catch (e) {
-          console.warn("[linuxdo-wecom] click login trigger failed", e);
-        }
-      }
-    }
+  function triggerPlatformLogin(newTab = false) {
     if (IS_LINUXDO) {
       try {
-        if (typeof discourseRouteTo === "function") {
-          discourseRouteTo("/login");
-          return true;
+        const owner = getEmberOwner();
+        if (owner) {
+          const appRoute = owner.lookup?.("route:application");
+          if (appRoute && typeof appRoute.send === "function") {
+            appRoute.send("showLogin");
+            return true;
+          }
+          const modalService = safeLookup(owner, "service:modal");
+          if (modalService && typeof modalService.show === "function") {
+            modalService.show("login");
+            return true;
+          }
         }
       } catch {}
-    }
-    if (info.loginUrl) {
-      if (info.loginUrl.startsWith("http")) {
-        window.location.href = info.loginUrl;
+      const btn = document.querySelector(".d-header .login-button, .header-buttons .login-button, button.login-button, #login-link");
+      if (btn && typeof btn.click === "function") {
+        try {
+          btn.click();
+          return true;
+        } catch {}
+      }
+      if (newTab) {
+        window.open("/login", "_blank", "noopener,noreferrer");
       } else {
-        window.location.href = location.origin + (info.loginUrl.startsWith("/") ? "" : "/") + info.loginUrl;
+        window.location.href = "/login";
+      }
+      return true;
+    }
+
+    const info = getPlatformInfo();
+    if (info.loginUrl) {
+      if (newTab) {
+        window.open(info.loginUrl, "_blank", "noopener,noreferrer");
+      } else {
+        window.location.href = info.loginUrl;
       }
       return true;
     }
     return false;
   }
 
-  function triggerPlatformSignup() {
-    const info = getPlatformInfo();
+  function triggerPlatformSignup(newTab = false) {
     if (IS_LINUXDO) {
-      const signupBtn = document.querySelector(".sign-up-button, .btn-primary.sign-up-button");
-      if (signupBtn && typeof signupBtn.click === "function") {
-        signupBtn.click();
-        return true;
-      }
       try {
-        if (typeof discourseRouteTo === "function") {
-          discourseRouteTo("/signup");
-          return true;
+        const owner = getEmberOwner();
+        if (owner) {
+          const appRoute = owner.lookup?.("route:application");
+          if (appRoute && typeof appRoute.send === "function") {
+            appRoute.send("showCreateAccount");
+            return true;
+          }
         }
       } catch {}
-    }
-    if (info.signupUrl) {
-      if (info.signupUrl.startsWith("http")) {
-        window.location.href = info.signupUrl;
+      const btn = document.querySelector(".d-header .sign-up-button, .header-buttons .sign-up-button, button.sign-up-button");
+      if (btn && typeof btn.click === "function") {
+        try {
+          btn.click();
+          return true;
+        } catch {}
+      }
+      if (newTab) {
+        window.open("/signup", "_blank", "noopener,noreferrer");
       } else {
-        window.location.href = location.origin + (info.signupUrl.startsWith("/") ? "" : "/") + info.signupUrl;
+        window.location.href = "/signup";
+      }
+      return true;
+    }
+
+    const info = getPlatformInfo();
+    if (info.signupUrl) {
+      if (newTab) {
+        window.open(info.signupUrl, "_blank", "noopener,noreferrer");
+      } else {
+        window.location.href = info.signupUrl;
       }
       return true;
     }
@@ -24952,8 +25007,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         } else if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
           e.preventDefault();
           document.removeEventListener("keydown", onKey);
-          triggerPlatformLogin();
           closeWecomLoginDialog(true);
+          triggerPlatformLogin(false);
         }
       };
       document.addEventListener("keydown", onKey);
@@ -24962,13 +25017,14 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         const actionBtn = e.target.closest("[data-login-action]");
         if (actionBtn) {
           const action = actionBtn.getAttribute("data-login-action");
+          const isNewTab = Boolean(e.ctrlKey || e.metaKey);
           document.removeEventListener("keydown", onKey);
           if (action === "login") {
-            triggerPlatformLogin();
             closeWecomLoginDialog(true);
+            triggerPlatformLogin(isNewTab);
           } else if (action === "signup") {
-            triggerPlatformSignup();
             closeWecomLoginDialog("signup");
+            triggerPlatformSignup(isNewTab);
           } else {
             closeWecomLoginDialog(false);
           }
@@ -24988,9 +25044,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   function scheduleInitialLoginCheck(delayMs = 1200) {
     if (hasAutoPromptedLoginInPage) return;
+    if (isAuthPath()) return;
     if (getViewMode() === "native" || otherThemeActive()) return;
     setTimeout(() => {
       if (hasAutoPromptedLoginInPage) return;
+      if (isAuthPath()) return;
       if (getViewMode() === "native" || otherThemeActive()) return;
       if (!isUserLoggedIn()) {
         hasAutoPromptedLoginInPage = true;
@@ -43259,6 +43317,12 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     if (!document.body) return;
 
     const pathname = location.pathname;
+    if (isAuthPath(pathname)) {
+      teardownTheme();
+      document.documentElement.classList.remove(LOCK_CLASS, "wecom-topic-open", "wecom-members-open");
+      return;
+    }
+
     const isV2exNew = IS_V2EX && (pathname === "/new" || pathname.startsWith("/new/"));
     document.documentElement.classList.toggle("wecom-v2ex-new-page", isV2exNew);
 
