@@ -12154,10 +12154,10 @@ test("Test 154: Instant Zhihu answer clamping, high-speed pagination via interna
   const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
-  // 1. Version matches 0.8.28
-  assert.ok(metaContent.includes("@version      0.8.28"), "meta.js version must be 0.8.28");
-  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.28";'), "user.js version must be 0.8.28");
-  assert.ok(readmeContent.includes("0.8.28"), "README.md version must be 0.8.28");
+  // 1. Version matches 0.8.28 or newer
+  assert.ok(/@version\s+0\.8\.(2[8-9]|[3-9]\d)/.test(metaContent), "meta.js version must be 0.8.28 or newer");
+  assert.ok(/SCRIPT_VERSION = "0\.8\.(2[8-9]|[3-9]\d)"/.test(scriptContent), "user.js version must be 0.8.28 or newer");
+  assert.ok(/0\.8\.(2[8-9]|[3-9]\d)/.test(readmeContent), "README.md version must be 0.8.28 or newer");
 
   // 2. Instant zero-delay Zhihu answer clamping heuristics
   assert.ok(
@@ -12177,7 +12177,7 @@ test("Test 154: Instant Zhihu answer clamping, high-speed pagination via interna
   );
   assert.ok(
     scriptContent.includes("const client = getZhihuInternalClient();") &&
-    scriptContent.includes("/api/v4/questions/${cleanId}/feeds?include=data[*].content,voteup_count,comment_count,author.headline,badge"),
+    scriptContent.includes("/api/v4/questions/${cleanId}/answers?include=data[*].content,voteup_count,comment_count,author.headline,badge"),
     "fetchZhihuQuestionFeeds must use Zhihu internal client signed requests to bypass 403 Forbidden"
   );
 
@@ -12193,7 +12193,7 @@ test("Test 154: Instant Zhihu answer clamping, high-speed pagination via interna
 
   // 5. Background pre-fetch of next answers into zhihuCapturedAnswersPool on opening
   assert.ok(
-    scriptContent.includes("if (chatState.zhihuHasMore && posts.length <= 6) {") &&
+    scriptContent.includes("if (posts.length <= 6) {") &&
     scriptContent.includes("const pre = await fetchZhihuQuestionFeeds(rawId, Math.max(1, posts.length - 1), 10);"),
     "loadTopic must prefetch next answers into pool in background for instant pagination"
   );
@@ -12206,6 +12206,49 @@ test("Test 154: Instant Zhihu answer clamping, high-speed pagination via interna
   assert.ok(
     scriptContent.includes("if (body.scrollTop + body.clientHeight >= body.scrollHeight - (IS_ZHIHU ? 320 : 160)) loadNewerPosts();"),
     "handleChatBodyScroll must trigger loadNewerPosts earlier (320px) on Zhihu"
+  );
+});
+
+test("Test 155: Prevention of premature Zhihu pagination end ('已加载全部') and accurate multi-answer question loading (v0.8.29)", () => {
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version 0.8.29
+  assert.ok(metaContent.includes("@version      0.8.29"), "meta.js version must be 0.8.29");
+  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.29";'), "user.js version must be 0.8.29");
+  assert.ok(readmeContent.includes("0.8.29"), "README.md version must be 0.8.29");
+
+  // 2. Recommend item mapping avoids polluting question reply_count with single answer's commentCount
+  assert.ok(
+    scriptContent.includes("const ansCount = isArticle\n      ? commentCount\n      : Number(target.question?.answerCount || target.question?.answer_count || target.answerCount || target.answer_count || 0);"),
+    "mapZhihuRecommendItemToTopic must not overwrite question reply_count with single answer commentCount"
+  );
+
+  // 3. parseZhihuHtml extracts answer count from Redux, microdata meta tags and headings
+  assert.ok(
+    scriptContent.includes('html.match(/<meta\\s+itemprop=["\']answerCount["\']\\s+content=["\'](\\d+)["\']/i)') &&
+    scriptContent.includes("question.answerCount = answerCount;") &&
+    scriptContent.includes("question.answer_count = answerCount;"),
+    "parseZhihuHtml must attach answerCount and answer_count to question"
+  );
+
+  // 4. fetchZhihuTopicData hasMoreAns logic prevents locking questions with >= 5 answers
+  assert.ok(
+    scriptContent.includes("const hasMoreAns = totalAnsCount > 5 ? (answers.length < totalAnsCount) : (answers.length >= 5);"),
+    "fetchZhihuTopicData must keep hasMoreAns=true for questions with >= 5 answers even if totalAnsCount was initially small"
+  );
+
+  // 5. fetchZhihuQuestionFeeds tries /answers endpoint first with separate try-catch and updates totals
+  assert.ok(
+    scriptContent.includes("const ansUrl = `/api/v4/questions/${cleanId}/answers?include=data[*].content,voteup_count,comment_count,author.headline,badge") &&
+    scriptContent.includes("chatState.topicData.reply_count = Number(ansData.paging.totals);"),
+    "fetchZhihuQuestionFeeds must update chatState.topicData.reply_count from paging.totals"
+  );
+
+  // 6. loadNewerPosts keeps zhihuHasMore true whenever fresh answers are fetched
+  assert.ok(
+    scriptContent.includes("chatState.zhihuHasMore = (totalAns > 5 && totalAns < 9000) ? (chatState.postsByNumber.size < totalAns + 1) : true;"),
+    "loadNewerPosts must keep zhihuHasMore true when fresh answers are fetched"
   );
 });
 

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.28
+// @version      0.8.29
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -20557,7 +20557,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.28";
+  const SCRIPT_VERSION = "0.8.29";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -23104,6 +23104,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       }
     }
 
+    const ansCount = isArticle
+      ? commentCount
+      : Number(target.question?.answerCount || target.question?.answer_count || target.answerCount || target.answer_count || 0);
+
     return {
       id: topicId,
       title,
@@ -23114,8 +23118,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       avatar_template: avatar,
       node_name: isArticle ? "文章" : "问答",
       hot_metric: voteupCount > 0 ? `${voteupCount} 赞同` : "",
-      posts_count: commentCount + 1,
-      reply_count: commentCount,
+      posts_count: ansCount > 0 ? ansCount + 1 : (isArticle ? commentCount + 1 : 1),
+      reply_count: ansCount > 0 ? ansCount : (isArticle ? commentCount : 0),
       bumped_at: target.updated_time ? target.updated_time * 1000 : Date.now(),
       created_at: target.created_time ? target.created_time * 1000 : Date.now(),
       slug: isArticle ? "article" : (isAnswer && !questionId ? "answer" : "question"),
@@ -23485,6 +23489,31 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         });
       } catch (_) {}
     }
+    if (question) {
+      let answerCount = Number(
+        question?.answerCount ??
+        question?.answer_count ??
+        question?.answersCount ??
+        question?.reply_count ??
+        question?.replyCount ??
+        state?.question?.answers?.[questionId]?.totals ??
+        state?.question?.answers?.[targetId]?.totals ??
+        0
+      );
+      if (!answerCount && typeof html === "string") {
+        const mMeta = html.match(/<meta\s+itemprop=["']answerCount["']\s+content=["'](\d+)["']/i) ||
+                      html.match(/<meta\s+property=["']zhihu:answer_count["']\s+content=["'](\d+)["']/i);
+        if (mMeta) answerCount = parseInt(mMeta[1], 10) || 0;
+      }
+      if (!answerCount && typeof html === "string") {
+        const mText = html.match(/(\d[\d,]*)\s*个回答/);
+        if (mText) answerCount = parseInt(mText[1].replace(/,/g, ""), 10) || 0;
+      }
+      if (answerCount > 0) {
+        question.answerCount = answerCount;
+        question.answer_count = answerCount;
+      }
+    }
     return { question, answers };
   }
 
@@ -23816,29 +23845,49 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     if (!cleanId) return [];
 
     // 1. Tier 1: Zhihu internal Axios client (signed with x-zse-96 / x-zse-93)
-    try {
-      const client = getZhihuInternalClient();
-      if (client) {
+    const client = getZhihuInternalClient();
+    if (client) {
+      // 1a. Try answers endpoint first (universal for questions)
+      try {
+        const ansUrl = `/api/v4/questions/${cleanId}/answers?include=data[*].content,voteup_count,comment_count,author.headline,badge&limit=${limit}&offset=${offset}&platform=desktop&sort_by=default`;
+        const ansResp = await client.get(ansUrl, signal ? { signal } : {});
+        const ansData = ansResp?.data?.data != null ? ansResp.data : (ansResp?.data || ansResp);
+        if (ansData?.paging?.totals != null && Number(ansData.paging.totals) > 0) {
+          if (chatState.topicData && (!chatState.topicData.reply_count || chatState.topicData.reply_count < Number(ansData.paging.totals))) {
+            chatState.topicData.reply_count = Number(ansData.paging.totals);
+          }
+        }
+        const rawAns = Array.isArray(ansData?.data) ? ansData.data : (Array.isArray(ansData) ? ansData : []);
+        const validAns = rawAns.filter((a) => a && (a.id || a.content));
+        if (validAns.length > 0) return validAns;
+      } catch (_) {}
+
+      // 1b. Try feeds endpoint
+      try {
         const reqUrl = `/api/v4/questions/${cleanId}/feeds?include=data[*].content,voteup_count,comment_count,author.headline,badge&limit=${limit}&offset=${offset}&order=default&platform=desktop`;
         const resp = await client.get(reqUrl, signal ? { signal } : {});
         const resData = resp?.data?.data != null ? resp.data : (resp?.data || resp);
+        if (resData?.paging?.totals != null && Number(resData.paging.totals) > 0) {
+          if (chatState.topicData && (!chatState.topicData.reply_count || chatState.topicData.reply_count < Number(resData.paging.totals))) {
+            chatState.topicData.reply_count = Number(resData.paging.totals);
+          }
+        }
         const rawFeed = Array.isArray(resData?.data) ? resData.data : (Array.isArray(resData) ? resData : []);
         const feedAns = rawFeed
           .map((item) => (item?.target && (item.target.type === "answer" || item.target.content || item.target.id) ? item.target : item))
           .filter((a) => a && (a.id || a.content));
         if (feedAns.length > 0) return feedAns;
-
-        // Try answers endpoint
-        const ansUrl = `/api/v4/questions/${cleanId}/answers?include=data[*].content,voteup_count,comment_count,author.headline,badge&limit=${limit}&offset=${offset}&platform=desktop&sort_by=default`;
-        const ansResp = await client.get(ansUrl, signal ? { signal } : {});
-        const ansData = ansResp?.data?.data != null ? ansResp.data : (ansResp?.data || ansResp);
-        const rawAns = Array.isArray(ansData?.data) ? ansData.data : (Array.isArray(ansData) ? ansData : []);
-        const validAns = rawAns.filter((a) => a && (a.id || a.content));
-        if (validAns.length > 0) return validAns;
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
 
     // 2. Tier 2: Direct API fetch fallback
+    try {
+      const ansResp = await zhihuApi(`/api/v4/questions/${cleanId}/answers?include=data[*].content,voteup_count,comment_count,author.headline,badge&limit=${limit}&offset=${offset}&platform=desktop&sort_by=default`, { signal });
+      const rawAns = Array.isArray(ansResp?.data) ? ansResp.data : [];
+      const validAns = rawAns.filter((a) => a && (a.id || a.content));
+      if (validAns.length > 0) return validAns;
+    } catch (_) {}
+
     try {
       const ansResp = await zhihuApi(`/api/v4/questions/${cleanId}/feeds?include=data[*].content,voteup_count,comment_count,author.headline,badge&limit=${limit}&offset=${offset}&order=default&platform=desktop`, { signal });
       const rawFeed = ansResp?.data || [];
@@ -24082,8 +24131,29 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const answerPosts = answers.map((ans, idx) => mapZhihuAnswerToPost(ans, idx + 2));
     const allPosts = [opPost, ...answerPosts];
     const stream = [rawId, ...answerPosts.map((p) => String(p.id))];
-    const totalAnsCount = question.answer_count != null ? Number(question.answer_count) : (matchedTopic?.reply_count || 0);
-    const hasMoreAns = totalAnsCount > 0 ? (answers.length < totalAnsCount) : (answers.length >= 5);
+    let totalAnsCount = Number(
+      question?.answerCount ??
+      question?.answer_count ??
+      question?.answersCount ??
+      question?.reply_count ??
+      question?.replyCount ??
+      initial?.initialState?.question?.answers?.[rawId]?.totals ??
+      0
+    );
+    if (!totalAnsCount && typeof document !== "undefined") {
+      const docMeta = document.querySelector('meta[itemprop="answerCount"]')?.getAttribute("content") ||
+                      document.querySelector('meta[property="zhihu:answer_count"]')?.getAttribute("content");
+      if (docMeta) totalAnsCount = parseInt(docMeta, 10) || 0;
+      if (!totalAnsCount) {
+        const headerEl = document.querySelector("h4.List-headerText, .QuestionPage [class*='List-headerText']");
+        const mText = (headerEl?.textContent || "").match(/(\d[\d,]*)\s*个回答/);
+        if (mText) totalAnsCount = parseInt(mText[1].replace(/,/g, ""), 10) || 0;
+      }
+    }
+    if (!totalAnsCount && matchedTopic?.node_name === "热榜" && matchedTopic?.reply_count) {
+      totalAnsCount = Number(matchedTopic.reply_count) || 0;
+    }
+    const hasMoreAns = totalAnsCount > 5 ? (answers.length < totalAnsCount) : (answers.length >= 5);
 
     return {
       id: rawId,
@@ -24092,8 +24162,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       zhihu_type: "question",
       zhihu_offset: answers.length,
       zhihu_has_more: hasMoreAns,
-      posts_count: totalAnsCount > 0 ? totalAnsCount + 1 : allPosts.length,
-      reply_count: totalAnsCount > 0 ? totalAnsCount : Math.max(0, allPosts.length - 1),
+      posts_count: totalAnsCount > 0 ? totalAnsCount + 1 : (hasMoreAns ? 9999 : allPosts.length),
+      reply_count: totalAnsCount > 0 ? totalAnsCount : (hasMoreAns ? 0 : Math.max(0, allPosts.length - 1)),
       post_stream: { stream, posts: allPosts }
     };
   }
@@ -39975,7 +40045,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             sub.textContent = `企业内部群 · ${chatState.replyTotal || replyTotal} 条消息`;
           } else if (IS_ZHIHU) {
             const zSuffix = data.zhihu_type === "article" ? "条评论" : "条回答";
-            sub.textContent = `归属于 zhihu.com · ${chatState.replyTotal || replyTotal} ${zSuffix}`;
+            const replyNum = (chatState.replyTotal && chatState.replyTotal < 9000)
+              ? chatState.replyTotal
+              : ((replyTotal > 0 && replyTotal < 9000) ? replyTotal : Math.max(0, posts.length - 1));
+            sub.textContent = `归属于 zhihu.com · ${replyNum} ${zSuffix}`;
           } else if (IS_V2EX) {
             const nodePart = (data.node_title || data.node_name) ? `归属于 ${data.node_title || data.node_name} · ` : "归属于 v2ex.com · ";
             sub.textContent = `${nodePart}${chatState.replyTotal || replyTotal} 条回复`;
@@ -39995,7 +40068,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         } else if (IS_ZHIHU) {
           syncZhihuPaginationFooter(body, false);
           applyZhihuAnswerClamping(body);
-          if (chatState.zhihuHasMore && posts.length <= 6) {
+          if (posts.length <= 6) {
             setTimeout(async () => {
               const isArticle = String(topicId).startsWith("p_");
               const rawId = isArticle ? String(topicId).slice(2) : String(topicId);
@@ -40010,6 +40083,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
                       }
                     });
                     zhihuCapturedAnswersPool.set(rawId, pool);
+                    chatState.zhihuHasMore = true;
+                    chatState.hasNewer = true;
+                    const b = document.querySelector(".wecom-chat-body");
+                    if (b) syncZhihuPaginationFooter(b, false);
                   }
                 } catch (_) {}
               }
@@ -40142,14 +40219,14 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     let bar = body.querySelector(".wecom-zhihu-more-bar");
     const hasMore = Boolean(chatState.zhihuHasMore);
     const renderedCount = body.querySelectorAll(".wecom-msg[data-post-number]").length;
-    const totalAns = Number(chatState.topicData?.reply_count || chatState.topicData?.posts_count || 0);
+    const totalAns = Number(chatState.topicData?.reply_count || 0);
 
     if (loading || hasMore) {
       if (bar) bar.remove();
       return;
     }
 
-    if (renderedCount > 1 || totalAns > 0) {
+    if (renderedCount > 1) {
       if (!bar) {
         bar = document.createElement("div");
         bar.className = "wecom-zhihu-more-bar wecom-v2ex-more-bar is-end";
@@ -40158,7 +40235,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       bar.className = "wecom-zhihu-more-bar wecom-v2ex-more-bar is-end";
       bar.removeAttribute("role");
       bar.removeAttribute("title");
-      bar.innerHTML = `<span>— 已加载全部知乎回答（共 ${totalAns || Math.max(0, renderedCount - 1)} 条）—</span>`;
+      const numText = (totalAns > 0 && totalAns < 9000) ? `共 ${totalAns} 条` : `共 ${Math.max(0, renderedCount - 1)} 条`;
+      bar.innerHTML = `<span>— 已加载全部知乎回答（${numText}）—</span>`;
     } else if (bar) {
       bar.remove();
     }
@@ -41686,8 +41764,17 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             appendFreshPosts(freshPosts, body, { scroll: false, flat: true });
             chatState.zhihuOffset = offset + freshPosts.length;
           }
-          const totalAns = Number(chatState.topicData?.reply_count || chatState.topicData?.posts_count || 0);
-          chatState.zhihuHasMore = totalAns > 0 ? (chatState.postsByNumber.size < totalAns + 1) : (freshPosts.length > 0);
+          const totalAns = Number(chatState.topicData?.reply_count || 0);
+          if (freshPosts.length > 0) {
+            chatState.zhihuHasMore = (totalAns > 5 && totalAns < 9000) ? (chatState.postsByNumber.size < totalAns + 1) : true;
+            if (chatState.topicData && totalAns < 9000 && totalAns > 0) {
+              chatState.replyTotal = totalAns;
+            } else {
+              chatState.replyTotal = Math.max(chatState.replyTotal || 0, chatState.postsByNumber.size - 1);
+            }
+          } else if (unrendered.length === 0) {
+            chatState.zhihuHasMore = false;
+          }
           chatState.hasNewer = chatState.zhihuHasMore;
         }
       } catch (err) {
