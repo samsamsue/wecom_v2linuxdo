@@ -12304,10 +12304,10 @@ test("Test 157: Elimination of duplicate question preview in 2nd floor, rich hot
   const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
-  // 1. Version 0.8.31
-  assert.ok(metaContent.includes("@version      0.8.31"), "meta.js version must be 0.8.31");
-  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.31";'), "user.js version must be 0.8.31");
-  assert.ok(readmeContent.includes("0.8.31"), "README.md version must be 0.8.31");
+  // 1. Version 0.8.31 or newer
+  assert.ok(/@version\s+0\.8\.(31|[3-9]\d)/.test(metaContent), "meta.js version must be 0.8.31 or newer");
+  assert.ok(/SCRIPT_VERSION = "0\.8\.(31|[3-9]\d)"/.test(scriptContent), "user.js version must be 0.8.31 or newer");
+  assert.ok(/0\.8\.(31|[3-9]\d)/.test(readmeContent), "README.md version must be 0.8.31 or newer");
 
   // 2. Elimination of fake duplicate preview answer in 2nd floor for questions
   assert.ok(
@@ -12357,6 +12357,68 @@ test("Test 157: Elimination of duplicate question preview in 2nd floor, rich hot
     "loadTopic must auto-render initial batch of answers into DOM when posts.length <= 1"
   );
 });
+
+test("Test 158: Zhihu recommend default chip, hot list pagination boundary & covers, and full answer content extraction (v0.8.32)", () => {
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version 0.8.32
+  assert.ok(metaContent.includes("@version      0.8.32"), "meta.js version must be 0.8.32");
+  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.32";'), "user.js version must be 0.8.32");
+  assert.ok(readmeContent.includes("0.8.32"), "README.md version must be 0.8.32");
+
+  // 2. Recommend chip is default and active on Zhihu
+  assert.ok(
+    scriptContent.includes('<button type="button" class="wecom-chip active" data-chip="recommend">推荐</button>\n          <button type="button" class="wecom-chip" data-chip="hot">热榜</button>'),
+    "chipsHtml must set recommend as the default active chip on Zhihu"
+  );
+  assert.ok(
+    scriptContent.includes('let activeChip = "recommend";') &&
+    scriptContent.includes('if (p.startsWith("/hot") || listState.apiPath === "/hot" || listState.apiPath?.includes("hot")) activeChip = "hot";'),
+    "syncListChips must default to recommend and switch to hot only on hot paths"
+  );
+
+  // 3. Strict hot list isolation and pagination boundary (no recommend feed leak)
+  assert.ok(
+    scriptContent.includes('const isHot = listState.apiPath === "/hot" || listState.apiPath?.includes("hot");\n      if (isHot) {\n        listState.moreUrl = null;\n        const statusEl = document.querySelector(".wecom-list-status");\n        if (statusEl) {\n          statusEl.textContent = `已加载全部热榜（共 ${listState.topics.length} 条）`;'),
+    "loadMoreList must terminate hot list with boundary notice and never load recommendations"
+  );
+  assert.ok(
+    scriptContent.includes('topics = await fetchZhihuHotList();\n        listState.zhihuOffset = topics.length;\n        listState.moreUrl = null;'),
+    "loadZhihuList must set moreUrl = null for hot list"
+  );
+
+  // 4. Hot list cover and SSR HTML priority
+  assert.ok(
+    scriptContent.includes('const pageDoc = await fetchZhihuPageDoc("/hot");') &&
+    scriptContent.includes('const match = html?.match(/<script\\s+id=["\']js-initialData["\'][^>]*>([\\s\\S]*?)<\\/script>/i);'),
+    "fetchZhihuHotList must prioritize SSR HTML of /hot page to guarantee rich thumbnails"
+  );
+  assert.ok(
+    !scriptContent.includes('const rankResp = await zhihuApi("/api/v4/creators/rank/hot?domain=0&limit=50");\n      const rankItems = rankResp?.data || [];\n      if (rankItems.length > 0) {\n        return rankItems.map(mapZhihuCreatorHotItemToTopic)'),
+    "fetchZhihuHotList must not fall back to creator rank hot without images"
+  );
+
+  // 5. Answer content extraction and non-empty fallback protection
+  assert.ok(
+    scriptContent.includes("const rawContent = raw.content || raw.editable_content || raw.editableContent || raw.excerpt || \"\";") &&
+    scriptContent.includes("content = snippet ? `<p>${escapeHtml(snippet)}</p>` : `<p>（回答内容需展开或登录后查看）</p>`;"),
+    "mapZhihuAnswerToPost must extract editable_content and provide non-empty fallback"
+  );
+  assert.ok(
+    scriptContent.includes("const ZHIHU_ANSWERS_EXTRA = ") &&
+    scriptContent.includes("editable_content,is_normal,admin_closed_comment"),
+    "fetchZhihuQuestionFeeds must send full Zhihu Web include fields"
+  );
+
+  // 6. XMLHttpRequest setRequestHeader hook captures signed headers
+  assert.ok(
+    scriptContent.includes("const _origXhrSetHeader = XMLHttpRequest.prototype.setRequestHeader;") &&
+    scriptContent.includes('lower === "x-zse-96" || lower === "x-zst-81"'),
+    "XMLHttpRequest.prototype.setRequestHeader hook must capture x-zse-96 and x-zst-81 headers"
+  );
+});
+
 
 
 
