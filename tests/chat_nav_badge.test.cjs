@@ -12213,10 +12213,10 @@ test("Test 155: Prevention of premature Zhihu pagination end ('已加载全部')
   const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
-  // 1. Version 0.8.29
-  assert.ok(metaContent.includes("@version      0.8.29"), "meta.js version must be 0.8.29");
-  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.29";'), "user.js version must be 0.8.29");
-  assert.ok(readmeContent.includes("0.8.29"), "README.md version must be 0.8.29");
+  // 1. Version 0.8.29 or newer
+  assert.ok(/@version\s+0\.8\.(29|[3-9]\d)/.test(metaContent), "meta.js version must be 0.8.29 or newer");
+  assert.ok(/SCRIPT_VERSION = "0\.8\.(29|[3-9]\d)"/.test(scriptContent), "user.js version must be 0.8.29 or newer");
+  assert.ok(/0\.8\.(29|[3-9]\d)/.test(readmeContent), "README.md version must be 0.8.29 or newer");
 
   // 2. Recommend item mapping avoids polluting question reply_count with single answer's commentCount
   assert.ok(
@@ -12251,6 +12251,55 @@ test("Test 155: Prevention of premature Zhihu pagination end ('已加载全部')
     "loadNewerPosts must keep zhihuHasMore true when fresh answers are fetched"
   );
 });
+
+test("Test 156: Zhihu authentic author avatars and high-speed list pagination (v0.8.30)", () => {
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version 0.8.30
+  assert.ok(metaContent.includes("@version      0.8.30"), "meta.js version must be 0.8.30");
+  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.30";'), "user.js version must be 0.8.30");
+  assert.ok(readmeContent.includes("0.8.30"), "README.md version must be 0.8.30");
+
+  // 2. Creator hot item maps authentic author avatar
+  assert.ok(
+    scriptContent.includes("v2ex_avatar: authorAvatar,") &&
+    scriptContent.includes("avatar_template: authorAvatar,"),
+    "mapZhihuCreatorHotItemToTopic must assign v2ex_avatar and avatar_template"
+  );
+
+  // 3. convAvatarHtml prevents group avatar (百家姓九宫格) on Zhihu
+  assert.ok(
+    scriptContent.includes("if (!IS_ZHIHU && isGroupConversation(topic))"),
+    "convAvatarHtml must not execute groupAvatarHtml for Zhihu topics"
+  );
+  assert.ok(
+    scriptContent.includes('const label = (topic.node_name && topic.node_name !== "问答") ? topic.node_name : (topic.v2ex_author || displayName || "知乎");'),
+    "convAvatarHtml must provide clean Zhihu fallback badge"
+  );
+
+  // 4. Recommend list pagination eliminates 1.5s sleep loop and 45 serial calls
+  assert.ok(
+    !scriptContent.includes("for (let round = 0; round < 5 && zhihuRecommendPool.length <= offset + 20; round++)"),
+    "fetchZhihuRecommendList must remove multi-round domain looping"
+  );
+  assert.ok(
+    !scriptContent.includes("for (let i = 0; i < 6; i++) {\n      await new Promise((r) => setTimeout(r, 250));"),
+    "fetchZhihuRecommendList must remove 1.5s sleep loop"
+  );
+
+  // 5. High-speed recommend pagination uses internal signed Axios client
+  assert.ok(
+    scriptContent.includes("const client = getZhihuInternalClient();") &&
+    scriptContent.includes("await client.get(`/api/v3/feed/topstory/recommend?limit=20&action=down&desktop=true`);"),
+    "fetchZhihuRecommendList must leverage internal signed Axios client for feed"
+  );
+  assert.ok(
+    scriptContent.includes("if (zhihuRecommendPool.length >= offset + 20) {\n      return zhihuRecommendPool.slice(offset, offset + 20);\n    }"),
+    "fetchZhihuRecommendList must have instant fast-path for memory pool"
+  );
+});
+
 
 
 

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.29
+// @version      0.8.30
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -20557,7 +20557,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.29";
+  const SCRIPT_VERSION = "0.8.30";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -23001,7 +23001,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const metrics = target.metricsArea?.text || item.detail_text || (item.feedSpecific?.score ? `${Math.round(item.feedSpecific.score / 10000)} 万热度` : "");
     const answerCount = item.feedSpecific?.answerCount || target.answerCount || 0;
     const author = target.author?.name || "知乎热榜";
-    const avatar = target.author?.avatarUrl || target.imageArea?.url || "";
+    const avatar = target.author?.avatarUrl || target.author?.avatar_url ||
+                   target.imageArea?.url || target.thumbnail || item.thumbnail || item.image_url || "";
 
     return {
       id: topicId,
@@ -23087,8 +23088,20 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       title = isArticle ? (target.title || "知乎专栏文章") : (target.excerpt ? target.excerpt.slice(0, 40) : "知乎问答");
     }
     const excerpt = target.excerpt || target.content || "";
-    const author = target.author?.name || "知乎用户";
-    const avatar = target.author?.avatar_url || target.author?.avatarUrl || "";
+    let author = target.author?.name || "";
+    let avatar = target.author?.avatar_url || target.author?.avatarUrl || "";
+    if (!avatar && target.author) {
+      const userToken = typeof target.author === "string" ? target.author : (target.author?.id || target.author?.urlToken || target.author?.url_token);
+      const userEnt = userToken ? initial?.initialState?.entities?.users?.[userToken] : null;
+      if (userEnt) {
+        if (!author) author = userEnt.name || "";
+        avatar = userEnt.avatarUrl || userEnt.avatar_url || "";
+      }
+    }
+    if (!avatar && target.thumbnail) avatar = target.thumbnail;
+    if (!avatar && target.imageArea?.url) avatar = target.imageArea.url;
+    if (!avatar && target.image_url) avatar = target.image_url;
+    if (!author) author = target.author?.name || (isArticle ? "专栏作者" : "知友");
     const voteupCount = target.voteup_count || target.voteupCount || 0;
     const commentCount = target.comment_count || target.commentCount || 0;
 
@@ -23202,6 +23215,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const replyCount = Number(item?.reaction?.answer_num || q.answer_count || 0);
     const upvoteCount = Number(item?.reaction?.upvote_num || 0);
     const category = q.topics?.[0]?.name || "问答";
+    const authorName = q.creator?.name || q.author?.name || "知友";
+    const authorAvatar = q.creator?.avatar_url || q.creator?.avatarUrl ||
+                         q.author?.avatar_url || q.author?.avatarUrl ||
+                         q.topics?.[0]?.avatar_url || item.image_url || item.thumbnail || "";
     return {
       id: topicId,
       title,
@@ -23211,8 +23228,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       reply_count: replyCount,
       node_name: category,
       hot_metric: upvoteCount > 0 ? `${upvoteCount} 赞同` : (replyCount > 0 ? `${replyCount} 回答` : ""),
-      v2ex_author: q.creator?.name || "知友",
-      last_poster_username: q.creator?.name || "知友",
+      v2ex_author: authorName,
+      last_poster_username: authorName,
+      v2ex_avatar: authorAvatar,
+      avatar_template: authorAvatar,
       bumped_at: (q.updated_time || q.created || Date.now() / 1000) * 1000,
       created_at: (q.created || Date.now() / 1000) * 1000
     };
@@ -23702,135 +23721,91 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           zhihuRecommendPool.push(t);
         }
       });
-
-      // Try creators rank hot as primary API source (domain 0: all, limit 30)
-      if (zhihuRecommendPool.length <= offset + 10) {
-        try {
-          const rankResp = await zhihuApi(`/api/v4/creators/rank/hot?domain=0&limit=30&offset=0`);
-          const items = rankResp?.data || [];
-          items.forEach((item, i) => {
-            const mapped = mapZhihuCreatorHotItemToTopic(item, i);
-            if (mapped && mapped.id && !zhihuRecommendSeen.has(String(mapped.id))) {
-              zhihuRecommendSeen.add(String(mapped.id));
-              zhihuRecommendPool.push(mapped);
-            }
-          });
-        } catch (_) {}
-      }
-
-      // Supplement with hot list so pool always has 50+ items right away
-      if (zhihuRecommendPool.length <= offset + 10) {
-        try {
-          const hot = await fetchZhihuHotList();
-          hot.forEach((t) => {
-            if (t && t.id && !zhihuRecommendSeen.has(String(t.id))) {
-              zhihuRecommendSeen.add(String(t.id));
-              zhihuRecommendPool.push(t);
-            }
-          });
-        } catch (_) {}
-      }
     }
 
-    // Try calling Zhihu's Web recommend API directly
-    if (zhihuRecommendPool.length <= offset + 10) {
+    // Fast path: if pool already has enough items for this offset, return immediately without network latency
+    if (zhihuRecommendPool.length >= offset + 20) {
+      return zhihuRecommendPool.slice(offset, offset + 20);
+    }
+
+    const client = getZhihuInternalClient();
+
+    // Tier 1: Zhihu internal signed Axios client for feed recommend (~150ms)
+    if (client) {
       try {
-        const apiResp = await zhihuApi(`/api/v3/feed/topstory/recommend?limit=10&action=down&desktop=true`);
-        if (Array.isArray(apiResp?.data) && apiResp.data.length > 0) {
-          apiResp.data.forEach((item, i) => {
-            const mapped = mapZhihuRecommendItemToTopic(item, i);
-            if (mapped && mapped.id && !zhihuRecommendSeen.has(String(mapped.id))) {
-              zhihuRecommendSeen.add(String(mapped.id));
-              zhihuRecommendPool.push(mapped);
-            }
-          });
-        }
+        const resp = await client.get(`/api/v3/feed/topstory/recommend?limit=20&action=down&desktop=true`);
+        const resData = resp?.data?.data != null ? resp.data : (resp?.data || resp);
+        const rawFeed = Array.isArray(resData?.data) ? resData.data : (Array.isArray(resData) ? resData : []);
+        rawFeed.forEach((item, i) => {
+          const mapped = mapZhihuRecommendItemToTopic(item, i);
+          if (mapped && mapped.id && !zhihuRecommendSeen.has(String(mapped.id))) {
+            zhihuRecommendSeen.add(String(mapped.id));
+            zhihuRecommendPool.push(mapped);
+          }
+        });
+      } catch (_) {}
+    } else {
+      try {
+        const apiResp = await zhihuApi(`/api/v3/feed/topstory/recommend?limit=20&action=down&desktop=true`);
+        const rawFeed = Array.isArray(apiResp?.data) ? apiResp.data : [];
+        rawFeed.forEach((item, i) => {
+          const mapped = mapZhihuRecommendItemToTopic(item, i);
+          if (mapped && mapped.id && !zhihuRecommendSeen.has(String(mapped.id))) {
+            zhihuRecommendSeen.add(String(mapped.id));
+            zhihuRecommendPool.push(mapped);
+          }
+        });
       } catch (_) {}
     }
 
-    // Supplement with creators rank hot across multiple domains (domain 0 to 8) with pagination
-    if (zhihuRecommendPool.length <= offset + 20) {
-      const domains = [0, 1, 2, 3, 4, 5, 6, 7, 8];
-      for (let round = 0; round < 5 && zhihuRecommendPool.length <= offset + 20; round++) {
-        let addedInRound = 0;
-        for (const d of domains) {
-          try {
-            const rankResp = await zhihuApi(`/api/v4/creators/rank/hot?domain=${d}&limit=20&offset=${zhihuCreatorDomainOffset}`);
-            const items = rankResp?.data || [];
-            items.forEach((item, i) => {
-              const mapped = mapZhihuCreatorHotItemToTopic(item, i);
-              if (mapped && mapped.id && !zhihuRecommendSeen.has(String(mapped.id))) {
-                zhihuRecommendSeen.add(String(mapped.id));
-                zhihuRecommendPool.push(mapped);
-                addedInRound++;
-              }
-            });
-            if (zhihuRecommendPool.length > offset + 20) break;
-          } catch (_) {}
-        }
-        zhihuCreatorDomainOffset += 20;
-        if (addedInRound === 0 && zhihuCreatorDomainOffset > 300) break;
-      }
+    if (zhihuRecommendPool.length >= offset + 20) {
+      return zhihuRecommendPool.slice(offset, offset + 20);
+    }
+
+    // Tier 2: Creators rank hot API (targeted domain corresponding to offset, fast single call)
+    if (zhihuRecommendPool.length <= offset + 10) {
+      try {
+        const domain = (Math.floor(offset / 20)) % 9;
+        const rankResp = client
+          ? await client.get(`/api/v4/creators/rank/hot?domain=${domain}&limit=30&offset=0`).then(r => r?.data || r).catch(() => null)
+          : await zhihuApi(`/api/v4/creators/rank/hot?domain=${domain}&limit=30&offset=0`).catch(() => null);
+        const items = rankResp?.data || [];
+        items.forEach((item, i) => {
+          const mapped = mapZhihuCreatorHotItemToTopic(item, i);
+          if (mapped && mapped.id && !zhihuRecommendSeen.has(String(mapped.id))) {
+            zhihuRecommendSeen.add(String(mapped.id));
+            zhihuRecommendPool.push(mapped);
+          }
+        });
+      } catch (_) {}
+    }
+
+    // Tier 3: Hot list total
+    if (zhihuRecommendPool.length <= offset + 10) {
+      try {
+        const hot = await fetchZhihuHotList();
+        hot.forEach((t) => {
+          if (t && t.id && !zhihuRecommendSeen.has(String(t.id))) {
+            zhihuRecommendSeen.add(String(t.id));
+            zhihuRecommendPool.push(t);
+          }
+        });
+      } catch (_) {}
     }
 
     if (zhihuRecommendPool.length > offset) {
       return zhihuRecommendPool.slice(offset, offset + 20);
     }
 
+    // Tier 4: Quick non-blocking trigger and check DOM / captured pool
     triggerZhihuNativeFeedScroll();
-
-    // Wait up to 1.5s for Zhihu native client to load more feed into DOM or zhihuCapturedFeedPool
-    for (let i = 0; i < 6; i++) {
-      await new Promise((r) => setTimeout(r, 250));
-      const freshDom = extractZhihuTopicsFromDom(document);
-      [...freshDom, ...zhihuCapturedFeedPool.map(mapZhihuRecommendItemToTopic)].forEach((t) => {
-        if (t && t.id && !zhihuRecommendSeen.has(String(t.id))) {
-          zhihuRecommendSeen.add(String(t.id));
-          zhihuRecommendPool.push(t);
-        }
-      });
-      if (zhihuRecommendPool.length > offset) {
-        return zhihuRecommendPool.slice(offset, offset + 20);
+    const freshDom = extractZhihuTopicsFromDom(document);
+    [...freshDom, ...zhihuCapturedFeedPool.map(mapZhihuRecommendItemToTopic)].forEach((t) => {
+      if (t && t.id && !zhihuRecommendSeen.has(String(t.id))) {
+        zhihuRecommendSeen.add(String(t.id));
+        zhihuRecommendPool.push(t);
       }
-    }
-
-    if (offset === 0 && zhihuRecommendPool.length === 0) {
-      try {
-        const pageDoc = await fetchZhihuPageDoc("/");
-        const html = typeof pageDoc === "string" ? pageDoc : pageDoc.html;
-        const match = html.match(/<script\s+id=["']js-initialData["'][^>]*>([\s\S]*?)<\/script>/i);
-        if (match && match[1]) {
-          const parsed = JSON.parse(match[1]);
-          const newTopics = extractZhihuRecommendTopicsFromInitial(parsed);
-          newTopics.forEach((t) => {
-            if (t && t.id && !zhihuRecommendSeen.has(String(t.id))) {
-              zhihuRecommendSeen.add(String(t.id));
-              zhihuRecommendPool.push(t);
-            }
-          });
-          if (zhihuRecommendPool.length > 0) return zhihuRecommendPool.slice(0, 20);
-        }
-      } catch (_) {}
-    }
-
-    // Additional fallback: query /explore page HTML
-    if (zhihuRecommendPool.length <= offset) {
-      try {
-        const exploreDoc = await fetchZhihuPageDoc("/explore");
-        const exploreHtml = typeof exploreDoc === "string" ? exploreDoc : exploreDoc.html;
-        const match = exploreHtml.match(/<script\s+id=["']js-initialData["'][^>]*>([\s\S]*?)<\/script>/i);
-        if (match && match[1]) {
-          const parsed = JSON.parse(match[1]);
-          const exploreTopics = extractZhihuRecommendTopicsFromInitial(parsed);
-          exploreTopics.forEach((t) => {
-            if (t && t.id && !zhihuRecommendSeen.has(String(t.id))) {
-              zhihuRecommendSeen.add(String(t.id));
-              zhihuRecommendPool.push(t);
-            }
-          });
-        }
-      } catch (_) {}
-    }
+    });
 
     if (zhihuRecommendPool.length === 0 && offset === 0) {
       const hotFallback = await fetchZhihuHotList();
@@ -24317,6 +24292,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             hot_metric: `${q.answer_count || 0} 回答`,
             v2ex_author: q.author?.name || "知友",
             last_poster_username: q.author?.name || "知友",
+            v2ex_avatar: q.author?.avatar_url || q.author?.avatarUrl || "",
+            avatar_template: q.author?.avatar_url || q.author?.avatarUrl || "",
             bumped_at: Date.now() - idx * 60000,
             created_at: Date.now() - idx * 60000
           };
@@ -30848,7 +30825,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     if (topic.avatar_template) {
       return `<span class="wecom-conv-avatar"${authorAttr}><img src="${escapeHtml(fullAvatarUrl(topic.avatar_template))}" alt="" loading="lazy"></span>`;
     }
-    if (isGroupConversation(topic)) {
+    if (!IS_ZHIHU && isGroupConversation(topic)) {
       return groupAvatarHtml(topic, usersById || {});
     }
     const poster = (topic.posters || [])[0];
@@ -30856,6 +30833,12 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const displayName = userDisplayName(user, topic.last_poster_username || "?");
     if (user && user.avatar_template) {
       return `<span class="wecom-conv-avatar"${authorAttr}><img src="${escapeHtml(fullAvatarUrl(user.avatar_template))}" alt="" loading="lazy"></span>`;
+    }
+    if (IS_ZHIHU) {
+      const label = (topic.node_name && topic.node_name !== "问答") ? topic.node_name : (topic.v2ex_author || displayName || "知乎");
+      const letter = avatarLetter(label);
+      const bg = avatarColor(label);
+      return `<span class="wecom-conv-avatar is-text-avatar is-solid"${authorAttr} style="background:${bg}"><span class="wecom-avatar-text" style="color:#fff;font-weight:600;">${escapeHtml(letter)}</span></span>`;
     }
     return `<span class="wecom-conv-avatar is-text-avatar is-solid"${authorAttr} style="background:${avatarColor(displayName)}">${escapeHtml(avatarLetter(displayName))}</span>`;
   }
