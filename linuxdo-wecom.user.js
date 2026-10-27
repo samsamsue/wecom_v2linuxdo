@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.27
+// @version      0.8.28
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -20557,7 +20557,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.27";
+  const SCRIPT_VERSION = "0.8.28";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -23811,6 +23811,59 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     return zhihuRecommendPool.slice(offset, offset + 20);
   }
 
+  async function fetchZhihuQuestionFeeds(rawId, offset = 0, limit = 10, signal = null) {
+    const cleanId = String(rawId || "").replace(/[^\d]/g, "");
+    if (!cleanId) return [];
+
+    // 1. Tier 1: Zhihu internal Axios client (signed with x-zse-96 / x-zse-93)
+    try {
+      const client = getZhihuInternalClient();
+      if (client) {
+        const reqUrl = `/api/v4/questions/${cleanId}/feeds?include=data[*].content,voteup_count,comment_count,author.headline,badge&limit=${limit}&offset=${offset}&order=default&platform=desktop`;
+        const resp = await client.get(reqUrl, signal ? { signal } : {});
+        const resData = resp?.data?.data != null ? resp.data : (resp?.data || resp);
+        const rawFeed = Array.isArray(resData?.data) ? resData.data : (Array.isArray(resData) ? resData : []);
+        const feedAns = rawFeed
+          .map((item) => (item?.target && (item.target.type === "answer" || item.target.content || item.target.id) ? item.target : item))
+          .filter((a) => a && (a.id || a.content));
+        if (feedAns.length > 0) return feedAns;
+
+        // Try answers endpoint
+        const ansUrl = `/api/v4/questions/${cleanId}/answers?include=data[*].content,voteup_count,comment_count,author.headline,badge&limit=${limit}&offset=${offset}&platform=desktop&sort_by=default`;
+        const ansResp = await client.get(ansUrl, signal ? { signal } : {});
+        const ansData = ansResp?.data?.data != null ? ansResp.data : (ansResp?.data || ansResp);
+        const rawAns = Array.isArray(ansData?.data) ? ansData.data : (Array.isArray(ansData) ? ansData : []);
+        const validAns = rawAns.filter((a) => a && (a.id || a.content));
+        if (validAns.length > 0) return validAns;
+      }
+    } catch (_) {}
+
+    // 2. Tier 2: Direct API fetch fallback
+    try {
+      const ansResp = await zhihuApi(`/api/v4/questions/${cleanId}/feeds?include=data[*].content,voteup_count,comment_count,author.headline,badge&limit=${limit}&offset=${offset}&order=default&platform=desktop`, { signal });
+      const rawFeed = ansResp?.data || [];
+      const feedAns = rawFeed
+        .map((item) => (item?.target && (item.target.type === "answer" || item.target.content || item.target.id) ? item.target : item))
+        .filter((a) => a && (a.id || a.content));
+      if (feedAns.length > 0) return feedAns;
+    } catch (_) {}
+
+    // 3. Tier 3: Multi-page SSR HTML fallback (/question/:id?page=X)
+    try {
+      const pageNum = Math.floor(offset / 5) + 1;
+      const pageDoc = await fetchZhihuPageDoc(`/question/${cleanId}?page=${pageNum}`, signal);
+      const pageHtml = typeof pageDoc === "string" ? pageDoc : pageDoc?.html;
+      if (pageHtml && !pageHtml.includes("没有知识存在的荒原") && !pageHtml.includes("<title>404")) {
+        const parsed = parseZhihuHtml(pageHtml, cleanId, false);
+        if (Array.isArray(parsed?.answers) && parsed.answers.length > 0) {
+          return parsed.answers;
+        }
+      }
+    } catch (_) {}
+
+    return [];
+  }
+
   async function fetchZhihuTopicData(topicId, signal) {
     const isArticle = String(topicId).startsWith("p_");
     let rawId = isArticle ? String(topicId).slice(2) : String(topicId);
@@ -23841,6 +23894,15 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       moreAnswers.forEach((a) => {
         if (!answers.some((existing) => String(existing.id) === String(a.id))) {
           answers.push(a);
+        }
+      });
+    }
+
+    if (!isArticle) {
+      const pool = zhihuCapturedAnswersPool.get(rawId) || [];
+      pool.forEach((pa) => {
+        if (!answers.some((existing) => String(existing.id) === String(pa.id))) {
+          answers.push(pa);
         }
       });
     }
@@ -23882,25 +23944,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
               });
             }
           }
-        }
-
-        // If question has more than 5 answers, pre-fetch page 2 so opening displays 10+ answers
-        const ansCountEstimate = Number(question?.answer_count || matchedTopic?.reply_count || 0);
-        if (!isArticle && answers.length > 0 && answers.length < 15 && (ansCountEstimate === 0 || answers.length < ansCountEstimate)) {
-          try {
-            const page2Doc = await fetchZhihuPageDoc(`/question/${rawId}?page=2`, signal);
-            const page2Html = typeof page2Doc === "string" ? page2Doc : page2Doc.html;
-            if (page2Html && !page2Html.includes("没有知识存在的荒原") && !page2Html.includes("<title>404")) {
-              const parsed2 = parseZhihuHtml(page2Html, rawId, false);
-              if (Array.isArray(parsed2.answers) && parsed2.answers.length > 0) {
-                parsed2.answers.forEach((pa) => {
-                  if (!answers.some((existing) => String(existing.id) === String(pa.id))) {
-                    answers.push(pa);
-                  }
-                });
-              }
-            }
-          } catch (_) {}
         }
       } catch (err) {
         console.warn("[zhihu-wecom] fetch topic html page failed, trying fallback", err);
@@ -24004,9 +24047,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
     if (answers.length === 0) {
       try {
-        const ansResp = await zhihuApi(`/api/v4/questions/${rawId}/feeds?include=data[*].content,voteup_count,comment_count,author.headline,badge&limit=10&offset=0&platform=desktop&sort_by=default`, { signal });
-        const rawFeed = ansResp?.data || [];
-        const feedAns = rawFeed.map((item) => (item?.target && item.target.type === "answer" ? item.target : item)).filter((a) => a && (a.id || a.content));
+        const feedAns = await fetchZhihuQuestionFeeds(rawId, 0, 10, signal);
         feedAns.forEach((fa) => {
           if (!answers.some((existing) => String(existing.id) === String(fa.id))) {
             answers.push(fa);
@@ -24015,20 +24056,18 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       } catch (_) {}
     }
 
-    if (answers.length === 0) {
-      try {
-        const ansResp = await zhihuApi(`/api/v4/questions/${rawId}/answers?include=data[*].content,voteup_count,comment_count,author.headline,badge&limit=20&offset=0&platform=desktop&sort_by=default`, { signal });
-        const directAns = (ansResp?.data || []).filter((a) => a && (a.id || a.content));
-        directAns.forEach((da) => {
-          if (!answers.some((existing) => String(existing.id) === String(da.id))) {
-            answers.push(da);
-          }
-        });
-      } catch (_) {}
-    }
-
     // Filter any answers containing 404 wasteland text
     answers = answers.filter((a) => !String(a.content || "").includes("没有知识存在的荒原"));
+
+    if (!isArticle && answers.length > 0) {
+      const pool = zhihuCapturedAnswersPool.get(rawId) || [];
+      answers.forEach((pa) => {
+        if (!pool.some((existing) => String(existing.id) === String(pa.id))) {
+          pool.push(pa);
+        }
+      });
+      zhihuCapturedAnswersPool.set(rawId, pool);
+    }
 
     // Fallback: If still no answers, check if topicFromList has excerpt or author to serve as top answer preview
     if (answers.length === 0 && topicFromList && (topicFromList.raw_content || topicFromList.excerpt)) {
@@ -34691,7 +34730,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     syncChatFloatNav(body);
     if (chatState.pinningScroll || chatState.pinnedPost) return;
     if (body.scrollTop < 80) loadOlderPosts();
-    if (body.scrollTop + body.clientHeight >= body.scrollHeight - 160) loadNewerPosts();
+    if (body.scrollTop + body.clientHeight >= body.scrollHeight - (IS_ZHIHU ? 320 : 160)) loadNewerPosts();
     trackVisibleTopicPost();
   }
 
@@ -39957,11 +39996,24 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           syncZhihuPaginationFooter(body, false);
           applyZhihuAnswerClamping(body);
           if (chatState.zhihuHasMore && posts.length <= 6) {
-            setTimeout(() => {
+            setTimeout(async () => {
               const isArticle = String(topicId).startsWith("p_");
               const rawId = isArticle ? String(topicId).slice(2) : String(topicId);
-              if (!isArticle) triggerZhihuQuestionScroll(rawId);
-            }, 500);
+              if (!isArticle && isSameTopic(chatState.topicId, topicId)) {
+                try {
+                  const pre = await fetchZhihuQuestionFeeds(rawId, Math.max(1, posts.length - 1), 10);
+                  if (pre && pre.length > 0) {
+                    const pool = zhihuCapturedAnswersPool.get(rawId) || [];
+                    pre.forEach((p) => {
+                      if (!pool.some((e) => String(e.id) === String(p.id))) {
+                        pool.push(p);
+                      }
+                    });
+                    zhihuCapturedAnswersPool.set(rawId, pool);
+                  }
+                } catch (_) {}
+              }
+            }, 300);
           }
         }
         syncRenderedWindow(body);
@@ -40194,7 +40246,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
         if (commentCount === 0 && postId && /^\d+$/.test(postId) && !bubble.dataset.countFetched) {
           bubble.dataset.countFetched = "1";
-          zhihuApi(`/api/v4/comment_v5/answers/${postId}/abstract_comment?limit=1`).then((res) => {
+          const client = getZhihuInternalClient();
+          const p = client
+            ? client.get(`/api/v4/comment_v5/answers/${postId}/abstract_comment?limit=1`).then((r) => r?.data || r)
+            : zhihuApi(`/api/v4/comment_v5/answers/${postId}/abstract_comment?limit=1`);
+          p.then((res) => {
             if (res?.counts?.total_counts != null) {
               const realCount = Number(res.counts.total_counts);
               if (realCount > 0) {
@@ -40234,13 +40290,18 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
       const checkAndClamp = () => {
         if (bubble.classList.contains("wecom-zhihu-clamped") || bubble.classList.contains("wecom-zhihu-expanded")) return;
-        if (body.scrollHeight > 240) {
+        const textLen = (body.textContent || "").trim().length;
+        const imgCount = body.querySelectorAll("img").length;
+        const pCount = body.querySelectorAll("p, div, blockquote, pre, table, ul, ol").length;
+        const isLong = body.scrollHeight > 240 || textLen > 240 || (imgCount > 0 && textLen > 50) || (imgCount >= 2) || pCount > 5;
+        if (isLong) {
           bubble.classList.add("wecom-zhihu-clamped");
           if (!footer.querySelector(".wecom-zhihu-expand-btn")) {
             const expandBar = document.createElement("div");
             expandBar.className = "wecom-zhihu-expand-bar";
             expandBar.innerHTML = `<button type="button" class="wecom-zhihu-expand-btn" data-action="zhihu-toggle-expand" title="展开全文"><span class="wecom-zhihu-expand-text">展开全文</span><span class="wecom-zhihu-expand-icon"> ⌵</span></button>`;
             footer.insertBefore(expandBar, footer.firstChild);
+            footer.style.display = "";
           }
         }
       };
@@ -41543,7 +41604,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       if (!chatState.hasNewer) return;
     }
     if (Date.now() < rateLimitCooldownUntil) return;
-    if (Date.now() - lastPaginationTime < PAGINATION_THROTTLE_MS) return;
+    const throttleMs = IS_ZHIHU ? 250 : PAGINATION_THROTTLE_MS;
+    if (Date.now() - lastPaginationTime < throttleMs) return;
     lastPaginationTime = Date.now();
     if (IS_ZHIHU) {
       const body = document.querySelector(".wecom-chat-body");
@@ -41551,7 +41613,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       syncZhihuPaginationFooter(body, true);
       const isArticle = String(chatState.topicId).startsWith("p_");
       const rawId = isArticle ? String(chatState.topicId).slice(2) : String(chatState.topicId);
-      const offset = Number(chatState.zhihuOffset) || 5;
+      const offset = (chatState.zhihuOffset != null && chatState.zhihuOffset > 0)
+        ? Number(chatState.zhihuOffset)
+        : Math.max(0, (chatState.stream?.length || 1) - 1);
       try {
         if (isArticle) {
           let commData = null;
@@ -41601,59 +41665,17 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           }
 
           if (unrendered.length === 0) {
-            triggerZhihuQuestionScroll(rawId);
-            for (let i = 0; i < 10; i++) {
-              await new Promise((r) => setTimeout(r, 150));
-              const freshCap = zhihuCapturedAnswersPool.get(rawId) || [];
-              unrendered = freshCap.filter((a) => a && a.id && !existingIds.has(String(a.id)));
-              if (unrendered.length > 0) break;
-              if (typeof document !== "undefined") {
-                const freshDom = extractZhihuAnswersFromDom(document, rawId);
-                unrendered = freshDom.filter((a) => a && a.id && !existingIds.has(String(a.id)));
-                if (unrendered.length > 0) break;
-              }
-            }
-          }
-
-          // Fallback 1: Direct question feeds API
-          if (unrendered.length === 0) {
-            try {
-              const ansResp = await zhihuApi(`/api/v4/questions/${rawId}/feeds?include=data[*].content,voteup_count,comment_count,author.headline,badge&limit=10&offset=${offset}&order=default&platform=desktop`);
-              const rawFeed = ansResp?.data || [];
-              const feedAns = rawFeed.map((item) => (item?.target && item.target.type === "answer" ? item.target : item)).filter((a) => a && (a.id || a.content));
-              unrendered = feedAns.filter((a) => !existingIds.has(String(a.id)));
-            } catch (_) {}
-          }
-
-          // Fallback 2: Direct question answers API
-          if (unrendered.length === 0) {
-            try {
-              const ansResp = await zhihuApi(`/api/v4/questions/${rawId}/answers?include=data[*].content,voteup_count,comment_count,author.headline,badge&limit=10&offset=${offset}&platform=desktop&sort_by=default`);
-              const feedAns = (ansResp?.data || []).filter((a) => a && (a.id || a.content));
-              unrendered = feedAns.filter((a) => !existingIds.has(String(a.id)));
-            } catch (_) {}
-          }
-
-          // Fallback 3: Multi-page SSR HTML pagination (/question/:id?page=X)
-          if (unrendered.length === 0) {
-            try {
-              const currentPageNum = Math.floor(chatState.postsByNumber.size / 5) + 1;
-              const pageDoc = await fetchZhihuPageDoc(`/question/${rawId}?page=${currentPageNum}`);
-              const pageHtml = typeof pageDoc === "string" ? pageDoc : pageDoc?.html;
-              if (pageHtml && !pageHtml.includes("没有知识存在的荒原") && !pageHtml.includes("<title>404")) {
-                const parsed = parseZhihuHtml(pageHtml, rawId, false);
-                if (Array.isArray(parsed?.answers) && parsed.answers.length > 0) {
-                  const poolArr = zhihuCapturedAnswersPool.get(rawId) || [];
-                  parsed.answers.forEach((pa) => {
-                    if (!poolArr.some((e) => String(e.id) === String(pa.id))) {
-                      poolArr.push(pa);
-                    }
-                  });
-                  zhihuCapturedAnswersPool.set(rawId, poolArr);
-                  unrendered = poolArr.filter((a) => a && a.id && !existingIds.has(String(a.id)));
+            const feedAns = await fetchZhihuQuestionFeeds(rawId, offset, 10);
+            if (feedAns && feedAns.length > 0) {
+              const pool = zhihuCapturedAnswersPool.get(rawId) || [];
+              feedAns.forEach((p) => {
+                if (!pool.some((e) => String(e.id) === String(p.id))) {
+                  pool.push(p);
                 }
-              }
-            } catch (_) {}
+              });
+              zhihuCapturedAnswersPool.set(rawId, pool);
+              unrendered = pool.filter((a) => a && a.id && !existingIds.has(String(a.id)));
+            }
           }
 
           answers = unrendered.slice(0, 10);

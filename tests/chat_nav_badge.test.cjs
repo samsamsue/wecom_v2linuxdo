@@ -12097,9 +12097,9 @@ test("Test 152: Smooth automatic infinite scroll loading for Zhihu comment discu
 
 test("Test 153: Smooth jitter-free Zhihu root comment stream, in-place child replies, and elimination of Linux.do double reload/flicker (v0.8.27)", () => {
   const metaContent = fs.readFileSync(path.resolve(__dirname, "../linuxdo-wecom.meta.js"), "utf8");
-  // 1. Version 0.8.27
-  assert.ok(metaContent.includes("@version      0.8.27"), "linuxdo-wecom.meta.js must be bumped to 0.8.27");
-  assert.ok(scriptContent.includes("@version      0.8.27"), "linuxdo-wecom.user.js must be bumped to 0.8.27");
+  // 1. Version 0.8.27 or newer
+  assert.ok(/@version\s+0\.8\.(2[7-9]|[3-9]\d)/.test(metaContent), "linuxdo-wecom.meta.js must be bumped to 0.8.27 or newer");
+  assert.ok(/@version\s+0\.8\.(2[7-9]|[3-9]\d)/.test(scriptContent), "linuxdo-wecom.user.js must be bumped to 0.8.27 or newer");
 
   // 2. Main timeline stream strictly loads root comments on bottom scroll to prevent child nesting jitter
   assert.ok(
@@ -12149,6 +12149,66 @@ test("Test 153: Smooth jitter-free Zhihu root comment stream, in-place child rep
     "MutationObserver must only invoke scheduleApply if panels are missing or URL changed"
   );
 });
+
+test("Test 154: Instant Zhihu answer clamping, high-speed pagination via internal client, and latency optimizations (v0.8.28)", () => {
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version matches 0.8.28
+  assert.ok(metaContent.includes("@version      0.8.28"), "meta.js version must be 0.8.28");
+  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.28";'), "user.js version must be 0.8.28");
+  assert.ok(readmeContent.includes("0.8.28"), "README.md version must be 0.8.28");
+
+  // 2. Instant zero-delay Zhihu answer clamping heuristics
+  assert.ok(
+    scriptContent.includes("const isLong = body.scrollHeight > 240 || textLen > 240 || (imgCount > 0 && textLen > 50) || (imgCount >= 2) || pCount > 5;"),
+    "applyZhihuAnswerClamping must use instant content heuristics to clamp long answers immediately on first frame"
+  );
+  assert.ok(
+    scriptContent.includes("footer.insertBefore(expandBar, footer.firstChild);") &&
+    scriptContent.includes('footer.style.display = "";'),
+    "checkAndClamp must ensure footer.style.display is reset so '展开全文' button is visible immediately"
+  );
+
+  // 3. fetchZhihuQuestionFeeds with internal Axios client
+  assert.ok(
+    scriptContent.includes("async function fetchZhihuQuestionFeeds(rawId, offset = 0, limit = 10, signal = null) {"),
+    "fetchZhihuQuestionFeeds must be defined"
+  );
+  assert.ok(
+    scriptContent.includes("const client = getZhihuInternalClient();") &&
+    scriptContent.includes("/api/v4/questions/${cleanId}/feeds?include=data[*].content,voteup_count,comment_count,author.headline,badge"),
+    "fetchZhihuQuestionFeeds must use Zhihu internal client signed requests to bypass 403 Forbidden"
+  );
+
+  // 4. Removal of the 1.5s idle wait loop in loadNewerPosts
+  assert.ok(
+    !scriptContent.includes("triggerZhihuQuestionScroll(rawId);\n            for (let i = 0; i < 10; i++) {"),
+    "loadNewerPosts must remove the 1.5s idle wait loop"
+  );
+  assert.ok(
+    scriptContent.includes("const feedAns = await fetchZhihuQuestionFeeds(rawId, offset, 10);"),
+    "loadNewerPosts must directly query fetchZhihuQuestionFeeds for fast pagination"
+  );
+
+  // 5. Background pre-fetch of next answers into zhihuCapturedAnswersPool on opening
+  assert.ok(
+    scriptContent.includes("if (chatState.zhihuHasMore && posts.length <= 6) {") &&
+    scriptContent.includes("const pre = await fetchZhihuQuestionFeeds(rawId, Math.max(1, posts.length - 1), 10);"),
+    "loadTopic must prefetch next answers into pool in background for instant pagination"
+  );
+
+  // 6. Responsive pagination throttle and scroll threshold for Zhihu
+  assert.ok(
+    scriptContent.includes("const throttleMs = IS_ZHIHU ? 250 : PAGINATION_THROTTLE_MS;"),
+    "loadNewerPosts must use 250ms throttle for Zhihu"
+  );
+  assert.ok(
+    scriptContent.includes("if (body.scrollTop + body.clientHeight >= body.scrollHeight - (IS_ZHIHU ? 320 : 160)) loadNewerPosts();"),
+    "handleChatBodyScroll must trigger loadNewerPosts earlier (320px) on Zhihu"
+  );
+});
+
 
 
 
