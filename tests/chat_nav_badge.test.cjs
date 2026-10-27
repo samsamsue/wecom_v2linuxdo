@@ -12256,10 +12256,10 @@ test("Test 156: Zhihu authentic author avatars and high-speed list pagination (v
   const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
-  // 1. Version 0.8.30
-  assert.ok(metaContent.includes("@version      0.8.30"), "meta.js version must be 0.8.30");
-  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.30";'), "user.js version must be 0.8.30");
-  assert.ok(readmeContent.includes("0.8.30"), "README.md version must be 0.8.30");
+  // 1. Version 0.8.30 or newer
+  assert.ok(/@version\s+0\.8\.(3[0-9]|[4-9]\d)/.test(metaContent), "meta.js version must be 0.8.30 or newer");
+  assert.ok(/SCRIPT_VERSION = "0\.8\.(3[0-9]|[4-9]\d)"/.test(scriptContent), "user.js version must be 0.8.30 or newer");
+  assert.ok(/0\.8\.(3[0-9]|[4-9]\d)/.test(readmeContent), "README.md version must be 0.8.30 or newer");
 
   // 2. Creator hot item maps authentic author avatar
   assert.ok(
@@ -12299,6 +12299,65 @@ test("Test 156: Zhihu authentic author avatars and high-speed list pagination (v
     "fetchZhihuRecommendList must have instant fast-path for memory pool"
   );
 });
+
+test("Test 157: Elimination of duplicate question preview in 2nd floor, rich hot list thumbnails, and auto-answer streaming (v0.8.31)", () => {
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version 0.8.31
+  assert.ok(metaContent.includes("@version      0.8.31"), "meta.js version must be 0.8.31");
+  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.31";'), "user.js version must be 0.8.31");
+  assert.ok(readmeContent.includes("0.8.31"), "README.md version must be 0.8.31");
+
+  // 2. Elimination of fake duplicate preview answer in 2nd floor for questions
+  assert.ok(
+    scriptContent.includes("if (answers.length === 0 && topicFromList?.is_answer && (topicFromList.raw_content || topicFromList.excerpt))"),
+    "fetchZhihuTopicData must only create an answer preview if item is an explicit answer card"
+  );
+  assert.ok(
+    !scriptContent.includes('id: `preview_${rawId}`'),
+    "fetchZhihuTopicData must not synthesize preview_${rawId} for regular questions"
+  );
+
+  // 3. zhihuApi automatically uses internal signed client and captured signed headers
+  assert.ok(
+    scriptContent.includes("const client = getZhihuInternalClient();") &&
+    scriptContent.includes("const resp = await client.get(endpoint, options);"),
+    "zhihuApi must leverage internal client for signed GET requests"
+  );
+  assert.ok(
+    scriptContent.includes("...(zhihuLastSignedHeaders || {}),"),
+    "zhihuApi must attach captured signed headers on fallback requests"
+  );
+
+  // 4. getZhihuInternalClient probe uses safe probe string and function wrapping
+  assert.ok(
+    !scriptContent.includes("window[chunkKey].push([[Symbol()], {}, (r) => { wpRequire = r; }]);"),
+    "getZhihuInternalClient must not pass Symbol() into Webpack chunk array"
+  );
+  assert.ok(
+    scriptContent.includes('const probeId = "wecom_probe_" + Math.random().toString(36).slice(2);'),
+    "getZhihuInternalClient must use safe probeId string"
+  );
+
+  // 5. Hot list fallback priority in recommend feed and rich thumbnail mapping
+  assert.ok(
+    scriptContent.includes("target.image_area?.url") &&
+    scriptContent.includes("item.children?.[0]?.thumbnail"),
+    "mapZhihuHotItemToTopic must support snake_case image_area and children thumbnails"
+  );
+
+  // 6. loadTopic auto-streams answers when opening a 1-post question
+  assert.ok(
+    scriptContent.includes("const pre = await fetchZhihuQuestionFeeds(rawId, Math.max(1, posts.length - 1), 10);"),
+    "loadTopic must prefetch answers"
+  );
+  assert.ok(
+    scriptContent.includes("if (posts.length <= 1) {\n                        const currentMaxNumber = Math.max(...[...chatState.postsByNumber.keys()], 1);\n                        const freshPosts = pre.map((ans, idx) => mapZhihuAnswerToPost(ans, currentMaxNumber + idx + 1));\n                        chatState.stream = chatState.stream.concat(freshPosts.map((p) => p.id));\n                        appendFreshPosts(freshPosts, b, { scroll: false, flat: true });\n                        chatState.zhihuOffset = freshPosts.length;\n                      }"),
+    "loadTopic must auto-render initial batch of answers into DOM when posts.length <= 1"
+  );
+});
+
 
 
 

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.30
+// @version      0.8.31
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -80,39 +80,35 @@
       const chunkKey = typeof window !== "undefined" && Object.keys(window).find((k) => k.startsWith("webpackChunk"));
       if (!chunkKey || !window[chunkKey] || typeof window[chunkKey].push !== "function") return null;
       let wpRequire = null;
-      window[chunkKey].push([[Symbol()], {}, (r) => { wpRequire = r; }]);
+      const probeId = "wecom_probe_" + Math.random().toString(36).slice(2);
+      try {
+        window[chunkKey].push([[probeId], { [probeId]: (m, e, r) => { wpRequire = r; } }, (r) => { wpRequire = r || wpRequire; }]);
+      } catch (_) {}
       if (!wpRequire) return null;
 
-      // Tier 1a: Check loaded modules in wpRequire.c for an Axios instance with request interceptors for zse
+      // Tier 1a: Check loaded modules in wpRequire.c for any client with .get
       if (wpRequire.c) {
         for (const id in wpRequire.c) {
           const exp = wpRequire.c[id]?.exports;
           if (!exp) continue;
-          const candidates = [exp, exp.default, exp.client, exp.request, exp.api].filter(Boolean);
+          const candidates = [exp, exp.default, exp.client, exp.request, exp.api, exp.axios].filter(Boolean);
           for (const cand of candidates) {
-            if (cand && typeof cand.get === "function") {
-              const handlers = cand.interceptors?.request?.handlers || [];
-              const hasZse = handlers.some((h) => {
-                const s = h?.fulfilled?.toString() || "";
-                return s.includes("zse") || s.includes("sign") || s.includes("headers");
-              });
-              if (hasZse) {
-                zhihuInternalClient = cand;
-                return cand;
-              }
+            if (cand && typeof cand.get === "function" && (cand.interceptors || cand.defaults || typeof cand.request === "function")) {
+              zhihuInternalClient = cand;
+              return cand;
             }
           }
         }
       }
 
-      // Tier 1b: Search module sources in wpRequire.m for the API module that handles "x-zse-96"
+      // Tier 1b: Search module sources in wpRequire.m for API or signing modules
       if (wpRequire.m) {
         for (const id in wpRequire.m) {
           const code = wpRequire.m[id]?.toString() || "";
-          if (code.includes("x-zse-96") || code.includes("101_3_3.0")) {
+          if (code.includes("x-zse-96") || code.includes("101_3_3.0") || (code.includes("createInstance") && code.includes("interceptors"))) {
             try {
               const mod = wpRequire(id);
-              const candidates = [mod, mod?.default, mod?.client, mod?.request, mod?.api].filter(Boolean);
+              const candidates = [mod, mod?.default, mod?.client, mod?.request, mod?.api, mod?.axios].filter(Boolean);
               for (const cand of candidates) {
                 if (cand && typeof cand.get === "function") {
                   zhihuInternalClient = cand;
@@ -124,16 +120,21 @@
         }
       }
 
-      // Tier 1c: Fallback to any axios instance with interceptors or defaults
+      // Tier 1c: Wrap any request function that doesn't have .get method directly
       if (wpRequire.c) {
         for (const id in wpRequire.c) {
           const exp = wpRequire.c[id]?.exports;
           if (!exp) continue;
-          const candidates = [exp, exp.default, exp.client, exp.request, exp.api].filter(Boolean);
+          const candidates = [exp, exp.default, exp.client, exp.request, exp.api, exp.axios].filter(Boolean);
           for (const cand of candidates) {
-            if (cand && typeof cand.get === "function" && (cand.interceptors || cand.defaults)) {
-              zhihuInternalClient = cand;
-              return cand;
+            if (typeof cand === "function" && typeof cand.get !== "function") {
+              const wrapped = {
+                get: (url, opts) => cand(url, { ...(opts || {}), method: "GET" }),
+                post: (url, data, opts) => cand(url, { ...(opts || {}), method: "POST", body: data }),
+                request: cand
+              };
+              zhihuInternalClient = wrapped;
+              return wrapped;
             }
           }
         }
@@ -20557,7 +20558,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.30";
+  const SCRIPT_VERSION = "0.8.31";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -22900,12 +22901,23 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   }
 
   async function zhihuApi(endpoint, options = {}) {
+    const isGet = !options.method || options.method.toUpperCase() === "GET";
+    if (isGet && !options.body) {
+      try {
+        const client = getZhihuInternalClient();
+        if (client && typeof client.get === "function") {
+          const resp = await client.get(endpoint, options);
+          return resp?.data?.data != null ? resp.data : (resp?.data || resp);
+        }
+      } catch (_) {}
+    }
     const url = endpoint.startsWith("http") ? endpoint : `https://www.zhihu.com${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
     const opts = {
       method: "GET",
       credentials: "include",
       headers: {
         Accept: "application/json",
+        ...(zhihuLastSignedHeaders || {}),
         ...(options.headers || {})
       },
       ...options
@@ -23002,7 +23014,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const answerCount = item.feedSpecific?.answerCount || target.answerCount || 0;
     const author = target.author?.name || "知乎热榜";
     const avatar = target.author?.avatarUrl || target.author?.avatar_url ||
-                   target.imageArea?.url || target.thumbnail || item.thumbnail || item.image_url || "";
+                   target.imageArea?.url || target.image_area?.url ||
+                   target.thumbnail || item.thumbnail || item.image_url ||
+                   item.children?.[0]?.thumbnail || item.children?.[0]?.author?.avatar_url ||
+                   item.children?.[0]?.author?.avatarUrl || "";
 
     return {
       id: topicId,
@@ -23762,7 +23777,24 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       return zhihuRecommendPool.slice(offset, offset + 20);
     }
 
-    // Tier 2: Creators rank hot API (targeted domain corresponding to offset, fast single call)
+    // Tier 2: Hot list (Rich cover thumbnails & real discussion metrics)
+    if (zhihuRecommendPool.length <= offset + 10) {
+      try {
+        const hot = await fetchZhihuHotList();
+        hot.forEach((t) => {
+          if (t && t.id && !zhihuRecommendSeen.has(String(t.id))) {
+            zhihuRecommendSeen.add(String(t.id));
+            zhihuRecommendPool.push(t);
+          }
+        });
+      } catch (_) {}
+    }
+
+    if (zhihuRecommendPool.length >= offset + 20) {
+      return zhihuRecommendPool.slice(offset, offset + 20);
+    }
+
+    // Tier 3: Creators rank hot API (targeted domain corresponding to offset, fast single call)
     if (zhihuRecommendPool.length <= offset + 10) {
       try {
         const domain = (Math.floor(offset / 20)) % 9;
@@ -23775,19 +23807,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           if (mapped && mapped.id && !zhihuRecommendSeen.has(String(mapped.id))) {
             zhihuRecommendSeen.add(String(mapped.id));
             zhihuRecommendPool.push(mapped);
-          }
-        });
-      } catch (_) {}
-    }
-
-    // Tier 3: Hot list total
-    if (zhihuRecommendPool.length <= offset + 10) {
-      try {
-        const hot = await fetchZhihuHotList();
-        hot.forEach((t) => {
-          if (t && t.id && !zhihuRecommendSeen.has(String(t.id))) {
-            zhihuRecommendSeen.add(String(t.id));
-            zhihuRecommendPool.push(t);
           }
         });
       } catch (_) {}
@@ -24093,11 +24112,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       zhihuCapturedAnswersPool.set(rawId, pool);
     }
 
-    // Fallback: If still no answers, check if topicFromList has excerpt or author to serve as top answer preview
-    if (answers.length === 0 && topicFromList && (topicFromList.raw_content || topicFromList.excerpt)) {
+    // Only treat list excerpt as an answer if the item was explicitly an answer card
+    if (answers.length === 0 && topicFromList?.is_answer && (topicFromList.raw_content || topicFromList.excerpt)) {
       answers = [{
-        id: `preview_${rawId}`,
-        author: { name: topicFromList.v2ex_author || "热心知友", avatar_url: topicFromList.v2ex_avatar || "" },
+        id: `ans_${rawId}`,
+        author: { name: topicFromList.v2ex_author || "知友", avatar_url: topicFromList.v2ex_avatar || "" },
         content: `<p>${escapeHtml(topicFromList.raw_content || topicFromList.excerpt)}</p>`,
         voteup_count: topicFromList.hot_metric ? parseInt(topicFromList.hot_metric.replace(/[^\d]/g, ""), 10) || 0 : 0
       }];
@@ -40069,11 +40088,20 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
                     chatState.zhihuHasMore = true;
                     chatState.hasNewer = true;
                     const b = document.querySelector(".wecom-chat-body");
-                    if (b) syncZhihuPaginationFooter(b, false);
+                    if (b && isSameTopic(chatState.topicId, topicId)) {
+                      if (posts.length <= 1) {
+                        const currentMaxNumber = Math.max(...[...chatState.postsByNumber.keys()], 1);
+                        const freshPosts = pre.map((ans, idx) => mapZhihuAnswerToPost(ans, currentMaxNumber + idx + 1));
+                        chatState.stream = chatState.stream.concat(freshPosts.map((p) => p.id));
+                        appendFreshPosts(freshPosts, b, { scroll: false, flat: true });
+                        chatState.zhihuOffset = freshPosts.length;
+                      }
+                      syncZhihuPaginationFooter(b, false);
+                    }
                   }
                 } catch (_) {}
               }
-            }, 300);
+            }, 60);
           }
         }
         syncRenderedWindow(body);
