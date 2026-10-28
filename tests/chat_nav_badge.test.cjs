@@ -12362,10 +12362,10 @@ test("Test 158: Zhihu recommend default chip, hot list pagination boundary & cov
   const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
-  // 1. Version 0.8.32
-  assert.ok(metaContent.includes("@version      0.8.32"), "meta.js version must be 0.8.32");
-  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.32";'), "user.js version must be 0.8.32");
-  assert.ok(readmeContent.includes("0.8.32"), "README.md version must be 0.8.32");
+  // 1. Version 0.8.32 or newer
+  assert.ok(/@version\s+0\.8\.(32|[3-9]\d)/.test(metaContent), "meta.js version must be 0.8.32 or newer");
+  assert.ok(/SCRIPT_VERSION = "0\.8\.(32|[3-9]\d)"/.test(scriptContent), "user.js version must be 0.8.32 or newer");
+  assert.ok(/0\.8\.(32|[3-9]\d)/.test(readmeContent), "README.md version must be 0.8.32 or newer");
 
   // 2. Recommend chip is default and active on Zhihu
   assert.ok(
@@ -12416,6 +12416,63 @@ test("Test 158: Zhihu recommend default chip, hot list pagination boundary & cov
     scriptContent.includes("const _origXhrSetHeader = XMLHttpRequest.prototype.setRequestHeader;") &&
     scriptContent.includes('lower === "x-zse-96" || lower === "x-zst-81"'),
     "XMLHttpRequest.prototype.setRequestHeader hook must capture x-zse-96 and x-zst-81 headers"
+  );
+});
+
+test("Test 159: Elimination of empty answer stubs, content-aware feeds, single answer hydration, and merge replacement (v0.8.33)", () => {
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version 0.8.33
+  assert.ok(metaContent.includes("@version      0.8.33"), "meta.js version must be 0.8.33");
+  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.33";'), "user.js version must be 0.8.33");
+  assert.ok(readmeContent.includes("0.8.33"), "README.md version must be 0.8.33");
+
+  // 2. hasAnswerContent & hasAnswerFullContent helpers
+  assert.ok(
+    scriptContent.includes("function hasAnswerContent(ans) {") &&
+    scriptContent.includes("function hasAnswerFullContent(ans) {"),
+    "hasAnswerContent and hasAnswerFullContent helpers must be defined"
+  );
+  assert.ok(
+    scriptContent.includes('if (trimmed.includes("没有知识存在的荒原") || trimmed.includes("回答内容需展开或登录后查看")) return false;'),
+    "hasAnswerContent must reject placeholder or wasteland strings"
+  );
+
+  // 3. mergeZhihuAnswer helper replaces empty stubs with full content
+  assert.ok(
+    scriptContent.includes("function mergeZhihuAnswer(list, ans) {") &&
+    scriptContent.includes("if (!existingHasContent && incomingHasContent) {") &&
+    scriptContent.includes("list[idx] = { ...list[idx], ...raw };"),
+    "mergeZhihuAnswer must upgrade existing stubs with incoming content"
+  );
+
+  // 4. Content filtering in fetchZhihuQuestionFeeds across tiers
+  assert.ok(
+    scriptContent.includes("const validAns = rawAns.filter(hasAnswerContent);") &&
+    scriptContent.includes(".filter(hasAnswerContent);"),
+    "fetchZhihuQuestionFeeds must filter raw answers and feeds with hasAnswerContent"
+  );
+
+  // 5. fetchZhihuSingleAnswer on-demand fetch
+  assert.ok(
+    scriptContent.includes("async function fetchZhihuSingleAnswer(answerId, signal = null) {") &&
+    scriptContent.includes("/api/v4/answers/${cleanId}?include=content,editable_content,excerpt,voteup_count,comment_count,author.headline,badge"),
+    "fetchZhihuSingleAnswer must fetch answer content on demand"
+  );
+
+  // 6. hydrateZhihuPendingAnswers auto-hydrates pending answers in DOM
+  assert.ok(
+    scriptContent.includes("async function hydrateZhihuPendingAnswers(root = document) {") &&
+    scriptContent.includes("targets.map(async (msgEl) => {"),
+    "hydrateZhihuPendingAnswers must resolve any pending answers into full cooked HTML"
+  );
+
+  // 7. Auto-hydration hooked in loadTopic, scroll loading, and appendFreshPosts
+  assert.ok(
+    scriptContent.includes("hydrateZhihuPendingAnswers(body);") &&
+    scriptContent.includes("hydrateZhihuPendingAnswers(b);"),
+    "hydrateZhihuPendingAnswers must be triggered in loadTopic and message append routines"
   );
 });
 
