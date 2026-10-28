@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.33
+// @version      0.8.34
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -117,17 +117,98 @@
     }
   }
 
+  function extractZhihuAnswerIdFromEl(el) {
+    if (!el) return "";
+    let zop = null;
+    try {
+      const rawZop = el.getAttribute("data-zop");
+      if (rawZop) zop = JSON.parse(rawZop);
+    } catch (_) {}
+    if (zop?.itemId) return String(zop.itemId);
+
+    const nameAttr = el.getAttribute("name");
+    if (nameAttr && /^\d+$/.test(nameAttr)) return nameAttr;
+
+    const dataId = el.dataset?.id || el.getAttribute("data-id");
+    if (dataId && /^\d+$/.test(dataId)) return dataId;
+
+    const metaAnsId = el.querySelector('meta[itemprop="answerId"], meta[itemprop="itemId"]')?.getAttribute("content");
+    if (metaAnsId && /^\d+$/.test(metaAnsId)) return metaAnsId;
+
+    const metaUrl = el.querySelector('meta[itemprop="url"], a[itemprop="url"], a[href*="/answer/"]')?.getAttribute("content") ||
+                    el.querySelector('a[href*="/answer/"]')?.getAttribute("href");
+    if (metaUrl) {
+      const m = metaUrl.match(/answer\/(\d+)/);
+      if (m) return m[1];
+    }
+
+    try {
+      const zaModule = el.getAttribute("data-za-extra-module") || el.getAttribute("data-za-module");
+      if (zaModule) {
+        const m = zaModule.match(/"(?:content_id|itemId|id)":\s*"?(\d+)"?/);
+        if (m) return m[1];
+      }
+    } catch (_) {}
+
+    return "";
+  }
+
+  function extractZhihuCommentsPayload(resp) {
+    if (!resp) return { comments: [], paging: null, counts: null, totalCount: 0 };
+
+    let payload = resp;
+    let comments = [];
+
+    if (resp.data != null) {
+      if (Array.isArray(resp.data)) {
+        comments = resp.data;
+      } else if (typeof resp.data === "object") {
+        payload = resp.data;
+      }
+    }
+
+    if (!comments.length) {
+      if (Array.isArray(payload?.data)) {
+        comments = payload.data;
+      } else if (Array.isArray(payload?.comments)) {
+        comments = payload.comments;
+      } else if (Array.isArray(payload)) {
+        comments = payload;
+      } else if (Array.isArray(resp?.data)) {
+        comments = resp.data;
+      } else if (Array.isArray(resp?.comments)) {
+        comments = resp.comments;
+      } else if (Array.isArray(resp)) {
+        comments = resp;
+      }
+    }
+
+    const paging = payload?.paging || resp?.paging || null;
+    const counts = payload?.counts || resp?.counts || null;
+    const totalCount = Number(
+      counts?.total_counts ??
+      counts?.totalCounts ??
+      paging?.totals ??
+      paging?.total ??
+      0
+    );
+
+    return { comments, paging, counts, totalCount };
+  }
+
   let zhihuInternalClient = null;
 
   function getZhihuInternalClient() {
     if (zhihuInternalClient && typeof zhihuInternalClient.get === "function") return zhihuInternalClient;
     try {
-      const chunkKey = typeof window !== "undefined" && Object.keys(window).find((k) => k.startsWith("webpackChunk"));
-      if (!chunkKey || !window[chunkKey] || typeof window[chunkKey].push !== "function") return null;
+      const win = typeof unsafeWindow !== "undefined" ? unsafeWindow : (typeof window !== "undefined" ? window : null);
+      if (!win) return null;
+      const chunkKey = Object.keys(win).find((k) => k.startsWith("webpackChunk"));
+      if (!chunkKey || !win[chunkKey] || typeof win[chunkKey].push !== "function") return null;
       let wpRequire = null;
       const probeId = "wecom_probe_" + Math.random().toString(36).slice(2);
       try {
-        window[chunkKey].push([[probeId], { [probeId]: (m, e, r) => { wpRequire = r; } }, (r) => { wpRequire = r || wpRequire; }]);
+        win[chunkKey].push([[probeId], { [probeId]: (m, e, r) => { wpRequire = r; } }, (r) => { wpRequire = r || wpRequire; }]);
       } catch (_) {}
       if (!wpRequire) return null;
 
@@ -20610,7 +20691,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.33";
+  const SCRIPT_VERSION = "0.8.34";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -22959,7 +23040,12 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         const client = getZhihuInternalClient();
         if (client && typeof client.get === "function") {
           const resp = await client.get(endpoint, options);
-          return resp?.data?.data != null ? resp.data : (resp?.data || resp);
+          if (resp != null) {
+            if (resp.data != null && typeof resp.data === "object" && !Array.isArray(resp.data) && (resp.status != null || resp.headers != null || resp.config != null)) {
+              return resp.data;
+            }
+            return resp?.data?.data != null ? resp.data : (resp?.data || resp);
+          }
         }
       } catch (_) {}
     }
@@ -23323,7 +23409,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         if (zopAttr) {
           try { zop = JSON.parse(zopAttr); } catch (_) {}
         }
-        const answerId = zop?.itemId || item.getAttribute("name") || item.dataset?.id;
+        const answerId = extractZhihuAnswerIdFromEl(item) || zop?.itemId || item.getAttribute("name") || item.dataset?.id;
         if (!answerId) return;
 
         const authorName = zop?.authorName || item.querySelector(".AuthorInfo-name, .UserLink-link")?.textContent?.trim() || "知乎答主";
@@ -23524,7 +23610,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             const rawZop = el.getAttribute("data-zop");
             if (rawZop) zop = JSON.parse(rawZop);
           } catch (_) {}
-          const realAnsId = zop?.itemId || el.getAttribute("name") || el.dataset?.id || `ans_${questionId}_${idx}`;
+          const realAnsId = extractZhihuAnswerIdFromEl(el) || zop?.itemId || el.getAttribute("name") || el.dataset?.id || `ans_${questionId}_${idx}`;
           let commentCount = 0;
           const metaComment = el.querySelector('meta[itemprop="commentCount"]');
           if (metaComment && metaComment.getAttribute("content")) {
@@ -40890,13 +40976,12 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             throw e1;
           }
         }
-        const resData = resp?.data?.data != null ? resp.data : (resp?.data || resp);
-        const dataArr = Array.isArray(resData?.data) ? resData.data : (Array.isArray(resData?.comments) ? resData.comments : []);
-        if (dataArr.length > 0) {
-          rawComments = dataArr;
-          paging = resData?.paging || null;
-          if (resData?.counts?.total_counts != null) {
-            fetchedTotal = Number(resData.counts.total_counts);
+        const extracted = extractZhihuCommentsPayload(resp);
+        if (extracted.comments.length > 0) {
+          rawComments = extracted.comments;
+          paging = extracted.paging;
+          if (extracted.totalCount > 0) {
+            fetchedTotal = extracted.totalCount;
             zhihuCommentCountsMap.set(cleanId, fetchedTotal);
           }
           if (paging) {
@@ -40950,19 +41035,24 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         } catch (e1) {
           const altType = targetType === "answers" ? "articles" : "answers";
           const altUrl = reqUrl.replace(`/${targetType}/`, `/${altType}/`);
-          resp = await zhihuApi(altUrl, {
-            headers: {
-              "x-requested-with": "fetch",
-              "Referer": location.href || "https://www.zhihu.com/"
-            }
-          });
-          targetType = altType;
+          try {
+            resp = await zhihuApi(altUrl, {
+              headers: {
+                "x-requested-with": "fetch",
+                "Referer": location.href || "https://www.zhihu.com/"
+              }
+            });
+            targetType = altType;
+          } catch (_) {
+            resp = null;
+          }
         }
-        if (Array.isArray(resp?.data) && resp.data.length > 0) {
-          rawComments = resp.data;
-          paging = resp.paging || null;
-          if (resp.counts?.total_counts != null) {
-            fetchedTotal = Number(resp.counts.total_counts);
+        const extracted = extractZhihuCommentsPayload(resp);
+        if (extracted.comments.length > 0) {
+          rawComments = extracted.comments;
+          paging = extracted.paging;
+          if (extracted.totalCount > 0) {
+            fetchedTotal = extracted.totalCount;
             zhihuCommentCountsMap.set(cleanId, fetchedTotal);
           }
           if (paging) {
@@ -40983,12 +41073,34 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             "Referer": location.href || "https://www.zhihu.com/"
           }
         });
-        if (absResp?.counts?.total_counts != null) {
-          fetchedTotal = Number(absResp.counts.total_counts);
+        const extracted = extractZhihuCommentsPayload(absResp);
+        if (extracted.totalCount > 0) {
+          fetchedTotal = extracted.totalCount;
           zhihuCommentCountsMap.set(cleanId, fetchedTotal);
         }
-        if (Array.isArray(absResp?.data) && absResp.data.length > 0) {
-          rawComments = absResp.data;
+        if (extracted.comments.length > 0) {
+          rawComments = extracted.comments;
+        }
+      } catch (_) {}
+    }
+
+    // Tier 4b: Classical v4 root_comments endpoint fallback
+    if (rawComments.length === 0 && pageNum === 1 && !cursor) {
+      try {
+        const v4Resp = await zhihuApi(`/api/v4/${targetType}/${cleanId}/root_comments?order_by=score&limit=20`, {
+          headers: {
+            "x-requested-with": "fetch",
+            "Referer": location.href || "https://www.zhihu.com/"
+          }
+        });
+        const extracted = extractZhihuCommentsPayload(v4Resp);
+        if (extracted.comments.length > 0) {
+          rawComments = extracted.comments;
+          paging = extracted.paging;
+          if (extracted.totalCount > 0) {
+            fetchedTotal = extracted.totalCount;
+            zhihuCommentCountsMap.set(cleanId, fetchedTotal);
+          }
         }
       } catch (_) {}
     }
@@ -41152,11 +41264,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       const client = getZhihuInternalClient();
       if (client) {
         const resp = await client.get(reqUrl);
-        const resData = resp?.data?.data != null ? resp.data : (resp?.data || resp);
-        rawComments = Array.isArray(resData?.data) ? resData.data : (Array.isArray(resData?.comments) ? resData.comments : []);
-        paging = resData?.paging || null;
-        if (resData?.counts?.total_counts != null) {
-          totalCount = Number(resData.counts.total_counts);
+        const extracted = extractZhihuCommentsPayload(resp);
+        rawComments = extracted.comments;
+        paging = extracted.paging;
+        if (extracted.totalCount > 0) {
+          totalCount = extracted.totalCount;
         }
       }
     } catch (_) {}
@@ -41170,10 +41282,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             "Referer": location.href || "https://www.zhihu.com/"
           }
         });
-        rawComments = Array.isArray(resp?.data) ? resp.data : [];
-        paging = resp?.paging || null;
-        if (resp?.counts?.total_counts != null) {
-          totalCount = Number(resp.counts.total_counts);
+        const extracted = extractZhihuCommentsPayload(resp);
+        rawComments = extracted.comments;
+        paging = extracted.paging;
+        if (extracted.totalCount > 0) {
+          totalCount = extracted.totalCount;
         }
       } catch (_) {}
     }
@@ -41562,6 +41675,16 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     }
     if (!post && answerId) {
       post = [...(chatState.postsByNumber?.values() || [])].find((p) => String(p.id) === String(answerId));
+    }
+    if ((!answerId || !/^\d+$/.test(String(answerId))) && postNumber) {
+      const msgEl = document.querySelector(`.wecom-msg[data-post-number="${postNumber}"]`);
+      if (msgEl) {
+        const domAnsId = msgEl.dataset?.postId || extractZhihuAnswerIdFromEl(msgEl);
+        if (domAnsId && /^\d+$/.test(domAnsId)) {
+          answerId = domAnsId;
+          if (post) post.id = domAnsId;
+        }
+      }
     }
     if (!post) {
       post = {

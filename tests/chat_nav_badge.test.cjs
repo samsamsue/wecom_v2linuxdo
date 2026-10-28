@@ -12423,10 +12423,10 @@ test("Test 159: Elimination of empty answer stubs, content-aware feeds, single a
   const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
-  // 1. Version 0.8.33
-  assert.ok(metaContent.includes("@version      0.8.33"), "meta.js version must be 0.8.33");
-  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.33";'), "user.js version must be 0.8.33");
-  assert.ok(readmeContent.includes("0.8.33"), "README.md version must be 0.8.33");
+  // 1. Version 0.8.33 or newer
+  assert.ok(/@version\s+0\.8\.(33|[3-9]\d)/.test(metaContent), "meta.js version must be 0.8.33 or newer");
+  assert.ok(/SCRIPT_VERSION = "0\.8\.(33|[3-9]\d)"/.test(scriptContent), "user.js version must be 0.8.33 or newer");
+  assert.ok(/0\.8\.(33|[3-9]\d)/.test(readmeContent), "README.md version must be 0.8.33 or newer");
 
   // 2. hasAnswerContent & hasAnswerFullContent helpers
   assert.ok(
@@ -12473,6 +12473,51 @@ test("Test 159: Elimination of empty answer stubs, content-aware feeds, single a
     scriptContent.includes("hydrateZhihuPendingAnswers(body);") &&
     scriptContent.includes("hydrateZhihuPendingAnswers(b);"),
     "hydrateZhihuPendingAnswers must be triggered in loadTopic and message append routines"
+  );
+});
+
+test("Test 160: Zhihu comments payload robust extraction, answer ID fallback, and client compatibility (v0.8.34)", () => {
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version 0.8.34
+  assert.ok(metaContent.includes("@version      0.8.34"), "meta.js version must be 0.8.34");
+  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.34";'), "user.js version must be 0.8.34");
+  assert.ok(readmeContent.includes("0.8.34"), "README.md version must be 0.8.34");
+
+  // 2. extractZhihuCommentsPayload helper
+  assert.ok(
+    scriptContent.includes("function extractZhihuCommentsPayload(resp) {") &&
+    scriptContent.includes("if (Array.isArray(payload?.data)) {") &&
+    scriptContent.includes("counts?.total_counts ??"),
+    "extractZhihuCommentsPayload must parse both standard and unwrapped response shapes"
+  );
+
+  // 3. extractZhihuAnswerIdFromEl helper
+  assert.ok(
+    scriptContent.includes("function extractZhihuAnswerIdFromEl(el) {") &&
+    scriptContent.includes('el.querySelector(\'meta[itemprop="answerId"], meta[itemprop="itemId"]\')') &&
+    scriptContent.includes("metaUrl.match(/answer\\/(\\d+)/)"),
+    "extractZhihuAnswerIdFromEl must check meta and link tags for answer ID"
+  );
+
+  // 4. getZhihuInternalClient supports unsafeWindow
+  assert.ok(
+    scriptContent.includes("const win = typeof unsafeWindow !== \"undefined\" ? unsafeWindow : (typeof window !== \"undefined\" ? window : null);"),
+    "getZhihuInternalClient must support unsafeWindow in userscript sandboxes"
+  );
+
+  // 5. fetchZhihuAnswerComments and fetchZhihuChildComments use extractZhihuCommentsPayload
+  assert.ok(
+    scriptContent.includes("const extracted = extractZhihuCommentsPayload(resp);") &&
+    scriptContent.includes("const extracted = extractZhihuCommentsPayload(absResp);"),
+    "fetchZhihuAnswerComments must extract comments using extractZhihuCommentsPayload"
+  );
+
+  // 6. Classical v4 root_comments endpoint fallback
+  assert.ok(
+    scriptContent.includes("`/api/v4/${targetType}/${cleanId}/root_comments?order_by=score&limit=20`"),
+    "fetchZhihuAnswerComments must include v4 root_comments endpoint fallback"
   );
 });
 
