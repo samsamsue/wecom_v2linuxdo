@@ -42727,6 +42727,26 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     });
   }
 
+  function updateConversationSnippet(topicId, lastPost) {
+    if (!topicId || !lastPost) return;
+    const conv = document.querySelector(`.wecom-conv[data-topic-id="${topicId}"]`);
+    if (!conv) return;
+
+    const author = lastPost.name || lastPost.username || "";
+    const snippet = (lastPost.cooked || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    const msgEl = conv.querySelector(".wecom-conv-msg");
+    if (msgEl) {
+      msgEl.textContent = author ? `${author}: ${snippet.slice(0, 50)}` : snippet.slice(0, 50);
+    }
+
+    const timeEl = conv.querySelector(".wecom-conv-time");
+    if (timeEl) {
+      const postTimeMs = parseTimestamp(lastPost?.created_at) || Date.now();
+      timeEl.dataset.time = String(postTimeMs);
+      timeEl.textContent = formatTime(postTimeMs);
+    }
+  }
+
   function appendFreshPosts(posts, body, options = {}) {
     if (!body || !Array.isArray(posts) || !posts.length) return 0;
     if (body.dataset.topicId && chatState.topicId && ((IS_JUEJIN || IS_ZHIHU) ? String(body.dataset.topicId) !== String(chatState.topicId) : Number(body.dataset.topicId) !== Number(chatState.topicId))) {
@@ -42823,22 +42843,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     }
     syncChatFloatNav(body);
     if (chatState.topicId && fresh.length) {
-      const conv = document.querySelector(`.wecom-conv[data-topic-id="${chatState.topicId}"]`);
-      if (conv) {
-        const lastPost = fresh[fresh.length - 1];
-        const msgEl = conv.querySelector(".wecom-conv-msg");
-        if (msgEl && lastPost) {
-          const author = lastPost.name || lastPost.username || "";
-          const snippet = (lastPost.cooked || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-          msgEl.textContent = author ? `${author}: ${snippet.slice(0, 50)}` : snippet.slice(0, 50);
-        }
-        const timeEl = conv.querySelector(".wecom-conv-time");
-        if (timeEl) {
-          const postTimeMs = parseTimestamp(lastPost?.created_at) || Date.now();
-          timeEl.dataset.time = String(postTimeMs);
-          timeEl.textContent = formatTime(postTimeMs);
-        }
-      }
+      updateConversationSnippet(chatState.topicId, fresh[fresh.length - 1]);
     }
     return fresh.length;
   }
@@ -43193,22 +43198,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       }
 
       // 更新左侧列表会话摘要与时间
-      if (totalAppended > 0) {
-        const conv = document.querySelector(`.wecom-conv[data-topic-id="${topicId}"]`);
-        if (conv) {
-          const lastPost = freshPosts[freshPosts.length - 1];
-          const msgEl = conv.querySelector(".wecom-conv-msg");
-          if (msgEl && lastPost) {
-            const snippet = (lastPost.cooked || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-            msgEl.textContent = `${lastPost.username}: ${snippet.slice(0, 50)}`;
-          }
-          const timeEl = conv.querySelector(".wecom-conv-time");
-          if (timeEl) {
-            const postTimeMs = parseTimestamp(lastPost?.created_at) || Date.now();
-            timeEl.dataset.time = String(postTimeMs);
-            timeEl.textContent = formatTime(postTimeMs);
-          }
-        }
+      if (totalAppended > 0 && freshPosts.length) {
+        updateConversationSnippet(topicId, freshPosts[freshPosts.length - 1]);
       }
 
       return totalAppended;
@@ -43332,22 +43323,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         currentBody.scrollTop = prevScrollTop;
       }
 
-      if (totalAppended > 0) {
-        const conv = document.querySelector(`.wecom-conv[data-topic-id="${topicId}"]`);
-        if (conv) {
-          const lastPost = freshPosts[freshPosts.length - 1];
-          const msgEl = conv.querySelector(".wecom-conv-msg");
-          if (msgEl && lastPost) {
-            const snippet = (lastPost.cooked || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-            msgEl.textContent = `${lastPost.username}: ${snippet.slice(0, 50)}`;
-          }
-          const timeEl = conv.querySelector(".wecom-conv-time");
-          if (timeEl) {
-            const postTimeMs = parseTimestamp(lastPost?.created_at) || Date.now();
-            timeEl.dataset.time = String(postTimeMs);
-            timeEl.textContent = formatTime(postTimeMs);
-          }
-        }
+      if (totalAppended > 0 && freshPosts.length) {
+        updateConversationSnippet(topicId, freshPosts[freshPosts.length - 1]);
       }
 
       return totalAppended;
