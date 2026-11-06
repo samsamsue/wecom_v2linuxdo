@@ -16935,6 +16935,59 @@
     return cachedSystemFonts;
   }
 
+  /* ============================== 通用弹层 (Modal / Dialog) 核心引擎 ============================== */
+
+  function createWecomModalShell({
+    overlayClass = "",
+    contentHtml = "",
+    closeOnEscape = true,
+    closeOnBackdrop = true,
+    closeSelectors = [],
+    onClose
+  }) {
+    const overlay = document.createElement("div");
+    overlay.className = overlayClass;
+    overlay.innerHTML = contentHtml;
+
+    let isClosed = false;
+    const cleanup = () => {
+      if (isClosed) return;
+      isClosed = true;
+      document.removeEventListener("keydown", handleKeydown, true);
+      overlay.remove();
+      if (typeof onClose === "function") onClose();
+    };
+
+    const handleKeydown = (e) => {
+      if (closeOnEscape && e.key === "Escape") {
+        e.stopPropagation();
+        e.preventDefault();
+        cleanup();
+      }
+    };
+
+    overlay.addEventListener("click", (e) => {
+      if (closeOnBackdrop && e.target === overlay) {
+        cleanup();
+        return;
+      }
+      for (const sel of closeSelectors) {
+        if (e.target.closest(sel)) {
+          cleanup();
+          return;
+        }
+      }
+    });
+
+    document.addEventListener("keydown", handleKeydown, true);
+    document.body.appendChild(overlay);
+
+    return {
+      overlay,
+      close: cleanup
+    };
+  }
+
   function closeSystemFontPicker() {
     const dialog = document.querySelector(".wecom-font-picker-dialog");
     if (dialog) dialog.remove();
@@ -16944,43 +16997,37 @@
     closeSystemFontPicker();
     setThemeMenuOpen(false);
 
-    const dialog = document.createElement("div");
-    dialog.className = "wecom-font-picker-dialog";
-    dialog.innerHTML = `
-      <div class="wecom-font-picker-card" role="dialog" aria-modal="true" aria-labelledby="wecom-font-picker-title">
-        <div class="wecom-font-picker-head">
-          <div id="wecom-font-picker-title" class="wecom-font-picker-title">
-            ${ICONS.gear || ""} <span>选择本地系统字体</span>
+    const { overlay, close } = createWecomModalShell({
+      overlayClass: "wecom-font-picker-dialog",
+      closeSelectors: [".wecom-font-picker-close"],
+      contentHtml: `
+        <div class="wecom-font-picker-card" role="dialog" aria-modal="true" aria-labelledby="wecom-font-picker-title">
+          <div class="wecom-font-picker-head">
+            <div id="wecom-font-picker-title" class="wecom-font-picker-title">
+              ${ICONS.gear || ""} <span>选择本地系统字体</span>
+            </div>
+            <button type="button" class="wecom-font-picker-close" aria-label="关闭">&times;</button>
           </div>
-          <button type="button" class="wecom-font-picker-close" aria-label="关闭">&times;</button>
+          <div class="wecom-font-picker-body">
+            <div class="wecom-font-search-wrap">
+              <input type="text" class="wecom-font-search-input" placeholder="输入关键字搜索已安装的字体 (如 楷体, YaHei, MiSans)..." />
+            </div>
+            <div class="wecom-font-status-bar">
+              <span class="wecom-font-count-label">正在读取本地系统字体...</span>
+              <button type="button" class="wecom-font-refresh-btn">重新扫描</button>
+            </div>
+            <div class="wecom-font-picker-list">
+              <div class="wecom-font-empty">正在加载字体列表...</div>
+            </div>
+          </div>
         </div>
-        <div class="wecom-font-picker-body">
-          <div class="wecom-font-search-wrap">
-            <input type="text" class="wecom-font-search-input" placeholder="输入关键字搜索已安装的字体 (如 楷体, YaHei, MiSans)..." />
-          </div>
-          <div class="wecom-font-status-bar">
-            <span class="wecom-font-count-label">正在读取本地系统字体...</span>
-            <button type="button" class="wecom-font-refresh-btn">重新扫描</button>
-          </div>
-          <div class="wecom-font-picker-list">
-            <div class="wecom-font-empty">正在加载字体列表...</div>
-          </div>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(dialog);
-
-    dialog.addEventListener("click", (e) => {
-      if (e.target === dialog || e.target.closest(".wecom-font-picker-close")) {
-        closeSystemFontPicker();
-      }
+      `
     });
 
-    const searchInput = dialog.querySelector(".wecom-font-search-input");
-    const countLabel = dialog.querySelector(".wecom-font-count-label");
-    const listEl = dialog.querySelector(".wecom-font-picker-list");
-    const refreshBtn = dialog.querySelector(".wecom-font-refresh-btn");
+    const searchInput = overlay.querySelector(".wecom-font-search-input");
+    const countLabel = overlay.querySelector(".wecom-font-count-label");
+    const listEl = overlay.querySelector(".wecom-font-picker-list");
+    const refreshBtn = overlay.querySelector(".wecom-font-refresh-btn");
 
     const renderList = (fonts, method) => {
       const curSetting = getCustomFontSetting();
@@ -17032,7 +17079,7 @@
       if (item && item.dataset.font) {
         const selectedFont = item.dataset.font;
         setCustomFontSetting("custom", selectedFont);
-        closeSystemFontPicker();
+        close();
         showWecomToast(`已应用系统字体: ${selectedFont}`, "success", 2000);
       }
     });
@@ -17145,50 +17192,46 @@
     void copyTextToClipboard(appCommand);
 
     // 3. 弹出企业微信风格指引窗口
-    const dialog = document.createElement("div");
-    dialog.className = "wecom-shortcut-dialog";
-    dialog.innerHTML = `
-      <div class="wecom-shortcut-card" role="dialog" aria-modal="true" aria-labelledby="wecom-shortcut-title">
-        <div class="wecom-shortcut-head">
-          <div id="wecom-shortcut-title" class="wecom-shortcut-title">
-            ${ICONS.win || ""} <span>创建桌面独立窗口快捷方式</span>
+    const { overlay, close } = createWecomModalShell({
+      overlayClass: "wecom-shortcut-dialog",
+      closeSelectors: [".wecom-shortcut-close", ".wecom-shortcut-btn-confirm"],
+      contentHtml: `
+        <div class="wecom-shortcut-card" role="dialog" aria-modal="true" aria-labelledby="wecom-shortcut-title">
+          <div class="wecom-shortcut-head">
+            <div id="wecom-shortcut-title" class="wecom-shortcut-title">
+              ${ICONS.win || ""} <span>创建桌面独立窗口快捷方式</span>
+            </div>
+            <button type="button" class="wecom-shortcut-close" aria-label="关闭">&times;</button>
           </div>
-          <button type="button" class="wecom-shortcut-close" aria-label="关闭">&times;</button>
-        </div>
-        <div class="wecom-shortcut-body">
-          <div class="wecom-shortcut-banner">
-            <span>${ICONS.checkCircle || "✔"}</span>
-            <span>已自动下载桌面快捷方式生成脚本，并复制启动命令！</span>
+          <div class="wecom-shortcut-body">
+            <div class="wecom-shortcut-banner">
+              <span>${ICONS.checkCircle || "✔"}</span>
+              <span>已自动下载桌面快捷方式生成脚本，并复制启动命令！</span>
+            </div>
+            <div style="font-weight: 600; color: var(--wc-text, #1F2329); margin-bottom: 4px;">快捷方式启动命令：</div>
+            <div class="wecom-shortcut-cmd-box">
+              <code class="wecom-shortcut-cmd-code">${escapeHtml(appCommand)}</code>
+              <button type="button" class="wecom-shortcut-btn-copy">${ICONS.copy || ""} <span>复制</span></button>
+            </div>
+            <div style="font-weight: 600; color: var(--wc-text, #1F2329); margin-bottom: 6px;">如何添加到桌面：</div>
+            <ol class="wecom-shortcut-methods">
+              <li><strong>一键生成（推荐）</strong>：直接双击运行刚刚下载的 <code>${escapeHtml(batFileName)}</code> 文件，即可一键在桌面生成带有 Chrome 图标的独立应用快捷方式！</li>
+              <li><strong>手动创建</strong>：在电脑桌面空白处点击 <strong>鼠标右键 &rarr; 新建 &rarr; 快捷方式</strong>，直接粘贴上面已复制的命令并命名保存即可。</li>
+              <li><strong>Chrome 原生应用模式</strong>：也可在 Chrome 地址栏右侧点击 <strong>安装应用</strong> 图标，或菜单 <code>⋮ &rarr; 保存并共享 &rarr; 创建快捷方式</code>（勾选“在独立窗口中打开”）。</li>
+            </ol>
           </div>
-          <div style="font-weight: 600; color: var(--wc-text, #1F2329); margin-bottom: 4px;">快捷方式启动命令：</div>
-          <div class="wecom-shortcut-cmd-box">
-            <code class="wecom-shortcut-cmd-code">${escapeHtml(appCommand)}</code>
-            <button type="button" class="wecom-shortcut-btn-copy">${ICONS.copy || ""} <span>复制</span></button>
+          <div class="wecom-shortcut-foot">
+            <button type="button" class="wecom-shortcut-action-btn wecom-shortcut-btn-redownload">重新下载脚本 (.bat)</button>
+            <button type="button" class="wecom-shortcut-action-btn primary wecom-shortcut-btn-confirm">我知道了</button>
           </div>
-          <div style="font-weight: 600; color: var(--wc-text, #1F2329); margin-bottom: 6px;">如何添加到桌面：</div>
-          <ol class="wecom-shortcut-methods">
-            <li><strong>一键生成（推荐）</strong>：直接双击运行刚刚下载的 <code>${escapeHtml(batFileName)}</code> 文件，即可一键在桌面生成带有 Chrome 图标的独立应用快捷方式！</li>
-            <li><strong>手动创建</strong>：在电脑桌面空白处点击 <strong>鼠标右键 &rarr; 新建 &rarr; 快捷方式</strong>，直接粘贴上面已复制的命令并命名保存即可。</li>
-            <li><strong>Chrome 原生应用模式</strong>：也可在 Chrome 地址栏右侧点击 <strong>安装应用</strong> 图标，或菜单 <code>⋮ &rarr; 保存并共享 &rarr; 创建快捷方式</code>（勾选“在独立窗口中打开”）。</li>
-          </ol>
         </div>
-        <div class="wecom-shortcut-foot">
-          <button type="button" class="wecom-shortcut-action-btn wecom-shortcut-btn-redownload">重新下载脚本 (.bat)</button>
-          <button type="button" class="wecom-shortcut-action-btn primary wecom-shortcut-btn-confirm">我知道了</button>
-        </div>
-      </div>
-    `;
+      `
+    });
 
-    document.body.appendChild(dialog);
-
-    dialog.addEventListener("click", (e) => {
-      if (e.target === dialog || e.target.closest(".wecom-shortcut-close") || e.target.closest(".wecom-shortcut-btn-confirm")) {
-        closeWindowShortcutDialog();
-        return;
-      }
+    overlay.addEventListener("click", (e) => {
       if (e.target.closest(".wecom-shortcut-btn-copy")) {
         void copyTextToClipboard(appCommand);
-        const copyBtn = dialog.querySelector(".wecom-shortcut-btn-copy");
+        const copyBtn = overlay.querySelector(".wecom-shortcut-btn-copy");
         if (copyBtn) {
           copyBtn.innerHTML = `${ICONS.checkCircle || ""} <span>已复制</span>`;
           setTimeout(() => {
@@ -28337,57 +28380,42 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       return;
     }
 
-    const overlay = document.createElement("div");
-    overlay.className = "wecom-connect-overlay";
-
-    const modal = document.createElement("div");
-    modal.className = "wecom-connect-modal";
-    modal.setAttribute("role", "dialog");
-    modal.setAttribute("aria-label", "LINUX DO Connect");
-
-    modal.innerHTML = `
-      <div class="wecom-connect-header">
-        <div class="wecom-connect-title-group">
-          <div class="wecom-connect-title">
-            <span>LINUX DO Connect</span>
-            <span class="wecom-connect-logo-badge">OAuth 2.0</span>
+    const { overlay, close } = createWecomModalShell({
+      overlayClass: "wecom-connect-overlay",
+      closeSelectors: [".wecom-connect-close"],
+      contentHtml: `
+        <div class="wecom-connect-modal" role="dialog" aria-label="LINUX DO Connect">
+          <div class="wecom-connect-header">
+            <div class="wecom-connect-title-group">
+              <div class="wecom-connect-title">
+                <span>LINUX DO Connect</span>
+                <span class="wecom-connect-logo-badge">OAuth 2.0</span>
+              </div>
+              <div class="wecom-connect-subtitle">
+                <a href="https://connect.linux.do/" target="_blank" rel="noopener noreferrer">https://connect.linux.do/</a> · 官方认证与信任级别
+              </div>
+            </div>
+            <button type="button" class="wecom-connect-close" title="关闭" aria-label="关闭">×</button>
           </div>
-          <div class="wecom-connect-subtitle">
-            <a href="https://connect.linux.do/" target="_blank" rel="noopener noreferrer">https://connect.linux.do/</a> · 官方认证与信任级别
+
+          <div class="wecom-connect-body">
+            <div class="wecom-connect-loading">
+              <span>正在获取 LINUX DO Connect 认证信息...</span>
+            </div>
+          </div>
+
+          <div class="wecom-connect-footer">
+            <button type="button" class="wecom-connect-btn secondary wecom-connect-refresh-btn">🔄 刷新数据</button>
+            <a class="wecom-connect-btn primary" href="https://connect.linux.do/" target="_blank" rel="noopener noreferrer">访问官方 Connect ↗</a>
           </div>
         </div>
-        <button type="button" class="wecom-connect-close" title="关闭" aria-label="关闭">×</button>
-      </div>
-
-      <div class="wecom-connect-body">
-        <div class="wecom-connect-loading">
-          <span>正在获取 LINUX DO Connect 认证信息...</span>
-        </div>
-      </div>
-
-      <div class="wecom-connect-footer">
-        <button type="button" class="wecom-connect-btn secondary wecom-connect-refresh-btn">🔄 刷新数据</button>
-        <a class="wecom-connect-btn primary" href="https://connect.linux.do/" target="_blank" rel="noopener noreferrer">访问官方 Connect ↗</a>
-      </div>
-    `;
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-
-    // Overlay click outside modal to close
-    overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) {
-        closeLinuxDoConnectModal();
-      }
+      `
     });
 
-    // Close button
-    modal.querySelector(".wecom-connect-close")?.addEventListener("click", () => {
-      closeLinuxDoConnectModal();
-    });
+    const modal = overlay.querySelector(".wecom-connect-modal");
 
     // Refresh button
-    modal.querySelector(".wecom-connect-refresh-btn")?.addEventListener("click", () => {
+    modal?.querySelector(".wecom-connect-refresh-btn")?.addEventListener("click", () => {
       const body = modal.querySelector(".wecom-connect-body");
       if (body) {
         body.innerHTML = `<div class="wecom-connect-loading"><span>正在刷新数据...</span></div>`;
@@ -28399,26 +28427,18 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
     // Scroll listener for smooth scrollbar feedback
     let connectScrollTimer = null;
-    const connectBody = modal.querySelector(".wecom-connect-body");
+    const connectBody = modal?.querySelector(".wecom-connect-body");
     const handleConnectScroll = () => {
       connectBody?.classList.add("is-scrolling");
-      modal.classList.add("is-scrolling");
+      modal?.classList.add("is-scrolling");
       clearTimeout(connectScrollTimer);
       connectScrollTimer = setTimeout(() => {
         connectBody?.classList.remove("is-scrolling");
-        modal.classList.remove("is-scrolling");
+        modal?.classList.remove("is-scrolling");
       }, 800);
     };
     connectBody?.addEventListener("scroll", handleConnectScroll, { passive: true });
-    modal.addEventListener("scroll", handleConnectScroll, { passive: true });
-
-    // Escape key
-    connectKeydownHandler = (e) => {
-      if (e.key === "Escape") {
-        closeLinuxDoConnectModal();
-      }
-    };
-    document.addEventListener("keydown", connectKeydownHandler);
+    modal?.addEventListener("scroll", handleConnectScroll, { passive: true });
 
     // Load data
     fetchLinuxDoConnectData(false)
