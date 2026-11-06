@@ -26143,6 +26143,163 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     void syncV2exUserStats(true);
   }
 
+  /* ============================== 多平台用户资料卡 (Member Card) 通用引擎 ============================== */
+
+  function closeAllWecomMemberCards() {
+    document.querySelectorAll(".wecom-v2ex-member-card, .wecom-juejin-member-card, .wecom-zhihu-member-card").forEach((el) => el.remove());
+  }
+
+  function positionWecomFloatingCard(card, triggerEl, cardWidth = 320, defaultHeight = 280, margin = 10) {
+    if (!card) return;
+    if (triggerEl && typeof triggerEl.getBoundingClientRect === "function") {
+      const rect = triggerEl.getBoundingClientRect();
+      const cardHeight = card.offsetHeight || defaultHeight;
+
+      let left = rect.right + margin;
+      let top = rect.top;
+
+      if (left + cardWidth > window.innerWidth - margin) {
+        left = rect.left - cardWidth - margin;
+        if (left < margin) {
+          left = Math.max(margin, (window.innerWidth - cardWidth) / 2);
+          top = rect.bottom + margin;
+        }
+      }
+
+      if (top + cardHeight > window.innerHeight - margin) {
+        top = Math.max(margin, window.innerHeight - cardHeight - margin);
+      }
+      if (top < margin) top = margin;
+
+      card.style.position = "fixed";
+      card.style.left = `${Math.round(left)}px`;
+      card.style.top = `${Math.round(top)}px`;
+      card.style.zIndex = "100005";
+    } else {
+      card.style.position = "fixed";
+      card.style.left = "50%";
+      card.style.top = "50%";
+      card.style.transform = "translate(-50%, -50%)";
+      card.style.zIndex = "100005";
+    }
+  }
+
+  function adjustWecomFloatingCardVertical(card, margin = 10) {
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    if (rect.bottom > window.innerHeight - margin) {
+      const newTop = Math.max(margin, window.innerHeight - rect.height - margin);
+      card.style.top = `${Math.round(newTop)}px`;
+    }
+  }
+
+  function createWecomMemberCardShell({
+    username,
+    customClass = "",
+    initialAvatarSrc = "",
+    taglinePlaceholder = "正在获取资料…",
+    badgePlaceholder = "PRO",
+    showBadge = false,
+    followBtnText = "+ 关注",
+    followBtnTitle = "关注此人",
+    homeUrl = "javascript:;",
+    homeTitle = "查看完整主页 ↗",
+    triggerEl,
+    closeFn
+  }) {
+    const card = document.createElement("div");
+    card.className = `wecom-v2ex-member-card ${customClass}`.trim();
+    card.setAttribute("role", "dialog");
+    card.setAttribute("aria-label", `${username} 的个人资料`);
+
+    card.innerHTML = `
+      <button type="button" class="wecom-member-card-close" title="关闭" aria-label="关闭">×</button>
+
+      <div class="wecom-member-card-header">
+        <div class="wecom-member-avatar-box">
+          ${initialAvatarSrc
+            ? `<img class="wecom-member-avatar-img" src="${escapeHtml(initialAvatarSrc)}" alt="${escapeHtml(username)}">`
+            : `<div class="wecom-member-avatar-img" style="display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:700;">${escapeHtml(avatarLetter(username))}</div>`}
+          <span class="wecom-member-online-dot" style="display:none"></span>
+        </div>
+        <div class="wecom-member-title-box">
+          <div class="wecom-member-name-row">
+            <span class="wecom-member-username">${escapeHtml(username)}</span>
+            <span class="wecom-member-badge" style="${showBadge ? '' : 'display:none'}">${escapeHtml(badgePlaceholder)}</span>
+          </div>
+          <div class="wecom-member-tagline"><span class="wecom-member-loading-text">${escapeHtml(taglinePlaceholder)}</span></div>
+        </div>
+      </div>
+
+      <div class="wecom-member-notice" style="display:none"></div>
+
+      <div class="wecom-member-card-actions" style="display:none">
+        <button type="button" class="wecom-member-action-btn wecom-member-follow-btn" title="${escapeHtml(followBtnTitle)}">${escapeHtml(followBtnText)}</button>
+        <button type="button" class="wecom-member-action-btn wecom-member-block-btn" title="屏蔽此人">🚫 Block</button>
+      </div>
+
+      <div class="wecom-member-meta-pills" style="display:none"></div>
+      <div class="wecom-member-coins-row" style="display:none"></div>
+      <div class="wecom-member-intro" style="display:none"></div>
+      <div class="wecom-member-socials" style="display:none"></div>
+      <div class="wecom-member-topics-box" style="display:none"></div>
+      <div class="wecom-member-replies-box" style="display:none"></div>
+
+      <div class="wecom-member-card-footer">
+        <a class="wecom-member-btn primary wecom-member-home-link" href="${escapeHtml(homeUrl)}" target="_blank">${escapeHtml(homeTitle)}</a>
+        <button type="button" class="wecom-member-btn secondary wecom-copy-username-btn">复制用户名</button>
+      </div>
+    `;
+
+    document.body.appendChild(card);
+    positionWecomFloatingCard(card, triggerEl);
+
+    card.querySelector(".wecom-member-card-close")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeFn();
+    });
+
+    card.querySelector(".wecom-copy-username-btn")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      try {
+        navigator.clipboard.writeText(username);
+        showWecomToast(`已复制用户名：${username}`, "success");
+      } catch {
+        showWecomToast(username, "info");
+      }
+    });
+
+    let cardScrollTimer = null;
+    card.addEventListener("scroll", () => {
+      card.classList.add("is-scrolling");
+      clearTimeout(cardScrollTimer);
+      cardScrollTimer = setTimeout(() => {
+        card.classList.remove("is-scrolling");
+      }, 800);
+    }, { passive: true });
+
+    const onOutsideClick = (e) => {
+      if (!card.contains(e.target) && (!triggerEl || !triggerEl.contains(e.target))) {
+        closeFn();
+        document.removeEventListener("click", onOutsideClick, true);
+        document.removeEventListener("keydown", onKeydown, true);
+      }
+    };
+    const onKeydown = (e) => {
+      if (e.key === "Escape") {
+        closeFn();
+        document.removeEventListener("click", onOutsideClick, true);
+        document.removeEventListener("keydown", onKeydown, true);
+      }
+    };
+    setTimeout(() => {
+      document.addEventListener("click", onOutsideClick, true);
+      document.addEventListener("keydown", onKeydown, true);
+    }, 10);
+
+    return card;
+  }
+
   /* ============================== V2EX 成员资料卡弹窗 (/member/:username) ============================== */
 
   const v2exMemberProfileCache = new Map();
@@ -26491,117 +26648,17 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const triggerImg = triggerEl?.querySelector?.("img") || (triggerEl?.tagName === "IMG" ? triggerEl : null);
     const initialAvatarSrc = triggerImg?.src || "";
 
-    const card = document.createElement("div");
-    card.className = "wecom-v2ex-member-card";
-    card.setAttribute("role", "dialog");
-    card.setAttribute("aria-label", `${username} 的个人资料`);
-
-    card.innerHTML = `
-      <button type="button" class="wecom-member-card-close" title="关闭" aria-label="关闭">×</button>
-
-      <div class="wecom-member-card-header">
-        <div class="wecom-member-avatar-box">
-          ${initialAvatarSrc ? `<img class="wecom-member-avatar-img" src="${escapeHtml(initialAvatarSrc)}" alt="${escapeHtml(username)}">` : `<div class="wecom-member-avatar-img" style="display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:700;">${escapeHtml(avatarLetter(username))}</div>`}
-          <span class="wecom-member-online-dot" style="display:none"></span>
-        </div>
-        <div class="wecom-member-title-box">
-          <div class="wecom-member-name-row">
-            <span class="wecom-member-username">${escapeHtml(username)}</span>
-            <span class="wecom-member-badge" style="display:none">PRO</span>
-          </div>
-          <div class="wecom-member-tagline"><span class="wecom-member-loading-text">正在获取资料…</span></div>
-        </div>
-      </div>
-
-      <div class="wecom-member-notice" style="display:none"></div>
-
-      <div class="wecom-member-card-actions" style="display:none">
-        <button type="button" class="wecom-member-action-btn wecom-member-follow-btn" title="特别关注">⭐ 特别关注</button>
-        <button type="button" class="wecom-member-action-btn wecom-member-block-btn" title="屏蔽此人">🚫 Block</button>
-      </div>
-
-      <div class="wecom-member-meta-pills" style="display:none"></div>
-      <div class="wecom-member-coins-row" style="display:none"></div>
-      <div class="wecom-member-intro" style="display:none"></div>
-      <div class="wecom-member-socials" style="display:none"></div>
-      <div class="wecom-member-topics-box" style="display:none"></div>
-      <div class="wecom-member-replies-box" style="display:none"></div>
-
-      <div class="wecom-member-card-footer">
-        <a class="wecom-member-btn primary" href="/member/${encodeURIComponent(username)}" target="_blank">查看完整主页 ↗</a>
-        <button type="button" class="wecom-member-btn secondary wecom-copy-username-btn">复制用户名</button>
-      </div>
-    `;
-
-    document.body.appendChild(card);
-
-    if (triggerEl && typeof triggerEl.getBoundingClientRect === "function") {
-      const rect = triggerEl.getBoundingClientRect();
-      const cardWidth = 320;
-      const cardHeight = card.offsetHeight || 300;
-      const margin = 10;
-
-      let left = rect.right + margin;
-      let top = rect.top;
-
-      if (left + cardWidth > window.innerWidth - margin) {
-        left = rect.left - cardWidth - margin;
-        if (left < margin) {
-          left = Math.max(margin, (window.innerWidth - cardWidth) / 2);
-          top = rect.bottom + margin;
-        }
-      }
-
-      if (top + cardHeight > window.innerHeight - margin) {
-        top = Math.max(margin, window.innerHeight - cardHeight - margin);
-      }
-      if (top < margin) top = margin;
-
-      card.style.position = "fixed";
-      card.style.left = `${Math.round(left)}px`;
-      card.style.top = `${Math.round(top)}px`;
-      card.style.zIndex = "100005";
-    } else {
-      card.style.position = "fixed";
-      card.style.left = "50%";
-      card.style.top = "50%";
-      card.style.transform = "translate(-50%, -50%)";
-      card.style.zIndex = "100005";
-    }
-
-    card.querySelector(".wecom-member-card-close")?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      closeV2exMemberCard();
+    const card = createWecomMemberCardShell({
+      username,
+      initialAvatarSrc,
+      taglinePlaceholder: "正在获取资料…",
+      badgePlaceholder: "PRO",
+      followBtnText: "⭐ 特别关注",
+      followBtnTitle: "特别关注",
+      homeUrl: `/member/${encodeURIComponent(username)}`,
+      triggerEl,
+      closeFn: closeV2exMemberCard
     });
-
-    card.querySelector(".wecom-copy-username-btn")?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      try {
-        navigator.clipboard.writeText(username);
-        showWecomToast(`已复制用户名：${username}`, "success");
-      } catch {
-        showWecomToast(username, "info");
-      }
-    });
-
-    let cardScrollTimer = null;
-    card.addEventListener("scroll", () => {
-      card.classList.add("is-scrolling");
-      clearTimeout(cardScrollTimer);
-      cardScrollTimer = setTimeout(() => {
-        card.classList.remove("is-scrolling");
-      }, 800);
-    }, { passive: true });
-
-    const onOutsideClick = (e) => {
-      if (!card.contains(e.target) && (!triggerEl || !triggerEl.contains(e.target))) {
-        closeV2exMemberCard();
-        document.removeEventListener("click", onOutsideClick, true);
-      }
-    };
-    setTimeout(() => {
-      document.addEventListener("click", onOutsideClick, true);
-    }, 10);
 
     fetchV2exMemberProfile(username).then((profile) => {
       if (!profile || !card.isConnected) return;
@@ -26645,13 +26702,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         }
 
         // 重新校验卡片可视区域定位
-        if (triggerEl && typeof triggerEl.getBoundingClientRect === "function") {
-          const rect = card.getBoundingClientRect();
-          if (rect.bottom > window.innerHeight - 10) {
-            const newTop = Math.max(10, window.innerHeight - rect.height - 10);
-            card.style.top = `${Math.round(newTop)}px`;
-          }
-        }
+        adjustWecomFloatingCardVertical(card);
         return;
       }
 
@@ -27061,13 +27112,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       }
 
       // Re-check card position to ensure it fits in the viewport
-      if (triggerEl && typeof triggerEl.getBoundingClientRect === "function") {
-        const rect = card.getBoundingClientRect();
-        if (rect.bottom > window.innerHeight - 10) {
-          const newTop = Math.max(10, window.innerHeight - rect.height - 10);
-          card.style.top = `${Math.round(newTop)}px`;
-        }
-      }
+      adjustWecomFloatingCardVertical(card);
     }).catch(() => {
       const tagline = card.querySelector(".wecom-member-tagline");
       if (tagline) tagline.textContent = "资料获取异常";
@@ -27310,115 +27355,18 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const triggerImg = triggerEl?.querySelector?.("img") || (triggerEl?.tagName === "IMG" ? triggerEl : null);
     const initialAvatarSrc = triggerImg?.src || "";
 
-    const card = document.createElement("div");
-    card.className = "wecom-v2ex-member-card wecom-juejin-member-card";
-    card.setAttribute("role", "dialog");
-    card.setAttribute("aria-label", `${username} 的个人资料`);
-
-    card.innerHTML = `
-      <button type="button" class="wecom-member-card-close" title="关闭" aria-label="关闭">×</button>
-
-      <div class="wecom-member-card-header">
-        <div class="wecom-member-avatar-box">
-          ${initialAvatarSrc
-            ? `<img class="wecom-member-avatar-img" src="${escapeHtml(initialAvatarSrc)}" alt="${escapeHtml(username)}">`
-            : `<div class="wecom-member-avatar-img" style="display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:700;">${escapeHtml(avatarLetter(username))}</div>`}
-          <span class="wecom-member-online-dot" style="display:none"></span>
-        </div>
-        <div class="wecom-member-title-box">
-          <div class="wecom-member-name-row">
-            <span class="wecom-member-username">${escapeHtml(username)}</span>
-            <span class="wecom-member-badge" style="display:none">Lv.1</span>
-          </div>
-          <div class="wecom-member-tagline"><span class="wecom-member-loading-text">${userId ? "正在获取资料…" : "掘金创作者"}</span></div>
-        </div>
-      </div>
-
-      <div class="wecom-member-notice" style="display:none"></div>
-
-      <div class="wecom-member-card-actions" style="display:none">
-        <button type="button" class="wecom-member-action-btn wecom-member-follow-btn" title="关注此人">+ 关注</button>
-      </div>
-
-      <div class="wecom-member-meta-pills" style="display:none"></div>
-
-      <div class="wecom-member-intro" style="display:none"></div>
-
-      <div class="wecom-member-card-footer">
-        <a class="wecom-member-btn primary wecom-member-home-link" href="${userId ? `https://juejin.cn/user/${userId}` : 'javascript:;'}" target="_blank">查看完整主页 ↗</a>
-        <button type="button" class="wecom-member-btn secondary wecom-copy-username-btn">复制用户名</button>
-      </div>
-    `;
-
-    document.body.appendChild(card);
-
-    if (triggerEl && typeof triggerEl.getBoundingClientRect === "function") {
-      const rect = triggerEl.getBoundingClientRect();
-      const cardWidth = 320;
-      const cardHeight = card.offsetHeight || 280;
-      const margin = 10;
-
-      let left = rect.right + margin;
-      let top = rect.top;
-
-      if (left + cardWidth > window.innerWidth - margin) {
-        left = rect.left - cardWidth - margin;
-        if (left < margin) {
-          left = Math.max(margin, (window.innerWidth - cardWidth) / 2);
-          top = rect.bottom + margin;
-        }
-      }
-
-      if (top + cardHeight > window.innerHeight - margin) {
-        top = Math.max(margin, window.innerHeight - cardHeight - margin);
-      }
-      if (top < margin) top = margin;
-
-      card.style.position = "fixed";
-      card.style.left = `${Math.round(left)}px`;
-      card.style.top = `${Math.round(top)}px`;
-      card.style.zIndex = "100005";
-    } else {
-      card.style.position = "fixed";
-      card.style.left = "50%";
-      card.style.top = "50%";
-      card.style.transform = "translate(-50%, -50%)";
-      card.style.zIndex = "100005";
-    }
-
-    card.querySelector(".wecom-member-card-close")?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      closeJuejinMemberCard();
+    const card = createWecomMemberCardShell({
+      username,
+      customClass: "wecom-juejin-member-card",
+      initialAvatarSrc,
+      taglinePlaceholder: userId ? "正在获取资料…" : "掘金创作者",
+      badgePlaceholder: "Lv.1",
+      followBtnText: "+ 关注",
+      followBtnTitle: "关注此人",
+      homeUrl: userId ? `https://juejin.cn/user/${userId}` : "javascript:;",
+      triggerEl,
+      closeFn: closeJuejinMemberCard
     });
-
-    card.querySelector(".wecom-copy-username-btn")?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      try {
-        navigator.clipboard.writeText(username);
-        showWecomToast(`已复制用户名：${username}`, "success");
-      } catch {
-        showWecomToast(username, "info");
-      }
-    });
-
-    let cardScrollTimer = null;
-    card.addEventListener("scroll", () => {
-      card.classList.add("is-scrolling");
-      clearTimeout(cardScrollTimer);
-      cardScrollTimer = setTimeout(() => {
-        card.classList.remove("is-scrolling");
-      }, 800);
-    }, { passive: true });
-
-    const onOutsideClick = (e) => {
-      if (!card.contains(e.target) && (!triggerEl || !triggerEl.contains(e.target))) {
-        closeJuejinMemberCard();
-        document.removeEventListener("click", onOutsideClick, true);
-      }
-    };
-    setTimeout(() => {
-      document.addEventListener("click", onOutsideClick, true);
-    }, 10);
 
     fetchJuejinUserProfile(userId).then((profile) => {
       if (!profile || !card.isConnected) return;
@@ -27548,13 +27496,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       }
 
       // 重新校验卡片边界
-      if (triggerEl && typeof triggerEl.getBoundingClientRect === "function") {
-        const rect = card.getBoundingClientRect();
-        if (rect.bottom > window.innerHeight - 10) {
-          const newTop = Math.max(10, window.innerHeight - rect.height - 10);
-          card.style.top = `${Math.round(newTop)}px`;
-        }
-      }
+      adjustWecomFloatingCardVertical(card);
     }).catch(() => {
       const tagline = card.querySelector(".wecom-member-tagline");
       if (tagline) tagline.textContent = "掘金创作者";
@@ -27645,102 +27587,19 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const initialAvatarSrc = triggerImg?.src || "";
     const cleanUsername = username && username !== "知友" ? username.split(" · ")[0] : (username || "知友");
 
-    const card = document.createElement("div");
-    card.className = "wecom-v2ex-member-card wecom-zhihu-member-card";
-    card.setAttribute("role", "dialog");
-    card.setAttribute("aria-label", `${cleanUsername} 的个人资料`);
-
-    card.innerHTML = `
-      <button type="button" class="wecom-member-card-close" title="关闭" aria-label="关闭">×</button>
-
-      <div class="wecom-member-card-header">
-        <div class="wecom-member-avatar-box">
-          ${initialAvatarSrc
-            ? `<img class="wecom-member-avatar-img" src="${escapeHtml(initialAvatarSrc)}" alt="${escapeHtml(cleanUsername)}">`
-            : `<div class="wecom-member-avatar-img" style="display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:700;">${escapeHtml(avatarLetter(cleanUsername))}</div>`}
-        </div>
-        <div class="wecom-member-title-box">
-          <div class="wecom-member-name-row">
-            <span class="wecom-member-username">${escapeHtml(cleanUsername)}</span>
-            <span class="wecom-member-badge" style="display:none">知乎答主</span>
-          </div>
-          <div class="wecom-member-tagline"><span class="wecom-member-loading-text">${userTokenOrId ? "正在获取资料…" : "知乎知友"}</span></div>
-        </div>
-      </div>
-
-      <div class="wecom-member-card-actions" style="display:none">
-        <button type="button" class="wecom-member-action-btn wecom-member-follow-btn" title="关注此人">+ 关注知友</button>
-      </div>
-
-      <div class="wecom-member-meta-pills" style="display:none"></div>
-      <div class="wecom-member-intro" style="display:none"></div>
-
-      <div class="wecom-member-card-footer">
-        <a class="wecom-member-btn primary wecom-member-home-link" href="${userTokenOrId ? `https://www.zhihu.com/people/${encodeURIComponent(userTokenOrId)}` : 'https://www.zhihu.com'}" target="_blank">查看完整主页 ↗</a>
-        <button type="button" class="wecom-member-btn secondary wecom-copy-username-btn">复制用户名</button>
-      </div>
-    `;
-
-    document.body.appendChild(card);
-
-    if (triggerEl && typeof triggerEl.getBoundingClientRect === "function") {
-      const rect = triggerEl.getBoundingClientRect();
-      const cardWidth = 320;
-      const cardHeight = card.offsetHeight || 280;
-      const margin = 10;
-
-      let left = rect.right + margin;
-      let top = rect.top;
-
-      if (left + cardWidth > window.innerWidth - margin) {
-        left = rect.left - cardWidth - margin;
-        if (left < margin) {
-          left = Math.max(margin, (window.innerWidth - cardWidth) / 2);
-          top = rect.bottom + margin;
-        }
-      }
-
-      if (top + cardHeight > window.innerHeight - margin) {
-        top = Math.max(margin, window.innerHeight - cardHeight - margin);
-      }
-      if (top < margin) top = margin;
-
-      card.style.position = "fixed";
-      card.style.left = `${Math.round(left)}px`;
-      card.style.top = `${Math.round(top)}px`;
-      card.style.zIndex = "100005";
-    } else {
-      card.style.position = "fixed";
-      card.style.left = "50%";
-      card.style.top = "50%";
-      card.style.transform = "translate(-50%, -50%)";
-      card.style.zIndex = "100005";
-    }
-
-    card.querySelector(".wecom-member-card-close")?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      closeZhihuMemberCard();
+    const homeUrl = userTokenOrId ? `https://www.zhihu.com/people/${encodeURIComponent(userTokenOrId)}` : 'https://www.zhihu.com';
+    const card = createWecomMemberCardShell({
+      username: cleanUsername,
+      customClass: "wecom-zhihu-member-card",
+      initialAvatarSrc,
+      taglinePlaceholder: userTokenOrId ? "正在获取资料…" : "知乎知友",
+      badgePlaceholder: "知乎答主",
+      followBtnText: "+ 关注知友",
+      followBtnTitle: "关注此人",
+      homeUrl,
+      triggerEl,
+      closeFn: closeZhihuMemberCard
     });
-
-    card.querySelector(".wecom-copy-username-btn")?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      try {
-        navigator.clipboard.writeText(cleanUsername);
-        showWecomToast(`已复制用户名：${cleanUsername}`, "success");
-      } catch {
-        showWecomToast(cleanUsername, "info");
-      }
-    });
-
-    const onOutsideClick = (e) => {
-      if (!card.contains(e.target) && (!triggerEl || !triggerEl.contains(e.target))) {
-        closeZhihuMemberCard();
-        document.removeEventListener("click", onOutsideClick, true);
-      }
-    };
-    setTimeout(() => {
-      document.addEventListener("click", onOutsideClick, true);
-    }, 10);
 
     fetchZhihuUserProfile(userTokenOrId).then((profile) => {
       if (!profile || !card.isConnected) return;
@@ -27802,13 +27661,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         }
       }
 
-      if (triggerEl && typeof triggerEl.getBoundingClientRect === "function") {
-        const rect = card.getBoundingClientRect();
-        if (rect.bottom > window.innerHeight - 10) {
-          const newTop = Math.max(10, window.innerHeight - rect.height - 10);
-          card.style.top = `${Math.round(newTop)}px`;
-        }
-      }
+      adjustWecomFloatingCardVertical(card);
     }).catch(() => {
       const tagline = card.querySelector(".wecom-member-tagline");
       if (tagline) tagline.textContent = "知乎知友";
