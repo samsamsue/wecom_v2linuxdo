@@ -12480,10 +12480,10 @@ test("Test 160: Zhihu comments payload robust extraction, answer ID fallback, an
   const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
-  // 1. Version 0.8.34
-  assert.ok(metaContent.includes("@version      0.8.34"), "meta.js version must be 0.8.34");
-  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.34";'), "user.js version must be 0.8.34");
-  assert.ok(readmeContent.includes("0.8.34"), "README.md version must be 0.8.34");
+  // 1. Version 0.8.34 or newer
+  assert.ok(/@version\s+0\.8\.(34|[3-9]\d)/.test(metaContent), "meta.js version must be 0.8.34 or newer");
+  assert.ok(/SCRIPT_VERSION = "0\.8\.(34|[3-9]\d)"/.test(scriptContent), "user.js version must be 0.8.34 or newer");
+  assert.ok(/0\.8\.(34|[3-9]\d)/.test(readmeContent), "README.md version must be 0.8.34 or newer");
 
   // 2. extractZhihuCommentsPayload helper
   assert.ok(
@@ -12518,6 +12518,101 @@ test("Test 160: Zhihu comments payload robust extraction, answer ID fallback, an
   assert.ok(
     scriptContent.includes("`/api/v4/${targetType}/${cleanId}/root_comments?order_by=score&limit=20`"),
     "fetchZhihuAnswerComments must include v4 root_comments endpoint fallback"
+  );
+});
+
+test("Test 161: Image layout thumbnail magnifying glass with mouse wheel zoom scale control across all platforms (v0.8.35)", () => {
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version 0.8.35
+  assert.ok(metaContent.includes("@version      0.8.35"), "meta.js version must be 0.8.35");
+  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.35";'), "user.js version must be 0.8.35");
+  assert.ok(readmeContent.includes("0.8.35"), "README.md version must be 0.8.35");
+
+  // 2. Constants definition
+  assert.ok(scriptContent.includes('const IMAGE_MAGNIFIER_KEY = "linuxdo-wecom-image-magnifier";'), "must define IMAGE_MAGNIFIER_KEY");
+  assert.ok(scriptContent.includes('const IMAGE_MAGNIFIER_SCALE_KEY = "linuxdo-wecom-image-magnifier-scale";'), "must define IMAGE_MAGNIFIER_SCALE_KEY");
+  assert.ok(scriptContent.includes("const DEFAULT_IMAGE_MAGNIFIER_SCALE = 2.5;"), "must define DEFAULT_IMAGE_MAGNIFIER_SCALE");
+  assert.ok(scriptContent.includes("const MIN_IMAGE_MAGNIFIER_SCALE = 1.2;"), "must define MIN_IMAGE_MAGNIFIER_SCALE");
+  assert.ok(scriptContent.includes("const MAX_IMAGE_MAGNIFIER_SCALE = 6.0;"), "must define MAX_IMAGE_MAGNIFIER_SCALE");
+
+  // 3. Helper functions: isImageMagnifierEnabled, setImageMagnifierEnabled, isImageMagnifierActive, getImageMagnifierScale, setImageMagnifierScale
+  assert.ok(scriptContent.includes("function isImageMagnifierEnabled()"), "must define isImageMagnifierEnabled");
+  assert.ok(scriptContent.includes("function setImageMagnifierEnabled(on)"), "must define setImageMagnifierEnabled");
+  assert.ok(scriptContent.includes("function isImageMagnifierActive()"), "must define isImageMagnifierActive");
+  assert.ok(
+    scriptContent.includes("return isImageAutoLayoutEnabled() && isImageMagnifierEnabled();"),
+    "isImageMagnifierActive must strictly require isImageAutoLayoutEnabled"
+  );
+  assert.ok(scriptContent.includes("function getImageMagnifierScale()"), "must define getImageMagnifierScale");
+  assert.ok(scriptContent.includes("function setImageMagnifierScale(scale)"), "must define setImageMagnifierScale");
+
+  // 4. Magnifier DOM elements, lens, glare, badge, and crosshair
+  assert.ok(scriptContent.includes("function ensureImageMagnifier()"), "must define ensureImageMagnifier");
+  assert.ok(scriptContent.includes('.wecom-image-magnifier'), "must style .wecom-image-magnifier");
+  assert.ok(scriptContent.includes('.wecom-magnifier-lens'), "must style .wecom-magnifier-lens");
+  assert.ok(scriptContent.includes('.wecom-magnifier-view'), "must style .wecom-magnifier-view");
+  assert.ok(scriptContent.includes('.wecom-magnifier-img'), "must style .wecom-magnifier-img");
+  assert.ok(scriptContent.includes('.wecom-magnifier-badge'), "must style .wecom-magnifier-badge");
+  assert.ok(scriptContent.includes('.wecom-msg-thumb.is-magnifying'), "must style .wecom-msg-thumb.is-magnifying");
+
+  // 5. Mouse wheel zoom adjustment with preventDefault
+  assert.ok(scriptContent.includes("function handleMagnifierWheel(event)"), "must define handleMagnifierWheel");
+  assert.ok(
+    scriptContent.includes("event.preventDefault();") &&
+    scriptContent.includes("event.stopPropagation();") &&
+    scriptContent.includes("delta < 0 ? 1 : -1"),
+    "handleMagnifierWheel must prevent default and compute zoom direction from deltaY"
+  );
+  assert.ok(
+    scriptContent.includes('document.addEventListener("wheel"') &&
+    scriptContent.includes('{ passive: false }'),
+    "must register wheel event with { passive: false } to allow preventDefault"
+  );
+
+  // 6. Theme menu integration
+  assert.ok(scriptContent.includes("wecom-menu-toggle-image-magnifier"), "must include wecom-menu-toggle-image-magnifier in theme menu");
+  assert.ok(scriptContent.includes("ICONS.magnifier"), "must use ICONS.magnifier");
+  assert.ok(
+    scriptContent.includes('const imageMagnifierBtn = menu.querySelector(".wecom-menu-toggle-image-magnifier");'),
+    "syncThemeControls must synchronize magnifier toggle state"
+  );
+  assert.ok(
+    scriptContent.includes('imageMagnifierBtn.style.opacity = isAuto ? "" : "0.55";'),
+    "magnifier toggle in menu must dim when auto layout is off"
+  );
+
+  // 7. WECOM_UI_SEL and bootstrap bindings
+  assert.ok(scriptContent.includes(".wecom-image-magnifier, .wecom-edit-dialog"), "WECOM_UI_SEL must include .wecom-image-magnifier");
+  assert.ok(scriptContent.includes("bindImageMagnifierEvents();"), "bootstrap must invoke bindImageMagnifierEvents");
+
+  // 8. Hover and magnifying state switch image to contain mode for complete uncropped viewing
+  assert.ok(
+    scriptContent.includes(".wecom-msg-thumb:hover img,") &&
+    scriptContent.includes(".wecom-msg-thumb.is-magnifying img {") &&
+    scriptContent.includes("object-fit: contain !important;"),
+    "hover and magnifying state must switch thumbnail image to object-fit: contain"
+  );
+  assert.ok(
+    scriptContent.includes("imageRatio > containerRatio") &&
+    scriptContent.includes("fitW / imageRatio") &&
+    scriptContent.includes("fitH * imageRatio"),
+    "renderImageMagnifier must calculate contain fitted image bounds for accurate mouse mapping"
+  );
+
+  // 9. Edge magnetic buffer zone and pin/freeze lock
+  assert.ok(
+    scriptContent.includes("const MAGNIFIER_EDGE_BUFFER = 28;") &&
+    scriptContent.includes("event.clientX >= rect.left - MAGNIFIER_EDGE_BUFFER") &&
+    scriptContent.includes("event.clientX <= rect.right + MAGNIFIER_EDGE_BUFFER"),
+    "must implement 28px edge magnetic buffer zone to prevent accidental boundary slipping"
+  );
+  assert.ok(
+    scriptContent.includes('event.code === "Space" || event.key === "Shift"') &&
+    scriptContent.includes("magnifierPinned = !magnifierPinned;") &&
+    scriptContent.includes(".wecom-image-magnifier.is-pinned"),
+    "must implement Space/Shift pin freeze lock for effortless edge inspection"
   );
 });
 

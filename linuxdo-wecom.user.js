@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.34
+// @version      0.8.35
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -467,6 +467,12 @@
   const IMAGE_AUTO_LAYOUT_ASPECT_KEY = "linuxdo-wecom-image-layout-aspect";
   const DEFAULT_IMAGE_AUTO_LAYOUT_ASPECT = "1:1";
   const SUPPORTED_IMAGE_AUTO_LAYOUT_ASPECTS = Object.freeze(["4:3", "1:1", "16:9"]);
+  const IMAGE_MAGNIFIER_KEY = "linuxdo-wecom-image-magnifier";
+  const IMAGE_MAGNIFIER_SCALE_KEY = "linuxdo-wecom-image-magnifier-scale";
+  const DEFAULT_IMAGE_MAGNIFIER_SCALE = 2.5;
+  const MIN_IMAGE_MAGNIFIER_SCALE = 1.2;
+  const MAX_IMAGE_MAGNIFIER_SCALE = 6.0;
+  const IMAGE_MAGNIFIER_STEP = 0.25;
   const CUSTOM_FONT_KEY = "linuxdo-wecom-custom-font";
   const CUSTOM_FONT_STYLE_ID = "wecom-custom-font-style";
   const DEFAULT_FONT_STACK = '"PingFang SC", "Microsoft YaHei", "Helvetica Neue", Inter, -apple-system, BlinkMacSystemFont, sans-serif';
@@ -660,6 +666,7 @@
     cut: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /><path d="M6 17m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /><path d="M8.6 8.6l10.4 10.4" /><path d="M8.6 15.4l10.4 -10.4" /></svg>`,
     folder: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l3 3h7a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-11a2 2 0 0 1 2 -2" /></svg>`,
     pic: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01" /><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12z" /><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" /></svg>`,
+    magnifier: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="7"/><line x1="21" y1="21" x2="15.5" y2="15.5"/><line x1="10.5" y1="7.5" x2="10.5" y2="13.5"/><line x1="7.5" y1="10.5" x2="13.5" y2="10.5"/></svg>`,
     collect: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873z" /></svg>`,
     file: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M9 9l1 0" /><path d="M9 13l6 0" /><path d="M9 17l6 0" /></svg>`,
     bolt: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3l0 7l6 0l-8 11l0 -7l-6 0z" /></svg>`,
@@ -6923,10 +6930,12 @@
       border-radius: 4px !important;
       margin: 0 !important;
       padding: 0 !important;
-      transition: transform 0.2s ease !important;
+      transition: transform 0.2s ease, object-fit 0.15s ease !important;
     }
-    .wecom-msg-thumb:hover img {
-      transform: scale(1.05) !important;
+    .wecom-msg-thumb:hover img,
+    .wecom-msg-thumb.is-magnifying img {
+      object-fit: contain !important;
+      transform: none !important;
     }
     .wecom-msg-thumb .meta {
       display: none !important;
@@ -7121,6 +7130,130 @@
       background: var(--wc-blue, #267EF0) !important;
       border-color: var(--wc-blue, #267EF0) !important;
       color: #FFFFFF !important;
+    }
+
+    /* 缩略图悬浮放大镜 */
+    .wecom-image-magnifier {
+      position: fixed !important;
+      left: 0;
+      top: 0;
+      width: 220px;
+      height: 220px;
+      pointer-events: none !important;
+      z-index: 999999 !important;
+      opacity: 0;
+      transform: scale(0.85);
+      transition: opacity 0.16s cubic-bezier(0.16, 1, 0.3, 1), transform 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: transform, left, top, opacity;
+      user-select: none !important;
+    }
+    .wecom-image-magnifier.is-visible {
+      opacity: 1 !important;
+      transform: scale(1) !important;
+    }
+    .wecom-magnifier-lens {
+      position: relative !important;
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: 50% !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+      background: #FFFFFF !important;
+      border: 3px solid rgba(255, 255, 255, 0.95) !important;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.32),
+                  0 0 0 1px rgba(0, 0, 0, 0.12),
+                  0 0 0 4px rgba(38, 126, 240, 0.45),
+                  inset 0 0 20px rgba(0, 0, 0, 0.2) !important;
+    }
+    html.wecom-dark .wecom-magnifier-lens {
+      background: #18191C !important;
+      border: 3px solid rgba(255, 255, 255, 0.25) !important;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.65),
+                  0 0 0 1px rgba(255, 255, 255, 0.15),
+                  0 0 0 4px rgba(38, 126, 240, 0.6),
+                  inset 0 0 24px rgba(0, 0, 0, 0.5) !important;
+    }
+    .wecom-magnifier-view {
+      position: absolute !important;
+      inset: 0 !important;
+      overflow: hidden !important;
+      border-radius: 50% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+    .wecom-magnifier-img {
+      position: absolute !important;
+      display: block !important;
+      max-width: none !important;
+      max-height: none !important;
+      transform-origin: 0 0 !important;
+      pointer-events: none !important;
+    }
+    .wecom-magnifier-glare {
+      position: absolute !important;
+      inset: 0 !important;
+      border-radius: 50% !important;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.08) 42%, transparent 60%) !important;
+      pointer-events: none !important;
+    }
+    html.wecom-dark .wecom-magnifier-glare {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.04) 42%, transparent 60%) !important;
+    }
+    .wecom-magnifier-crosshair {
+      position: absolute !important;
+      left: 50% !important;
+      top: 50% !important;
+      width: 10px !important;
+      height: 10px !important;
+      transform: translate(-50%, -50%) !important;
+      border: 1.5px solid rgba(38, 126, 240, 0.8) !important;
+      border-radius: 50% !important;
+      box-shadow: 0 0 2px rgba(255, 255, 255, 0.9), inset 0 0 2px rgba(255, 255, 255, 0.9) !important;
+      pointer-events: none !important;
+      opacity: 0.75 !important;
+    }
+    .wecom-magnifier-badge {
+      position: absolute !important;
+      bottom: 8px !important;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+      background: rgba(0, 0, 0, 0.75) !important;
+      backdrop-filter: blur(6px) !important;
+      -webkit-backdrop-filter: blur(6px) !important;
+      color: #FFFFFF !important;
+      font-size: 11px !important;
+      font-weight: 600 !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", monospace, sans-serif !important;
+      padding: 2px 8px !important;
+      border-radius: 10px !important;
+      line-height: 1.3 !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+      pointer-events: none !important;
+      white-space: nowrap !important;
+      letter-spacing: 0.5px !important;
+      transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease !important;
+    }
+    .wecom-msg-thumb.is-magnifying,
+    .wecom-zhihu-comment-image-wrap.is-magnifying {
+      border-color: var(--wc-blue, #267EF0) !important;
+      box-shadow: 0 0 0 2px rgba(38, 126, 240, 0.35) !important;
+    }
+    .wecom-msg-thumb.is-magnifying img,
+    .wecom-zhihu-comment-image-wrap.is-magnifying img {
+      object-fit: contain !important;
+      transform: none !important;
+    }
+    .wecom-image-magnifier.is-pinned .wecom-magnifier-lens {
+      border-color: var(--wc-blue, #267EF0) !important;
+      box-shadow: 0 14px 44px rgba(38, 126, 240, 0.4),
+                  0 0 0 2px var(--wc-blue, #267EF0),
+                  0 0 0 5px rgba(38, 126, 240, 0.35) !important;
+    }
+    .wecom-msg-thumb.is-pinned,
+    .wecom-zhihu-comment-image-wrap.is-pinned {
+      border-color: var(--wc-blue, #267EF0) !important;
+      box-shadow: 0 0 0 3px rgba(38, 126, 240, 0.45) !important;
     }
 
     /* 界面字体设置行 */
@@ -16056,6 +16189,9 @@
     try {
       localStorage.setItem(IMAGE_AUTO_LAYOUT_KEY, on ? "1" : "0");
     } catch { /* ignore */ }
+    if (!on && typeof hideImageMagnifier === "function") {
+      hideImageMagnifier(true);
+    }
     syncThemeControls();
     refreshChatMessagesLayout();
   }
@@ -16139,6 +16275,433 @@
     applyImageAutoLayoutSizeCss(getImageAutoLayoutSize(), normalized);
     syncThemeControls();
     refreshChatMessagesLayout();
+  }
+
+  /* ============================== 缩略图悬浮放大镜 ============================== */
+
+  function isImageMagnifierEnabled() {
+    try {
+      const val = localStorage.getItem(IMAGE_MAGNIFIER_KEY);
+      return val !== null ? val === "1" : true;
+    } catch {
+      return true;
+    }
+  }
+
+  function setImageMagnifierEnabled(on) {
+    const shouldOn = Boolean(on);
+    try {
+      localStorage.setItem(IMAGE_MAGNIFIER_KEY, shouldOn ? "1" : "0");
+    } catch { /* ignore */ }
+    if (!shouldOn) {
+      hideImageMagnifier(true);
+    }
+    syncThemeControls();
+  }
+
+  function isImageMagnifierActive() {
+    return isImageAutoLayoutEnabled() && isImageMagnifierEnabled();
+  }
+
+  function getImageMagnifierScale() {
+    try {
+      const val = parseFloat(localStorage.getItem(IMAGE_MAGNIFIER_SCALE_KEY));
+      if (Number.isFinite(val) && val >= MIN_IMAGE_MAGNIFIER_SCALE && val <= MAX_IMAGE_MAGNIFIER_SCALE) {
+        return Math.round(val * 100) / 100;
+      }
+    } catch { /* ignore */ }
+    return DEFAULT_IMAGE_MAGNIFIER_SCALE;
+  }
+
+  function setImageMagnifierScale(scale) {
+    const num = Math.min(MAX_IMAGE_MAGNIFIER_SCALE, Math.max(MIN_IMAGE_MAGNIFIER_SCALE, Math.round(Number(scale) * 100) / 100 || DEFAULT_IMAGE_MAGNIFIER_SCALE));
+    try {
+      localStorage.setItem(IMAGE_MAGNIFIER_SCALE_KEY, String(num));
+    } catch { /* ignore */ }
+    return num;
+  }
+
+  let imageMagnifierEl = null;
+  let activeMagnifierTarget = null;
+  let activeMagnifierSourceImg = null;
+  let magnifierRafId = null;
+  let lastMagnifierX = 0;
+  let lastMagnifierY = 0;
+  let magnifierBadgeTimer = null;
+  let magnifierHideTimer = null;
+  const MAGNIFIER_EDGE_BUFFER = 28;
+  let magnifierPinned = false;
+
+  function ensureImageMagnifier() {
+    if (imageMagnifierEl && imageMagnifierEl.parentElement) return imageMagnifierEl;
+    const existing = document.querySelector(".wecom-image-magnifier");
+    if (existing) {
+      imageMagnifierEl = existing;
+      return existing;
+    }
+    const el = document.createElement("div");
+    el.className = "wecom-image-magnifier";
+    el.setAttribute("aria-hidden", "true");
+    el.style.display = "none";
+    el.innerHTML = `
+      <div class="wecom-magnifier-lens">
+        <div class="wecom-magnifier-view">
+          <img class="wecom-magnifier-img" draggable="false" alt="" />
+        </div>
+        <div class="wecom-magnifier-glare"></div>
+        <div class="wecom-magnifier-crosshair"></div>
+      </div>
+      <div class="wecom-magnifier-badge">2.5×</div>
+    `;
+    document.body.appendChild(el);
+    imageMagnifierEl = el;
+    return el;
+  }
+
+  function showImageMagnifier(thumb, event) {
+    if (!thumb) return;
+    const img = thumb.querySelector("img") || (thumb.tagName === "IMG" ? thumb : null);
+    if (!img) return;
+
+    clearTimeout(magnifierHideTimer);
+    const magnifier = ensureImageMagnifier();
+    const magnifierImg = magnifier.querySelector(".wecom-magnifier-img");
+    const badge = magnifier.querySelector(".wecom-magnifier-badge");
+
+    if (activeMagnifierTarget && activeMagnifierTarget !== thumb) {
+      activeMagnifierTarget.classList.remove("is-magnifying");
+    }
+
+    activeMagnifierTarget = thumb;
+    activeMagnifierSourceImg = img;
+    thumb.classList.add("is-magnifying");
+
+    const bestSrc = previewImageSource(img) || img.currentSrc || img.getAttribute("src") || "";
+    if (magnifierImg) {
+      if (magnifierImg.src !== bestSrc) {
+        magnifierImg.src = bestSrc;
+      }
+    }
+
+    const scale = getImageMagnifierScale();
+    if (badge) {
+      badge.textContent = `${scale.toFixed(1)}×`;
+    }
+
+    magnifier.style.display = "";
+    requestAnimationFrame(() => {
+      if (activeMagnifierTarget === thumb) {
+        magnifier.classList.add("is-visible");
+      }
+    });
+
+    updateImageMagnifierPos(event.clientX, event.clientY);
+  }
+
+  function hideImageMagnifier(immediate = false) {
+    if (activeMagnifierTarget) {
+      activeMagnifierTarget.classList.remove("is-magnifying", "is-pinned");
+    }
+    activeMagnifierTarget = null;
+    activeMagnifierSourceImg = null;
+    magnifierPinned = false;
+
+    if (magnifierRafId) {
+      cancelAnimationFrame(magnifierRafId);
+      magnifierRafId = null;
+    }
+
+    if (imageMagnifierEl) {
+      imageMagnifierEl.classList.remove("is-visible", "is-pinned");
+      clearTimeout(magnifierHideTimer);
+      if (immediate) {
+        imageMagnifierEl.style.display = "none";
+      } else {
+        magnifierHideTimer = setTimeout(() => {
+          if (!activeMagnifierTarget && imageMagnifierEl) {
+            imageMagnifierEl.style.display = "none";
+          }
+        }, 160);
+      }
+    }
+  }
+
+  function updateImageMagnifierPos(clientX, clientY) {
+    lastMagnifierX = clientX;
+    lastMagnifierY = clientY;
+    if (!magnifierRafId) {
+      magnifierRafId = requestAnimationFrame(() => {
+        magnifierRafId = null;
+        renderImageMagnifier(lastMagnifierX, lastMagnifierY);
+      });
+    }
+  }
+
+  function renderImageMagnifier(clientX, clientY) {
+    if (!activeMagnifierTarget || !activeMagnifierSourceImg || !imageMagnifierEl) return;
+    const magnifierImg = imageMagnifierEl.querySelector(".wecom-magnifier-img");
+    if (!magnifierImg) return;
+
+    const lensSize = 220;
+    const pad = 12;
+
+    const rawLeft = clientX - lensSize / 2;
+    const rawTop = clientY - lensSize / 2;
+    const clampedLeft = Math.max(pad, Math.min(window.innerWidth - lensSize - pad, rawLeft));
+    const clampedTop = Math.max(pad, Math.min(window.innerHeight - lensSize - pad, rawTop));
+
+    imageMagnifierEl.style.left = `${Math.round(clampedLeft)}px`;
+    imageMagnifierEl.style.top = `${Math.round(clampedTop)}px`;
+
+    const thumbRect = activeMagnifierTarget.getBoundingClientRect();
+    if (thumbRect.width <= 0 || thumbRect.height <= 0) return;
+
+    const natW = activeMagnifierSourceImg.naturalWidth || thumbRect.width || 100;
+    const natH = activeMagnifierSourceImg.naturalHeight || thumbRect.height || 100;
+    const imageRatio = (natW > 0 && natH > 0) ? (natW / natH) : (thumbRect.width / thumbRect.height);
+    const containerRatio = thumbRect.width / thumbRect.height;
+
+    // 因为图片在悬浮时切为 contain 方式展示，精确计算小图内实际可见图像盒区域，保证全图皆可探测与放大
+    let fitW = thumbRect.width;
+    let fitH = thumbRect.height;
+    let fitLeft = 0;
+    let fitTop = 0;
+
+    if (imageRatio > containerRatio) {
+      // 横向更宽：上下留白居中
+      fitW = thumbRect.width;
+      fitH = fitW / imageRatio;
+      fitLeft = 0;
+      fitTop = (thumbRect.height - fitH) / 2;
+    } else {
+      // 纵向更高：左右留白居中
+      fitH = thumbRect.height;
+      fitW = fitH * imageRatio;
+      fitLeft = (thumbRect.width - fitW) / 2;
+      fitTop = 0;
+    }
+
+    const mouseX = clientX - thumbRect.left;
+    const mouseY = clientY - thumbRect.top;
+
+    const rx = Math.max(0, Math.min(1, (mouseX - fitLeft) / fitW));
+    const ry = Math.max(0, Math.min(1, (mouseY - fitTop) / fitH));
+
+    const scale = getImageMagnifierScale();
+    const baseDimension = Math.max(fitW, fitH, 120);
+    let imgW, imgH;
+    if (imageRatio >= 1) {
+      imgW = Math.max(lensSize, Math.round(baseDimension * imageRatio * scale * 1.5));
+      imgH = Math.round(imgW / imageRatio);
+    } else {
+      imgH = Math.max(lensSize, Math.round(baseDimension * (1 / imageRatio) * scale * 1.5));
+      imgW = Math.round(imgH * imageRatio);
+    }
+
+    const cursorInLensX = clientX - clampedLeft;
+    const cursorInLensY = clientY - clampedTop;
+
+    let imgX = cursorInLensX - (rx * imgW);
+    let imgY = cursorInLensY - (ry * imgH);
+
+    if (imgW > lensSize) {
+      imgX = Math.min(0, Math.max(lensSize - imgW, imgX));
+    } else {
+      imgX = (lensSize - imgW) / 2;
+    }
+
+    if (imgH > lensSize) {
+      imgY = Math.min(0, Math.max(lensSize - imgH, imgY));
+    } else {
+      imgY = (lensSize - imgH) / 2;
+    }
+
+    magnifierImg.style.width = `${Math.round(imgW)}px`;
+    magnifierImg.style.height = `${Math.round(imgH)}px`;
+    magnifierImg.style.left = `${Math.round(imgX)}px`;
+    magnifierImg.style.top = `${Math.round(imgY)}px`;
+  }
+
+  function flashMagnifierBadge(scale) {
+    if (!imageMagnifierEl) return;
+    const badge = imageMagnifierEl.querySelector(".wecom-magnifier-badge");
+    if (!badge) return;
+    badge.textContent = magnifierPinned ? `📌 ${scale.toFixed(1)}×` : `${scale.toFixed(1)}×`;
+    badge.style.transform = "translateX(-50%) scale(1.15)";
+    badge.style.background = "rgba(38, 126, 240, 0.95)";
+    clearTimeout(magnifierBadgeTimer);
+    magnifierBadgeTimer = setTimeout(() => {
+      if (badge) {
+        badge.style.transform = "translateX(-50%) scale(1)";
+        badge.style.background = magnifierPinned ? "rgba(38, 126, 240, 0.9)" : "rgba(0, 0, 0, 0.75)";
+      }
+    }, 400);
+  }
+
+  function handleMagnifierWheel(event) {
+    if (!isImageMagnifierActive()) return;
+    if (!activeMagnifierTarget) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const delta = event.deltaY;
+    if (!delta) return;
+
+    const currentScale = getImageMagnifierScale();
+    const step = IMAGE_MAGNIFIER_STEP;
+    const direction = delta < 0 ? 1 : -1;
+    const nextScale = direction > 0
+      ? Math.min(MAX_IMAGE_MAGNIFIER_SCALE, Math.round((currentScale + step) * 100) / 100)
+      : Math.max(MIN_IMAGE_MAGNIFIER_SCALE, Math.round((currentScale - step) * 100) / 100);
+
+    if (nextScale !== currentScale) {
+      setImageMagnifierScale(nextScale);
+      const targetX = magnifierPinned ? lastMagnifierX : event.clientX;
+      const targetY = magnifierPinned ? lastMagnifierY : event.clientY;
+      renderImageMagnifier(targetX, targetY);
+      flashMagnifierBadge(nextScale);
+    }
+  }
+
+  function bindImageMagnifierEvents() {
+    if (window.__wecomImageMagnifierBound) return;
+    window.__wecomImageMagnifierBound = true;
+
+    document.addEventListener("pointerover", (event) => {
+      if (!isImageMagnifierActive()) return;
+      if (document.documentElement.classList.contains("wecom-image-viewer-open")) return;
+      if (magnifierPinned) return;
+      const thumb = event.target.closest(".wecom-msg-thumb, .wecom-zhihu-comment-image-wrap");
+      if (thumb) {
+        showImageMagnifier(thumb, event);
+      }
+    });
+
+    document.addEventListener("pointermove", (event) => {
+      if (!isImageMagnifierActive()) {
+        if (activeMagnifierTarget) hideImageMagnifier();
+        return;
+      }
+      if (document.documentElement.classList.contains("wecom-image-viewer-open")) {
+        if (activeMagnifierTarget) hideImageMagnifier();
+        return;
+      }
+      if (magnifierPinned) return;
+
+      const thumb = event.target.closest(".wecom-msg-thumb, .wecom-zhihu-comment-image-wrap");
+      if (thumb) {
+        if (activeMagnifierTarget !== thumb) {
+          showImageMagnifier(thumb, event);
+        } else {
+          updateImageMagnifierPos(event.clientX, event.clientY);
+        }
+      } else if (activeMagnifierTarget) {
+        // 边缘磁吸缓冲判定：鼠标移出小图但仍在 28px 容差范围内时，不关闭放大镜，坐标自动吸附在最边界
+        const rect = activeMagnifierTarget.getBoundingClientRect();
+        const inBuffer = (
+          event.clientX >= rect.left - MAGNIFIER_EDGE_BUFFER &&
+          event.clientX <= rect.right + MAGNIFIER_EDGE_BUFFER &&
+          event.clientY >= rect.top - MAGNIFIER_EDGE_BUFFER &&
+          event.clientY <= rect.bottom + MAGNIFIER_EDGE_BUFFER
+        );
+        if (inBuffer) {
+          updateImageMagnifierPos(event.clientX, event.clientY);
+        } else {
+          hideImageMagnifier();
+        }
+      }
+    });
+
+    document.addEventListener("pointerout", (event) => {
+      if (!activeMagnifierTarget || magnifierPinned) return;
+      const related = event.relatedTarget;
+      if (!related || !activeMagnifierTarget.contains(related)) {
+        // 检查离开目标时是否仍在 28px 缓冲区内
+        const rect = activeMagnifierTarget.getBoundingClientRect();
+        const inBuffer = (
+          event.clientX >= rect.left - MAGNIFIER_EDGE_BUFFER &&
+          event.clientX <= rect.right + MAGNIFIER_EDGE_BUFFER &&
+          event.clientY >= rect.top - MAGNIFIER_EDGE_BUFFER &&
+          event.clientY <= rect.bottom + MAGNIFIER_EDGE_BUFFER
+        );
+        if (!inBuffer) {
+          hideImageMagnifier();
+        }
+      }
+    });
+
+    document.addEventListener("wheel", (event) => {
+      if (!isImageMagnifierActive()) return;
+      if (!activeMagnifierTarget) return;
+      const thumb = event.target.closest(".wecom-msg-thumb, .wecom-zhihu-comment-image-wrap");
+      if (thumb && thumb === activeMagnifierTarget) {
+        handleMagnifierWheel(event);
+      } else if (magnifierPinned) {
+        const rect = activeMagnifierTarget.getBoundingClientRect();
+        const inThumbArea = (
+          event.clientX >= rect.left - 40 &&
+          event.clientX <= rect.right + 40 &&
+          event.clientY >= rect.top - 40 &&
+          event.clientY <= rect.bottom + 40
+        );
+        const lensRect = imageMagnifierEl ? imageMagnifierEl.getBoundingClientRect() : null;
+        const inLensArea = lensRect && (
+          event.clientX >= lensRect.left - 10 &&
+          event.clientX <= lensRect.right + 10 &&
+          event.clientY >= lensRect.top - 10 &&
+          event.clientY <= lensRect.bottom + 10
+        );
+        if (inThumbArea || inLensArea) {
+          handleMagnifierWheel(event);
+        }
+      }
+    }, { passive: false });
+
+    document.addEventListener("pointerdown", (event) => {
+      if (activeMagnifierTarget) {
+        const thumb = event.target.closest(".wecom-msg-thumb, .wecom-zhihu-comment-image-wrap");
+        if (!thumb || thumb !== activeMagnifierTarget || magnifierPinned) {
+          hideImageMagnifier(true);
+        }
+      }
+    }, true);
+
+    window.addEventListener("scroll", () => {
+      if (activeMagnifierTarget && !magnifierPinned) {
+        hideImageMagnifier();
+      }
+    }, { passive: true });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && activeMagnifierTarget) {
+        hideImageMagnifier(true);
+        return;
+      }
+      // 按空格或 Shift 键切换锁定/钉住状态，彻底防止手滑移出
+      if ((event.code === "Space" || event.key === "Shift") && activeMagnifierTarget) {
+        const tag = (event.target && event.target.tagName) || "";
+        if (tag === "INPUT" || tag === "TEXTAREA" || event.target.isContentEditable) return;
+        event.preventDefault();
+        event.stopPropagation();
+        magnifierPinned = !magnifierPinned;
+        if (imageMagnifierEl) {
+          imageMagnifierEl.classList.toggle("is-pinned", magnifierPinned);
+          if (activeMagnifierTarget) {
+            activeMagnifierTarget.classList.toggle("is-pinned", magnifierPinned);
+          }
+          const badge = imageMagnifierEl.querySelector(".wecom-magnifier-badge");
+          if (badge) {
+            const scale = getImageMagnifierScale();
+            badge.textContent = magnifierPinned ? `📌 ${scale.toFixed(1)}× 已锁定` : `${scale.toFixed(1)}×`;
+            badge.style.background = magnifierPinned ? "rgba(38, 126, 240, 0.95)" : "rgba(0, 0, 0, 0.75)";
+          }
+        }
+        if (magnifierPinned) {
+          showWecomToast("已锁定放大镜（再次按空格/Shift或点击任意处解锁）", "info", 1800);
+        }
+      }
+    });
   }
 
   /* ============================== 界面字体设置 ============================== */
@@ -20297,6 +20860,21 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       });
     }
 
+    const imageMagnifierBtn = menu.querySelector(".wecom-menu-toggle-image-magnifier");
+    if (imageMagnifierBtn) {
+      const isAuto = isImageAutoLayoutEnabled();
+      const on = isImageMagnifierEnabled();
+      const active = isAuto && on;
+      imageMagnifierBtn.classList.remove("is-active");
+      imageMagnifierBtn.setAttribute("aria-checked", active ? "true" : "false");
+      imageMagnifierBtn.style.opacity = isAuto ? "" : "0.55";
+      const badge = imageMagnifierBtn.querySelector(".wecom-menu-state-badge");
+      if (badge) {
+        badge.textContent = active ? "已开启" : "已关闭";
+        badge.className = `wecom-menu-state-badge ${active ? "is-on" : "is-off"}`;
+      }
+    }
+
     const fontRow = menu.querySelector(".wecom-menu-font-row");
     if (fontRow) {
       const curSetting = getCustomFontSetting();
@@ -20432,6 +21010,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       `    <button type="button" class="wecom-aspect-chip" data-aspect="16:9">16:9</button>` +
       `  </div>` +
       `</div>` +
+      `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-image-magnifier" aria-checked="false" title="开启后，鼠标悬浮在排版小图上有放大镜效果，可用滚轮缩放">` +
+      `${ICONS.magnifier}<span class="wecom-menu-label">图片悬浮放大镜</span><span class="wecom-menu-state-badge is-off">已关闭</span></button>` +
       `<div class="wecom-theme-menu-title wecom-theme-menu-divider">界面字体</div>` +
       `<div class="wecom-menu-font-row" title="点击切换界面字体">` +
       `  <div class="wecom-menu-font-header"><span class="wecom-menu-sub-label">字体选择</span><span class="wecom-menu-font-val">默认</span></div>` +
@@ -20595,6 +21175,22 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         setImageAutoLayoutAspect(aspectVal);
         return;
       }
+      const imageMagnifierBtn = event.target.closest(".wecom-menu-toggle-image-magnifier");
+      if (imageMagnifierBtn) {
+        event.preventDefault();
+        event.stopPropagation();
+        const next = !isImageMagnifierEnabled();
+        if (next && !isImageAutoLayoutEnabled()) {
+          setImageAutoLayoutEnabled(true);
+        }
+        setImageMagnifierEnabled(next);
+        if (next) {
+          showWecomToast("已开启图片悬浮放大镜（滚轮可调节放大倍数）", "success", 2000);
+        } else {
+          showWecomToast("已关闭图片悬浮放大镜", "info", 1500);
+        }
+        return;
+      }
       const fontChip = event.target.closest(".wecom-font-chip");
       if (fontChip) {
         event.preventDefault();
@@ -20691,7 +21287,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.34";
+  const SCRIPT_VERSION = "0.8.35";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -32512,6 +33108,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   function openImageViewer(sourceImage) {
     if (!sourceImage) return;
+    if (typeof hideImageMagnifier === "function") hideImageMagnifier(true);
     imageViewerList = collectChatImages(sourceImage);
     const currentSrc = previewImageSource(sourceImage);
     const idx = imageViewerList.findIndex((img) => img === sourceImage || (currentSrc && previewImageSource(img) === currentSrc));
@@ -43947,7 +44544,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       });
     }
 
-    const WECOM_UI_SEL = ".wecom-toast-container, .wecom-confirm-dialog, .wecom-font-picker-dialog, .wecom-shortcut-dialog, .wecom-ai-config-dialog, .wecom-ai-summary-dialog, .wecom-connect-overlay, .wecom-connect-modal, .wecom-base64-insert-dialog, .wecom-v2ex-user-popover, .wecom-v2ex-member-card, .wecom-juejin-member-card, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-edit-dialog, .wecom-rail, .wecom-rail-resizer, .wecom-list-resizer, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
+    const WECOM_UI_SEL = ".wecom-toast-container, .wecom-confirm-dialog, .wecom-font-picker-dialog, .wecom-shortcut-dialog, .wecom-ai-config-dialog, .wecom-ai-summary-dialog, .wecom-connect-overlay, .wecom-connect-modal, .wecom-base64-insert-dialog, .wecom-v2ex-user-popover, .wecom-v2ex-member-card, .wecom-juejin-member-card, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-image-magnifier, .wecom-edit-dialog, .wecom-rail, .wecom-rail-resizer, .wecom-list-resizer, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
     const NATIVE_BRIDGE_SEL = "#reply-control, .dialog-holder, .dialog-container, #discourse-modal-container, .d-modal, .bootbox, .autocomplete, .autocomplete-container, .d-editor-popup, [data-identifier='emoji-picker'], .tag-chooser";
 
     function isWecomOrBridgeNode(node) {
@@ -44060,6 +44657,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     bindViewModeShortcut();
     // 停靠栏深浅色切换与外观设置全局事件代理
     bindThemeControls();
+    // 缩略图悬浮放大镜交互代理
+    bindImageMagnifierEvents();
     // 定时同步头像通知角标与新主题角标（3 秒轮询）
     if (!window.__wecomNotifBadgeTimer) {
       window.__wecomNotifBadgeTimer = setInterval(() => {
