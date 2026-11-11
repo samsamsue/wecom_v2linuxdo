@@ -493,7 +493,7 @@
   const DEFAULT_IMAGE_MAGNIFIER_SCALE = 1.2;
   const MIN_IMAGE_MAGNIFIER_SCALE = 1.2;
   const MAX_IMAGE_MAGNIFIER_SCALE = 6.0;
-  const IMAGE_MAGNIFIER_STEP = 0.1;
+  const IMAGE_MAGNIFIER_STEP = 0.4;
   const CUSTOM_FONT_KEY = "linuxdo-wecom-custom-font";
   const CUSTOM_FONT_STYLE_ID = "wecom-custom-font-style";
   const DEFAULT_FONT_STACK = '"PingFang SC", "Microsoft YaHei", "Helvetica Neue", Inter, -apple-system, BlinkMacSystemFont, sans-serif';

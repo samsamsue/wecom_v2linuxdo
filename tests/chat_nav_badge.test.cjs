@@ -12941,17 +12941,17 @@ test("Test 164: Image magnifier defaults to 1.2x per unzoomed image, retains eac
 
   assert.ok(
     scriptContent.includes("const DEFAULT_IMAGE_MAGNIFIER_SCALE = 1.2;") &&
-    scriptContent.includes("const IMAGE_MAGNIFIER_STEP = 0.1;") &&
+    scriptContent.includes("const IMAGE_MAGNIFIER_STEP = 0.4;") &&
     scriptContent.includes("function resetImageMagnifierScale()") &&
     scriptContent.includes("function computeImageMagnifierGeometry({"),
-    "must define 1.2x default scale, 0.1 step, resetImageMagnifierScale, and computeImageMagnifierGeometry"
+    "must define 1.2x default scale, 0.4 step, resetImageMagnifierScale, and computeImageMagnifierGeometry"
   );
 
   // Extract scale state, show/hide, wheel, and geometry calculation functions into VM
   const constStart = scriptContent.indexOf("  const DEFAULT_IMAGE_MAGNIFIER_SCALE = 1.2;");
   const constEnd = scriptContent.indexOf("  const CUSTOM_FONT_KEY =");
   const sliceStart = scriptContent.indexOf("  let currentImageMagnifierScale = DEFAULT_IMAGE_MAGNIFIER_SCALE;");
-  const sliceEnd = scriptContent.indexOf("  function handleMagnifierWheel(event) {");
+  const sliceEnd = scriptContent.indexOf("  function bindImageMagnifierEvents() {");
   assert.ok(constStart >= 0 && constEnd > constStart && sliceStart > constEnd && sliceEnd > sliceStart, "must find magnifier constants and core functions");
   const coreSnippet = `${scriptContent.slice(constStart, constEnd)}\n${scriptContent.slice(sliceStart, sliceEnd)}`;
 
@@ -13008,6 +13008,7 @@ test("Test 164: Image magnifier defaults to 1.2x per unzoomed image, retains eac
     setTimeout: () => 1,
     clearTimeout: () => {},
     previewImageSource: (img) => img.currentSrc,
+    isImageMagnifierActive: () => true,
     window: { innerWidth: 1280, innerHeight: 800 },
     document: {
       body: { appendChild: () => {} },
@@ -13018,7 +13019,7 @@ test("Test 164: Image magnifier defaults to 1.2x per unzoomed image, retains eac
     localStorage: { getItem: () => null, setItem: () => {} }
   };
   vm.runInNewContext(
-    `${coreSnippet}\nthis.getImageMagnifierScale = getImageMagnifierScale;\nthis.setImageMagnifierScale = setImageMagnifierScale;\nthis.showImageMagnifier = showImageMagnifier;\nthis.hideImageMagnifier = hideImageMagnifier;\nthis.computeImageMagnifierGeometry = computeImageMagnifierGeometry;`,
+    `${coreSnippet}\nthis.getImageMagnifierScale = getImageMagnifierScale;\nthis.setImageMagnifierScale = setImageMagnifierScale;\nthis.showImageMagnifier = showImageMagnifier;\nthis.hideImageMagnifier = hideImageMagnifier;\nthis.handleMagnifierWheel = handleMagnifierWheel;\nthis.computeImageMagnifierGeometry = computeImageMagnifierGeometry;`,
     sandbox
   );
 
@@ -13056,6 +13057,15 @@ test("Test 164: Image magnifier defaults to 1.2x per unzoomed image, retains eac
   sandbox.showImageMagnifier(thumb3, { clientX: 150, clientY: 150 });
   assert.strictEqual(sandbox.getImageMagnifierScale(), 1.2, "hovering untouched thumb3 still starts at 1.2x");
   assert.strictEqual(mockMagnifier._badge.textContent, "1.2×");
+
+  const wheelUp = { deltaY: -100, clientX: 150, clientY: 150, preventDefault() {}, stopPropagation() {} };
+  const wheelDown = { deltaY: 100, clientX: 150, clientY: 150, preventDefault() {}, stopPropagation() {} };
+  sandbox.handleMagnifierWheel(wheelUp);
+  assert.strictEqual(sandbox.getImageMagnifierScale(), 1.6, "wheel up steps by 0.4 from 1.2 to 1.6");
+  sandbox.handleMagnifierWheel(wheelUp);
+  assert.strictEqual(sandbox.getImageMagnifierScale(), 2.0, "second wheel up steps from 1.6 to 2.0");
+  sandbox.handleMagnifierWheel(wheelDown);
+  assert.strictEqual(sandbox.getImageMagnifierScale(), 1.6, "wheel down steps back cleanly from 2.0 to 1.6");
 
   // 2. Four-corner visibility: every corner (0,0), (1,0), (0,1), (1,1) maps right to circular lens center (110, 110)
   const lensSize = 220;
