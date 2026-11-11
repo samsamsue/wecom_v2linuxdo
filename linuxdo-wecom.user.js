@@ -16435,19 +16435,41 @@
   }
 
   let currentImageMagnifierScale = DEFAULT_IMAGE_MAGNIFIER_SCALE;
+  const imageMagnifierScaleMap = typeof WeakMap === "function" ? new WeakMap() : null;
 
-  function getImageMagnifierScale() {
-    const val = Number(currentImageMagnifierScale);
+  function normalizeImageMagnifierScale(scale) {
+    const val = Number(scale);
     if (Number.isFinite(val) && val >= MIN_IMAGE_MAGNIFIER_SCALE && val <= MAX_IMAGE_MAGNIFIER_SCALE) {
       return Math.round(val * 100) / 100;
     }
-    return DEFAULT_IMAGE_MAGNIFIER_SCALE;
+    return null;
+  }
+
+  function getImageMagnifierScaleForTarget(target) {
+    if (target && (typeof target === "object" || typeof target === "function") && imageMagnifierScaleMap) {
+      const saved = normalizeImageMagnifierScale(imageMagnifierScaleMap.get(target));
+      if (saved !== null) return saved;
+      return DEFAULT_IMAGE_MAGNIFIER_SCALE;
+    }
+    const fallback = normalizeImageMagnifierScale(currentImageMagnifierScale);
+    return fallback !== null ? fallback : DEFAULT_IMAGE_MAGNIFIER_SCALE;
+  }
+
+  function setImageMagnifierScaleForTarget(target, scale) {
+    const num = Math.min(MAX_IMAGE_MAGNIFIER_SCALE, Math.max(MIN_IMAGE_MAGNIFIER_SCALE, Math.round(Number(scale) * 100) / 100 || DEFAULT_IMAGE_MAGNIFIER_SCALE));
+    if (target && (typeof target === "object" || typeof target === "function") && imageMagnifierScaleMap) {
+      imageMagnifierScaleMap.set(target, num);
+    }
+    currentImageMagnifierScale = num;
+    return num;
+  }
+
+  function getImageMagnifierScale() {
+    return getImageMagnifierScaleForTarget(activeMagnifierTarget);
   }
 
   function setImageMagnifierScale(scale) {
-    const num = Math.min(MAX_IMAGE_MAGNIFIER_SCALE, Math.max(MIN_IMAGE_MAGNIFIER_SCALE, Math.round(Number(scale) * 100) / 100 || DEFAULT_IMAGE_MAGNIFIER_SCALE));
-    currentImageMagnifierScale = num;
-    return num;
+    return setImageMagnifierScaleForTarget(activeMagnifierTarget, scale);
   }
 
   function resetImageMagnifierScale() {
@@ -16509,11 +16531,11 @@
       }
       magnifierPinned = false;
       magnifier.classList.remove("is-pinned");
-      resetImageMagnifierScale();
     }
 
     activeMagnifierTarget = thumb;
     activeMagnifierSourceImg = img;
+    currentImageMagnifierScale = getImageMagnifierScaleForTarget(thumb);
     thumb.classList.add("is-magnifying");
 
     const bestSrc = previewImageSource(img) || img.currentSrc || img.getAttribute("src") || "";

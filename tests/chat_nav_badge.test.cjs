@@ -12936,7 +12936,7 @@ test("Test 163: Subframe guard prevents WeCom rail/shell injection in iframes an
   assert.ok(!wrappedVid.iframe.classList.has("wecom-iframe-video") && !wrappedVid.iframe.classList.has("wecom-iframe-expanded"), "aspect-ratio video container wrapper is not overridden");
 });
 
-test("Test 164: Image magnifier defaults to 1.2x per hovered image and maps all 4 corners to lens center without circular clipping", () => {
+test("Test 164: Image magnifier defaults to 1.2x per unzoomed image, retains each zoomed image scale, and maps all 4 corners to lens center", () => {
   const vm = require("node:vm");
 
   assert.ok(
@@ -13022,9 +13022,10 @@ test("Test 164: Image magnifier defaults to 1.2x per hovered image and maps all 
     sandbox
   );
 
-  // 1. Starts at 1.2 on thumb1, zoomed to 1.5, preserves 1.5 on child pointerover inside thumb1, resets to 1.2 on thumb2
+  // 1. Starts at 1.2 on thumb1, zoomed to 1.5, thumb2 still starts at 1.2, and thumb1 retains 1.5 after leaving/switching
   const thumb1 = makeThumb("https://example.com/1.jpg");
   const thumb2 = makeThumb("https://example.com/2.jpg");
+  const thumb3 = makeThumb("https://example.com/3.jpg");
   assert.strictEqual(sandbox.getImageMagnifierScale(), 1.2, "initial scale defaults to 1.2");
 
   sandbox.showImageMagnifier(thumb1, { clientX: 150, clientY: 150 });
@@ -13037,12 +13038,24 @@ test("Test 164: Image magnifier defaults to 1.2x per hovered image and maps all 
   assert.strictEqual(sandbox.getImageMagnifierScale(), 1.5, "child hover within same image preserves current 1.5x zoom");
 
   sandbox.showImageMagnifier(thumb2, { clientX: 150, clientY: 150 });
-  assert.strictEqual(sandbox.getImageMagnifierScale(), 1.2, "hovering another image resets starting scale back to 1.2x");
+  assert.strictEqual(sandbox.getImageMagnifierScale(), 1.2, "hovering an unzoomed second image starts at 1.2x");
   assert.strictEqual(mockMagnifier._badge.textContent, "1.2×");
 
   sandbox.setImageMagnifierScale(1.8);
   sandbox.hideImageMagnifier(true);
-  assert.strictEqual(sandbox.getImageMagnifierScale(), 1.2, "leaving magnifier resets scale to 1.2x for next hover");
+  assert.strictEqual(sandbox.getImageMagnifierScale(), 1.2, "scale defaults to 1.2x while no image is hovered");
+
+  sandbox.showImageMagnifier(thumb1, { clientX: 150, clientY: 150 });
+  assert.strictEqual(sandbox.getImageMagnifierScale(), 1.5, "returning to zoomed thumb1 preserves its 1.5x zoom");
+  assert.strictEqual(mockMagnifier._badge.textContent, "1.5×");
+
+  sandbox.showImageMagnifier(thumb2, { clientX: 150, clientY: 150 });
+  assert.strictEqual(sandbox.getImageMagnifierScale(), 1.8, "returning to zoomed thumb2 preserves its 1.8x zoom");
+  assert.strictEqual(mockMagnifier._badge.textContent, "1.8×");
+
+  sandbox.showImageMagnifier(thumb3, { clientX: 150, clientY: 150 });
+  assert.strictEqual(sandbox.getImageMagnifierScale(), 1.2, "hovering untouched thumb3 still starts at 1.2x");
+  assert.strictEqual(mockMagnifier._badge.textContent, "1.2×");
 
   // 2. Four-corner visibility: every corner (0,0), (1,0), (0,1), (1,1) maps right to circular lens center (110, 110)
   const lensSize = 220;
