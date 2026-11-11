@@ -34,10 +34,31 @@
 // @downloadURL  https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js
 // @grant        none
 // @run-at       document-start
+// @noframes
 // ==/UserScript==
 
 (function () {
   "use strict";
+
+  function isEmbeddedSubframe(win = typeof window !== "undefined" ? window : null) {
+    if (!win) return false;
+    try {
+      if (win.self !== win.top) return true;
+    } catch (_) {
+      return true;
+    }
+    try {
+      if (win.frameElement) return true;
+    } catch (_) {
+      return true;
+    }
+    return false;
+  }
+
+  // 禁止在嵌入的 iframe（如微应用/帖子内嵌页面）中注入企微左边栏与界面外壳
+  if (isEmbeddedSubframe()) {
+    return;
+  }
 
   /* ============================== 常量 ============================== */
 
@@ -11840,6 +11861,60 @@
     .wecom-msg-me .wecom-msg-bubble {
       background: var(--wc-bubble-me) !important; /* #95EC69 */
       color: var(--wc-bubble-me-text) !important; /* #1F2329 */
+    }
+
+    /* 包含 iframe 的消息气泡自动扩展至最大可用宽度，避免微应用/嵌入页被窄气泡挤压 */
+    .wecom-msg:has(.wecom-msg-bubble iframe),
+    .wecom-msg.has-iframe,
+    .wecom-zhihu-thread-comments .wecom-msg:has(.wecom-msg-bubble iframe),
+    .wecom-zhihu-thread-comments .wecom-msg.has-iframe {
+      width: 100% !important;
+      max-width: 100% !important;
+      align-self: stretch !important;
+    }
+    .wecom-msg:has(.wecom-msg-bubble iframe) > .wecom-msg-content,
+    .wecom-msg.has-iframe > .wecom-msg-content {
+      flex: 1 1 0% !important;
+      width: auto !important;
+      min-width: 0 !important;
+    }
+    .wecom-msg:has(.wecom-msg-bubble iframe) > .wecom-msg-content > .wecom-msg-bubble,
+    .wecom-msg.has-iframe > .wecom-msg-content > .wecom-msg-bubble {
+      width: 100% !important;
+      max-width: 100% !important;
+      align-self: stretch !important;
+      box-sizing: border-box !important;
+    }
+    .wecom-msg:has(.wecom-msg-bubble iframe) > .wecom-msg-content > .wecom-msg-bubble > .wecom-msg-body,
+    .wecom-msg.has-iframe > .wecom-msg-content > .wecom-msg-bubble > .wecom-msg-body {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+    }
+    .wecom-msg-body :is(div, p, figure, section, aside):has(iframe) {
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+    .wecom-msg-bubble iframe {
+      display: block !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      border: none;
+      border-radius: 6px;
+      box-sizing: border-box !important;
+    }
+    .wecom-msg-bubble :where(.video-container, .lazyYT, .lazyYT-container, .embed-responsive) iframe {
+      min-height: 0 !important;
+    }
+    .wecom-msg-bubble iframe.wecom-iframe-video {
+      aspect-ratio: 16 / 9;
+      height: auto !important;
+      min-height: 240px;
+    }
+    .wecom-msg-bubble iframe.wecom-iframe-expanded {
+      min-height: clamp(460px, 66vh, 760px) !important;
     }
 
     /* 悬停浮动工具条：确保层级置顶（z-index: 25）不被文字遮挡，避开昵称与视口边界并保留悬停桥接 */
@@ -33490,11 +33565,71 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     hydrateChatImages(body);
   }
 
+  function isCompactAudioIframe(iframe) {
+    if (!iframe) return false;
+    const src = String(iframe.getAttribute?.("src") || iframe.dataset?.src || "").toLowerCase();
+    const rawH = parsePixelDimension(iframe.getAttribute?.("height") || iframe.style?.height);
+    if (/music\.163\.com|y\.qq\.com|open\.spotify\.com\/embed|music\.apple\.com|soundcloud\.com\/player/.test(src)) {
+      if (!Number.isFinite(rawH) || rawH <= 160) return true;
+    }
+    return Number.isFinite(rawH) && rawH > 0 && rawH <= 120;
+  }
+
+  function hasAspectRatioVideoWrapper(iframe) {
+    return Boolean(iframe?.closest?.(".video-container, .lazyYT, .lazyYT-container, .embed-responsive"));
+  }
+
+  function isVideoIframe(iframe) {
+    if (!iframe) return false;
+    if (hasAspectRatioVideoWrapper(iframe) || iframe.closest?.("[data-youtube-id]")) return true;
+    const src = String(iframe.getAttribute?.("src") || iframe.dataset?.src || "").toLowerCase();
+    return /youtube\.com\/embed|youtube-nocookie\.com\/embed|player\.bilibili\.com|player\.vimeo\.com|v\.qq\.com\/txp\/iframe|ixigua\.com\/iframe/.test(src);
+  }
+
+  function hydrateChatIframes(root) {
+    if (!root || typeof root.querySelectorAll !== "function") return;
+    const iframes = root.matches?.(".wecom-msg-bubble")
+      ? root.querySelectorAll("iframe")
+      : root.querySelectorAll(".wecom-msg-bubble iframe");
+    iframes.forEach((iframe) => {
+      let ancestor = iframe.closest?.(".wecom-msg");
+      while (ancestor) {
+        ancestor.classList.add("has-iframe");
+        ancestor = ancestor.parentElement?.closest?.(".wecom-msg") || null;
+      }
+
+      const bubble = iframe.closest?.(".wecom-msg-bubble");
+      let parent = iframe.parentElement;
+      while (parent && parent !== bubble) {
+        parent.style?.setProperty?.("width", "100%", "important");
+        parent.style?.setProperty?.("max-width", "100%", "important");
+        parent = parent.parentElement;
+      }
+
+      iframe.style?.setProperty?.("width", "100%", "important");
+      iframe.style?.setProperty?.("max-width", "100%", "important");
+
+      if (isCompactAudioIframe(iframe) || hasAspectRatioVideoWrapper(iframe)) {
+        iframe.classList?.remove("wecom-iframe-expanded", "wecom-iframe-video");
+        return;
+      }
+
+      if (isVideoIframe(iframe)) {
+        iframe.classList?.add("wecom-iframe-video");
+        iframe.classList?.remove("wecom-iframe-expanded");
+        return;
+      }
+
+      iframe.classList?.add("wecom-iframe-expanded");
+    });
+  }
+
   function hydrateChatImages(root) {
     if (!root) return;
     hydrateChatLinks(root);
     hydrateRedEnvelopes(root);
     hydratePolls(root);
+    hydrateChatIframes(root);
     if (isImageAutoLayoutEnabled()) {
       applyImageAutoLayout(root);
     }
@@ -44562,6 +44697,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   }
 
   function bootstrap() {
+    if (isEmbeddedSubframe()) return;
     if (!document.documentElement) {
       setTimeout(bootstrap, 0);
       return;

@@ -34,4 +34,5 @@
 // @downloadURL  https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js
 // @grant        none
 // @run-at       document-start
+// @noframes
 // ==/UserScript==

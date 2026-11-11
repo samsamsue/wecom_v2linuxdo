@@ -12819,6 +12819,123 @@ test("Test 162: Floating message toolbar avoids blocking nickname/header, clamps
   assert.strictEqual(-400 + longScrolled.top, 68, "long scrolled message clamps toolbar to visible top viewport edge");
 });
 
+test("Test 163: Subframe guard prevents WeCom rail/shell injection in iframes and iframe messages expand bubble to max width", () => {
+  const vm = require("node:vm");
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+
+  // 1. Metadata @noframes in both user.js and meta.js + runtime early guard
+  assert.ok(scriptContent.includes("// @noframes"), "user.js header must declare @noframes");
+  assert.ok(metaContent.includes("// @noframes"), "meta.js header must declare @noframes");
+  assert.ok(
+    scriptContent.includes("if (isEmbeddedSubframe()) {\n    return;\n  }"),
+    "IIFE must bail out early when executed inside an embedded iframe (e.g. local @require wrappers)"
+  );
+  assert.ok(
+    scriptContent.includes("function bootstrap() {\n    if (isEmbeddedSubframe()) return;"),
+    "bootstrap() must double-guard against iframe execution"
+  );
+
+  // 2. Execute isEmbeddedSubframe directly
+  const subframeFnMatch = scriptContent.match(
+    /function isEmbeddedSubframe\(win[\s\S]*?\n  \}(?=\n\n  \/\/ 禁止在嵌入的 iframe)/
+  );
+  assert.ok(subframeFnMatch, "must define isEmbeddedSubframe");
+  const sfSandbox = {};
+  vm.runInNewContext(`${subframeFnMatch[0]}\nthis.isEmbeddedSubframe = isEmbeddedSubframe;`, sfSandbox);
+  const topWin = { frameElement: null };
+  topWin.self = topWin;
+  topWin.top = topWin;
+  assert.strictEqual(sfSandbox.isEmbeddedSubframe(topWin), false, "top-level window must not be treated as subframe");
+  assert.strictEqual(sfSandbox.isEmbeddedSubframe({ self: {}, top: topWin, frameElement: null }), true, "self !== top must detect iframe");
+  assert.strictEqual(sfSandbox.isEmbeddedSubframe({ self: topWin, top: topWin, frameElement: {} }), true, "non-null frameElement must detect iframe");
+  assert.strictEqual(sfSandbox.isEmbeddedSubframe({ get self() { return {}; }, get top() { throw new Error("SecurityError"); } }), true, "cross-origin error accessing window.top must fail safe as subframe");
+
+  // 3. Full-width iframe bubble & iframe CSS rules
+  assert.ok(
+    scriptContent.includes(".wecom-msg:has(.wecom-msg-bubble iframe)") &&
+    scriptContent.includes(".wecom-msg.has-iframe") &&
+    scriptContent.includes("max-width: 100% !important;") &&
+    scriptContent.includes("flex: 1 1 0% !important;") &&
+    scriptContent.includes(".wecom-msg-bubble iframe.wecom-iframe-expanded") &&
+    scriptContent.includes(".wecom-msg-bubble iframe.wecom-iframe-video"),
+    "must include full-width expansion CSS rules for messages containing iframes"
+  );
+
+  // 4. hydrateChatIframes hooked into hydrateChatImages and handles app / audio / video embeds
+  assert.ok(
+    scriptContent.includes("function hydrateChatIframes(root)") &&
+    scriptContent.includes("hydrateChatIframes(root);"),
+    "hydrateChatImages must invoke hydrateChatIframes"
+  );
+  const parseDimMatch = scriptContent.match(/function parsePixelDimension\([\s\S]*?\n  \}/);
+  const iframeHelpersMatch = scriptContent.match(
+    /function isCompactAudioIframe\(iframe\)[\s\S]*?\n  function hydrateChatImages\(/
+  );
+  assert.ok(parseDimMatch && iframeHelpersMatch, "must locate parsePixelDimension and iframe hydration helpers");
+  const helpersCode = iframeHelpersMatch[0].replace(/\n  function hydrateChatImages\($/, "");
+  const ihSandbox = { Number };
+  vm.runInNewContext(`${parseDimMatch[0]}\n${helpersCode}\nthis.hydrateChatIframes = hydrateChatIframes;`, ihSandbox);
+
+  function makeClassList(initial = []) {
+    const set = new Set(initial);
+    return {
+      add: (...cls) => cls.forEach((c) => set.add(c)),
+      remove: (...cls) => cls.forEach((c) => set.delete(c)),
+      has: (c) => set.has(c),
+      values: () => [...set]
+    };
+  }
+  function makeStyle() {
+    const props = {};
+    return {
+      props,
+      setProperty: (k, v, p) => { props[k] = p ? `${v} !${p}` : v; }
+    };
+  }
+  function makeIframeNode({ src = "", height = null, inVideoWrapper = false } = {}) {
+    const outerMsg = { classList: makeClassList(["wecom-msg"]), parentElement: null, closest: () => null };
+    const innerMsg = {
+      classList: makeClassList(["wecom-msg", "is-thread-child"]),
+      parentElement: { closest: (sel) => (sel === ".wecom-msg" ? outerMsg : null) },
+      closest: (sel) => (sel === ".wecom-msg" ? innerMsg : null)
+    };
+    const bubble = { classList: makeClassList(["wecom-msg-bubble"]), parentElement: innerMsg, closest: (sel) => (sel === ".wecom-msg" ? innerMsg : null) };
+    const pWrap = { style: makeStyle(), parentElement: bubble };
+    const iframe = {
+      dataset: {},
+      style: makeStyle(),
+      classList: makeClassList(),
+      parentElement: pWrap,
+      getAttribute: (name) => (name === "src" ? src : (name === "height" ? height : null)),
+      closest: (sel) => {
+        if (sel === ".wecom-msg") return innerMsg;
+        if (sel === ".wecom-msg-bubble") return bubble;
+        if (inVideoWrapper && sel.includes(".video-container")) return {};
+        return null;
+      }
+    };
+    return { iframe, pWrap, innerMsg, outerMsg };
+  }
+
+  const app = makeIframeNode({ src: "https://linux.do/microapp/minesweeper" });
+  const music = makeIframeNode({ src: "https://music.163.com/outchain/player?id=1", height: "86" });
+  const bili = makeIframeNode({ src: "https://player.bilibili.com/player.html?bvid=1" });
+  const wrappedVid = makeIframeNode({ src: "https://www.youtube.com/embed/abc", inVideoWrapper: true });
+  const mockRoot = {
+    matches: () => false,
+    querySelectorAll: () => [app.iframe, music.iframe, bili.iframe, wrappedVid.iframe]
+  };
+  ihSandbox.hydrateChatIframes(mockRoot);
+
+  assert.ok(app.innerMsg.classList.has("has-iframe") && app.outerMsg.classList.has("has-iframe"), "must mark nested and outer .wecom-msg with has-iframe");
+  assert.strictEqual(app.pWrap.style.props.width, "100% !important", "intermediate wrapper must stretch to 100%");
+  assert.strictEqual(app.iframe.style.props.width, "100% !important", "iframe must stretch to 100%");
+  assert.ok(app.iframe.classList.has("wecom-iframe-expanded"), "generic/app iframe gets expanded height class");
+  assert.ok(!music.iframe.classList.has("wecom-iframe-expanded") && !music.iframe.classList.has("wecom-iframe-video"), "compact audio iframe keeps compact height");
+  assert.ok(bili.iframe.classList.has("wecom-iframe-video") && !bili.iframe.classList.has("wecom-iframe-expanded"), "standalone video iframe uses aspect video class");
+  assert.ok(!wrappedVid.iframe.classList.has("wecom-iframe-video") && !wrappedVid.iframe.classList.has("wecom-iframe-expanded"), "aspect-ratio video container wrapper is not overridden");
+});
+
 
 
 
