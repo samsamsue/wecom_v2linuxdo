@@ -12533,7 +12533,7 @@ test("Test 161: Image layout thumbnail magnifying glass with mouse wheel zoom sc
   // 2. Constants definition
   assert.ok(scriptContent.includes('const IMAGE_MAGNIFIER_KEY = "linuxdo-wecom-image-magnifier";'), "must define IMAGE_MAGNIFIER_KEY");
   assert.ok(scriptContent.includes('const IMAGE_MAGNIFIER_SCALE_KEY = "linuxdo-wecom-image-magnifier-scale";'), "must define IMAGE_MAGNIFIER_SCALE_KEY");
-  assert.ok(scriptContent.includes("const DEFAULT_IMAGE_MAGNIFIER_SCALE = 2.5;"), "must define DEFAULT_IMAGE_MAGNIFIER_SCALE");
+  assert.ok(scriptContent.includes("const DEFAULT_IMAGE_MAGNIFIER_SCALE = 1.2;"), "must define DEFAULT_IMAGE_MAGNIFIER_SCALE");
   assert.ok(scriptContent.includes("const MIN_IMAGE_MAGNIFIER_SCALE = 1.2;"), "must define MIN_IMAGE_MAGNIFIER_SCALE");
   assert.ok(scriptContent.includes("const MAX_IMAGE_MAGNIFIER_SCALE = 6.0;"), "must define MAX_IMAGE_MAGNIFIER_SCALE");
 
@@ -12934,6 +12934,156 @@ test("Test 163: Subframe guard prevents WeCom rail/shell injection in iframes an
   assert.ok(!music.iframe.classList.has("wecom-iframe-expanded") && !music.iframe.classList.has("wecom-iframe-video"), "compact audio iframe keeps compact height");
   assert.ok(bili.iframe.classList.has("wecom-iframe-video") && !bili.iframe.classList.has("wecom-iframe-expanded"), "standalone video iframe uses aspect video class");
   assert.ok(!wrappedVid.iframe.classList.has("wecom-iframe-video") && !wrappedVid.iframe.classList.has("wecom-iframe-expanded"), "aspect-ratio video container wrapper is not overridden");
+});
+
+test("Test 164: Image magnifier defaults to 1.2x per hovered image and maps all 4 corners to lens center without circular clipping", () => {
+  const vm = require("node:vm");
+
+  assert.ok(
+    scriptContent.includes("const DEFAULT_IMAGE_MAGNIFIER_SCALE = 1.2;") &&
+    scriptContent.includes("const IMAGE_MAGNIFIER_STEP = 0.1;") &&
+    scriptContent.includes("function resetImageMagnifierScale()") &&
+    scriptContent.includes("function computeImageMagnifierGeometry({"),
+    "must define 1.2x default scale, 0.1 step, resetImageMagnifierScale, and computeImageMagnifierGeometry"
+  );
+
+  // Extract scale state, show/hide, wheel, and geometry calculation functions into VM
+  const constStart = scriptContent.indexOf("  const DEFAULT_IMAGE_MAGNIFIER_SCALE = 1.2;");
+  const constEnd = scriptContent.indexOf("  const CUSTOM_FONT_KEY =");
+  const sliceStart = scriptContent.indexOf("  let currentImageMagnifierScale = DEFAULT_IMAGE_MAGNIFIER_SCALE;");
+  const sliceEnd = scriptContent.indexOf("  function handleMagnifierWheel(event) {");
+  assert.ok(constStart >= 0 && constEnd > constStart && sliceStart > constEnd && sliceEnd > sliceStart, "must find magnifier constants and core functions");
+  const coreSnippet = `${scriptContent.slice(constStart, constEnd)}\n${scriptContent.slice(sliceStart, sliceEnd)}`;
+
+  const makeMockEl = () => {
+    const cls = new Set();
+    const el = {
+      className: "",
+      style: {},
+      textContent: "",
+      classList: {
+        add: (...c) => c.forEach((x) => cls.add(x)),
+        remove: (...c) => c.forEach((x) => cls.delete(x)),
+        contains: (c) => cls.has(c)
+      },
+      setAttribute: () => {},
+      querySelector: (sel) => {
+        if (sel === ".wecom-magnifier-img") return el._img;
+        if (sel === ".wecom-magnifier-badge") return el._badge;
+        return null;
+      },
+      _img: { style: {}, src: "" },
+      _badge: { textContent: "", style: {} }
+    };
+    return el;
+  };
+  const mockMagnifier = makeMockEl();
+  const makeThumb = (src) => {
+    const cls = new Set();
+    const img = {
+      tagName: "IMG",
+      naturalWidth: 1600,
+      naturalHeight: 900,
+      currentSrc: src,
+      getAttribute: () => src,
+      getBoundingClientRect: () => ({ left: 100, top: 100, width: 100, height: 100, right: 200, bottom: 200 })
+    };
+    return {
+      querySelector: () => img,
+      getBoundingClientRect: () => ({ left: 100, top: 100, width: 100, height: 100, right: 200, bottom: 200 }),
+      classList: {
+        add: (...c) => c.forEach((x) => cls.add(x)),
+        remove: (...c) => c.forEach((x) => cls.delete(x)),
+        contains: (c) => cls.has(c)
+      }
+    };
+  };
+
+  const sandbox = {
+    Math,
+    Number,
+    parseFloat,
+    requestAnimationFrame: (cb) => { cb(); return 1; },
+    cancelAnimationFrame: () => {},
+    setTimeout: () => 1,
+    clearTimeout: () => {},
+    previewImageSource: (img) => img.currentSrc,
+    window: { innerWidth: 1280, innerHeight: 800 },
+    document: {
+      body: { appendChild: () => {} },
+      createElement: () => mockMagnifier,
+      querySelector: () => mockMagnifier
+    },
+    IMAGE_MAGNIFIER_SCALE_KEY: "linuxdo-wecom-image-magnifier-scale",
+    localStorage: { getItem: () => null, setItem: () => {} }
+  };
+  vm.runInNewContext(
+    `${coreSnippet}\nthis.getImageMagnifierScale = getImageMagnifierScale;\nthis.setImageMagnifierScale = setImageMagnifierScale;\nthis.showImageMagnifier = showImageMagnifier;\nthis.hideImageMagnifier = hideImageMagnifier;\nthis.computeImageMagnifierGeometry = computeImageMagnifierGeometry;`,
+    sandbox
+  );
+
+  // 1. Starts at 1.2 on thumb1, zoomed to 1.5, preserves 1.5 on child pointerover inside thumb1, resets to 1.2 on thumb2
+  const thumb1 = makeThumb("https://example.com/1.jpg");
+  const thumb2 = makeThumb("https://example.com/2.jpg");
+  assert.strictEqual(sandbox.getImageMagnifierScale(), 1.2, "initial scale defaults to 1.2");
+
+  sandbox.showImageMagnifier(thumb1, { clientX: 150, clientY: 150 });
+  assert.strictEqual(sandbox.getImageMagnifierScale(), 1.2);
+  assert.strictEqual(mockMagnifier._badge.textContent, "1.2×");
+
+  sandbox.setImageMagnifierScale(1.5);
+  assert.strictEqual(sandbox.getImageMagnifierScale(), 1.5);
+  sandbox.showImageMagnifier(thumb1, { clientX: 155, clientY: 155 });
+  assert.strictEqual(sandbox.getImageMagnifierScale(), 1.5, "child hover within same image preserves current 1.5x zoom");
+
+  sandbox.showImageMagnifier(thumb2, { clientX: 150, clientY: 150 });
+  assert.strictEqual(sandbox.getImageMagnifierScale(), 1.2, "hovering another image resets starting scale back to 1.2x");
+  assert.strictEqual(mockMagnifier._badge.textContent, "1.2×");
+
+  sandbox.setImageMagnifierScale(1.8);
+  sandbox.hideImageMagnifier(true);
+  assert.strictEqual(sandbox.getImageMagnifierScale(), 1.2, "leaving magnifier resets scale to 1.2x for next hover");
+
+  // 2. Four-corner visibility: every corner (0,0), (1,0), (0,1), (1,1) maps right to circular lens center (110, 110)
+  const lensSize = 220;
+  const lensCenter = lensSize / 2;
+  const cases = [
+    { name: "16:9 wide near window edge", boxRect: { left: 10, top: 10, width: 100, height: 100 }, natWidth: 1600, natHeight: 900 },
+    { name: "9:16 portrait centered", boxRect: { left: 300, top: 300, width: 100, height: 100 }, natWidth: 900, natHeight: 1600 },
+    { name: "1:1 square large thumb", boxRect: { left: 400, top: 250, width: 160, height: 160 }, natWidth: 1200, natHeight: 1200 }
+  ];
+
+  for (const tc of cases) {
+    const sampleGeo = sandbox.computeImageMagnifierGeometry({
+      clientX: tc.boxRect.left + tc.boxRect.width / 2,
+      clientY: tc.boxRect.top + tc.boxRect.height / 2,
+      ...tc,
+      scale: 1.5,
+      lensSize
+    });
+    const cornerCoords = [
+      { rx: 0, ry: 0, x: tc.boxRect.left + sampleGeo.fitLeft, y: tc.boxRect.top + sampleGeo.fitTop },
+      { rx: 1, ry: 0, x: tc.boxRect.left + sampleGeo.fitLeft + sampleGeo.fitW, y: tc.boxRect.top + sampleGeo.fitTop },
+      { rx: 0, ry: 1, x: tc.boxRect.left + sampleGeo.fitLeft, y: tc.boxRect.top + sampleGeo.fitTop + sampleGeo.fitH },
+      { rx: 1, ry: 1, x: tc.boxRect.left + sampleGeo.fitLeft + sampleGeo.fitW, y: tc.boxRect.top + sampleGeo.fitTop + sampleGeo.fitH }
+    ];
+    for (const c of cornerCoords) {
+      const g = sandbox.computeImageMagnifierGeometry({
+        clientX: c.x,
+        clientY: c.y,
+        ...tc,
+        scale: 1.5,
+        lensSize
+      });
+      // Pixel position inside circular lens corresponding to the corner (c.rx * imgW, c.ry * imgH):
+      const cornerInLensX = g.imgX + c.rx * g.imgW;
+      const cornerInLensY = g.imgY + c.ry * g.imgH;
+      assert.ok(
+        Math.abs(cornerInLensX - lensCenter) <= 1 && Math.abs(cornerInLensY - lensCenter) <= 1,
+        `${tc.name} corner (${c.rx},${c.ry}) must sit at circular lens center (${lensCenter},${lensCenter}), got (${cornerInLensX},${cornerInLensY})`
+      );
+    }
+  }
 });
 
 

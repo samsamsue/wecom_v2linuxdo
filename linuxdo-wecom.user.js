@@ -490,10 +490,10 @@
   const SUPPORTED_IMAGE_AUTO_LAYOUT_ASPECTS = Object.freeze(["4:3", "1:1", "16:9"]);
   const IMAGE_MAGNIFIER_KEY = "linuxdo-wecom-image-magnifier";
   const IMAGE_MAGNIFIER_SCALE_KEY = "linuxdo-wecom-image-magnifier-scale";
-  const DEFAULT_IMAGE_MAGNIFIER_SCALE = 2.5;
+  const DEFAULT_IMAGE_MAGNIFIER_SCALE = 1.2;
   const MIN_IMAGE_MAGNIFIER_SCALE = 1.2;
   const MAX_IMAGE_MAGNIFIER_SCALE = 6.0;
-  const IMAGE_MAGNIFIER_STEP = 0.25;
+  const IMAGE_MAGNIFIER_STEP = 0.1;
   const CUSTOM_FONT_KEY = "linuxdo-wecom-custom-font";
   const CUSTOM_FONT_STYLE_ID = "wecom-custom-font-style";
   const DEFAULT_FONT_STACK = '"PingFang SC", "Microsoft YaHei", "Helvetica Neue", Inter, -apple-system, BlinkMacSystemFont, sans-serif';
@@ -16434,22 +16434,25 @@
     return isImageAutoLayoutEnabled() && isImageMagnifierEnabled();
   }
 
+  let currentImageMagnifierScale = DEFAULT_IMAGE_MAGNIFIER_SCALE;
+
   function getImageMagnifierScale() {
-    try {
-      const val = parseFloat(localStorage.getItem(IMAGE_MAGNIFIER_SCALE_KEY));
-      if (Number.isFinite(val) && val >= MIN_IMAGE_MAGNIFIER_SCALE && val <= MAX_IMAGE_MAGNIFIER_SCALE) {
-        return Math.round(val * 100) / 100;
-      }
-    } catch { /* ignore */ }
+    const val = Number(currentImageMagnifierScale);
+    if (Number.isFinite(val) && val >= MIN_IMAGE_MAGNIFIER_SCALE && val <= MAX_IMAGE_MAGNIFIER_SCALE) {
+      return Math.round(val * 100) / 100;
+    }
     return DEFAULT_IMAGE_MAGNIFIER_SCALE;
   }
 
   function setImageMagnifierScale(scale) {
     const num = Math.min(MAX_IMAGE_MAGNIFIER_SCALE, Math.max(MIN_IMAGE_MAGNIFIER_SCALE, Math.round(Number(scale) * 100) / 100 || DEFAULT_IMAGE_MAGNIFIER_SCALE));
-    try {
-      localStorage.setItem(IMAGE_MAGNIFIER_SCALE_KEY, String(num));
-    } catch { /* ignore */ }
+    currentImageMagnifierScale = num;
     return num;
+  }
+
+  function resetImageMagnifierScale() {
+    currentImageMagnifierScale = DEFAULT_IMAGE_MAGNIFIER_SCALE;
+    return currentImageMagnifierScale;
   }
 
   let imageMagnifierEl = null;
@@ -16482,7 +16485,7 @@
         <div class="wecom-magnifier-glare"></div>
         <div class="wecom-magnifier-crosshair"></div>
       </div>
-      <div class="wecom-magnifier-badge">2.5×</div>
+      <div class="wecom-magnifier-badge">${DEFAULT_IMAGE_MAGNIFIER_SCALE.toFixed(1)}×</div>
     `;
     document.body.appendChild(el);
     imageMagnifierEl = el;
@@ -16498,9 +16501,15 @@
     const magnifier = ensureImageMagnifier();
     const magnifierImg = magnifier.querySelector(".wecom-magnifier-img");
     const badge = magnifier.querySelector(".wecom-magnifier-badge");
+    const isTargetSwitch = activeMagnifierTarget !== thumb;
 
-    if (activeMagnifierTarget && activeMagnifierTarget !== thumb) {
-      activeMagnifierTarget.classList.remove("is-magnifying");
+    if (isTargetSwitch) {
+      if (activeMagnifierTarget) {
+        activeMagnifierTarget.classList.remove("is-magnifying", "is-pinned");
+      }
+      magnifierPinned = false;
+      magnifier.classList.remove("is-pinned");
+      resetImageMagnifierScale();
     }
 
     activeMagnifierTarget = thumb;
@@ -16516,7 +16525,8 @@
 
     const scale = getImageMagnifierScale();
     if (badge) {
-      badge.textContent = `${scale.toFixed(1)}×`;
+      badge.textContent = magnifierPinned ? `📌 ${scale.toFixed(1)}×` : `${scale.toFixed(1)}×`;
+      badge.style.background = magnifierPinned ? "rgba(38, 126, 240, 0.9)" : "rgba(0, 0, 0, 0.75)";
     }
 
     magnifier.style.display = "";
@@ -16536,6 +16546,7 @@
     activeMagnifierTarget = null;
     activeMagnifierSourceImg = null;
     magnifierPinned = false;
+    resetImageMagnifierScale();
 
     if (magnifierRafId) {
       cancelAnimationFrame(magnifierRafId);
@@ -16568,89 +16579,117 @@
     }
   }
 
-  function renderImageMagnifier(clientX, clientY) {
-    if (!activeMagnifierTarget || !activeMagnifierSourceImg || !imageMagnifierEl) return;
-    const magnifierImg = imageMagnifierEl.querySelector(".wecom-magnifier-img");
-    if (!magnifierImg) return;
-
-    const lensSize = 220;
-    const pad = 12;
-
+  function computeImageMagnifierGeometry({
+    clientX,
+    clientY,
+    boxRect,
+    natWidth = 0,
+    natHeight = 0,
+    scale = DEFAULT_IMAGE_MAGNIFIER_SCALE,
+    lensSize = 220,
+    pad = 12,
+    viewportWidth = 1280,
+    viewportHeight = 800
+  }) {
     const rawLeft = clientX - lensSize / 2;
     const rawTop = clientY - lensSize / 2;
-    const clampedLeft = Math.max(pad, Math.min(window.innerWidth - lensSize - pad, rawLeft));
-    const clampedTop = Math.max(pad, Math.min(window.innerHeight - lensSize - pad, rawTop));
+    const clampedLeft = Math.max(pad, Math.min(viewportWidth - lensSize - pad, rawLeft));
+    const clampedTop = Math.max(pad, Math.min(viewportHeight - lensSize - pad, rawTop));
 
-    imageMagnifierEl.style.left = `${Math.round(clampedLeft)}px`;
-    imageMagnifierEl.style.top = `${Math.round(clampedTop)}px`;
+    if (!boxRect || boxRect.width <= 0 || boxRect.height <= 0) {
+      return null;
+    }
 
-    const thumbRect = activeMagnifierTarget.getBoundingClientRect();
-    if (thumbRect.width <= 0 || thumbRect.height <= 0) return;
-
-    const natW = activeMagnifierSourceImg.naturalWidth || thumbRect.width || 100;
-    const natH = activeMagnifierSourceImg.naturalHeight || thumbRect.height || 100;
-    const imageRatio = (natW > 0 && natH > 0) ? (natW / natH) : (thumbRect.width / thumbRect.height);
-    const containerRatio = thumbRect.width / thumbRect.height;
+    const natW = natWidth || boxRect.width || 100;
+    const natH = natHeight || boxRect.height || 100;
+    const imageRatio = (natW > 0 && natH > 0) ? (natW / natH) : (boxRect.width / boxRect.height);
+    const containerRatio = boxRect.width / boxRect.height;
 
     // 因为图片在悬浮时切为 contain 方式展示，精确计算小图内实际可见图像盒区域，保证全图皆可探测与放大
-    let fitW = thumbRect.width;
-    let fitH = thumbRect.height;
+    let fitW = boxRect.width;
+    let fitH = boxRect.height;
     let fitLeft = 0;
     let fitTop = 0;
 
     if (imageRatio > containerRatio) {
       // 横向更宽：上下留白居中
-      fitW = thumbRect.width;
+      fitW = boxRect.width;
       fitH = fitW / imageRatio;
       fitLeft = 0;
-      fitTop = (thumbRect.height - fitH) / 2;
+      fitTop = (boxRect.height - fitH) / 2;
     } else {
       // 纵向更高：左右留白居中
-      fitH = thumbRect.height;
+      fitH = boxRect.height;
       fitW = fitH * imageRatio;
-      fitLeft = (thumbRect.width - fitW) / 2;
+      fitLeft = (boxRect.width - fitW) / 2;
       fitTop = 0;
     }
 
-    const mouseX = clientX - thumbRect.left;
-    const mouseY = clientY - thumbRect.top;
+    const mouseX = clientX - boxRect.left;
+    const mouseY = clientY - boxRect.top;
 
-    const rx = Math.max(0, Math.min(1, (mouseX - fitLeft) / fitW));
-    const ry = Math.max(0, Math.min(1, (mouseY - fitTop) / fitH));
+    const rx = Math.max(0, Math.min(1, fitW > 0 ? (mouseX - fitLeft) / fitW : 0.5));
+    const ry = Math.max(0, Math.min(1, fitH > 0 ? (mouseY - fitTop) / fitH : 0.5));
 
-    const scale = getImageMagnifierScale();
-    const baseDimension = Math.max(fitW, fitH, 120);
+    const baseDimension = Math.max(fitW, fitH, lensSize);
     let imgW, imgH;
     if (imageRatio >= 1) {
-      imgW = Math.max(lensSize, Math.round(baseDimension * imageRatio * scale * 1.5));
+      imgW = Math.round(baseDimension * scale);
       imgH = Math.round(imgW / imageRatio);
     } else {
-      imgH = Math.max(lensSize, Math.round(baseDimension * (1 / imageRatio) * scale * 1.5));
+      imgH = Math.round(baseDimension * scale);
       imgW = Math.round(imgH * imageRatio);
     }
 
-    const cursorInLensX = clientX - clampedLeft;
-    const cursorInLensY = clientY - clampedTop;
+    // 以圆形放大镜圆心十字准星为定位基准，不在 0 / lensSize - imgW 处截断，确保四个角可移入圆心清晰查看
+    const lensCenter = lensSize / 2;
+    const imgX = Math.round(lensCenter - (rx * imgW));
+    const imgY = Math.round(lensCenter - (ry * imgH));
 
-    let imgX = cursorInLensX - (rx * imgW);
-    let imgY = cursorInLensY - (ry * imgH);
+    return {
+      clampedLeft: Math.round(clampedLeft),
+      clampedTop: Math.round(clampedTop),
+      rx,
+      ry,
+      fitW,
+      fitH,
+      fitLeft,
+      fitTop,
+      imgW,
+      imgH,
+      imgX,
+      imgY
+    };
+  }
 
-    if (imgW > lensSize) {
-      imgX = Math.min(0, Math.max(lensSize - imgW, imgX));
-    } else {
-      imgX = (lensSize - imgW) / 2;
-    }
+  function renderImageMagnifier(clientX, clientY) {
+    if (!activeMagnifierTarget || !activeMagnifierSourceImg || !imageMagnifierEl) return;
+    const magnifierImg = imageMagnifierEl.querySelector(".wecom-magnifier-img");
+    if (!magnifierImg) return;
 
-    if (imgH > lensSize) {
-      imgY = Math.min(0, Math.max(lensSize - imgH, imgY));
-    } else {
-      imgY = (lensSize - imgH) / 2;
-    }
+    const imgRect = activeMagnifierSourceImg.getBoundingClientRect();
+    const thumbRect = activeMagnifierTarget.getBoundingClientRect();
+    const boxRect = (imgRect && imgRect.width > 0 && imgRect.height > 0) ? imgRect : thumbRect;
+    const geom = computeImageMagnifierGeometry({
+      clientX,
+      clientY,
+      boxRect,
+      natWidth: activeMagnifierSourceImg.naturalWidth || 0,
+      natHeight: activeMagnifierSourceImg.naturalHeight || 0,
+      scale: getImageMagnifierScale(),
+      lensSize: 220,
+      pad: 12,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight
+    });
+    if (!geom) return;
 
-    magnifierImg.style.width = `${Math.round(imgW)}px`;
-    magnifierImg.style.height = `${Math.round(imgH)}px`;
-    magnifierImg.style.left = `${Math.round(imgX)}px`;
-    magnifierImg.style.top = `${Math.round(imgY)}px`;
+    imageMagnifierEl.style.left = `${geom.clampedLeft}px`;
+    imageMagnifierEl.style.top = `${geom.clampedTop}px`;
+    magnifierImg.style.width = `${geom.imgW}px`;
+    magnifierImg.style.height = `${geom.imgH}px`;
+    magnifierImg.style.left = `${geom.imgX}px`;
+    magnifierImg.style.top = `${geom.imgY}px`;
   }
 
   function flashMagnifierBadge(scale) {
@@ -16768,15 +16807,16 @@
       const thumb = event.target.closest(".wecom-msg-thumb, .wecom-zhihu-comment-image-wrap");
       if (thumb && thumb === activeMagnifierTarget) {
         handleMagnifierWheel(event);
-      } else if (magnifierPinned) {
+      } else {
         const rect = activeMagnifierTarget.getBoundingClientRect();
+        const pad = magnifierPinned ? 40 : MAGNIFIER_EDGE_BUFFER;
         const inThumbArea = (
-          event.clientX >= rect.left - 40 &&
-          event.clientX <= rect.right + 40 &&
-          event.clientY >= rect.top - 40 &&
-          event.clientY <= rect.bottom + 40
+          event.clientX >= rect.left - pad &&
+          event.clientX <= rect.right + pad &&
+          event.clientY >= rect.top - pad &&
+          event.clientY <= rect.bottom + pad
         );
-        const lensRect = imageMagnifierEl ? imageMagnifierEl.getBoundingClientRect() : null;
+        const lensRect = magnifierPinned && imageMagnifierEl ? imageMagnifierEl.getBoundingClientRect() : null;
         const inLensArea = lensRect && (
           event.clientX >= lensRect.left - 10 &&
           event.clientX <= lensRect.right + 10 &&
