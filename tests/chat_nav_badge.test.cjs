@@ -12616,6 +12616,209 @@ test("Test 161: Image layout thumbnail magnifying glass with mouse wheel zoom sc
   );
 });
 
+test("Test 162: Floating message toolbar avoids blocking nickname/header, clamps within viewport bounds, and bridges hover gap", () => {
+  const vm = require("node:vm");
+
+  // 1. Safe CSS baseline and hover bridge pseudo-elements
+  assert.ok(
+    !scriptContent.includes("position: absolute;\n      top: -14px;\n      right: 0;"),
+    "WECOM_LATEST_REFINEMENTS .wecom-msg-tools must no longer use overlapping top: -14px; right: 0;"
+  );
+  assert.ok(
+    scriptContent.includes('.wecom-msg-tools[data-tools-pos="beside-right"]::before') &&
+    scriptContent.includes('.wecom-msg-tools[data-tools-pos="beside-left"]::before') &&
+    scriptContent.includes('.wecom-msg-tools[data-tools-pos="bubble-right"]::before'),
+    "must define directional ::before hover bridge selectors so moving cursor from bubble to tools never drops hover"
+  );
+  assert.ok(
+    scriptContent.includes("function positionMsgTools(msgEl, containerEl = null)") &&
+    scriptContent.includes("if (msgEl) positionMsgTools(msgEl);"),
+    "must define positionMsgTools and invoke it when opening boost popover"
+  );
+  assert.ok(
+    scriptContent.includes('chatBody.addEventListener("mouseover"') &&
+    scriptContent.includes('chatBody.addEventListener("focusin"'),
+    "bindChatPanelEvents must reposition .wecom-msg-tools dynamically on hover and focus"
+  );
+
+  // 2. Extract live computeMsgToolsPlacement function and validate all layout geometry scenarios
+  const fnMatch = scriptContent.match(
+    /function computeMsgToolsPlacement\(metrics\)\s*\{[\s\S]*?\n  \}(?=\n\n  function positionMsgTools)/
+  );
+  assert.ok(fnMatch, "must find computeMsgToolsPlacement function body");
+  const sandbox = { Math, Number, Infinity };
+  vm.runInNewContext(`${fnMatch[0]}\nthis.computeMsgToolsPlacement = computeMsgToolsPlacement;`, sandbox);
+  const calc = sandbox.computeMsgToolsPlacement;
+  assert.strictEqual(typeof calc, "function");
+
+  // Scenario A: Screenshot regression (narrow .wecom-msg-other bubble with hidden avatars near left edge)
+  const narrowOther = calc({
+    isMe: false,
+    isThreadChild: false,
+    safeLeft: 420,
+    safeRight: 1180,
+    safeTop: 68,
+    contentRect: { left: 420, top: 210, right: 540, bottom: 290, width: 120, height: 80 },
+    bubbleRect: { left: 420, top: 230, right: 520, bottom: 290, width: 100, height: 60 },
+    headerRect: { left: 420, top: 210, right: 540, bottom: 226, width: 120, height: 16 },
+    headerItemsLeft: 420,
+    headerItemsRight: 535,
+    toolsWidth: 168,
+    toolsHeight: 28
+  });
+  assert.strictEqual(narrowOther.placement, "beside-right", "narrow bubble with open right whitespace places tools beside bubble");
+  assert.ok(420 + narrowOther.left >= 526, "must sit cleanly to the right of bubble");
+  assert.ok(420 + narrowOther.left >= 420, "must never overflow left chat boundary");
+  assert.ok(narrowOther.top >= 18, "must sit below header so nickname/time/floor are never obscured");
+
+  // Scenario B: Wide .wecom-msg-other bubble + short header -> clean header-right clear of nickname
+  const wideOtherShortHeader = calc({
+    isMe: false,
+    isThreadChild: false,
+    safeLeft: 420,
+    safeRight: 1000,
+    safeTop: 68,
+    contentRect: { left: 420, top: 200, right: 920, bottom: 320, width: 500, height: 120 },
+    bubbleRect: { left: 420, top: 222, right: 920, bottom: 320, width: 500, height: 98 },
+    headerRect: { left: 420, top: 200, right: 920, bottom: 218, width: 500, height: 18 },
+    headerItemsLeft: 420,
+    headerItemsRight: 560,
+    toolsWidth: 168,
+    toolsHeight: 28
+  });
+  assert.strictEqual(wideOtherShortHeader.placement, "header-right");
+  assert.ok(420 + wideOtherShortHeader.left >= 560 + 12, "header-right must preserve >=12px horizontal clearance from header text");
+  assert.ok(420 + wideOtherShortHeader.left + 168 <= 1000, "header-right must not overflow right boundary");
+  assert.strictEqual(wideOtherShortHeader.top, 0, "header-right must stay inside own message bounds without touching previous message");
+
+  // Scenario C: Wide .wecom-msg-other bubble + wide header -> drops below header to bubble-right
+  const wideOtherWideHeader = calc({
+    isMe: false,
+    isThreadChild: false,
+    safeLeft: 420,
+    safeRight: 1000,
+    safeTop: 68,
+    contentRect: { left: 420, top: 200, right: 920, bottom: 320, width: 500, height: 120 },
+    bubbleRect: { left: 420, top: 222, right: 920, bottom: 320, width: 500, height: 98 },
+    headerRect: { left: 420, top: 200, right: 920, bottom: 218, width: 500, height: 18 },
+    headerItemsLeft: 420,
+    headerItemsRight: 880,
+    toolsWidth: 168,
+    toolsHeight: 28
+  });
+  assert.strictEqual(wideOtherWideHeader.placement, "bubble-right");
+  assert.ok(wideOtherWideHeader.top >= 20, "bubble-right must sit below header when header occupies right side");
+  assert.ok(420 + wideOtherWideHeader.left + 168 <= 1000 && 420 + wideOtherWideHeader.left >= 420);
+
+  // Scenario D: Ultra-narrow container clamps strictly inside [safeLeft, safeRight]
+  const ultraNarrow = calc({
+    isMe: false,
+    isThreadChild: false,
+    safeLeft: 16,
+    safeRight: 240,
+    safeTop: 10,
+    contentRect: { left: 16, top: 100, right: 150, bottom: 160, width: 134, height: 60 },
+    bubbleRect: { left: 16, top: 120, right: 96, bottom: 160, width: 80, height: 40 },
+    headerRect: { left: 16, top: 100, right: 150, bottom: 116, width: 134, height: 16 },
+    headerItemsLeft: 16,
+    headerItemsRight: 145,
+    toolsWidth: 168,
+    toolsHeight: 28
+  });
+  assert.ok(16 + ultraNarrow.left >= 16, "ultra-narrow must never overflow safeLeft");
+  assert.ok(16 + ultraNarrow.left + 168 <= 240, "ultra-narrow must never overflow safeRight");
+  assert.ok(ultraNarrow.top >= 18, "ultra-narrow must avoid obscuring header text");
+
+  // Scenario E: Short & tight .wecom-msg-me bubbles stay clear of header and viewport bounds
+  const shortMe = calc({
+    isMe: true,
+    isThreadChild: false,
+    safeLeft: 420,
+    safeRight: 1180,
+    safeTop: 68,
+    contentRect: { left: 1080, top: 200, right: 1180, bottom: 260, width: 100, height: 60 },
+    bubbleRect: { left: 1080, top: 222, right: 1180, bottom: 260, width: 100, height: 38 },
+    headerRect: { left: 1100, top: 200, right: 1180, bottom: 218, width: 80, height: 18 },
+    headerItemsLeft: 1110,
+    headerItemsRight: 1180,
+    toolsWidth: 168,
+    toolsHeight: 28
+  });
+  assert.strictEqual(shortMe.placement, "beside-left");
+  assert.ok(1080 + shortMe.left + 168 <= 1080 - 6, "short self bubble places tools cleanly to the left of bubble");
+  assert.ok(1080 + shortMe.left >= 420, "short self bubble tools remain inside safeLeft");
+
+  const tightMe = calc({
+    isMe: true,
+    isThreadChild: false,
+    safeLeft: 16,
+    safeRight: 320,
+    safeTop: 10,
+    contentRect: { left: 60, top: 200, right: 320, bottom: 280, width: 260, height: 80 },
+    bubbleRect: { left: 60, top: 222, right: 320, bottom: 280, width: 260, height: 58 },
+    headerRect: { left: 60, top: 200, right: 320, bottom: 218, width: 260, height: 18 },
+    headerItemsLeft: 90,
+    headerItemsRight: 320,
+    toolsWidth: 168,
+    toolsHeight: 28
+  });
+  assert.strictEqual(tightMe.placement, "bubble-left");
+  assert.ok(60 + tightMe.left >= 16 && 60 + tightMe.left + 168 <= 320, "tight self bubble clamps strictly inside bounds");
+  assert.ok(tightMe.top >= 20, "tight self bubble drops below header items when left header lacks space");
+
+  // Scenario F: Nested thread child keeps right pin when space suffices and drops below header when crowded
+  const childClean = calc({
+    isMe: false,
+    isThreadChild: true,
+    safeLeft: 440,
+    safeRight: 940,
+    safeTop: 68,
+    contentRect: { left: 460, top: 300, right: 920, bottom: 380, width: 460, height: 80 },
+    bubbleRect: { left: 460, top: 320, right: 920, bottom: 380, width: 460, height: 60 },
+    headerRect: { left: 460, top: 300, right: 920, bottom: 316, width: 460, height: 16 },
+    headerItemsLeft: 460,
+    headerItemsRight: 580,
+    toolsWidth: 168,
+    toolsHeight: 28
+  });
+  assert.strictEqual(childClean.placement, "thread-right");
+  assert.strictEqual(childClean.right, 0);
+
+  const childCrowded = calc({
+    isMe: false,
+    isThreadChild: true,
+    safeLeft: 440,
+    safeRight: 700,
+    safeTop: 68,
+    contentRect: { left: 460, top: 300, right: 700, bottom: 380, width: 240, height: 80 },
+    bubbleRect: { left: 460, top: 320, right: 700, bottom: 380, width: 240, height: 60 },
+    headerRect: { left: 460, top: 300, right: 700, bottom: 316, width: 240, height: 16 },
+    headerItemsLeft: 460,
+    headerItemsRight: 640,
+    toolsWidth: 168,
+    toolsHeight: 28
+  });
+  assert.strictEqual(childCrowded.placement, "thread-below-header");
+  assert.ok(childCrowded.top >= 18, "crowded thread child tools must drop below header to clear author name");
+
+  // Scenario G: Long scrolled post keeps toolbar pinned inside visible chat top edge
+  const longScrolled = calc({
+    isMe: false,
+    isThreadChild: false,
+    safeLeft: 420,
+    safeRight: 1180,
+    safeTop: 68,
+    contentRect: { left: 420, top: -400, right: 860, bottom: 500, width: 440, height: 900 },
+    bubbleRect: { left: 420, top: -378, right: 860, bottom: 500, width: 440, height: 878 },
+    headerRect: { left: 420, top: -400, right: 860, bottom: -382, width: 440, height: 18 },
+    headerItemsLeft: 420,
+    headerItemsRight: 550,
+    toolsWidth: 168,
+    toolsHeight: 28
+  });
+  assert.strictEqual(-400 + longScrolled.top, 68, "long scrolled message clamps toolbar to visible top viewport edge");
+});
+
 
 
 

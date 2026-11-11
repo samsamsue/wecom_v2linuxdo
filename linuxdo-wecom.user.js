@@ -4484,7 +4484,7 @@
       padding: 2px 10px;
     }
     .wecom-msg-tools {
-      position: absolute; top: -14px; right: 0; z-index: 25 !important;
+      position: absolute; top: 22px; left: 0; right: auto; z-index: 25 !important;
       display: flex; align-items: center; gap: 2px;
       background: var(--wc-bg);
       border: 1px solid var(--wc-border);
@@ -4503,12 +4503,12 @@
       pointer-events: auto !important;
       display: flex !important;
     }
-    .wecom-msg-me:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-tools { right: auto; left: 0; }
+    .wecom-msg-me:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-tools { right: 0; left: auto; }
     .wecom-reply-children .wecom-msg-tools,
     .wecom-msg-me .wecom-reply-children .wecom-msg-tools {
       right: 0 !important;
       left: auto !important;
-      top: -6px !important;
+      top: 0;
       z-index: 25 !important;
     }
     .wecom-msg-tool {
@@ -11842,11 +11842,12 @@
       color: var(--wc-bubble-me-text) !important; /* #1F2329 */
     }
 
-    /* 悬停浮动工具条：确保层级置顶（z-index: 25）不被文字遮挡，鼠标移入时保持显示可正常点击 */
+    /* 悬停浮动工具条：确保层级置顶（z-index: 25）不被文字遮挡，避开昵称与视口边界并保留悬停桥接 */
     .wecom-msg-tools {
       position: absolute;
-      top: -14px;
-      right: 0;
+      top: 22px;
+      left: 0;
+      right: auto;
       display: flex;
       align-items: center;
       gap: 2px;
@@ -11861,6 +11862,61 @@
       pointer-events: none;
       transition: opacity 0.15s ease, visibility 0.15s ease;
     }
+    .wecom-msg-tools::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: inherit;
+      z-index: -1;
+    }
+    .wecom-msg-tools[data-tools-pos="beside-right"]::before {
+      top: -4px;
+      bottom: -4px;
+      left: -12px;
+      right: 0;
+    }
+    .wecom-msg-tools[data-tools-pos="beside-left"]::before {
+      top: -4px;
+      bottom: -4px;
+      left: 0;
+      right: -12px;
+    }
+    .wecom-msg-tools[data-tools-pos="header-right"]::before {
+      top: 0;
+      bottom: -8px;
+      left: -6px;
+      right: 0;
+    }
+    .wecom-msg-tools[data-tools-pos="header-left"]::before {
+      top: 0;
+      bottom: -8px;
+      left: 0;
+      right: -6px;
+    }
+    .wecom-msg-tools[data-tools-pos="bubble-right"]::before {
+      top: -4px;
+      bottom: -8px;
+      left: -8px;
+      right: 0;
+    }
+    .wecom-msg-tools[data-tools-pos="bubble-left"]::before {
+      top: -4px;
+      bottom: -8px;
+      left: 0;
+      right: -8px;
+    }
+    .wecom-msg-tools[data-tools-pos="thread-right"]::before {
+      top: 0;
+      bottom: -8px;
+      left: 0;
+      right: 0;
+    }
+    .wecom-msg-tools[data-tools-pos="thread-below-header"]::before {
+      top: -4px;
+      bottom: -8px;
+      left: -6px;
+      right: 0;
+    }
     .wecom-msg:hover:not(:has(.wecom-msg:hover)) > .wecom-msg-content > .wecom-msg-tools,
     .wecom-msg.has-boost-popover > .wecom-msg-content > .wecom-msg-tools,
     .wecom-msg-tools:hover {
@@ -11870,14 +11926,14 @@
       display: flex !important;
     }
     .wecom-msg-me:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-tools {
-      right: auto;
-      left: 0;
+      right: 0;
+      left: auto;
     }
     .wecom-reply-children .wecom-msg-tools,
     .wecom-msg-me .wecom-reply-children .wecom-msg-tools {
       right: 0 !important;
       left: auto !important;
-      top: -6px !important;
+      top: 0;
       z-index: 25 !important;
     }
     .wecom-msg-tool {
@@ -35606,6 +35662,178 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     });
   }
 
+  function computeMsgToolsPlacement(metrics) {
+    const {
+      isMe = false,
+      isThreadChild = false,
+      safeLeft = 0,
+      safeRight = 800,
+      safeTop = null,
+      contentRect = { left: 0, top: 0, right: 200, bottom: 60, width: 200, height: 60 },
+      bubbleRect = contentRect,
+      headerRect = { left: contentRect.left, top: contentRect.top, right: contentRect.right, bottom: contentRect.top, width: contentRect.width, height: 0 },
+      headerItemsLeft = Infinity,
+      headerItemsRight = -Infinity,
+      toolsWidth = 168,
+      toolsHeight = 28
+    } = metrics || {};
+
+    const bubbleGap = 6;
+    const headerClearGap = 12;
+    const minLeft = safeLeft;
+    const maxLeft = Math.max(minLeft, safeRight - toolsWidth);
+    const clampViewportX = (x) => Math.max(minLeft, Math.min(maxLeft, x));
+    const applyVisibleTopClamp = (topOffset) => {
+      if (!Number.isFinite(safeTop)) return topOffset;
+      const headerScrolledOut = !headerRect || headerRect.height <= 0 || headerRect.bottom < safeTop;
+      if (headerScrolledOut && (contentRect.top + topOffset) < safeTop && (bubbleRect.bottom - toolsHeight - 4) > safeTop) {
+        return Math.round(Math.min(bubbleRect.bottom - toolsHeight - 4, safeTop) - contentRect.top);
+      }
+      return topOffset;
+    };
+    const buildResult = (targetX, rawTop, placement) => ({
+      left: Math.round(targetX - contentRect.left),
+      right: Math.round(contentRect.right - (targetX + toolsWidth)),
+      top: applyVisibleTopClamp(Math.round(rawTop)),
+      placement
+    });
+
+    const headerBottomOffset = headerRect && headerRect.height > 0
+      ? Math.max(0, headerRect.bottom - contentRect.top)
+      : 0;
+    const rawBubbleTop = Math.max(0, bubbleRect.top - contentRect.top);
+    const belowHeaderTop = Math.max(rawBubbleTop, headerBottomOffset > 0 ? headerBottomOffset + 2 : 0);
+
+    const verticalCenterAdjust = (bubbleRect.height >= toolsHeight && bubbleRect.height <= 48)
+      ? Math.round((bubbleRect.height - toolsHeight) / 2)
+      : (bubbleRect.height > 48 ? 2 : 0);
+    const besideTop = belowHeaderTop + Math.max(0, verticalCenterAdjust);
+
+    if (isThreadChild) {
+      const targetX = clampViewportX(Math.min(contentRect.right, safeRight) - toolsWidth);
+      const headerHasClearance = !headerRect || headerRect.height <= 0 || headerItemsRight === -Infinity ||
+        targetX >= headerItemsRight + headerClearGap;
+      const top = headerHasClearance ? 0 : belowHeaderTop + 2;
+      return buildResult(targetX, top, headerHasClearance ? "thread-right" : "thread-below-header");
+    }
+
+    if (isMe) {
+      const besideX = bubbleRect.left - bubbleGap - toolsWidth;
+      if (besideX >= minLeft && besideX <= maxLeft) {
+        return buildResult(besideX, besideTop, "beside-left");
+      }
+      const leftAnchorX = clampViewportX(minLeft);
+      const headerFitsLeft = !headerRect || headerRect.height <= 0 || headerItemsLeft === Infinity ||
+        (leftAnchorX + toolsWidth) <= (headerItemsLeft - headerClearGap);
+      if (headerFitsLeft) {
+        return buildResult(leftAnchorX, 0, "header-left");
+      }
+      return buildResult(leftAnchorX, belowHeaderTop + 2, "bubble-left");
+    }
+
+    const besideX = bubbleRect.right + bubbleGap;
+    if ((besideX + toolsWidth) <= safeRight && besideX >= minLeft) {
+      return buildResult(clampViewportX(besideX), besideTop, "beside-right");
+    }
+
+    const rightAnchorX = clampViewportX(safeRight - toolsWidth);
+    const headerFitsRight = !headerRect || headerRect.height <= 0 || headerItemsRight === -Infinity ||
+      rightAnchorX >= (headerItemsRight + headerClearGap);
+    if (headerFitsRight) {
+      return buildResult(rightAnchorX, 0, "header-right");
+    }
+
+    return buildResult(rightAnchorX, belowHeaderTop + 2, "bubble-right");
+  }
+
+  function positionMsgTools(msgEl, containerEl = null) {
+    if (!msgEl || typeof msgEl.querySelector !== "function") return null;
+    const tools = msgEl.querySelector(":scope > .wecom-msg-content > .wecom-msg-tools") ||
+      msgEl.querySelector(".wecom-msg-tools");
+    const content = tools?.parentElement;
+    if (!tools || !content) return null;
+
+    const container = containerEl || msgEl.closest(".wecom-chat-body, .wecom-chat-messages");
+    if (!container) return null;
+
+    const cRect = container.getBoundingClientRect();
+    if (!cRect || cRect.width <= 0) return null;
+
+    const cs = typeof window !== "undefined" && window.getComputedStyle ? window.getComputedStyle(container) : null;
+    const padLeft = cs ? (parseFloat(cs.paddingLeft) || 0) : 12;
+    const padRight = cs ? (parseFloat(cs.paddingRight) || 0) : 12;
+    const innerRight = container.clientWidth > 0 ? (cRect.left + container.clientWidth) : cRect.right;
+
+    let safeLeft = cRect.left + Math.max(8, padLeft);
+    let safeRight = innerRight - Math.max(8, padRight);
+
+    const isThreadChild = msgEl.classList.contains("is-thread-child") || Boolean(msgEl.closest(".wecom-reply-children"));
+    const isMe = msgEl.classList.contains("wecom-msg-me") && !isThreadChild;
+
+    const contentRect = content.getBoundingClientRect();
+    const bubble = content.querySelector(":scope > .wecom-msg-bubble");
+    const bubbleRect = bubble ? bubble.getBoundingClientRect() : contentRect;
+    const header = content.querySelector(":scope > .wecom-msg-header");
+    const headerRect = header ? header.getBoundingClientRect() : {
+      left: contentRect.left, top: contentRect.top, right: contentRect.right, bottom: contentRect.top,
+      width: contentRect.width, height: 0
+    };
+
+    const tRect = tools.getBoundingClientRect();
+    const toolsWidth = tools.offsetWidth || tRect.width || 168;
+    const toolsHeight = tools.offsetHeight || tRect.height || 28;
+
+    if (isThreadChild) {
+      const parentBubble = msgEl.closest(".wecom-reply-children")?.closest(".wecom-msg-bubble");
+      if (parentBubble) {
+        const pRect = parentBubble.getBoundingClientRect();
+        if ((pRect.right - pRect.left) >= (toolsWidth + 16)) {
+          safeLeft = Math.max(safeLeft, pRect.left + 4);
+          safeRight = Math.min(safeRight, pRect.right - 4);
+        }
+      }
+    }
+
+    let headerItemsLeft = Infinity;
+    let headerItemsRight = -Infinity;
+    if (header) {
+      for (const child of header.children) {
+        const r = child.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) {
+          if (r.left < headerItemsLeft) headerItemsLeft = r.left;
+          if (r.right > headerItemsRight) headerItemsRight = r.right;
+        }
+      }
+    }
+
+    const pos = computeMsgToolsPlacement({
+      isMe,
+      isThreadChild,
+      safeLeft,
+      safeRight,
+      safeTop: cRect.top + 8,
+      contentRect,
+      bubbleRect,
+      headerRect,
+      headerItemsLeft,
+      headerItemsRight,
+      toolsWidth,
+      toolsHeight
+    });
+
+    tools.dataset.toolsPos = pos.placement;
+    if (isThreadChild) {
+      tools.style.setProperty("left", "auto", "important");
+      tools.style.setProperty("right", `${pos.right}px`, "important");
+      tools.style.setProperty("top", `${pos.top}px`, "important");
+    } else {
+      tools.style.setProperty("left", `${pos.left}px`);
+      tools.style.setProperty("right", "auto");
+      tools.style.setProperty("top", `${pos.top}px`);
+    }
+    return pos;
+  }
+
   function bindChatPanelEvents(panel) {
     panel.addEventListener("click", (event) => handleChatPanelClick(event, panel));
     panel.addEventListener("keydown", handleChatImageKeydown);
@@ -35615,6 +35843,19 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     let chatScrollTimer = null;
     let chatBodyScrollThrottleTimer = null;
     const chatBody = panel.querySelector(".wecom-chat-body");
+    chatBody.addEventListener("mouseover", (event) => {
+      if (event.target?.closest?.(".wecom-msg-tools")) return;
+      const msgEl = event.target?.closest?.(".wecom-msg");
+      if (!msgEl || !chatBody.contains(msgEl)) return;
+      positionMsgTools(msgEl, chatBody);
+    });
+    chatBody.addEventListener("focusin", (event) => {
+      const msgEl = event.target?.closest?.(".wecom-msg");
+      if (!msgEl || !chatBody.contains(msgEl)) return;
+      const inTools = Boolean(event.target?.closest?.(".wecom-msg-tools"));
+      if (inTools && msgEl.querySelector(":scope > .wecom-msg-content > .wecom-msg-tools")?.dataset?.toolsPos) return;
+      positionMsgTools(msgEl, chatBody);
+    });
     const cancelPin = () => {
       chatState.pinnedPost = 0;
       chatState.pinningScroll = false;
@@ -36800,6 +37041,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     if (!postId) return;
 
     msgEl?.classList.add("has-boost-popover");
+    if (msgEl) positionMsgTools(msgEl);
 
     const popover = document.createElement("div");
     popover.className = "wecom-boost-popover";
