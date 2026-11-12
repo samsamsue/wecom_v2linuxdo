@@ -13398,6 +13398,7 @@ test("Test 166: Long-pressing a message bubble opens action menu at pointer coor
     clearTimeout: fakeClearTimeout,
     consumeClick: () => { consumedClicks += 1; },
     closeBoostPopover: () => {},
+    syncMsgToolsLayoutItem: () => {},
     window: {
       innerWidth: 1280,
       innerHeight: 800,
@@ -13462,6 +13463,213 @@ test("Test 166: Long-pressing a message bubble opens action menu at pointer coor
   panelEmitter.emit("pointerdown", { target: linkTarget, button: 0, pointerId: 4, clientX: 540, clientY: 440 });
   panelEmitter.emit("click", { target: linkTarget }, true);
   assert.strictEqual(consumedClicks, 1, "subsequent click on menu item must pass through cleanly");
+});
+
+test("Test 167: message tools menu toggles original/auto layout and keeps dividers & corner button synced", () => {
+  // 1. Markup, CSS & handler wiring exist
+  assert.ok(
+    scriptContent.includes(".wecom-msg-tool[hidden],") &&
+    scriptContent.includes(".wecom-msg-tools-divider[hidden]") &&
+    scriptContent.includes('action: "toggle-layout"') &&
+    scriptContent.includes('if (action === "toggle-layout")') &&
+    scriptContent.includes("syncMsgToolsLayoutItem(msgEl);"),
+    "must define hidden CSS rules, toggle-layout menu item, click routing, and open-menu sync"
+  );
+
+  // 2. Extract layout helpers + handleMessageToolClick cleanly into VM
+  const helperStart = scriptContent.indexOf("  function findOwnMsgElement(root,");
+  const helperEnd = scriptContent.indexOf("  function refreshChatMessagesLayout()");
+  assert.ok(helperStart >= 0 && helperEnd > helperStart, "must locate layout helper block");
+
+  const clickStart = scriptContent.indexOf("  function handleMessageToolClick(event, panel) {");
+  const clickEnd = scriptContent.indexOf("  function handleChatPanelClick(", clickStart);
+  assert.ok(clickStart >= 0 && clickEnd > clickStart, "must locate handleMessageToolClick");
+
+  const code = `${scriptContent.slice(helperStart, helperEnd)}\n${scriptContent.slice(clickStart, clickEnd)}\n` +
+    `this.findOwnMsgElement = findOwnMsgElement;\n` +
+    `this.syncMsgToolsDividers = syncMsgToolsDividers;\n` +
+    `this.syncMsgToolsLayoutItem = syncMsgToolsLayoutItem;\n` +
+    `this.toggleMessageBubbleLayout = toggleMessageBubbleLayout;\n` +
+    `this.handleMessageToolClick = handleMessageToolClick;`;
+
+  let closedPanels = 0;
+  let consumedClicks = 0;
+  let hydratedBubbles = 0;
+  let autoLayoutCalls = 0;
+
+  const makeCls = (initial = []) => {
+    const set = new Set(initial);
+    return {
+      add: (...c) => c.forEach((x) => set.add(x)),
+      remove: (...c) => c.forEach((x) => set.delete(x)),
+      contains: (c) => set.has(c)
+    };
+  };
+
+  function buildMsgTree({ postNumber = 10, layoutMode = null, hasCornerBtn = true, hasChildReplyToggle = false } = {}) {
+    const iconEl = { innerHTML: "" };
+    const labelEl = { textContent: "" };
+    const copyTool = { hidden: false, classList: makeCls(["wecom-msg-tool"]), dataset: { action: "copy" } };
+    const div1 = { hidden: false, classList: makeCls(["wecom-msg-tools-divider"]) };
+    const layoutTool = {
+      hidden: true,
+      title: "",
+      dataset: { action: "toggle-layout" },
+      classList: makeCls(["wecom-msg-tool"]),
+      removeAttribute(name) {
+        if (name === "data-layout-mode") delete this.dataset.layoutMode;
+      },
+      querySelector: (sel) => {
+        if (sel === ".wecom-msg-tool-icon") return iconEl;
+        if (sel === ".wecom-msg-tool-label") return labelEl;
+        return null;
+      }
+    };
+    const div2 = { hidden: false, classList: makeCls(["wecom-msg-tools-divider"]) };
+    const deleteTool = { hidden: false, classList: makeCls(["wecom-msg-tool"]), dataset: { action: "delete" } };
+
+    const childMsg = {};
+    const childBubble = {};
+    const childCornerBtn = hasChildReplyToggle ? {
+      classList: makeCls(["wecom-bubble-layout-toggle"]),
+      closest: (sel) => (sel === ".wecom-msg-bubble" ? childBubble : sel === ".wecom-msg" ? childMsg : null)
+    } : null;
+
+    const cornerClasses = makeCls(["wecom-bubble-layout-toggle"]);
+    const cornerBtn = hasCornerBtn ? {
+      title: "点击显示原排版",
+      innerHTML: "ORIG<span>原排版</span>",
+      classList: cornerClasses,
+      matches: (sel) => sel === ".wecom-bubble-layout-toggle",
+      closest: (sel) => (sel === ".wecom-msg-bubble" ? bubbleEl : sel === ".wecom-msg" ? msgEl : null),
+      remove: () => {}
+    } : null;
+
+    const bodyEl = {
+      innerHTML: "",
+      classList: makeCls(["wecom-msg-body", "is-empty"]),
+      closest: (sel) => (sel === ".wecom-msg-bubble" ? bubbleEl : null)
+    };
+    let removedImageGrids = 0;
+    const ownGrid = {
+      closest: (sel) => (sel === ".wecom-msg-bubble" ? bubbleEl : null),
+      remove: () => { removedImageGrids += 1; }
+    };
+
+    const bubbleDataset = { rawCooked: "<p>raw content</p>" };
+    if (layoutMode) bubbleDataset.layoutMode = layoutMode;
+
+    const bubbleEl = {
+      dataset: bubbleDataset,
+      classList: makeCls(["wecom-msg-bubble"]),
+      matches: (sel) => sel === ".wecom-msg-bubble",
+      removeAttribute(name) {
+        if (name === "data-layout-mode") delete this.dataset.layoutMode;
+      },
+      closest: (sel) => (sel === ".wecom-msg" ? msgEl : sel === ".wecom-msg-bubble" ? bubbleEl : null),
+      querySelector: (sel) => (sel === ".wecom-msg-body" ? bodyEl : null),
+      querySelectorAll: (sel) => {
+        if (sel === ".wecom-bubble-layout-toggle") {
+          return [cornerBtn, childCornerBtn].filter(Boolean);
+        }
+        if (sel === ".wecom-msg-body") return [bodyEl];
+        if (sel === ".wecom-msg-images") return [ownGrid];
+        return [];
+      }
+    };
+
+    const toolsEl = {
+      children: [copyTool, div1, layoutTool, div2, deleteTool],
+      closest: (sel) => (sel === ".wecom-msg" ? msgEl : null),
+      querySelector: (sel) => (sel === '.wecom-msg-tool[data-action="toggle-layout"]' ? layoutTool : null)
+    };
+
+    const msgEl = {
+      dataset: { postNumber: String(postNumber) },
+      classList: makeCls(["wecom-msg"]),
+      matches: (sel) => sel === ".wecom-msg",
+      closest: (sel) => (sel === ".wecom-msg" ? msgEl : null),
+      querySelectorAll: (sel) => {
+        if (sel === ".wecom-msg-tools") return [toolsEl];
+        if (sel === ".wecom-msg-bubble") return [bubbleEl, ...(hasChildReplyToggle ? [childBubble] : [])];
+        return [];
+      }
+    };
+    layoutTool.closest = (sel) => (sel === ".wecom-msg-tool" ? layoutTool : sel === ".wecom-msg" ? msgEl : null);
+    return {
+      msgEl, bubbleEl, toolsEl, copyTool, div1, layoutTool, div2, deleteTool,
+      iconEl, labelEl, cornerBtn, cornerClasses, bodyEl,
+      getRemovedImageGrids: () => removedImageGrids
+    };
+  }
+
+  const vm = require("node:vm");
+  const sandbox = {
+    IS_LINUXDO: true,
+    ICONS: { layoutOriginal: "<svg>ORIG</svg>", layoutAuto: "<svg>AUTO</svg>" },
+    chatState: { postsByNumber: new Map([[10, { post_number: 10, cooked: "<p>raw content</p>" }]]) },
+    consumeClick: () => { consumedClicks += 1; },
+    closeAllMsgToolsMenus: () => { closedPanels += 1; },
+    hydrateChatImages: () => { hydratedBubbles += 1; },
+    applyImageAutoLayout: (root) => {
+      autoLayoutCalls += 1;
+      const b = root.querySelectorAll(".wecom-msg-bubble")[0];
+      if (b) b.dataset.layoutMode = "auto";
+    }
+  };
+  vm.runInNewContext(code, sandbox);
+
+  // Scenario A: Plain-text bubble with NO auto-layout (even with nested child reply toggle) hides toggle-layout and collapses duplicate divider
+  const plain = buildMsgTree({ layoutMode: null, hasCornerBtn: false, hasChildReplyToggle: true });
+  sandbox.syncMsgToolsLayoutItem(plain.msgEl);
+  assert.strictEqual(plain.layoutTool.hidden, true, "parent without own layoutMode must keep toggle-layout hidden even if nested reply has toggle");
+  assert.strictEqual(plain.div1.hidden, false, "divider before delete stays visible");
+  assert.strictEqual(plain.div2.hidden, true, "duplicate divider after hidden-only middle section collapses cleanly");
+
+  // Also verify trailing section with only hidden item collapses divider before it
+  plain.deleteTool.hidden = true;
+  sandbox.syncMsgToolsDividers(plain.toolsEl);
+  assert.strictEqual(plain.div1.hidden, true, "trailing divider with no visible items after it must hide");
+  assert.strictEqual(plain.div2.hidden, true);
+
+  // Scenario B: Auto-layout bubble syncs menu -> click menu toggles to raw -> click again toggles back to auto
+  const autoMsg = buildMsgTree({ postNumber: 10, layoutMode: "auto", hasCornerBtn: true });
+  sandbox.syncMsgToolsLayoutItem(autoMsg.msgEl);
+  assert.strictEqual(autoMsg.layoutTool.hidden, false, "auto-layout bubble shows toggle-layout item");
+  assert.strictEqual(autoMsg.labelEl.textContent, "原排版");
+  assert.strictEqual(autoMsg.iconEl.innerHTML, "<svg>ORIG</svg>");
+  assert.strictEqual(autoMsg.div1.hidden, false);
+  assert.strictEqual(autoMsg.div2.hidden, false);
+
+  const panel = { contains: () => true };
+  sandbox.handleMessageToolClick({ target: autoMsg.layoutTool }, panel);
+  assert.strictEqual(closedPanels, 1, "clicking toggle-layout closes dropdown menu");
+  assert.strictEqual(consumedClicks, 1);
+  assert.strictEqual(autoMsg.bubbleEl.dataset.layoutMode, "raw", "switches bubble mode from auto to raw");
+  assert.strictEqual(autoMsg.bodyEl.innerHTML, "<p>raw content</p>");
+  assert.strictEqual(autoMsg.bodyEl.classList.contains("is-empty"), false);
+  assert.strictEqual(autoMsg.getRemovedImageGrids(), 1);
+  assert.strictEqual(autoMsg.cornerClasses.contains("is-raw"), true, "syncs corner toggle button to is-raw");
+  assert.strictEqual(autoMsg.cornerBtn.title, "点击显示自动排版");
+  assert.strictEqual(autoMsg.labelEl.textContent, "自动排版", "syncs menu item label to 自动排版");
+  assert.strictEqual(autoMsg.iconEl.innerHTML, "<svg>AUTO</svg>");
+  assert.strictEqual(hydratedBubbles, 1);
+
+  // Second click from menu switches back to auto
+  sandbox.handleMessageToolClick({ target: autoMsg.layoutTool }, panel);
+  assert.strictEqual(closedPanels, 2);
+  assert.strictEqual(autoLayoutCalls, 1, "switching back to auto invokes applyImageAutoLayout");
+  assert.strictEqual(autoMsg.bubbleEl.dataset.layoutMode, "auto");
+  assert.strictEqual(autoMsg.cornerClasses.contains("is-raw"), false);
+  assert.strictEqual(autoMsg.cornerBtn.title, "点击显示原排版");
+  assert.strictEqual(autoMsg.labelEl.textContent, "原排版");
+  assert.strictEqual(autoMsg.iconEl.innerHTML, "<svg>ORIG</svg>");
+  assert.strictEqual(hydratedBubbles, 2);
+
+  // Direct click on corner button also keeps menu item synced
+  sandbox.toggleMessageBubbleLayout(autoMsg.cornerBtn);
+  assert.strictEqual(autoMsg.bubbleEl.dataset.layoutMode, "raw");
+  assert.strictEqual(autoMsg.labelEl.textContent, "自动排版");
 });
 
 

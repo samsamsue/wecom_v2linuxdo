@@ -12016,6 +12016,10 @@
       height: 15px;
       stroke: currentColor;
     }
+    .wecom-msg-tool[hidden],
+    .wecom-msg-tools-divider[hidden] {
+      display: none !important;
+    }
 
     /* 聊天消息区底部居中悬浮导航按钮组（回到上次位置 / 一键滚到底部） */
     .wecom-chat-float-nav {
@@ -33565,8 +33569,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       });
 
       if (!candidateImgs.length) {
-        bubble.querySelector(".wecom-bubble-layout-toggle")?.remove();
+        findOwnMsgElement(bubble, ".wecom-bubble-layout-toggle", ".wecom-msg-bubble")?.remove();
         bubble.removeAttribute("data-layout-mode");
+        syncMsgToolsLayoutItem(bubble.closest(".wecom-msg"));
         continue;
       }
 
@@ -33652,57 +33657,138 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       }
 
       // 添加气泡排版切换悬浮钮
-      let toggleBtn = bubble.querySelector(".wecom-bubble-layout-toggle");
+      let toggleBtn = findOwnMsgElement(bubble, ".wecom-bubble-layout-toggle", ".wecom-msg-bubble");
       if (!toggleBtn) {
         toggleBtn = document.createElement("button");
         toggleBtn.type = "button";
         toggleBtn.className = "wecom-bubble-layout-toggle";
         bubble.appendChild(toggleBtn);
       }
-      toggleBtn.title = "点击显示原排版";
-      toggleBtn.innerHTML = `${ICONS.layoutOriginal}<span>原排版</span>`;
-      toggleBtn.classList.remove("is-raw");
+      setBubbleLayoutButtonState(toggleBtn, false);
       bubble.dataset.layoutMode = "auto";
+      syncMsgToolsLayoutItem(bubble.closest(".wecom-msg"));
     }
   }
 
-  function toggleMessageBubbleLayout(btn) {
-    const bubble = btn.closest(".wecom-msg-bubble");
-    if (!bubble) return;
-    const msgEl = bubble.closest(".wecom-msg");
-    if (!msgEl) return;
-    const postNum = Number(msgEl.dataset.postNumber);
-    const post = chatState.postsByNumber.get(postNum);
-    const rawContent = post?.cooked || bubble.dataset.rawCooked || "";
+  function findOwnMsgElement(root, selector, ownerSelector) {
+    if (!root?.querySelectorAll) return null;
+    const list = Array.from(root.querySelectorAll(selector));
+    const checkOwner = Boolean(ownerSelector && root.matches?.(ownerSelector));
+    return list.find((el) => !checkOwner || !el.closest || el.closest(ownerSelector) === root) || null;
+  }
 
-    const isRaw = bubble.dataset.layoutMode === "raw";
+  function setBubbleLayoutButtonState(btn, isRaw) {
+    if (!btn) return;
+    btn.title = isRaw ? "点击显示自动排版" : "点击显示原排版";
+    btn.innerHTML = isRaw ? `${ICONS.layoutAuto}<span>自动排版</span>` : `${ICONS.layoutOriginal}<span>原排版</span>`;
+    if (isRaw) {
+      btn.classList?.add?.("is-raw");
+    } else {
+      btn.classList?.remove?.("is-raw");
+    }
+  }
+
+  function syncMsgToolsDividers(toolsEl) {
+    if (!toolsEl) return;
+    const children = Array.from(toolsEl.children || []);
+    if (!children.length) return;
+    let hasVisibleBefore = false;
+    let lastVisibleDivider = null;
+    for (const child of children) {
+      if (child.classList?.contains?.("wecom-msg-tools-divider")) {
+        if (hasVisibleBefore) {
+          child.hidden = false;
+          lastVisibleDivider = child;
+          hasVisibleBefore = false;
+        } else {
+          child.hidden = true;
+        }
+      } else if (child.classList?.contains?.("wecom-msg-tool") && !child.hidden) {
+        hasVisibleBefore = true;
+        lastVisibleDivider = null;
+      }
+    }
+    if (lastVisibleDivider) {
+      lastVisibleDivider.hidden = true;
+    }
+  }
+
+  function syncMsgToolsLayoutItem(msgEl) {
+    if (!msgEl) return;
+    const toolsEl = findOwnMsgElement(msgEl, ".wecom-msg-tools", ".wecom-msg");
+    if (!toolsEl) return;
+    const layoutTool = toolsEl.querySelector?.('.wecom-msg-tool[data-action="toggle-layout"]');
+    if (!layoutTool) {
+      syncMsgToolsDividers(toolsEl);
+      return;
+    }
+    const bubble = findOwnMsgElement(msgEl, ".wecom-msg-bubble", ".wecom-msg");
+    const mode = bubble?.dataset?.layoutMode;
+    const ownToggleBtn = findOwnMsgElement(bubble, ".wecom-bubble-layout-toggle", ".wecom-msg-bubble");
+    const hasLayoutToggle = mode === "auto" || mode === "raw" || Boolean(ownToggleBtn);
+    layoutTool.hidden = !hasLayoutToggle;
+    if (hasLayoutToggle) {
+      const isRaw = mode === "raw";
+      const iconEl = layoutTool.querySelector?.(".wecom-msg-tool-icon");
+      const labelEl = layoutTool.querySelector?.(".wecom-msg-tool-label");
+      if (iconEl) iconEl.innerHTML = isRaw ? ICONS.layoutAuto : ICONS.layoutOriginal;
+      if (labelEl) labelEl.textContent = isRaw ? "自动排版" : "原排版";
+      layoutTool.title = isRaw ? "切换为自动排版" : "切换为原排版";
+      if (layoutTool.dataset) {
+        layoutTool.dataset.layoutMode = isRaw ? "raw" : "auto";
+      }
+    } else {
+      layoutTool.removeAttribute?.("data-layout-mode");
+    }
+    syncMsgToolsDividers(toolsEl);
+  }
+
+  function toggleMessageBubbleLayout(target) {
+    if (!target) return false;
+    const msgEl = target.matches?.(".wecom-msg")
+      ? target
+      : (target.closest?.(".wecom-msg") || target.closest?.(".wecom-msg-bubble")?.closest?.(".wecom-msg"));
+    if (!msgEl) return false;
+    const bubble = target.matches?.(".wecom-msg-bubble")
+      ? target
+      : (target.closest?.(".wecom-msg-bubble") || findOwnMsgElement(msgEl, ".wecom-msg-bubble", ".wecom-msg"));
+    if (!bubble) return false;
+    const btn = target.matches?.(".wecom-bubble-layout-toggle")
+      ? target
+      : findOwnMsgElement(bubble, ".wecom-bubble-layout-toggle", ".wecom-msg-bubble");
+    const postNum = Number(msgEl.dataset?.postNumber);
+    const post = chatState.postsByNumber.get(postNum);
+    const rawContent = post?.cooked || bubble.dataset?.rawCooked || "";
+
+    const bodyEl = findOwnMsgElement(bubble, ".wecom-msg-body", ".wecom-msg-bubble") || bubble.querySelector?.(".wecom-msg-body");
+    const ownImages = Array.from(bubble.querySelectorAll?.(".wecom-msg-images") || [])
+      .filter((el) => !el.closest || el.closest(".wecom-msg-bubble") === bubble);
+
+    const isRaw = bubble.dataset?.layoutMode === "raw";
     if (isRaw) {
       // 切换到自动排版
       bubble.dataset.layoutMode = "auto";
-      const bodyEl = bubble.querySelector(".wecom-msg-body");
       if (bodyEl) {
         bodyEl.innerHTML = rawContent;
-        bodyEl.classList.remove("is-empty");
+        bodyEl.classList?.remove?.("is-empty");
       }
-      bubble.querySelectorAll(".wecom-msg-images").forEach((el) => el.remove());
+      ownImages.forEach((el) => el.remove());
       applyImageAutoLayout(msgEl);
-      btn.title = "点击显示原排版";
-      btn.innerHTML = `${ICONS.layoutOriginal}<span>原排版</span>`;
-      btn.classList.remove("is-raw");
+      const activeBtn = btn || findOwnMsgElement(bubble, ".wecom-bubble-layout-toggle", ".wecom-msg-bubble");
+      setBubbleLayoutButtonState(activeBtn, false);
     } else {
       // 切换到原排版
       bubble.dataset.layoutMode = "raw";
-      bubble.querySelectorAll(".wecom-msg-images").forEach((el) => el.remove());
-      const bodyEl = bubble.querySelector(".wecom-msg-body");
+      ownImages.forEach((el) => el.remove());
       if (bodyEl) {
         bodyEl.innerHTML = rawContent;
-        bodyEl.classList.remove("is-empty");
+        bodyEl.classList?.remove?.("is-empty");
       }
-      btn.title = "点击显示自动排版";
-      btn.innerHTML = `${ICONS.layoutAuto}<span>自动排版</span>`;
-      btn.classList.add("is-raw");
+      setBubbleLayoutButtonState(btn, true);
     }
+    syncMsgToolsLayoutItem(msgEl);
     hydrateChatImages(bubble);
+    return true;
   }
 
   function refreshChatMessagesLayout() {
@@ -33727,6 +33813,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       } else {
         bubble.innerHTML = `${post ? replyReferenceHtml(post) : ""}<div class="wecom-msg-body">${rawContent}</div>`;
       }
+      syncMsgToolsLayoutItem(msgEl);
     }
     hydrateChatImages(body);
   }
@@ -35558,6 +35645,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     if (action === "copy") {
       return copyMessageBodyText(message);
     }
+    if (action === "toggle-layout") {
+      return toggleMessageBubbleLayout(message);
+    }
     if (action === "quote") {
       const sel = typeof window !== "undefined" && window.getSelection ? window.getSelection() : null;
       let selText = "";
@@ -36253,6 +36343,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     if (!msgEl) return false;
     closeAllMsgToolsMenus(document);
     closeBoostPopover();
+    syncMsgToolsLayoutItem(msgEl);
     msgEl.classList.add("is-tools-open");
     const moreBtn = msgEl.querySelector(":scope > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn") ||
       msgEl.querySelector(".wecom-msg-more-btn");
@@ -37775,9 +37866,16 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       title: likeLabel,
       extraClass: liked.trim()
     });
+    const layoutToggleTool = msgToolItemHtml({
+      action: "toggle-layout",
+      icon: ICONS.layoutOriginal,
+      label: "原排版",
+      title: "切换为原排版",
+      extraAttrs: "hidden"
+    });
     const toolsMenuHtml = renderMsgToolsMenuHtml([
       [copyButton, shareButton, quoteButton, replyButton, likeButton, boostButton],
-      [bookmarkButton, solutionButton],
+      [bookmarkButton, solutionButton, layoutToggleTool],
       [editButton, flagButton, deleteButton]
     ]);
     const likesBadgeHtml = likeCount > 0
