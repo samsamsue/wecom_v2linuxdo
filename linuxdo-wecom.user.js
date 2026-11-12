@@ -4539,8 +4539,7 @@
       opacity: 0; visibility: hidden;
       pointer-events: none;
     }
-    .wecom-msg.is-tools-open > .wecom-msg-content > .wecom-msg-tools,
-    .wecom-msg.has-boost-popover > .wecom-msg-content > .wecom-msg-tools {
+    .wecom-msg.is-tools-open > .wecom-msg-content > .wecom-msg-tools {
       opacity: 1 !important;
       visibility: visible !important;
       pointer-events: auto !important;
@@ -4899,12 +4898,6 @@
     .wecom-base64-copy-btn.is-copied {
       color: #07C160 !important;
       border-color: #07C160 !important;
-    }
-
-    /* 保持消息浮动工具条在打开 Popover 时常驻 */
-    .wecom-msg.has-boost-popover .wecom-msg-tools {
-      opacity: 1 !important;
-      visibility: visible !important;
     }
 
     /* Boost 添加微弹窗 */
@@ -11980,8 +11973,7 @@
       visibility: hidden;
       pointer-events: none;
     }
-    .wecom-msg.is-tools-open > .wecom-msg-content > .wecom-msg-tools,
-    .wecom-msg.has-boost-popover > .wecom-msg-content > .wecom-msg-tools {
+    .wecom-msg.is-tools-open > .wecom-msg-content > .wecom-msg-tools {
       opacity: 1 !important;
       visibility: visible !important;
       pointer-events: auto !important;
@@ -35476,11 +35468,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     consumeClick(event);
     const action = button.dataset.action;
     if (action === "boost") {
-      if (!IS_LINUXDO) {
-        closeAllMsgToolsMenus(panel);
-        return;
-      }
-      return openBoostPopover(message, button);
+      const result = IS_LINUXDO ? openBoostPopover(message, button) : undefined;
+      closeAllMsgToolsMenus(panel);
+      return result;
     }
     closeAllMsgToolsMenus(panel);
     if (action === "copy") {
@@ -37241,13 +37231,25 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   function openBoostPopover(msgEl, anchorBtn) {
     if (!IS_LINUXDO) return;
+    // Capture visible coordinates before closing the dropdown menu hides anchorBtn
+    const rawAnchorRect = anchorBtn?.getBoundingClientRect?.();
+    const hasAnchorRect = !!(rawAnchorRect && (rawAnchorRect.width > 0 || rawAnchorRect.height > 0));
+    const moreBtn = msgEl?.querySelector?.(":scope > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn") ||
+      msgEl?.querySelector?.(".wecom-msg-more-btn");
+    const fallbackRect = !hasAnchorRect ? moreBtn?.getBoundingClientRect?.() : null;
+    const rect = hasAnchorRect
+      ? rawAnchorRect
+      : ((fallbackRect && (fallbackRect.width > 0 || fallbackRect.height > 0))
+        ? fallbackRect
+        : (rawAnchorRect || { left: 16, top: 60, right: 36, bottom: 80, width: 20, height: 20 }));
+
     closeBoostPopover();
+    closeAllMsgToolsMenus(typeof document !== "undefined" ? document : msgEl?.closest?.(".wecom-chat-panel"));
     const postId = Number(msgEl?.dataset.postId);
     const postNumber = Number(msgEl?.dataset.postNumber);
     if (!postId) return;
 
     msgEl?.classList.add("has-boost-popover");
-    if (msgEl) positionMsgTools(msgEl);
 
     const popover = document.createElement("div");
     popover.className = "wecom-boost-popover";
@@ -37276,7 +37278,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     document.body.appendChild(popover);
     activeBoostPopover = popover;
 
-    const rect = anchorBtn.getBoundingClientRect();
     const popoverWidth = 260;
     const popoverHeight = popover.offsetHeight || 165;
     let left = Math.round(rect.left + rect.width / 2 - popoverWidth / 2);
@@ -37365,7 +37366,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     popover.querySelector(".wecom-boost-popover-close")?.addEventListener("click", closeBoostPopover);
 
     const onDocClick = (e) => {
-      if (!popover.contains(e.target) && e.target !== anchorBtn && !anchorBtn.contains(e.target)) {
+      if (!popover.contains(e.target) && e.target !== anchorBtn && !anchorBtn?.contains?.(e.target)) {
         closeBoostPopover();
       }
     };

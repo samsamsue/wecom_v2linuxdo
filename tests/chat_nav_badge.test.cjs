@@ -326,11 +326,12 @@ test("Boost toggle setting enables hiding and menu toggle", () => {
 test("Boost popover has symmetrical layout and dynamic positioning", () => {
   assert.ok(
     scriptContent.includes('has-boost-popover'),
-    "msgEl must be tagged with has-boost-popover to maintain tool visibility"
+    "msgEl must be tagged with has-boost-popover to highlight the trigger button"
   );
   assert.ok(
-    scriptContent.includes(".wecom-msg.has-boost-popover .wecom-msg-tools"),
-    "CSS must keep .wecom-msg-tools visible while popover is open"
+    !scriptContent.includes(".wecom-msg.has-boost-popover .wecom-msg-tools") &&
+    !scriptContent.includes(".wecom-msg.has-boost-popover > .wecom-msg-content > .wecom-msg-tools"),
+    "CSS must NOT keep .wecom-msg-tools menu open after clicking boost"
   );
   assert.ok(
     scriptContent.includes("popover.offsetHeight"),
@@ -12762,6 +12763,105 @@ test("Test 162: Header More button click opens WeCom grouped dropdown menu witho
   });
   assert.strictEqual(nearRightEdge.left, 980 - 164);
   assert.ok(nearRightEdge.left + 164 <= 1000 && nearRightEdge.left >= 320);
+
+  // 5. Clicking "贴表情" (boost) immediately closes the dropdown menu and opens popover at captured button rect
+  const toolClickMatch = scriptContent.match(
+    /function handleMessageToolClick\(event, panel\)\s*\{[\s\S]*?\n  \}(?=\n\n  function handleChatPanelClick)/
+  );
+  const closeMenusMatch = scriptContent.match(
+    /function closeAllMsgToolsMenus\(root = document\)\s*\{[\s\S]*?\n  \}/
+  );
+  const boostPopoverMatch = scriptContent.match(
+    /function closeBoostPopover\(\)\s*\{[\s\S]*?\n  \}\n\n  function openBoostPopover\(msgEl, anchorBtn\)\s*\{[\s\S]*?\n  \}(?=\n\n  async function submitPostBoost)/
+  );
+  assert.ok(toolClickMatch && closeMenusMatch && boostPopoverMatch, "must extract tool click, closeAllMsgToolsMenus, and boost popover helpers");
+
+  const makeClassList = (initial = []) => {
+    const set = new Set(initial);
+    return {
+      add: (...cls) => cls.forEach((c) => set.add(c)),
+      remove: (...cls) => cls.forEach((c) => set.delete(c)),
+      contains: (c) => set.has(c)
+    };
+  };
+  const msgClasses = makeClassList(["wecom-msg", "is-tools-open"]);
+  const attrs = { "aria-expanded": "true" };
+  const mockMoreBtn = {
+    setAttribute: (k, v) => { attrs[k] = String(v); },
+    getAttribute: (k) => attrs[k],
+    getBoundingClientRect: () => ({ left: 420, top: 180, right: 440, bottom: 200, width: 20, height: 20 })
+  };
+  const appendedPopovers = [];
+  let createdPopover = null;
+  const mockMessage = {
+    dataset: { postId: "456", postNumber: "7" },
+    classList: msgClasses,
+    closest: () => mockPanel,
+    querySelector: (sel) => (sel.includes("wecom-msg-more-btn") ? mockMoreBtn : null)
+  };
+  const mockBoostBtn = {
+    dataset: { action: "boost" },
+    closest: (sel) => (sel === ".wecom-msg-tool" ? mockBoostBtn : sel === ".wecom-msg" ? mockMessage : null),
+    // Zero out rect once menu closes to verify openBoostPopover captured visible coordinates first
+    getBoundingClientRect: () => (
+      msgClasses.contains("is-tools-open")
+        ? { left: 500, top: 320, right: 640, bottom: 352, width: 140, height: 32 }
+        : { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 }
+    )
+  };
+  const mockPanel = {
+    contains: (el) => el === mockBoostBtn,
+    querySelectorAll: (sel) => (sel === ".wecom-msg.is-tools-open" && msgClasses.contains("is-tools-open") ? [mockMessage] : [])
+  };
+  const boostSandbox = {
+    Math,
+    Number,
+    String,
+    setTimeout: () => 0,
+    IS_LINUXDO: true,
+    ICONS: { boost: "<svg>boost</svg>" },
+    activeBoostDocClickHandler: null,
+    activeBoostPopover: null,
+    window: { innerWidth: 1280, innerHeight: 800 },
+    consumeClick: () => {},
+    document: {
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      querySelectorAll: (sel) => {
+        if (sel === ".wecom-msg.has-boost-popover" && msgClasses.contains("has-boost-popover")) return [mockMessage];
+        if (sel === ".wecom-msg.is-tools-open" && msgClasses.contains("is-tools-open")) return [mockMessage];
+        return [];
+      },
+      createElement: () => {
+        createdPopover = {
+          className: "",
+          innerHTML: "",
+          offsetHeight: 170,
+          style: {},
+          contains: () => false,
+          remove: () => {},
+          querySelector: () => null,
+          querySelectorAll: () => []
+        };
+        return createdPopover;
+      },
+      body: {
+        appendChild: (node) => { appendedPopovers.push(node); }
+      }
+    }
+  };
+  vm.runInNewContext(
+    `${closeMenusMatch[0]}\n${boostPopoverMatch[0]}\n${toolClickMatch[0]}\nthis.handleMessageToolClick = handleMessageToolClick;`,
+    boostSandbox
+  );
+  boostSandbox.handleMessageToolClick({ target: mockBoostBtn }, mockPanel);
+  assert.strictEqual(msgClasses.contains("is-tools-open"), false, "clicking boost menu item must immediately close dropdown menu");
+  assert.strictEqual(mockMoreBtn.getAttribute("aria-expanded"), "false", "closing menu on boost click must reset aria-expanded");
+  assert.strictEqual(appendedPopovers.length, 1, "clicking boost menu item must still open boost popover");
+  assert.ok(
+    parseInt(createdPopover.style.left, 10) > 400 && parseInt(createdPopover.style.top, 10) > 100,
+    `boost popover must position using captured visible button rect instead of (0,0), got (${createdPopover.style.left}, ${createdPopover.style.top})`
+  );
 });
 
 test("Test 163: Subframe guard prevents WeCom rail/shell injection in iframes and iframe messages expand bubble to max width", () => {
