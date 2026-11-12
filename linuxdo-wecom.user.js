@@ -11950,6 +11950,38 @@
       min-height: clamp(460px, 66vh, 760px) !important;
     }
 
+    /* 长气泡滚动吸顶头部：保持发送人信息与「更多」按钮在超长气泡阅读过程中始终可触及 */
+    .wecom-msg:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-header {
+      position: sticky;
+      top: 6px;
+      z-index: 12;
+      width: fit-content;
+      max-width: 100%;
+      align-self: flex-start;
+    }
+    .wecom-msg-me:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-header {
+      align-self: flex-end;
+    }
+    .wecom-msg-me:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-header:has(.wecom-msg-reply-indicator) {
+      align-self: flex-start;
+    }
+    .wecom-msg-header.is-header-stuck::before {
+      content: "";
+      position: absolute;
+      inset: -3px -7px;
+      z-index: -1;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(31, 35, 41, 0.08);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+      pointer-events: none;
+    }
+    .wecom-msg-header.is-header-stuck > .wecom-msg-more-btn {
+      opacity: 1;
+    }
+
     /* 气泡更多操作菜单：仅由 .wecom-msg-header 中的更多按钮点击触发，呈现企微垂直分组右键菜单样式 */
     .wecom-msg-tools {
       position: fixed;
@@ -14502,7 +14534,13 @@
       color: #ECEFF4 !important;
     }
 
-    /* 气泡更多操作菜单 */
+    /* 气泡更多操作菜单与吸顶头部暗色适配 */
+    html.wecom-dark .wecom-msg-header.is-header-stuck::before,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-header.is-header-stuck::before {
+      background: rgba(43, 47, 54, 0.92);
+      border-color: rgba(255, 255, 255, 0.12);
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.36);
+    }
     html.wecom-dark .wecom-msg-more-btn:hover,
     html.${ROOT_CLASS}.wecom-dark .wecom-msg-more-btn:hover,
     html.wecom-dark .wecom-msg.is-tools-open > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn,
@@ -35245,6 +35283,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     }
 
     syncTimelineSlider(chatBody);
+    if (typeof syncStickyMsgHeaders === "function") syncStickyMsgHeaders(chatBody);
   }
 
   function saveChatJumpPosition(body, prevScrollTop, sourceEl = null) {
@@ -35986,6 +36025,83 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     });
   }
 
+  let stickyHeaderSyncRafId = 0;
+
+  function shouldMsgHeaderStick(metrics) {
+    const {
+      containerTop = 0,
+      containerHeight = 0,
+      contentTop = 0,
+      headerTop = 0,
+      headerHeight = 0,
+      bubbleTop = 0,
+      bubbleBottom = 0,
+      stickyTop = 6
+    } = metrics || {};
+    if (containerHeight <= 0 || headerHeight <= 0) return false;
+    const pastStickyThreshold = contentTop < containerTop + stickyTop - 1;
+    const overlappingBubble = headerTop + headerHeight > bubbleTop + 2;
+    const enoughBubbleLeft = bubbleBottom > headerTop + headerHeight + 16;
+    return pastStickyThreshold && overlappingBubble && enoughBubbleLeft;
+  }
+
+  function syncStickyMsgHeaders(chatBody) {
+    if (!chatBody || typeof chatBody.getBoundingClientRect !== "function") return;
+    const bodyRect = chatBody.getBoundingClientRect();
+    if (!bodyRect || bodyRect.height <= 0) return;
+
+    const msgs = chatBody.querySelectorAll(".wecom-msg:not(.is-thread-child)");
+    const updates = [];
+    msgs.forEach((msgEl) => {
+      const contentEl = msgEl.querySelector(":scope > .wecom-msg-content");
+      const headerEl = contentEl?.querySelector(":scope > .wecom-msg-header");
+      const bubbleEl = contentEl?.querySelector(":scope > .wecom-msg-bubble");
+      if (!headerEl || !contentEl || !bubbleEl) return;
+
+      const contentRect = contentEl.getBoundingClientRect();
+      // Skip messages completely outside vertical viewport
+      if (contentRect.bottom <= bodyRect.top || contentRect.top >= bodyRect.bottom) {
+        if (headerEl.classList.contains("is-header-stuck")) {
+          updates.push([headerEl, false]);
+        }
+        return;
+      }
+
+      const headerRect = headerEl.getBoundingClientRect();
+      const bubbleRect = bubbleEl.getBoundingClientRect();
+      const nextStuck = shouldMsgHeaderStick({
+        containerTop: bodyRect.top,
+        containerHeight: bodyRect.height,
+        contentTop: contentRect.top,
+        headerTop: headerRect.top,
+        headerHeight: headerRect.height,
+        bubbleTop: bubbleRect.top,
+        bubbleBottom: bubbleRect.bottom,
+        stickyTop: 6
+      });
+      if (headerEl.classList.contains("is-header-stuck") !== nextStuck) {
+        updates.push([headerEl, nextStuck]);
+      }
+    });
+
+    for (const [headerEl, stuck] of updates) {
+      headerEl.classList.toggle("is-header-stuck", stuck);
+    }
+  }
+
+  function scheduleStickyHeaderSync(chatBody) {
+    if (!chatBody) return;
+    if (typeof requestAnimationFrame !== "function") {
+      syncStickyMsgHeaders(chatBody);
+      return;
+    }
+    if (stickyHeaderSyncRafId) return;
+    stickyHeaderSyncRafId = requestAnimationFrame(() => {
+      stickyHeaderSyncRafId = 0;
+      syncStickyMsgHeaders(chatBody);
+    });
+  }
+
   function computeMsgToolsPlacement(metrics) {
     const {
       isMe = false,
@@ -36132,6 +36248,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     chatBody.addEventListener("pointerdown", cancelPin, { passive: true });
     chatBody.addEventListener("scroll", () => {
       closeAllMsgToolsMenus(chatBody);
+      scheduleStickyHeaderSync(chatBody);
       closeQuoteTooltip();
       closeLikesPopover();
       closeMentionPopup();

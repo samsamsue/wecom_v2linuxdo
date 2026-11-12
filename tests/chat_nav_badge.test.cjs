@@ -13263,6 +13263,114 @@ test("Test 165: V2EX /i/<id>.png HTML wrapper links resolve to embedded image sr
   assert.strictEqual(erroredUrl, "");
 });
 
+test("Test 166: Tall message headers stick at scrollport top with frosted pill state while nested thread headers stay static", () => {
+  const vm = require("node:vm");
+
+  // 1. CSS rules for sticky top-level message headers and stuck pill backdrop (light & dark)
+  assert.ok(
+    scriptContent.includes(".wecom-msg:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-header") &&
+    scriptContent.includes("position: sticky;") &&
+    scriptContent.includes(".wecom-msg-header.is-header-stuck::before") &&
+    scriptContent.includes("html.wecom-dark .wecom-msg-header.is-header-stuck::before"),
+    "CSS must style sticky message headers and light/dark .is-header-stuck backdrops"
+  );
+
+  // 2. Scroll hook + syncChatFloatNav integration
+  assert.ok(
+    scriptContent.includes("scheduleStickyHeaderSync(chatBody);") &&
+    scriptContent.includes("syncStickyMsgHeaders(chatBody);"),
+    "scroll handler and syncChatFloatNav must keep sticky header state in sync"
+  );
+
+  // 3. Extract and test shouldMsgHeaderStick + syncStickyMsgHeaders in Node VM
+  const startIdx = scriptContent.indexOf("  let stickyHeaderSyncRafId = 0;");
+  const endIdx = scriptContent.indexOf("  function computeMsgToolsPlacement(metrics) {");
+  assert.ok(startIdx >= 0 && endIdx > startIdx, "must locate sticky header sync functions");
+  const stickyBlock = scriptContent.slice(startIdx, endIdx);
+
+  const sandbox = {};
+  vm.runInNewContext(
+    `${stickyBlock}\nthis.shouldMsgHeaderStick = shouldMsgHeaderStick;\nthis.syncStickyMsgHeaders = syncStickyMsgHeaders;`,
+    sandbox
+  );
+
+  const s = sandbox.shouldMsgHeaderStick;
+  assert.strictEqual(
+    s({ containerTop: 60, containerHeight: 700, contentTop: 200, headerTop: 200, headerHeight: 20, bubbleTop: 224, bubbleBottom: 900 }),
+    false,
+    "message below sticky threshold must not mark header stuck"
+  );
+  assert.strictEqual(
+    s({ containerTop: 60, containerHeight: 700, contentTop: -240, headerTop: 66, headerHeight: 20, bubbleTop: -216, bubbleBottom: 620 }),
+    true,
+    "tall bubble scrolled past sticky top while overlapping bubble must mark header stuck"
+  );
+  assert.strictEqual(
+    s({ containerTop: 60, containerHeight: 700, contentTop: -400, headerTop: 66, headerHeight: 20, bubbleTop: -376, bubbleBottom: 95 }),
+    false,
+    "tall bubble with <= 16px remaining below header must unstick cleanly"
+  );
+
+  // 4. DOM toggle behavior via syncStickyMsgHeaders
+  const makeCls = (initial = []) => {
+    const set = new Set(initial);
+    return {
+      contains: (c) => set.has(c),
+      toggle: (c, force) => {
+        const next = force === undefined ? !set.has(c) : Boolean(force);
+        if (next) set.add(c);
+        else set.delete(c);
+        return next;
+      }
+    };
+  };
+  const makeMsg = ({ contentRect, headerRect, bubbleRect, initialStuck = false }) => {
+    const header = {
+      classList: makeCls(initialStuck ? ["wecom-msg-header", "is-header-stuck"] : ["wecom-msg-header"]),
+      getBoundingClientRect: () => headerRect
+    };
+    const bubble = { getBoundingClientRect: () => bubbleRect };
+    const content = {
+      getBoundingClientRect: () => contentRect,
+      querySelector: (sel) => (sel.includes("wecom-msg-header") ? header : sel.includes("wecom-msg-bubble") ? bubble : null)
+    };
+    return {
+      _header: header,
+      querySelector: (sel) => (sel.includes("wecom-msg-content") ? content : null)
+    };
+  };
+
+  const tallScrolled = makeMsg({
+    contentRect: { top: -180, bottom: 520 },
+    headerRect: { top: 66, height: 20 },
+    bubbleRect: { top: -156, bottom: 520 }
+  });
+  const offscreenWasStuck = makeMsg({
+    contentRect: { top: -600, bottom: 10 },
+    headerRect: { top: -10, height: 20 },
+    bubbleRect: { top: -576, bottom: 10 },
+    initialStuck: true
+  });
+  const normalVisible = makeMsg({
+    contentRect: { top: 560, bottom: 640 },
+    headerRect: { top: 560, height: 20 },
+    bubbleRect: { top: 584, bottom: 640 }
+  });
+
+  const chatBody = {
+    getBoundingClientRect: () => ({ top: 60, bottom: 760, height: 700 }),
+    querySelectorAll: (sel) => {
+      assert.strictEqual(sel, ".wecom-msg:not(.is-thread-child)");
+      return [tallScrolled, offscreenWasStuck, normalVisible];
+    }
+  };
+  sandbox.syncStickyMsgHeaders(chatBody);
+
+  assert.strictEqual(tallScrolled._header.classList.contains("is-header-stuck"), true, "scrolled tall bubble header must get is-header-stuck");
+  assert.strictEqual(offscreenWasStuck._header.classList.contains("is-header-stuck"), false, "offscreen message must clear is-header-stuck");
+  assert.strictEqual(normalVisible._header.classList.contains("is-header-stuck"), false, "normal visible message must not get is-header-stuck");
+});
+
 
 
 
