@@ -6904,7 +6904,8 @@
       width: 100% !important;
       box-sizing: border-box !important;
     }
-    blockquote .wecom-msg-images {
+    blockquote .wecom-msg-images,
+    details .wecom-msg-images {
       margin-top: 6px !important;
       margin-bottom: 2px !important;
     }
@@ -33558,7 +33559,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       const candidateImgs = allImgs.filter((img) => {
         if (!isPreviewableChatImage(img)) return false;
         if (img.matches(".onebox-avatar, .onebox-thumbnail, .site-icon, .badge-icon, .avatar")) return false;
-        if (img.closest("aside.onebox, .onebox, .onebox-body, [data-onebox-src], .wecom-reply-reference, table, details, .poll, .poll-ui-container, .lazyYT, .video-container, .audio-container, .chat-transcript, pre, code")) return false;
+        if (img.closest("aside.onebox, .onebox, .onebox-body, [data-onebox-src], .wecom-reply-reference, table, .poll, .poll-ui-container, .lazyYT, .video-container, .audio-container, .chat-transcript, pre, code")) return false;
+        if (img.closest("details") && (!img.closest(".lightbox-wrapper") || img.closest("summary"))) return false;
         const src = img.getAttribute("src") || img.getAttribute("data-orig-src") || img.getAttribute("data-large-src");
         if (!src || src.startsWith("data:image/svg+xml")) return false;
         if (isImageSmallerThanLayout(img, layoutSize)) return false;
@@ -33575,11 +33577,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         continue;
       }
 
-      // 按照所在作用域分组：每个 blockquote 各自形成独立画廊，引用框外的图片归入气泡主画廊
+      // 按照所在作用域分组：每个 blockquote / details 各自形成独立画廊，作用域外的图片归入气泡主画廊
       const groups = new Map();
       for (const img of candidateImgs) {
-        const bq = img.closest("blockquote");
-        const scope = bq || bubble;
+        const scopedContainer = img.closest("blockquote, details");
+        const scope = scopedContainer || bubble;
         if (!groups.has(scope)) {
           groups.set(scope, []);
         }
@@ -33590,7 +33592,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         const gallery = document.createElement("div");
         gallery.className = "wecom-msg-images";
         gallery.setAttribute("role", "group");
-        gallery.setAttribute("aria-label", scope === bubble ? "帖子图片" : "引用图片");
+        const isDetailsScope = /^details$/i.test(scope?.nodeName || scope?.tagName || "");
+        gallery.setAttribute("aria-label", scope === bubble ? "帖子图片" : (isDetailsScope ? "折叠图片" : "引用图片"));
 
         for (const img of imgs) {
           const lightboxWrapper = img.closest(".lightbox-wrapper");

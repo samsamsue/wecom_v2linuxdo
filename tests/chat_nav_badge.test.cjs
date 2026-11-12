@@ -3069,10 +3069,10 @@ test("Images inside blockquote are auto-laid out into independent galleries with
     "isNodeVisuallyEmpty must treat galleries and thumbnails as meaningful content"
   );
 
-  // 3. Verify applyImageAutoLayout scopes images by blockquote
+  // 3. Verify applyImageAutoLayout scopes images by blockquote / details
   assert.ok(
-    scriptContent.includes("const bq = img.closest(\"blockquote\");\n        const scope = bq || bubble;"),
-    "applyImageAutoLayout must group candidate images by blockquote scope"
+    scriptContent.includes("const scopedContainer = img.closest(\"blockquote, details\");\n        const scope = scopedContainer || bubble;"),
+    "applyImageAutoLayout must group candidate images by blockquote / details scope"
   );
   assert.ok(
     scriptContent.includes("if (scope === bubble) {\n          cleanMessageBodyWhitespace(bodyEl);\n          bodyEl.after(gallery);\n        } else {\n          cleanMessageBodyWhitespace(scope);\n          scope.appendChild(gallery);\n        }"),
@@ -13670,6 +13670,252 @@ test("Test 167: message tools menu toggles original/auto layout and keeps divide
   sandbox.toggleMessageBubbleLayout(autoMsg.cornerBtn);
   assert.strictEqual(autoMsg.bubbleEl.dataset.layoutMode, "raw");
   assert.strictEqual(autoMsg.labelEl.textContent, "自动排版");
+});
+
+test("Test 168: lightbox-wrapper images inside <details> are auto-laid out in an independent gallery inside <details>", () => {
+  // 1. Verify CSS & filter wiring in scriptContent
+  assert.ok(
+    scriptContent.includes("details .wecom-msg-images") &&
+    scriptContent.includes('if (img.closest("details") && (!img.closest(".lightbox-wrapper") || img.closest("summary"))) return false;') &&
+    scriptContent.includes('img.closest("blockquote, details")'),
+    "must style details .wecom-msg-images, require .lightbox-wrapper inside <details>, and scope galleries per details/blockquote"
+  );
+
+  // 2. Extract real applyImageAutoLayout and exercise DOM trees in VM
+  const fnStart = scriptContent.indexOf("  function applyImageAutoLayout(root) {");
+  const fnEnd = scriptContent.indexOf("  function findOwnMsgElement(root,", fnStart);
+  assert.ok(fnStart >= 0 && fnEnd > fnStart, "must locate applyImageAutoLayout function");
+
+  class MockElem {
+    constructor(tagName, { classes = [], attrs = {}, text = "" } = {}) {
+      this.nodeType = 1;
+      this.nodeName = tagName.toUpperCase();
+      this.tagName = this.nodeName;
+      this.attrs = { ...attrs };
+      this.dataset = {};
+      this.children = [];
+      this.parentElement = null;
+      this.parentNode = null;
+      this._text = text;
+      const set = new Set(classes);
+      this.classList = {
+        add: (...c) => c.forEach((x) => set.add(x)),
+        remove: (...c) => c.forEach((x) => set.delete(x)),
+        contains: (c) => set.has(c)
+      };
+      Object.defineProperty(this, "className", {
+        get: () => Array.from(set).join(" "),
+        set: (val) => {
+          set.clear();
+          String(val || "").split(/\s+/).filter(Boolean).forEach((c) => set.add(c));
+        }
+      });
+    }
+    get textContent() {
+      return this._text + this.children.map((c) => c.textContent).join("");
+    }
+    set textContent(v) {
+      this._text = String(v || "");
+      this.children = [];
+    }
+    get innerHTML() {
+      return "<raw-mock/>";
+    }
+    getAttribute(k) {
+      return Object.prototype.hasOwnProperty.call(this.attrs, k) ? this.attrs[k] : null;
+    }
+    setAttribute(k, v) {
+      this.attrs[k] = String(v);
+    }
+    removeAttribute(k) {
+      if (k.startsWith("data-")) {
+        const camel = k.slice(5).replace(/-([a-z])/g, (_, ch) => ch.toUpperCase());
+        delete this.dataset[camel];
+      }
+      delete this.attrs[k];
+    }
+    appendChild(child) {
+      if (child.parentElement) child.remove();
+      child.parentElement = this;
+      child.parentNode = this;
+      this.children.push(child);
+      return child;
+    }
+    after(node) {
+      if (!this.parentElement) return;
+      if (node.parentElement) node.remove();
+      const siblings = this.parentElement.children;
+      const idx = siblings.indexOf(this);
+      node.parentElement = this.parentElement;
+      node.parentNode = this.parentElement;
+      siblings.splice(idx + 1, 0, node);
+    }
+    remove() {
+      if (!this.parentElement) return;
+      const arr = this.parentElement.children;
+      const idx = arr.indexOf(this);
+      if (idx >= 0) arr.splice(idx, 1);
+      this.parentElement = null;
+      this.parentNode = null;
+    }
+    _matchesOne(sel) {
+      const s = sel.trim();
+      if (!s) return false;
+      if (s === "a[href]") return this.nodeName === "A" && Object.prototype.hasOwnProperty.call(this.attrs, "href");
+      if (s === "a.lightbox") return this.nodeName === "A" && this.classList.contains("lightbox");
+      if (s === ".lightbox-wrapper a[href]") {
+        return this.nodeName === "A" && Object.prototype.hasOwnProperty.call(this.attrs, "href") &&
+          Boolean(this.parentElement?.closest(".lightbox-wrapper"));
+      }
+      if (s === "aside.onebox") return this.nodeName === "ASIDE" && this.classList.contains("onebox");
+      if (s === "[data-onebox-src]") return Object.prototype.hasOwnProperty.call(this.attrs, "data-onebox-src");
+      if (s.startsWith(".")) return this.classList.contains(s.slice(1));
+      return this.nodeName.toLowerCase() === s.toLowerCase();
+    }
+    matches(selectorList) {
+      return selectorList.split(",").some((part) => this._matchesOne(part));
+    }
+    closest(selectorList) {
+      let cur = this;
+      while (cur) {
+        if (cur.matches(selectorList)) return cur;
+        cur = cur.parentElement;
+      }
+      return null;
+    }
+    querySelectorAll(selectorList) {
+      const out = [];
+      const walk = (node) => {
+        for (const child of node.children) {
+          if (child.matches(selectorList)) out.push(child);
+          walk(child);
+        }
+      };
+      walk(this);
+      return out;
+    }
+    querySelector(selectorList) {
+      return this.querySelectorAll(selectorList)[0] || null;
+    }
+  }
+
+  const msg = new MockElem("div", { classes: ["wecom-msg"] });
+  const bubble = new MockElem("div", { classes: ["wecom-msg-bubble"] });
+  const bodyEl = new MockElem("div", { classes: ["wecom-msg-body"] });
+  msg.appendChild(bubble);
+  bubble.appendChild(bodyEl);
+
+  // Outer bubble lightbox image
+  const outerWrap = new MockElem("div", { classes: ["lightbox-wrapper"] });
+  const outerLink = new MockElem("a", { classes: ["lightbox"], attrs: { href: "https://linux.do/orig-outer.png" } });
+  const outerImg = new MockElem("img", { attrs: { src: "https://linux.do/opt-outer.png", alt: "outer" } });
+  outerLink.appendChild(outerImg);
+  outerWrap.appendChild(outerLink);
+  bodyEl.appendChild(outerWrap);
+
+  // Blockquote image
+  const bq = new MockElem("blockquote");
+  const bqP = new MockElem("p", { text: "引用说明" });
+  const bqWrap = new MockElem("div", { classes: ["lightbox-wrapper"] });
+  const bqLink = new MockElem("a", { classes: ["lightbox"], attrs: { href: "https://linux.do/orig-quote.png" } });
+  const bqImg = new MockElem("img", { attrs: { src: "https://linux.do/opt-quote.png", alt: "quoted" } });
+  bqLink.appendChild(bqImg);
+  bqWrap.appendChild(bqLink);
+  bq.appendChild(bqP);
+  bq.appendChild(bqWrap);
+  bodyEl.appendChild(bq);
+
+  // Details block containing: (a) summary with img (excluded), (b) lightbox-wrapper img (auto-laid out inside details!),
+  // (c) plain non-lightbox img (excluded), (d) onebox img inside details (excluded)
+  const detailsEl = new MockElem("details");
+  const summaryEl = new MockElem("summary", { text: "展开细节截图" });
+  const sumWrap = new MockElem("div", { classes: ["lightbox-wrapper"] });
+  const sumImg = new MockElem("img", { attrs: { src: "https://linux.do/sum-thumb.png" } });
+  sumWrap.appendChild(sumImg);
+  summaryEl.appendChild(sumWrap);
+  detailsEl.appendChild(summaryEl);
+
+  const detP = new MockElem("p");
+  const detWrap = new MockElem("div", { classes: ["lightbox-wrapper"] });
+  const detMeta = new MockElem("div", { classes: ["meta"] });
+  detMeta.appendChild(new MockElem("span", { classes: ["informations"], text: "1200x800 90 KB" }));
+  const detLink = new MockElem("a", { classes: ["lightbox"], attrs: { href: "https://linux.do/orig-details.png" } });
+  const detImg = new MockElem("img", { attrs: { src: "https://linux.do/opt-details.png", alt: "details-shot" } });
+  detLink.appendChild(detImg);
+  detWrap.appendChild(detLink);
+  detWrap.appendChild(detMeta);
+  detP.appendChild(detWrap);
+  detailsEl.appendChild(detP);
+
+  const plainDetailsImg = new MockElem("img", { attrs: { src: "https://linux.do/plain-badge.png" } });
+  detailsEl.appendChild(plainDetailsImg);
+
+  const detOnebox = new MockElem("aside", { classes: ["onebox"] });
+  const detOneboxWrap = new MockElem("div", { classes: ["lightbox-wrapper"] });
+  const detOneboxImg = new MockElem("img", { attrs: { src: "https://linux.do/onebox-in-details.png" } });
+  detOneboxWrap.appendChild(detOneboxImg);
+  detOnebox.appendChild(detOneboxWrap);
+  detailsEl.appendChild(detOnebox);
+
+  bodyEl.appendChild(detailsEl);
+
+  let syncedMsgs = 0;
+  const vm = require("node:vm");
+  const sandbox = {
+    document: { createElement: (tag) => new MockElem(tag) },
+    isImageAutoLayoutEnabled: () => true,
+    getImageAutoLayoutSize: () => 100,
+    isPreviewableChatImage: (img) => !img.closest("aside.onebox, .onebox"),
+    isImageSmallerThanLayout: () => false,
+    getImageEffectiveDimensions: () => ({ width: 800, height: 600 }),
+    attachImageAutoLayoutLoadCheck: () => {},
+    isNodeVisuallyEmpty: (node) => node.children.length === 0 && !node.textContent.trim(),
+    cleanMessageBodyWhitespace: () => {},
+    findOwnMsgElement: (root, sel) => root?.querySelector(sel) || null,
+    setBubbleLayoutButtonState: (btn, isRaw) => { if (btn) btn.dataset.isRaw = String(isRaw); },
+    syncMsgToolsLayoutItem: () => { syncedMsgs += 1; }
+  };
+  vm.runInNewContext(`${scriptContent.slice(fnStart, fnEnd)}\nthis.applyImageAutoLayout = applyImageAutoLayout;`, sandbox);
+
+  sandbox.applyImageAutoLayout(msg);
+
+  assert.strictEqual(bubble.dataset.layoutMode, "auto", "bubble enters auto layout mode");
+  assert.strictEqual(syncedMsgs, 1);
+
+  // Outer gallery after bodyEl has ONLY outerImg
+  const bubbleDirectGalleries = bubble.children.filter((c) => c.classList.contains("wecom-msg-images"));
+  assert.strictEqual(bubbleDirectGalleries.length, 1, "bubble gets 1 outer gallery");
+  assert.strictEqual(bubbleDirectGalleries[0].getAttribute("aria-label"), "帖子图片");
+  assert.deepStrictEqual(
+    bubbleDirectGalleries[0].querySelectorAll("img").map((i) => i.getAttribute("src")),
+    ["https://linux.do/opt-outer.png"],
+    "outer gallery must NOT pull in details or blockquote images"
+  );
+
+  // Blockquote gallery stays inside blockquote
+  const bqGallery = bq.querySelector(".wecom-msg-images");
+  assert.ok(bqGallery, "blockquote gets its own gallery");
+  assert.strictEqual(bqGallery.getAttribute("aria-label"), "引用图片");
+  assert.deepStrictEqual(
+    bqGallery.querySelectorAll("img").map((i) => i.getAttribute("src")),
+    ["https://linux.do/opt-quote.png"]
+  );
+
+  // Details gallery stays inside <details>, cleans empty wrapper/meta, and preserves non-lightbox / summary / onebox images in place
+  const detGallery = detailsEl.children.find((c) => c.classList.contains("wecom-msg-images"));
+  assert.ok(detGallery, "<details> must receive its own .wecom-msg-images gallery");
+  assert.strictEqual(detGallery.getAttribute("aria-label"), "折叠图片");
+  assert.deepStrictEqual(
+    detGallery.querySelectorAll("img").map((i) => i.getAttribute("src")),
+    ["https://linux.do/opt-details.png"],
+    "<details> gallery includes only lightbox-wrapper image outside summary/onebox"
+  );
+  assert.strictEqual(detWrap.parentElement, null, "converted .lightbox-wrapper inside <details> is removed");
+  assert.strictEqual(detP.parentElement, null, "empty <p> around converted lightbox-wrapper inside <details> is cleaned");
+  assert.strictEqual(detMeta.parentElement, null, ".meta inside <details> lightbox-wrapper is removed");
+  assert.strictEqual(plainDetailsImg.parentElement, detailsEl, "plain non-lightbox img inside <details> stays untouched");
+  assert.strictEqual(sumImg.closest("summary"), summaryEl, "img inside <summary> stays untouched");
+  assert.strictEqual(detOneboxImg.closest("aside.onebox"), detOnebox, "onebox img inside <details> stays untouched");
 });
 
 
