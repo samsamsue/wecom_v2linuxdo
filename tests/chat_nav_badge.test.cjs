@@ -13154,6 +13154,115 @@ test("Test 164: Image magnifier defaults to 1.2x per unzoomed image, retains eac
   }
 });
 
+test("Test 165: V2EX /i/<id>.png HTML wrapper links resolve to embedded image src and viewer falls back across candidates on error", () => {
+  const vm = require("node:vm");
+  const startIdx = scriptContent.indexOf("  function normalizePreviewImageUrl(value) {");
+  const endIdx = scriptContent.indexOf("  function normalizeImageViewerScale(value) {");
+  assert.ok(startIdx >= 0 && endIdx > startIdx, "must locate previewImageCandidates and bindImageCandidateFallback block");
+  const block = scriptContent.slice(startIdx, endIdx);
+
+  const sandbox = {
+    URL,
+    console,
+    location: { href: "https://www.v2ex.com/t/1256198" }
+  };
+  vm.runInNewContext(
+    `${block}\nthis.previewImageCandidates = previewImageCandidates;\nthis.previewImageSource = previewImageSource;\nthis.bindImageCandidateFallback = bindImageCandidateFallback;`,
+    sandbox
+  );
+
+  const makeMockImage = ({ src = "", currentSrc = "", attrs = {}, link = null, lightbox = null } = {}) => ({
+    currentSrc,
+    getAttribute: (name) => {
+      if (name === "src") return src;
+      return Object.prototype.hasOwnProperty.call(attrs, name) ? attrs[name] : null;
+    },
+    closest: (sel) => {
+      if (sel.includes("lightbox")) return lightbox;
+      if (sel === "a[href]") return link;
+      return null;
+    }
+  });
+  const makeLink = (href, classes = []) => ({
+    classList: { contains: (cls) => classes.includes(cls) },
+    getAttribute: (name) => (name === "href" ? href : null)
+  });
+
+  // 1. V2EX topic #3 pattern: <a href="/i/xRZfUAZb.png"><img src="//i.v2ex.co/xRZfUAZb.png"></a>
+  const v2exImg = makeMockImage({
+    src: "//i.v2ex.co/xRZfUAZb.png",
+    currentSrc: "https://i.v2ex.co/xRZfUAZb.png",
+    link: makeLink("/i/xRZfUAZb.png")
+  });
+  const v2exCandidates = sandbox.previewImageCandidates(v2exImg);
+  assert.strictEqual(
+    sandbox.previewImageSource(v2exImg),
+    "https://i.v2ex.co/xRZfUAZb.png",
+    "V2EX wrapped /i/<id>.png HTML page link must never hijack //i.v2ex.co/ direct image src"
+  );
+  assert.ok(
+    !v2exCandidates.some((u) => u.includes("v2ex.com/i/")),
+    "v2ex.com/i/ HTML page must be excluded from image preview candidates"
+  );
+
+  // 2. Non-image HTML page link containing 'img'/'image' (e.g. imgur page link) must not hijack img src
+  const imgurWrapped = makeMockImage({
+    src: "https://i.imgur.com/xRZfUAZb.png",
+    currentSrc: "https://i.imgur.com/xRZfUAZb.png",
+    link: makeLink("https://imgur.com/xRZfUAZ")
+  });
+  assert.strictEqual(
+    sandbox.previewImageSource(imgurWrapped),
+    "https://i.imgur.com/xRZfUAZb.png",
+    "wrapper page link https://imgur.com/... must not override actual img src"
+  );
+
+  // 3. Direct high-res image link still wins first while retaining thumbnail src as error fallback
+  const highResWrapped = makeMockImage({
+    src: "https://i.imgur.com/thumb.jpg",
+    currentSrc: "https://i.imgur.com/thumb.jpg",
+    link: makeLink("https://i.imgur.com/high.jpg")
+  });
+  assert.deepStrictEqual(
+    [...sandbox.previewImageCandidates(highResWrapped)],
+    ["https://i.imgur.com/high.jpg", "https://i.imgur.com/thumb.jpg"],
+    "direct high-res wrapper image must remain primary candidate with thumbnail fallback"
+  );
+
+  // 4. bindImageCandidateFallback tries primary, falls back on onerror to working thumbnail, and fires onLoad
+  const events = [];
+  const targetImg = {
+    _src: "",
+    complete: false,
+    naturalWidth: 0,
+    getAttribute: (name) => (name === "src" ? targetImg._src : null),
+    set src(val) {
+      targetImg._src = val;
+      events.push(`attempt:${val}`);
+      if (val.includes("high.jpg")) {
+        targetImg.onerror();
+      } else {
+        targetImg.complete = true;
+        targetImg.naturalWidth = 800;
+        targetImg.onload();
+      }
+    },
+    get src() { return targetImg._src; }
+  };
+  let loadedUrl = "";
+  let erroredUrl = "";
+  sandbox.bindImageCandidateFallback(targetImg, sandbox.previewImageCandidates(highResWrapped), {
+    onLoad: (u) => { loadedUrl = u; },
+    onError: (u) => { erroredUrl = u; }
+  });
+  assert.deepStrictEqual(events, [
+    "attempt:https://i.imgur.com/high.jpg",
+    "attempt:https://i.imgur.com/thumb.jpg"
+  ]);
+  assert.strictEqual(loadedUrl, "https://i.imgur.com/thumb.jpg");
+  assert.strictEqual(erroredUrl, "");
+});
+
 
 
 

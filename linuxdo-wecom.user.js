@@ -16539,10 +16539,21 @@
     currentImageMagnifierScale = getImageMagnifierScaleForTarget(thumb);
     thumb.classList.add("is-magnifying");
 
-    const bestSrc = previewImageSource(img) || img.currentSrc || img.getAttribute("src") || "";
-    if (magnifierImg) {
-      if (magnifierImg.src !== bestSrc) {
-        magnifierImg.src = bestSrc;
+    const candidates = typeof previewImageCandidates === "function"
+      ? previewImageCandidates(img)
+      : [previewImageSource(img) || img.currentSrc || img.getAttribute("src") || ""].filter(Boolean);
+    if (magnifierImg && candidates.length) {
+      if (typeof bindImageCandidateFallback === "function") {
+        const candidatesKey = candidates.join("|");
+        const prevKey = magnifierImg.dataset ? magnifierImg.dataset.candidatesKey : magnifierImg._candidatesKey;
+        const currentAttrSrc = typeof magnifierImg.getAttribute === "function" ? magnifierImg.getAttribute("src") : magnifierImg.src;
+        if (prevKey !== candidatesKey || !currentAttrSrc) {
+          if (magnifierImg.dataset) magnifierImg.dataset.candidatesKey = candidatesKey;
+          else magnifierImg._candidatesKey = candidatesKey;
+          bindImageCandidateFallback(magnifierImg, candidates);
+        }
+      } else if (magnifierImg.src !== candidates[0]) {
+        magnifierImg.src = candidates[0];
       }
     }
 
@@ -32848,27 +32859,88 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     return "";
   }
 
-  function previewImageSource(image) {
+  function isNonDirectImagePageUrl(normalizedUrl) {
+    if (!normalizedUrl) return false;
+    try {
+      const parsed = new URL(normalizedUrl);
+      // V2EX wraps <img src="//i.v2ex.co/<id>.png"> in <a href="/i/<id>.png"> which serves HTML, not PNG
+      if (/(?:^|\.)v2ex\.com$/i.test(parsed.hostname) && /^\/i\//i.test(parsed.pathname)) {
+        return true;
+      }
+    } catch { /* ignore */ }
+    return false;
+  }
+
+  function isWrappedDirectImageUrl(rawUrl, linkEl) {
+    const normalized = normalizePreviewImageUrl(rawUrl);
+    if (!normalized || isNonDirectImagePageUrl(normalized)) return "";
+    if (linkEl?.classList?.contains("lightbox")) return normalized;
+    try {
+      const parsed = new URL(normalized);
+      if (/\.(?:png|jpe?g|gif|webp|bmp|svg|avif)$/i.test(parsed.pathname)) {
+        return normalized;
+      }
+    } catch { /* ignore */ }
+    return "";
+  }
+
+  function previewImageCandidates(image) {
+    if (!image) return [];
     const lightbox = image.closest("a.lightbox, .lightbox-wrapper a[href]");
     const generalLink = image.closest("a[href]");
     const linkHref = generalLink?.getAttribute("href");
-    const isImageLink = linkHref && (generalLink.classList.contains("lightbox") || /\.(?:png|jpe?g|gif|webp|bmp|svg)(?:\?.*)?$/i.test(linkHref) || /image|photo|img|uploads/i.test(linkHref));
-    const candidates = [
+    const lightboxHref = normalizePreviewImageUrl(lightbox?.getAttribute("href"));
+    const wrappedLinkSrc = isWrappedDirectImageUrl(linkHref, generalLink);
+    const rawCandidates = [
       image.getAttribute("data-large-src"),
       image.getAttribute("data-orig-src"),
       image.getAttribute("data-actualsrc"),
       image.getAttribute("data-original"),
-      lightbox?.getAttribute("href"),
-      isImageLink ? linkHref : null,
+      lightboxHref && !isNonDirectImagePageUrl(lightboxHref) ? lightboxHref : null,
+      wrappedLinkSrc || null,
       image.currentSrc,
-      image.getAttribute("src"),
-      linkHref
+      image.getAttribute("src")
     ];
-    for (const candidate of candidates) {
+    const seen = [];
+    for (const candidate of rawCandidates) {
       const url = normalizePreviewImageUrl(candidate);
-      if (url) return url;
+      if (url && !isNonDirectImagePageUrl(url) && !seen.includes(url)) {
+        seen.push(url);
+      }
     }
-    return "";
+    return seen;
+  }
+
+  function previewImageSource(image) {
+    return previewImageCandidates(image)[0] || "";
+  }
+
+  function bindImageCandidateFallback(targetImg, candidates, { onLoad, onError } = {}) {
+    if (!targetImg) return;
+    const list = Array.isArray(candidates) ? candidates.filter(Boolean) : [];
+    if (!list.length) return;
+    let activeIdx = 0;
+    const applyIdx = (idx) => {
+      activeIdx = idx;
+      const url = list[idx];
+      const currentAttrSrc = typeof targetImg.getAttribute === "function" ? targetImg.getAttribute("src") : targetImg.src;
+      if (currentAttrSrc === url && targetImg.complete && targetImg.naturalWidth > 0) {
+        if (typeof onLoad === "function") onLoad(url, idx);
+        return;
+      }
+      targetImg.src = url;
+    };
+    targetImg.onload = () => {
+      if (typeof onLoad === "function") onLoad(list[activeIdx], activeIdx);
+    };
+    targetImg.onerror = () => {
+      if (activeIdx + 1 < list.length) {
+        applyIdx(activeIdx + 1);
+        return;
+      }
+      if (typeof onError === "function") onError(list[activeIdx], activeIdx);
+    };
+    applyIdx(0);
   }
 
   function normalizeImageViewerScale(value) {
@@ -33013,7 +33085,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const sourceImage = imageViewerList[imageViewerIndex];
     if (!sourceImage) return;
 
-    const src = previewImageSource(sourceImage);
+    const candidates = previewImageCandidates(sourceImage);
+    const src = candidates[0] || "";
     if (!src) {
       console.error("[Linux DO 企业微信] 无法预览图片：未找到有效图片地址", sourceImage);
       return;
@@ -33031,14 +33104,16 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const indexSuffix = total > 1 ? ` (${imageViewerIndex + 1} / ${total})` : "";
     caption.textContent = `图片加载中…${indexSuffix}`;
 
-    image.onload = () => { caption.textContent = `${label}${indexSuffix}`; };
-    image.onerror = () => {
-      caption.textContent = `图片加载失败${indexSuffix}`;
-      console.error("[Linux DO 企业微信] 图片预览加载失败", src);
-    };
-
     updateImageViewerNavigationUi();
-    image.src = src;
+    bindImageCandidateFallback(image, candidates, {
+      onLoad: () => {
+        caption.textContent = `${label}${indexSuffix}`;
+      },
+      onError: (failedSrc) => {
+        caption.textContent = `图片加载失败${indexSuffix}`;
+        console.error("[Linux DO 企业微信] 图片预览加载失败", failedSrc);
+      }
+    });
   }
 
   function nextImageViewerImage() {
