@@ -11950,39 +11950,14 @@
       min-height: clamp(460px, 66vh, 760px) !important;
     }
 
-    /* 长气泡滚动吸顶头部：保持发送人信息与「更多」按钮在超长气泡阅读过程中始终可触及 */
-    .wecom-msg:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-header {
-      position: sticky;
-      top: 6px;
-      z-index: 12;
-      width: fit-content;
-      max-width: 100%;
-      align-self: flex-start;
-    }
-    .wecom-msg-me:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-header {
-      align-self: flex-end;
-    }
-    .wecom-msg-me:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-header:has(.wecom-msg-reply-indicator) {
-      align-self: flex-start;
-    }
-    .wecom-msg-header.is-header-stuck::before {
-      content: "";
-      position: absolute;
-      inset: -3px -7px;
-      z-index: -1;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.92);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border: 1px solid rgba(31, 35, 41, 0.08);
-      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
-      pointer-events: none;
-    }
-    .wecom-msg-header.is-header-stuck > .wecom-msg-more-btn {
-      opacity: 1;
+    /* 长按气泡触发展示轻微按压轮廓反馈 */
+    .wecom-msg-bubble.is-long-pressing {
+      outline: 1.5px solid rgba(38, 126, 240, 0.35);
+      outline-offset: 1px;
+      transition: outline-color 0.14s ease;
     }
 
-    /* 气泡更多操作菜单：仅由 .wecom-msg-header 中的更多按钮点击触发，呈现企微垂直分组右键菜单样式 */
+    /* 气泡更多操作菜单：由 .wecom-msg-header 更多按钮点击或长按气泡弹出，呈现企微垂直分组右键菜单样式 */
     .wecom-msg-tools {
       position: fixed;
       top: 0;
@@ -14534,13 +14509,7 @@
       color: #ECEFF4 !important;
     }
 
-    /* 气泡更多操作菜单与吸顶头部暗色适配 */
-    html.wecom-dark .wecom-msg-header.is-header-stuck::before,
-    html.${ROOT_CLASS}.wecom-dark .wecom-msg-header.is-header-stuck::before {
-      background: rgba(43, 47, 54, 0.92);
-      border-color: rgba(255, 255, 255, 0.12);
-      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.36);
-    }
+    /* 气泡更多操作菜单 */
     html.wecom-dark .wecom-msg-more-btn:hover,
     html.${ROOT_CLASS}.wecom-dark .wecom-msg-more-btn:hover,
     html.wecom-dark .wecom-msg.is-tools-open > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn,
@@ -35283,7 +35252,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     }
 
     syncTimelineSlider(chatBody);
-    if (typeof syncStickyMsgHeaders === "function") syncStickyMsgHeaders(chatBody);
   }
 
   function saveChatJumpPosition(body, prevScrollTop, sourceEl = null) {
@@ -36025,80 +35993,156 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     });
   }
 
-  let stickyHeaderSyncRafId = 0;
+  const LONG_PRESS_MSG_TOOLS_MS = 420;
+  const LONG_PRESS_FEEDBACK_DELAY_MS = 140;
+  const LONG_PRESS_MOVE_TOLERANCE_PX = 6;
 
-  function shouldMsgHeaderStick(metrics) {
-    const {
-      containerTop = 0,
-      containerHeight = 0,
-      contentTop = 0,
-      headerTop = 0,
-      headerHeight = 0,
-      bubbleTop = 0,
-      bubbleBottom = 0,
-      stickyTop = 6
-    } = metrics || {};
-    if (containerHeight <= 0 || headerHeight <= 0) return false;
-    const pastStickyThreshold = contentTop < containerTop + stickyTop - 1;
-    const overlappingBubble = headerTop + headerHeight > bubbleTop + 2;
-    const enoughBubbleLeft = bubbleBottom > headerTop + headerHeight + 16;
-    return pastStickyThreshold && overlappingBubble && enoughBubbleLeft;
+  function shouldIgnoreMsgBubbleLongPressTarget(target, pointerButton = 0) {
+    if (typeof pointerButton === "number" && pointerButton !== 0) return true;
+    if (!target || typeof target.closest !== "function") return true;
+    return Boolean(target.closest(
+      "a, button, input, textarea, select, [role='button'], .wecom-bubble-layout-toggle, .wecom-reply-reference, .wecom-msg-thumb, img, iframe, video, audio, .wecom-msg-header, .wecom-msg-avatar, .wecom-msg-tools, .wecom-msg-boosts, .wecom-boost-popover"
+    ));
   }
 
-  function syncStickyMsgHeaders(chatBody) {
-    if (!chatBody || typeof chatBody.getBoundingClientRect !== "function") return;
-    const bodyRect = chatBody.getBoundingClientRect();
-    if (!bodyRect || bodyRect.height <= 0) return;
+  function bindMsgBubbleLongPress(panel) {
+    if (!panel || panel.dataset?.msgLongPressBound) return;
+    if (panel.dataset) panel.dataset.msgLongPressBound = "1";
 
-    const msgs = chatBody.querySelectorAll(".wecom-msg:not(.is-thread-child)");
-    const updates = [];
-    msgs.forEach((msgEl) => {
-      const contentEl = msgEl.querySelector(":scope > .wecom-msg-content");
-      const headerEl = contentEl?.querySelector(":scope > .wecom-msg-header");
-      const bubbleEl = contentEl?.querySelector(":scope > .wecom-msg-bubble");
-      if (!headerEl || !contentEl || !bubbleEl) return;
+    let holdTimer = null;
+    let feedbackTimer = null;
+    let activeMsg = null;
+    let activeBubble = null;
+    let startX = 0;
+    let startY = 0;
+    let activePointerId = null;
+    let startPointerType = "";
+    let longPressTriggered = false;
+    let lastTouchLongPressAt = 0;
+    let suppressClickUntil = 0;
+    let listenersAttached = false;
 
-      const contentRect = contentEl.getBoundingClientRect();
-      // Skip messages completely outside vertical viewport
-      if (contentRect.bottom <= bodyRect.top || contentRect.top >= bodyRect.bottom) {
-        if (headerEl.classList.contains("is-header-stuck")) {
-          updates.push([headerEl, false]);
+    const handleMove = (event) => {
+      if (!activeMsg || !holdTimer) return;
+      if (activePointerId != null && event.pointerId != null && event.pointerId !== activePointerId) return;
+      const dx = (Number(event.clientX) || 0) - startX;
+      const dy = (Number(event.clientY) || 0) - startY;
+      if (Math.hypot(dx, dy) > LONG_PRESS_MOVE_TOLERANCE_PX) {
+        cancelPress();
+      }
+    };
+
+    const detachPointerListeners = () => {
+      if (!listenersAttached) return;
+      listenersAttached = false;
+      document.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+      window.removeEventListener("pointercancel", cancelPress);
+      window.removeEventListener("blur", cancelPress);
+    };
+
+    const attachPointerListeners = () => {
+      if (listenersAttached) return;
+      listenersAttached = true;
+      document.addEventListener("pointermove", handleMove, { passive: true });
+      window.addEventListener("pointerup", handleUp);
+      window.addEventListener("pointercancel", cancelPress);
+      window.addEventListener("blur", cancelPress);
+    };
+
+    const clearTimersAndFeedback = () => {
+      if (holdTimer) {
+        clearTimeout(holdTimer);
+        holdTimer = null;
+      }
+      if (feedbackTimer) {
+        clearTimeout(feedbackTimer);
+        feedbackTimer = null;
+      }
+      if (activeBubble) {
+        activeBubble.classList?.remove("is-long-pressing");
+      }
+      activeMsg = null;
+      activeBubble = null;
+    };
+
+    function handleUp(event) {
+      if (activePointerId != null && event?.pointerId != null && event.pointerId !== activePointerId) return;
+      if (longPressTriggered) {
+        suppressClickUntil = Date.now() + 180;
+        longPressTriggered = false;
+      }
+      activePointerId = null;
+      clearTimersAndFeedback();
+      detachPointerListeners();
+    }
+
+    function cancelPress(event) {
+      if (event && activePointerId != null && event.pointerId != null && event.pointerId !== activePointerId) return;
+      activePointerId = null;
+      clearTimersAndFeedback();
+      detachPointerListeners();
+      longPressTriggered = false;
+    }
+    panel._cancelMsgBubbleLongPress = () => cancelPress();
+
+    panel.addEventListener("pointerdown", (event) => {
+      suppressClickUntil = 0;
+      if (shouldIgnoreMsgBubbleLongPressTarget(event.target, event.button)) return;
+      const bubble = event.target.closest(".wecom-msg-bubble");
+      if (!bubble || !panel.contains(bubble) || !bubble.closest?.(".wecom-chat-body")) return;
+      const msgEl = bubble.closest(".wecom-msg");
+      if (!msgEl) return;
+
+      cancelPress();
+      activeMsg = msgEl;
+      activeBubble = bubble;
+      activePointerId = event.pointerId ?? null;
+      startX = Number(event.clientX) || 0;
+      startY = Number(event.clientY) || 0;
+      startPointerType = String(event.pointerType || "");
+      attachPointerListeners();
+
+      feedbackTimer = setTimeout(() => {
+        if (activeBubble === bubble) {
+          bubble.classList?.add("is-long-pressing");
         }
-        return;
-      }
+      }, LONG_PRESS_FEEDBACK_DELAY_MS);
 
-      const headerRect = headerEl.getBoundingClientRect();
-      const bubbleRect = bubbleEl.getBoundingClientRect();
-      const nextStuck = shouldMsgHeaderStick({
-        containerTop: bodyRect.top,
-        containerHeight: bodyRect.height,
-        contentTop: contentRect.top,
-        headerTop: headerRect.top,
-        headerHeight: headerRect.height,
-        bubbleTop: bubbleRect.top,
-        bubbleBottom: bubbleRect.bottom,
-        stickyTop: 6
-      });
-      if (headerEl.classList.contains("is-header-stuck") !== nextStuck) {
-        updates.push([headerEl, nextStuck]);
-      }
+      holdTimer = setTimeout(() => {
+        const targetMsg = activeMsg;
+        if (!targetMsg || targetMsg.isConnected === false) {
+          cancelPress();
+          return;
+        }
+        const sel = typeof window !== "undefined" && window.getSelection ? window.getSelection() : null;
+        if (sel && !sel.isCollapsed && String(sel.toString() || "").trim()) {
+          cancelPress();
+          return;
+        }
+        clearTimersAndFeedback();
+        longPressTriggered = true;
+        if (startPointerType && startPointerType !== "mouse") {
+          lastTouchLongPressAt = Date.now();
+        }
+        openMsgToolsMenu(targetMsg, { panel, anchorPoint: { x: startX, y: startY } });
+      }, LONG_PRESS_MSG_TOOLS_MS);
     });
 
-    for (const [headerEl, stuck] of updates) {
-      headerEl.classList.toggle("is-header-stuck", stuck);
-    }
-  }
+    // Swallow only the immediate release click right after long-press fires so the menu isn't accidentally activated
+    panel.addEventListener("click", (event) => {
+      if (!suppressClickUntil) return;
+      const activeGuard = Date.now() <= suppressClickUntil;
+      suppressClickUntil = 0;
+      if (activeGuard) {
+        consumeClick(event);
+      }
+    }, true);
 
-  function scheduleStickyHeaderSync(chatBody) {
-    if (!chatBody) return;
-    if (typeof requestAnimationFrame !== "function") {
-      syncStickyMsgHeaders(chatBody);
-      return;
-    }
-    if (stickyHeaderSyncRafId) return;
-    stickyHeaderSyncRafId = requestAnimationFrame(() => {
-      stickyHeaderSyncRafId = 0;
-      syncStickyMsgHeaders(chatBody);
+    panel.addEventListener("contextmenu", (event) => {
+      if (longPressTriggered || (lastTouchLongPressAt && Date.now() - lastTouchLongPressAt < 800)) {
+        event.preventDefault();
+      }
     });
   }
 
@@ -36157,13 +36201,14 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     });
   }
 
-  function positionMsgTools(msgEl, containerEl = null) {
+  function positionMsgTools(msgEl, containerEl = null, anchorPoint = null) {
     if (!msgEl || typeof msgEl.querySelector !== "function") return null;
     const tools = msgEl.querySelector(":scope > .wecom-msg-content > .wecom-msg-tools") ||
       msgEl.querySelector(".wecom-msg-tools");
     const moreBtn = msgEl.querySelector(":scope > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn") ||
       msgEl.querySelector(".wecom-msg-more-btn");
-    if (!tools || !moreBtn) return null;
+    const hasAnchorPoint = Boolean(anchorPoint && Number.isFinite(anchorPoint.x) && Number.isFinite(anchorPoint.y));
+    if (!tools || (!hasAnchorPoint && !moreBtn)) return null;
 
     const container = containerEl || msgEl.closest(".wecom-chat-body, .wecom-chat-messages");
     const cRect = container?.getBoundingClientRect?.();
@@ -36176,7 +36221,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const safeTop = cRect && cRect.height > 0 ? Math.max(8, cRect.top + 4) : 8;
     const safeBottom = winH - 8;
 
-    const anchorRect = moreBtn.getBoundingClientRect();
+    const anchorRect = hasAnchorPoint
+      ? { left: anchorPoint.x, top: anchorPoint.y, right: anchorPoint.x, bottom: anchorPoint.y, width: 0, height: 0 }
+      : moreBtn.getBoundingClientRect();
     const tRect = tools.getBoundingClientRect();
     const menuWidth = tools.offsetWidth || tRect.width || 160;
     const menuHeight = tools.offsetHeight || tRect.height || 240;
@@ -36202,19 +36249,28 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     return pos;
   }
 
-  function toggleMsgToolsMenu(msgEl, panel = null) {
+  function openMsgToolsMenu(msgEl, { panel = null, anchorPoint = null } = {}) {
     if (!msgEl) return false;
-    const wasOpen = msgEl.classList.contains("is-tools-open");
     closeAllMsgToolsMenus(document);
     closeBoostPopover();
-    if (wasOpen) return false;
     msgEl.classList.add("is-tools-open");
     const moreBtn = msgEl.querySelector(":scope > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn") ||
       msgEl.querySelector(".wecom-msg-more-btn");
     if (moreBtn) moreBtn.setAttribute("aria-expanded", "true");
     const container = panel?.querySelector?.(".wecom-chat-body") || msgEl.closest?.(".wecom-chat-body, .wecom-chat-messages");
-    positionMsgTools(msgEl, container);
+    positionMsgTools(msgEl, container, anchorPoint);
     return true;
+  }
+
+  function toggleMsgToolsMenu(msgEl, panel = null) {
+    if (!msgEl) return false;
+    const wasOpen = msgEl.classList.contains("is-tools-open");
+    if (wasOpen) {
+      closeAllMsgToolsMenus(document);
+      closeBoostPopover();
+      return false;
+    }
+    return openMsgToolsMenu(msgEl, { panel });
   }
 
   function bindChatPanelEvents(panel) {
@@ -36236,6 +36292,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       });
     }
     bindChatTitleLongPress(panel);
+    bindMsgBubbleLongPress(panel);
     let chatScrollTimer = null;
     let chatBodyScrollThrottleTimer = null;
     const chatBody = panel.querySelector(".wecom-chat-body");
@@ -36248,7 +36305,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     chatBody.addEventListener("pointerdown", cancelPin, { passive: true });
     chatBody.addEventListener("scroll", () => {
       closeAllMsgToolsMenus(chatBody);
-      scheduleStickyHeaderSync(chatBody);
+      panel._cancelMsgBubbleLongPress?.();
       closeQuoteTooltip();
       closeLikesPopover();
       closeMentionPopup();

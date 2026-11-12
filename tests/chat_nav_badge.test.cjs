@@ -12654,7 +12654,7 @@ test("Test 162: Header More button click opens WeCom grouped dropdown menu witho
   assert.ok(
     scriptContent.includes("function toggleMsgToolsMenu(msgEl, panel = null)") &&
     scriptContent.includes("function closeAllMsgToolsMenus(root = document)") &&
-    scriptContent.includes("function positionMsgTools(msgEl, containerEl = null)") &&
+    scriptContent.includes("function positionMsgTools(msgEl, containerEl = null, anchorPoint = null)") &&
     scriptContent.includes("closeAllMsgToolsMenus(chatBody);"),
     "must toggle menu on .wecom-msg-more-btn click and dismiss on outside click, Escape, or scroll"
   );
@@ -13263,112 +13263,205 @@ test("Test 165: V2EX /i/<id>.png HTML wrapper links resolve to embedded image sr
   assert.strictEqual(erroredUrl, "");
 });
 
-test("Test 166: Tall message headers stick at scrollport top with frosted pill state while nested thread headers stay static", () => {
+test("Test 166: Long-pressing a message bubble opens action menu at pointer coordinates without sticky header, drag selection interference, or release click misfire", () => {
   const vm = require("node:vm");
 
-  // 1. CSS rules for sticky top-level message headers and stuck pill backdrop (light & dark)
+  // 1. Sticky header approach is completely removed
   assert.ok(
-    scriptContent.includes(".wecom-msg:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-header") &&
-    scriptContent.includes("position: sticky;") &&
-    scriptContent.includes(".wecom-msg-header.is-header-stuck::before") &&
-    scriptContent.includes("html.wecom-dark .wecom-msg-header.is-header-stuck::before"),
-    "CSS must style sticky message headers and light/dark .is-header-stuck backdrops"
+    !scriptContent.includes("is-header-stuck") &&
+    !scriptContent.includes("syncStickyMsgHeaders") &&
+    !scriptContent.includes("shouldMsgHeaderStick"),
+    "sticky header CSS/JS must be completely removed"
   );
 
-  // 2. Scroll hook + syncChatFloatNav integration
+  // 2. Long-press CSS & JS bindings exist
   assert.ok(
-    scriptContent.includes("scheduleStickyHeaderSync(chatBody);") &&
-    scriptContent.includes("syncStickyMsgHeaders(chatBody);"),
-    "scroll handler and syncChatFloatNav must keep sticky header state in sync"
+    scriptContent.includes(".wecom-msg-bubble.is-long-pressing") &&
+    scriptContent.includes("function shouldIgnoreMsgBubbleLongPressTarget(") &&
+    scriptContent.includes("function bindMsgBubbleLongPress(") &&
+    scriptContent.includes("function openMsgToolsMenu(msgEl,") &&
+    scriptContent.includes("bindMsgBubbleLongPress(panel);"),
+    "must define long-press feedback CSS, guard helper, menu opener, and panel binder"
   );
 
-  // 3. Extract and test shouldMsgHeaderStick + syncStickyMsgHeaders in Node VM
-  const startIdx = scriptContent.indexOf("  let stickyHeaderSyncRafId = 0;");
-  const endIdx = scriptContent.indexOf("  function computeMsgToolsPlacement(metrics) {");
-  assert.ok(startIdx >= 0 && endIdx > startIdx, "must locate sticky header sync functions");
-  const stickyBlock = scriptContent.slice(startIdx, endIdx);
+  // 3. Extract and exercise bindMsgBubbleLongPress + positionMsgTools + openMsgToolsMenu in Node VM
+  const startIdx = scriptContent.indexOf("  const LONG_PRESS_MSG_TOOLS_MS =");
+  const endIdx = scriptContent.indexOf("  function bindChatPanelEvents(panel) {");
+  assert.ok(startIdx >= 0 && endIdx > startIdx, "must locate long-press and menu helpers");
+  const snippet = scriptContent.slice(startIdx, endIdx);
 
-  const sandbox = {};
-  vm.runInNewContext(
-    `${stickyBlock}\nthis.shouldMsgHeaderStick = shouldMsgHeaderStick;\nthis.syncStickyMsgHeaders = syncStickyMsgHeaders;`,
-    sandbox
-  );
+  const timers = new Map();
+  let nextTimerId = 1;
+  const fakeSetTimeout = (fn, ms) => {
+    const id = nextTimerId++;
+    timers.set(id, { fn, ms });
+    return id;
+  };
+  const fakeClearTimeout = (id) => { timers.delete(id); };
+  const makeEmitter = () => {
+    const map = {};
+    return {
+      addEventListener: (type, fn, opts) => {
+        (map[type] ||= []).push({ fn, capture: Boolean(opts === true || opts?.capture) });
+      },
+      removeEventListener: (type, fn) => {
+        if (!map[type]) return;
+        map[type] = map[type].filter((item) => item.fn !== fn);
+      },
+      emit: (type, ev, captureOnly = null) => {
+        for (const item of [...(map[type] || [])]) {
+          if (captureOnly === null || item.capture === captureOnly) {
+            item.fn(ev);
+          }
+        }
+      },
+      listenerCount: (type) => (map[type] || []).length
+    };
+  };
+  const docEmitter = makeEmitter();
+  const winEmitter = makeEmitter();
+  const panelEmitter = makeEmitter();
 
-  const s = sandbox.shouldMsgHeaderStick;
-  assert.strictEqual(
-    s({ containerTop: 60, containerHeight: 700, contentTop: 200, headerTop: 200, headerHeight: 20, bubbleTop: 224, bubbleBottom: 900 }),
-    false,
-    "message below sticky threshold must not mark header stuck"
-  );
-  assert.strictEqual(
-    s({ containerTop: 60, containerHeight: 700, contentTop: -240, headerTop: 66, headerHeight: 20, bubbleTop: -216, bubbleBottom: 620 }),
-    true,
-    "tall bubble scrolled past sticky top while overlapping bubble must mark header stuck"
-  );
-  assert.strictEqual(
-    s({ containerTop: 60, containerHeight: 700, contentTop: -400, headerTop: 66, headerHeight: 20, bubbleTop: -376, bubbleBottom: 95 }),
-    false,
-    "tall bubble with <= 16px remaining below header must unstick cleanly"
-  );
-
-  // 4. DOM toggle behavior via syncStickyMsgHeaders
+  let selectionCollapsed = true;
+  let selectionText = "";
   const makeCls = (initial = []) => {
     const set = new Set(initial);
     return {
-      contains: (c) => set.has(c),
-      toggle: (c, force) => {
-        const next = force === undefined ? !set.has(c) : Boolean(force);
-        if (next) set.add(c);
-        else set.delete(c);
-        return next;
-      }
-    };
-  };
-  const makeMsg = ({ contentRect, headerRect, bubbleRect, initialStuck = false }) => {
-    const header = {
-      classList: makeCls(initialStuck ? ["wecom-msg-header", "is-header-stuck"] : ["wecom-msg-header"]),
-      getBoundingClientRect: () => headerRect
-    };
-    const bubble = { getBoundingClientRect: () => bubbleRect };
-    const content = {
-      getBoundingClientRect: () => contentRect,
-      querySelector: (sel) => (sel.includes("wecom-msg-header") ? header : sel.includes("wecom-msg-bubble") ? bubble : null)
-    };
-    return {
-      _header: header,
-      querySelector: (sel) => (sel.includes("wecom-msg-content") ? content : null)
+      add: (...c) => c.forEach((x) => set.add(x)),
+      remove: (...c) => c.forEach((x) => set.delete(x)),
+      contains: (c) => set.has(c)
     };
   };
 
-  const tallScrolled = makeMsg({
-    contentRect: { top: -180, bottom: 520 },
-    headerRect: { top: 66, height: 20 },
-    bubbleRect: { top: -156, bottom: 520 }
-  });
-  const offscreenWasStuck = makeMsg({
-    contentRect: { top: -600, bottom: 10 },
-    headerRect: { top: -10, height: 20 },
-    bubbleRect: { top: -576, bottom: 10 },
-    initialStuck: true
-  });
-  const normalVisible = makeMsg({
-    contentRect: { top: 560, bottom: 640 },
-    headerRect: { top: 560, height: 20 },
-    bubbleRect: { top: 584, bottom: 640 }
-  });
+  const bubbleClasses = makeCls(["wecom-msg-bubble"]);
+  const msgClasses = makeCls(["wecom-msg"]);
+  const toolsStyles = {};
+  const moreBtnAttrs = {};
+  let consumedClicks = 0;
 
-  const chatBody = {
-    getBoundingClientRect: () => ({ top: 60, bottom: 760, height: 700 }),
-    querySelectorAll: (sel) => {
-      assert.strictEqual(sel, ".wecom-msg:not(.is-thread-child)");
-      return [tallScrolled, offscreenWasStuck, normalVisible];
+  const chatBodyEl = {
+    clientWidth: 800,
+    getBoundingClientRect: () => ({ left: 300, top: 60, right: 1100, bottom: 800, width: 800, height: 740 })
+  };
+  const toolsEl = {
+    offsetWidth: 164,
+    offsetHeight: 220,
+    dataset: {},
+    getBoundingClientRect: () => ({ width: 164, height: 220 }),
+    style: { setProperty: (k, v) => { toolsStyles[k] = v; } }
+  };
+  const moreBtnEl = {
+    setAttribute: (k, v) => { moreBtnAttrs[k] = String(v); },
+    getBoundingClientRect: () => ({ left: 400, top: -900, right: 420, bottom: -880, width: 20, height: 20 })
+  };
+  const msgEl = {
+    isConnected: true,
+    classList: msgClasses,
+    closest: (sel) => (sel.includes("wecom-chat-body") ? chatBodyEl : null),
+    querySelector: (sel) => {
+      if (sel.includes("wecom-msg-tools")) return toolsEl;
+      if (sel.includes("wecom-msg-more-btn")) return moreBtnEl;
+      return null;
     }
   };
-  sandbox.syncStickyMsgHeaders(chatBody);
+  const bubbleEl = {
+    classList: bubbleClasses,
+    closest: (sel) => {
+      if (sel === ".wecom-msg-bubble") return bubbleEl;
+      if (sel.includes("wecom-chat-body")) return chatBodyEl;
+      if (sel === ".wecom-msg") return msgEl;
+      return null;
+    }
+  };
+  const textTarget = {
+    closest: (sel) => (sel === ".wecom-msg-bubble" ? bubbleEl : null)
+  };
+  const linkTarget = {
+    closest: (sel) => (sel.includes("a,") ? linkTarget : sel === ".wecom-msg-bubble" ? bubbleEl : null)
+  };
+  const panelEl = {
+    dataset: {},
+    contains: (el) => el === bubbleEl || el === textTarget || el === linkTarget,
+    addEventListener: panelEmitter.addEventListener,
+    removeEventListener: panelEmitter.removeEventListener,
+    querySelector: (sel) => (sel === ".wecom-chat-body" ? chatBodyEl : null),
+    querySelectorAll: () => []
+  };
 
-  assert.strictEqual(tallScrolled._header.classList.contains("is-header-stuck"), true, "scrolled tall bubble header must get is-header-stuck");
-  assert.strictEqual(offscreenWasStuck._header.classList.contains("is-header-stuck"), false, "offscreen message must clear is-header-stuck");
-  assert.strictEqual(normalVisible._header.classList.contains("is-header-stuck"), false, "normal visible message must not get is-header-stuck");
+  const sandbox = {
+    Math,
+    Number,
+    String,
+    Boolean,
+    Date,
+    setTimeout: fakeSetTimeout,
+    clearTimeout: fakeClearTimeout,
+    consumeClick: () => { consumedClicks += 1; },
+    closeBoostPopover: () => {},
+    window: {
+      innerWidth: 1280,
+      innerHeight: 800,
+      getSelection: () => ({ isCollapsed: selectionCollapsed, toString: () => selectionText }),
+      addEventListener: winEmitter.addEventListener,
+      removeEventListener: winEmitter.removeEventListener
+    },
+    document: {
+      querySelectorAll: (sel) => (sel === ".wecom-msg.is-tools-open" && msgClasses.contains("is-tools-open") ? [msgEl] : []),
+      addEventListener: docEmitter.addEventListener,
+      removeEventListener: docEmitter.removeEventListener
+    }
+  };
+  vm.runInNewContext(
+    `${snippet}\nthis.shouldIgnoreMsgBubbleLongPressTarget = shouldIgnoreMsgBubbleLongPressTarget;\nthis.bindMsgBubbleLongPress = bindMsgBubbleLongPress;`,
+    sandbox
+  );
+
+  // Interactive links/thumbs/controls must be ignored
+  assert.strictEqual(sandbox.shouldIgnoreMsgBubbleLongPressTarget(linkTarget, 0), true, "links must not trigger bubble long-press");
+  assert.strictEqual(sandbox.shouldIgnoreMsgBubbleLongPressTarget(textTarget, 2), true, "right-click button must not trigger long-press");
+  assert.strictEqual(sandbox.shouldIgnoreMsgBubbleLongPressTarget(textTarget, 0), false, "plain bubble text with primary button is eligible");
+
+  sandbox.bindMsgBubbleLongPress(panelEl);
+
+  // Scenario A: Drag > 6px cancels long-press before timer fires (protects text selection)
+  panelEmitter.emit("pointerdown", { target: textTarget, button: 0, pointerId: 1, clientX: 520, clientY: 420 });
+  assert.strictEqual(winEmitter.listenerCount("pointerup"), 1, "active press attaches release listener");
+  docEmitter.emit("pointermove", { pointerId: 1, clientX: 535, clientY: 420 });
+  assert.strictEqual(timers.size, 0, "dragging > 6px cancels feedback and hold timers");
+  assert.strictEqual(winEmitter.listenerCount("pointerup"), 0, "cancel cleans up temporary window listeners");
+
+  // Scenario B: Non-empty text selection aborts long-press timer
+  panelEmitter.emit("pointerdown", { target: textTarget, button: 0, pointerId: 2, clientX: 520, clientY: 420 });
+  selectionCollapsed = false;
+  selectionText = "selected text";
+  for (const [, t] of [...timers.entries()]) t.fn();
+  assert.strictEqual(msgClasses.contains("is-tools-open"), false, "non-empty selection prevents long-press menu popup");
+  winEmitter.emit("pointerup", { pointerId: 2 });
+  selectionCollapsed = true;
+  selectionText = "";
+
+  // Scenario C: Holding at scrolled-down bubble position (header button offscreen at y=-900) opens menu near pointer (520, 420) and swallows release click
+  panelEmitter.emit("pointerdown", { target: textTarget, button: 0, pointerId: 3, pointerType: "mouse", clientX: 520, clientY: 420 });
+  const pending = [...timers.entries()].sort((a, b) => a[1].ms - b[1].ms);
+  pending[0][1].fn(); // feedback timer (140ms)
+  assert.strictEqual(bubbleClasses.contains("is-long-pressing"), true, "hold shows subtle feedback before menu triggers");
+  pending[1][1].fn(); // hold timer (420ms)
+  assert.strictEqual(msgClasses.contains("is-tools-open"), true, "long-press opens message tools menu");
+  assert.strictEqual(bubbleClasses.contains("is-long-pressing"), false, "feedback class clears once menu opens");
+  assert.strictEqual(moreBtnAttrs["aria-expanded"], "true");
+  assert.strictEqual(toolsStyles.left, "520px");
+  assert.strictEqual(toolsStyles.top, "424px", "menu must anchor near pointer coords instead of offscreen header (-900px)");
+
+  // Releasing pointer immediately fires capture click guard once
+  winEmitter.emit("pointerup", { pointerId: 3 });
+  assert.strictEqual(winEmitter.listenerCount("pointerup"), 0, "pointerup detaches temporary listeners");
+  panelEmitter.emit("click", { target: textTarget }, true);
+  assert.strictEqual(consumedClicks, 1, "immediate release click after long-press must be swallowed");
+
+  // Subsequent real click to pick a menu item is NOT swallowed
+  panelEmitter.emit("pointerdown", { target: linkTarget, button: 0, pointerId: 4, clientX: 540, clientY: 440 });
+  panelEmitter.emit("click", { target: linkTarget }, true);
+  assert.strictEqual(consumedClicks, 1, "subsequent click on menu item must pass through cleanly");
 });
 
 
