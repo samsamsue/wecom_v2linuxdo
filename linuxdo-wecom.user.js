@@ -494,6 +494,7 @@
   const MIN_IMAGE_MAGNIFIER_SCALE = 1.2;
   const MAX_IMAGE_MAGNIFIER_SCALE = 6.0;
   const IMAGE_MAGNIFIER_STEP = 0.4;
+  const IMAGE_MAGNIFIER_LENS_SIZE = 160;
   const CUSTOM_FONT_KEY = "linuxdo-wecom-custom-font";
   const CUSTOM_FONT_STYLE_ID = "wecom-custom-font-style";
   const DEFAULT_FONT_STACK = '"PingFang SC", "Microsoft YaHei", "Helvetica Neue", Inter, -apple-system, BlinkMacSystemFont, sans-serif';
@@ -7192,8 +7193,8 @@
       position: fixed !important;
       left: 0;
       top: 0;
-      width: 220px;
-      height: 220px;
+      width: ${IMAGE_MAGNIFIER_LENS_SIZE}px;
+      height: ${IMAGE_MAGNIFIER_LENS_SIZE}px;
       pointer-events: none !important;
       z-index: 999999 !important;
       opacity: 0;
@@ -7214,19 +7215,19 @@
       overflow: hidden !important;
       box-sizing: border-box !important;
       background: #FFFFFF !important;
-      border: 3px solid rgba(255, 255, 255, 0.95) !important;
-      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.32),
+      border: 2px solid rgba(255, 255, 255, 0.95) !important;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.30),
                   0 0 0 1px rgba(0, 0, 0, 0.12),
-                  0 0 0 4px rgba(38, 126, 240, 0.45),
-                  inset 0 0 20px rgba(0, 0, 0, 0.2) !important;
+                  0 0 0 3px rgba(38, 126, 240, 0.45),
+                  inset 0 0 16px rgba(0, 0, 0, 0.18) !important;
     }
     html.wecom-dark .wecom-magnifier-lens {
       background: #18191C !important;
-      border: 3px solid rgba(255, 255, 255, 0.25) !important;
-      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.65),
+      border: 2px solid rgba(255, 255, 255, 0.25) !important;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.62),
                   0 0 0 1px rgba(255, 255, 255, 0.15),
-                  0 0 0 4px rgba(38, 126, 240, 0.6),
-                  inset 0 0 24px rgba(0, 0, 0, 0.5) !important;
+                  0 0 0 3px rgba(38, 126, 240, 0.6),
+                  inset 0 0 20px rgba(0, 0, 0, 0.45) !important;
     }
     .wecom-magnifier-view {
       position: absolute !important;
@@ -7259,8 +7260,8 @@
       position: absolute !important;
       left: 50% !important;
       top: 50% !important;
-      width: 10px !important;
-      height: 10px !important;
+      width: 8px !important;
+      height: 8px !important;
       transform: translate(-50%, -50%) !important;
       border: 1.5px solid rgba(38, 126, 240, 0.8) !important;
       border-radius: 50% !important;
@@ -7270,17 +7271,17 @@
     }
     .wecom-magnifier-badge {
       position: absolute !important;
-      bottom: 8px !important;
+      bottom: 6px !important;
       left: 50% !important;
       transform: translateX(-50%) !important;
       background: rgba(0, 0, 0, 0.75) !important;
       backdrop-filter: blur(6px) !important;
       -webkit-backdrop-filter: blur(6px) !important;
       color: #FFFFFF !important;
-      font-size: 11px !important;
+      font-size: 10px !important;
       font-weight: 600 !important;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", monospace, sans-serif !important;
-      padding: 2px 8px !important;
+      padding: 1px 7px !important;
       border-radius: 10px !important;
       line-height: 1.3 !important;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
@@ -16632,7 +16633,7 @@
     natWidth = 0,
     natHeight = 0,
     scale = DEFAULT_IMAGE_MAGNIFIER_SCALE,
-    lensSize = 220,
+    lensSize = IMAGE_MAGNIFIER_LENS_SIZE,
     pad = 12,
     viewportWidth = 1280,
     viewportHeight = 800
@@ -16723,7 +16724,7 @@
       natWidth: activeMagnifierSourceImg.naturalWidth || 0,
       natHeight: activeMagnifierSourceImg.naturalHeight || 0,
       scale: getImageMagnifierScale(),
-      lensSize: 220,
+      lensSize: IMAGE_MAGNIFIER_LENS_SIZE,
       pad: 12,
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight

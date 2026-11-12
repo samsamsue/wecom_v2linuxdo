@@ -12987,9 +12987,13 @@ test("Test 164: Image magnifier defaults to 1.2x per unzoomed image, retains eac
   assert.ok(
     scriptContent.includes("const DEFAULT_IMAGE_MAGNIFIER_SCALE = 1.2;") &&
     scriptContent.includes("const IMAGE_MAGNIFIER_STEP = 0.4;") &&
+    scriptContent.includes("const IMAGE_MAGNIFIER_LENS_SIZE = 160;") &&
+    scriptContent.includes("width: ${IMAGE_MAGNIFIER_LENS_SIZE}px;") &&
+    scriptContent.includes("height: ${IMAGE_MAGNIFIER_LENS_SIZE}px;") &&
+    scriptContent.includes("lensSize: IMAGE_MAGNIFIER_LENS_SIZE,") &&
     scriptContent.includes("function resetImageMagnifierScale()") &&
     scriptContent.includes("function computeImageMagnifierGeometry({"),
-    "must define 1.2x default scale, 0.4 step, resetImageMagnifierScale, and computeImageMagnifierGeometry"
+    "must define 1.2x default scale, 0.4 step, 160px shared lens size constant, resetImageMagnifierScale, and computeImageMagnifierGeometry"
   );
 
   // Extract scale state, show/hide, wheel, and geometry calculation functions into VM
@@ -13064,7 +13068,7 @@ test("Test 164: Image magnifier defaults to 1.2x per unzoomed image, retains eac
     localStorage: { getItem: () => null, setItem: () => {} }
   };
   vm.runInNewContext(
-    `${coreSnippet}\nthis.getImageMagnifierScale = getImageMagnifierScale;\nthis.setImageMagnifierScale = setImageMagnifierScale;\nthis.showImageMagnifier = showImageMagnifier;\nthis.hideImageMagnifier = hideImageMagnifier;\nthis.handleMagnifierWheel = handleMagnifierWheel;\nthis.computeImageMagnifierGeometry = computeImageMagnifierGeometry;`,
+    `${coreSnippet}\nthis.IMAGE_MAGNIFIER_LENS_SIZE = IMAGE_MAGNIFIER_LENS_SIZE;\nthis.getImageMagnifierScale = getImageMagnifierScale;\nthis.setImageMagnifierScale = setImageMagnifierScale;\nthis.showImageMagnifier = showImageMagnifier;\nthis.hideImageMagnifier = hideImageMagnifier;\nthis.handleMagnifierWheel = handleMagnifierWheel;\nthis.computeImageMagnifierGeometry = computeImageMagnifierGeometry;`,
     sandbox
   );
 
@@ -13112,8 +13116,9 @@ test("Test 164: Image magnifier defaults to 1.2x per unzoomed image, retains eac
   sandbox.handleMagnifierWheel(wheelDown);
   assert.strictEqual(sandbox.getImageMagnifierScale(), 1.6, "wheel down steps back cleanly from 2.0 to 1.6");
 
-  // 2. Four-corner visibility: every corner (0,0), (1,0), (0,1), (1,1) maps right to circular lens center (110, 110)
-  const lensSize = 220;
+  // 2. Four-corner visibility: every corner (0,0), (1,0), (0,1), (1,1) maps right to circular lens center (80, 80)
+  const lensSize = sandbox.IMAGE_MAGNIFIER_LENS_SIZE;
+  assert.strictEqual(lensSize, 160, "compact magnifier lens defaults to 160px diameter");
   const lensCenter = lensSize / 2;
   const cases = [
     { name: "16:9 wide near window edge", boxRect: { left: 10, top: 10, width: 100, height: 100 }, natWidth: 1600, natHeight: 900 },
