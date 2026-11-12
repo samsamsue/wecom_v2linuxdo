@@ -13954,7 +13954,7 @@ test("Test 169: .wecom-msg-bubble hugs content without being stretched to wide .
   );
 
   // Last override block (WECOM_LATEST_REFINEMENTS) specifically enforces fit-content & box-sizing
-  const latestBubble = bubbleBlocks.find((b) => b.includes("padding: 8px 12px !important;"));
+  const latestBubble = bubbleBlocks.find((b) => b.includes("padding: 10px !important;"));
   assert.ok(latestBubble, "must locate latest .wecom-msg-bubble refinement block");
   assert.ok(
     latestBubble.includes("width: fit-content;") &&
@@ -13967,6 +13967,24 @@ test("Test 169: .wecom-msg-bubble hugs content without being stretched to wide .
   assert.ok(
     scriptContent.includes(".wecom-msg.has-iframe > .wecom-msg-content > .wecom-msg-bubble {\n      width: 100% !important;\n      max-width: 100% !important;\n      align-self: stretch !important;"),
     "iframe message bubbles must still override to full width"
+  );
+});
+
+test("Test 170: .wecom-msg-bubble uses equal top/right/bottom/left inner padding across styles", () => {
+  const bubbleBlocks = [...scriptContent.matchAll(/^\s*\.wecom-msg-bubble\s*\{[^}]*\}/gm)].map((m) => m[0]);
+  const paddedBlocks = bubbleBlocks.filter((b) => b.includes("padding:"));
+  assert.strictEqual(paddedBlocks.length, 3, "must verify all 3 top-level .wecom-msg-bubble padding definitions");
+  for (const block of paddedBlocks) {
+    const match = block.match(/padding:\s*([^;!]+)(?:!important)?\s*;/);
+    assert.ok(match, `must parse padding in block: ${block}`);
+    const val = match[1].trim();
+    assert.strictEqual(val, "10px", `bubble padding must be uniform 10px on all 4 sides, got '${val}'`);
+  }
+
+  assert.ok(
+    scriptContent.includes(".wecom-msg-body > *:first-child {\n      margin-top: 0 !important;\n    }") &&
+    scriptContent.includes(".wecom-msg-body > *:last-child {\n      margin-bottom: 0 !important;\n    }"),
+    ".wecom-msg-body first/last child margins must collapse to 0 so bubble padding stays visually symmetrical"
   );
 });
 

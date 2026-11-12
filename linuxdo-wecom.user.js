@@ -4437,7 +4437,7 @@
       width: fit-content;
       max-width: 100%;
       box-sizing: border-box;
-      padding: 10px 14px;
+      padding: 10px;
       font-size: 14px; line-height: 1.6;
       color: var(--wc-text);
       word-break: break-word;
@@ -6918,6 +6918,9 @@
     }
     .wecom-msg-body.is-empty + .wecom-msg-images,
     .wecom-msg-body:empty + .wecom-msg-images {
+      margin-top: 0 !important;
+    }
+    .wecom-msg-body > *:first-child {
       margin-top: 0 !important;
     }
     .wecom-msg-body > *:last-child {
@@ -9644,7 +9647,7 @@
     .wecom-msg-name { margin-bottom: 0 !important; color: #999; }
     .wecom-msg-bubble {
       position: relative;
-      padding: 9px 12px;
+      padding: 10px;
       border-radius: 8px !important;
       font-size: 14px;
       line-height: 1.62;
@@ -11805,7 +11808,7 @@
       width: fit-content;
       max-width: 100%;
       box-sizing: border-box;
-      padding: 8px 12px !important;
+      padding: 10px !important;
       border-radius: 8px !important;
       font-size: 14px !important;
       line-height: 1.55 !important;
