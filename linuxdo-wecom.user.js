@@ -746,7 +746,8 @@
     lock: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2" /><circle cx="12" cy="16" r="1" /><path d="M8 11v-4a4 4 0 0 1 8 0v4" /></svg>`,
     quote: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v6c0 2.667-1.333 4.333-4 5" /><path d="M20 11h-4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v6c0 2.667-1.333 4.333-4 5" /></svg>`,
     eye: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6" /></svg>`,
-    eyeOff: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.585 10.587a2 2 0 0 0 2.829 2.828" /><path d="M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c1.272 -2.12 2.712 -3.678 4.32 -4.674m2.86 -1.146a9.055 9.055 0 0 1 1.82 -.18c3.6 0 6.6 2 9 6c-.666 1.11 -1.379 2.067 -2.138 2.87" /><path d="M3 3l18 18" /></svg>`
+    eyeOff: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.585 10.587a2 2 0 0 0 2.829 2.828" /><path d="M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c1.272 -2.12 2.712 -3.678 4.32 -4.674m2.86 -1.146a9.055 9.055 0 0 1 1.82 -.18c3.6 0 6.6 2 9 6c-.666 1.11 -1.379 2.067 -2.138 2.87" /><path d="M3 3l18 18" /></svg>`,
+    forward: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5 -5l-5 -5" /><path d="M4 20v-7a4 4 0 0 1 4 -4h12" /></svg>`
   };
   ICONS.chat = ICONS.msg;
   ICONS.list = ICONS.msg;
@@ -4504,47 +4505,85 @@
       font-size: 12px; color: var(--wc-text-3);
       padding: 2px 10px;
     }
+    .wecom-msg-more-btn {
+      width: 20px; height: 20px;
+      padding: 0; margin: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: none; background: transparent; cursor: pointer;
+      border-radius: 4px; color: var(--wc-text-3);
+      opacity: 0.65; flex-shrink: 0;
+      transition: background 0.14s ease, color 0.14s ease, opacity 0.14s ease;
+    }
+    .wecom-msg-more-btn svg { width: 14px; height: 14px; stroke: currentColor; }
+    .wecom-msg:hover .wecom-msg-more-btn,
+    .wecom-msg-more-btn:hover,
+    .wecom-msg-more-btn:focus-visible,
+    .wecom-msg.is-tools-open > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn,
+    .wecom-msg.has-boost-popover > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn {
+      opacity: 1;
+    }
+    .wecom-msg-more-btn:hover,
+    .wecom-msg.is-tools-open > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn,
+    .wecom-msg.has-boost-popover > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn {
+      background: var(--wc-hover); color: var(--wc-text);
+    }
     .wecom-msg-tools {
-      position: absolute; top: 22px; left: 0; right: auto; z-index: 25 !important;
-      display: flex; align-items: center; gap: 2px;
-      background: var(--wc-bg);
-      border: 1px solid var(--wc-border);
-      border-radius: 8px;
-      padding: 2px;
-      box-shadow: 0 2px 8px rgba(31, 35, 41, 0.1);
+      position: fixed; top: 0; left: 0; right: auto; z-index: 950 !important;
+      display: none; flex-direction: column; align-items: stretch; gap: 1px;
+      min-width: 152px; max-width: 220px; width: max-content;
+      background: var(--wc-bg, #FFFFFF);
+      border: 1px solid var(--wc-border, #E5E6EB);
+      border-radius: 6px;
+      padding: 4px 0;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.06);
       opacity: 0; visibility: hidden;
-      transition: opacity 0.15s ease;
       pointer-events: none;
     }
-    .wecom-msg:hover:not(:has(.wecom-msg:hover)) > .wecom-msg-content > .wecom-msg-tools,
-    .wecom-msg.has-boost-popover > .wecom-msg-content > .wecom-msg-tools,
-    .wecom-msg-tools:hover {
+    .wecom-msg.is-tools-open > .wecom-msg-content > .wecom-msg-tools,
+    .wecom-msg.has-boost-popover > .wecom-msg-content > .wecom-msg-tools {
       opacity: 1 !important;
       visibility: visible !important;
       pointer-events: auto !important;
       display: flex !important;
     }
-    .wecom-msg-me:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-tools { right: 0; left: auto; }
-    .wecom-reply-children .wecom-msg-tools,
-    .wecom-msg-me .wecom-reply-children .wecom-msg-tools {
-      right: 0 !important;
-      left: auto !important;
-      top: 0;
-      z-index: 25 !important;
+    .wecom-msg-tools-divider {
+      height: 1px;
+      margin: 4px 0;
+      background: var(--wc-border, #EBEEF2);
+      flex-shrink: 0;
     }
     .wecom-msg-tool {
-      width: 26px; height: 26px;
-      display: flex; align-items: center; justify-content: center;
+      width: 100%; height: 32px; min-height: 32px;
+      padding: 0 14px;
+      display: flex; align-items: center; justify-content: flex-start; gap: 10px;
       border: none; background: transparent; cursor: pointer;
-      border-radius: 6px; color: var(--wc-text-2);
-      padding: 0;
+      border-radius: 0; color: var(--wc-text, #1F2329);
+      font-size: 13px; font-weight: 400; line-height: 1.2;
+      text-align: left; white-space: nowrap; box-sizing: border-box;
+      transition: background 0.12s ease, color 0.12s ease;
     }
-    .wecom-msg-tool svg { width: 15px; height: 15px; }
-    .wecom-msg-tool:hover { background: var(--wc-hover); color: var(--wc-accent); }
+    .wecom-msg-tool-icon {
+      width: 16px; height: 16px;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: var(--wc-text-2, #585C60); flex-shrink: 0;
+    }
+    .wecom-msg-tool svg { width: 15px; height: 15px; stroke: currentColor; }
+    .wecom-msg-tool-label { flex: 1; min-width: 0; }
+    .wecom-msg-tool-arrow {
+      display: inline-flex; align-items: center; justify-content: center;
+      color: var(--wc-text-3, #8F959E); margin-left: 14px; flex-shrink: 0;
+    }
+    .wecom-msg-tool-arrow svg { width: 13px; height: 13px; }
+    .wecom-msg-tool:hover { background: var(--wc-hover, #F2F3F5); color: var(--wc-text, #1F2329); }
     .wecom-msg-tool.liked,
-    .wecom-msg-tool.bookmarked { color: var(--wc-accent); }
+    .wecom-msg-tool.liked .wecom-msg-tool-icon,
+    .wecom-msg-tool.bookmarked,
+    .wecom-msg-tool.bookmarked .wecom-msg-tool-icon { color: var(--wc-accent); }
+    .wecom-msg-tool.is-danger:hover,
+    .wecom-msg-tool.is-danger:hover .wecom-msg-tool-icon { color: #FA5151; }
+    .wecom-msg-tool.is-danger:hover { background: rgba(250, 81, 81, 0.08); }
     .wecom-msg-tool.liked svg {
-      transform: scale(1.15);
+      transform: scale(1.1);
       transition: transform 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
     .wecom-msg-tool.liked svg path {
@@ -4696,7 +4735,8 @@
 
     /* 允许通过设置关闭显示 Boost */
     html.wecom-hide-boost .wecom-msg-boosts,
-    html.wecom-hide-boost .wecom-msg-tool-btn[data-action="boost"] {
+    html.wecom-hide-boost .wecom-msg-tool-btn[data-action="boost"],
+    html.wecom-hide-boost .wecom-msg-tool[data-action="boost"] {
       display: none !important;
     }
 
@@ -9635,7 +9675,7 @@
       background: rgba(38, 126, 240, .06);
     }
     .wecom-msg-meta { color: #AAA; }
-    .wecom-msg-tools { border-radius: 4px; }
+    .wecom-msg-tools { border-radius: 6px; }
 
     /* 企业微信底部编辑区已统一在 WECOM_LATEST_REFINEMENTS 规范管理 */
     .wecom-mode-fab {
@@ -11917,119 +11957,64 @@
       min-height: clamp(460px, 66vh, 760px) !important;
     }
 
-    /* 悬停浮动工具条：确保层级置顶（z-index: 25）不被文字遮挡，避开昵称与视口边界并保留悬停桥接 */
+    /* 气泡更多操作菜单：仅由 .wecom-msg-header 中的更多按钮点击触发，呈现企微垂直分组右键菜单样式 */
     .wecom-msg-tools {
-      position: absolute;
-      top: 22px;
+      position: fixed;
+      top: 0;
       left: 0;
       right: auto;
-      display: flex;
-      align-items: center;
-      gap: 2px;
+      display: none;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 1px;
+      min-width: 152px;
+      max-width: 220px;
+      width: max-content;
       background: var(--wc-bg, #FFFFFF);
-      border: 1px solid var(--wc-border);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      border-radius: 4px;
-      padding: 2px 4px;
-      z-index: 25 !important;
+      border: 1px solid rgba(31, 35, 41, 0.08);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.06);
+      border-radius: 6px;
+      padding: 4px 0;
+      z-index: 950 !important;
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
-      transition: opacity 0.15s ease, visibility 0.15s ease;
     }
-    .wecom-msg-tools::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      pointer-events: inherit;
-      z-index: -1;
-    }
-    .wecom-msg-tools[data-tools-pos="beside-right"]::before {
-      top: -4px;
-      bottom: -4px;
-      left: -12px;
-      right: 0;
-    }
-    .wecom-msg-tools[data-tools-pos="beside-left"]::before {
-      top: -4px;
-      bottom: -4px;
-      left: 0;
-      right: -12px;
-    }
-    .wecom-msg-tools[data-tools-pos="header-right"]::before {
-      top: 0;
-      bottom: -8px;
-      left: -6px;
-      right: 0;
-    }
-    .wecom-msg-tools[data-tools-pos="header-left"]::before {
-      top: 0;
-      bottom: -8px;
-      left: 0;
-      right: -6px;
-    }
-    .wecom-msg-tools[data-tools-pos="bubble-right"]::before {
-      top: -4px;
-      bottom: -8px;
-      left: -8px;
-      right: 0;
-    }
-    .wecom-msg-tools[data-tools-pos="bubble-left"]::before {
-      top: -4px;
-      bottom: -8px;
-      left: 0;
-      right: -8px;
-    }
-    .wecom-msg-tools[data-tools-pos="thread-right"]::before {
-      top: 0;
-      bottom: -8px;
-      left: 0;
-      right: 0;
-    }
-    .wecom-msg-tools[data-tools-pos="thread-below-header"]::before {
-      top: -4px;
-      bottom: -8px;
-      left: -6px;
-      right: 0;
-    }
-    .wecom-msg:hover:not(:has(.wecom-msg:hover)) > .wecom-msg-content > .wecom-msg-tools,
-    .wecom-msg.has-boost-popover > .wecom-msg-content > .wecom-msg-tools,
-    .wecom-msg-tools:hover {
+    .wecom-msg.is-tools-open > .wecom-msg-content > .wecom-msg-tools,
+    .wecom-msg.has-boost-popover > .wecom-msg-content > .wecom-msg-tools {
       opacity: 1 !important;
       visibility: visible !important;
       pointer-events: auto !important;
       display: flex !important;
     }
-    .wecom-msg-me:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-tools {
-      right: 0;
-      left: auto;
-    }
-    .wecom-reply-children .wecom-msg-tools,
-    .wecom-msg-me .wecom-reply-children .wecom-msg-tools {
-      right: 0 !important;
-      left: auto !important;
-      top: 0;
-      z-index: 25 !important;
-    }
     .wecom-msg-tool {
-      width: 22px;
-      height: 22px;
+      width: 100%;
+      height: 32px;
+      min-height: 32px;
+      padding: 0 14px;
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
+      gap: 10px;
       border: none;
       background: transparent;
-      color: var(--wc-text-2);
+      color: var(--wc-text, #1F2329);
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 1.2;
+      text-align: left;
+      white-space: nowrap;
       cursor: pointer;
-      border-radius: 3px;
+      border-radius: 0;
+      box-sizing: border-box;
     }
     .wecom-msg-tool:hover {
-      background: rgba(0,0,0,0.06);
-      color: var(--wc-blue);
+      background: rgba(0, 0, 0, 0.05);
+      color: var(--wc-text, #1F2329);
     }
     .wecom-msg-tool svg {
-      width: 14px;
-      height: 14px;
+      width: 15px;
+      height: 15px;
       stroke: currentColor;
     }
 
@@ -14525,21 +14510,45 @@
       color: #ECEFF4 !important;
     }
 
-    /* 气泡浮动操作条 */
+    /* 气泡更多操作菜单 */
+    html.wecom-dark .wecom-msg-more-btn:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-more-btn:hover,
+    html.wecom-dark .wecom-msg.is-tools-open > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg.is-tools-open > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn {
+      background: rgba(255, 255, 255, 0.1) !important;
+      color: #ECEFF4 !important;
+    }
     html.wecom-dark .wecom-msg-tools,
     html.${ROOT_CLASS}.wecom-dark .wecom-msg-tools {
       background: #2B2F36 !important;
       border: 1px solid rgba(255, 255, 255, 0.14) !important;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
+      box-shadow: 0 6px 22px rgba(0, 0, 0, 0.48) !important;
+    }
+    html.wecom-dark .wecom-msg-tools-divider,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-tools-divider {
+      background: rgba(255, 255, 255, 0.1) !important;
     }
     html.wecom-dark .wecom-msg-tool,
     html.${ROOT_CLASS}.wecom-dark .wecom-msg-tool {
+      color: #E5E9F0 !important;
+    }
+    html.wecom-dark .wecom-msg-tool-icon,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-tool-icon {
       color: #A0A6B2 !important;
     }
     html.wecom-dark .wecom-msg-tool:hover,
     html.${ROOT_CLASS}.wecom-dark .wecom-msg-tool:hover {
-      background: rgba(255, 255, 255, 0.1) !important;
-      color: #388BFD !important;
+      background: rgba(255, 255, 255, 0.08) !important;
+      color: #FFFFFF !important;
+    }
+    html.wecom-dark .wecom-msg-tool.is-danger:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-tool.is-danger:hover {
+      background: rgba(255, 107, 107, 0.14) !important;
+      color: #FF6B6B !important;
+    }
+    html.wecom-dark .wecom-msg-tool.is-danger:hover .wecom-msg-tool-icon,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg-tool.is-danger:hover .wecom-msg-tool-icon {
+      color: #FF6B6B !important;
     }
 
     /* 气泡消息体 */
@@ -30000,6 +30009,36 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     }
   }
 
+  async function copyTextWithToast(text, tip) {
+    const val = String(text || "");
+    try {
+      await navigator.clipboard.writeText(val);
+      if (tip) showMiniToast(tip);
+    } catch {
+      const input = document.createElement("textarea");
+      input.value = val;
+      input.setAttribute("readonly", "");
+      input.style.cssText = "position:fixed;top:-9999px;left:-9999px;opacity:0;";
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      input.remove();
+      if (tip) showMiniToast(tip);
+    }
+    return true;
+  }
+
+  async function copyMessageBodyText(message) {
+    const bodyEl = message?.querySelector?.(":scope > .wecom-msg-content > .wecom-msg-bubble > .wecom-msg-body") ||
+      message?.querySelector?.(".wecom-msg-body");
+    const rawText = String(bodyEl?.innerText || bodyEl?.textContent || "").trim();
+    if (!rawText) {
+      showMiniToast("暂无可复制的文本内容");
+      return false;
+    }
+    return copyTextWithToast(rawText, "已复制消息内容");
+  }
+
   async function copyPostFloorLink(message) {
     const postNumber = Number(message?.dataset.postNumber) || 1;
     const href = replyPostHref(postNumber);
@@ -30010,18 +30049,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       ? (postNumber > 1 ? "已复制回答直达链接" : "已复制问题直达链接")
       : "已复制楼层直达链接";
 
-    try {
-      await navigator.clipboard.writeText(fullUrl);
-      showMiniToast(tip);
-    } catch {
-      const input = document.createElement("input");
-      input.value = fullUrl;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand("copy");
-      input.remove();
-      showMiniToast(tip);
-    }
+    return copyTextWithToast(fullUrl, tip);
   }
 
   let activeLikesPopover = null;
@@ -30259,6 +30287,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       if (button) {
         button.dataset.action = accept ? "unaccept-solution" : "accept-solution";
         button.title = accept ? "取消采纳此回答" : "采纳此回答为解决方案";
+        const labelEl = button.querySelector(".wecom-msg-tool-label");
+        if (labelEl) labelEl.textContent = accept ? "取消采纳" : "采纳为解答";
         button.classList.toggle("is-solved-tool", accept);
       }
 
@@ -35445,6 +35475,35 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     if (!message) return;
     consumeClick(event);
     const action = button.dataset.action;
+    if (action === "boost") {
+      if (!IS_LINUXDO) {
+        closeAllMsgToolsMenus(panel);
+        return;
+      }
+      return openBoostPopover(message, button);
+    }
+    closeAllMsgToolsMenus(panel);
+    if (action === "copy") {
+      return copyMessageBodyText(message);
+    }
+    if (action === "quote") {
+      const sel = typeof window !== "undefined" && window.getSelection ? window.getSelection() : null;
+      let selText = "";
+      if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
+        const anchorNode = sel.anchorNode;
+        const anchorEl = anchorNode && anchorNode.nodeType === Node.ELEMENT_NODE ? anchorNode : anchorNode?.parentElement;
+        if (anchorEl && message.contains(anchorEl)) {
+          selText = String(sel.toString() || "").trim();
+        }
+      }
+      const bodyEl = message.querySelector(":scope > .wecom-msg-content > .wecom-msg-bubble > .wecom-msg-body") ||
+        message.querySelector(".wecom-msg-body");
+      const rawText = selText || String(bodyEl?.innerText || bodyEl?.textContent || "").trim();
+      if (!rawText) {
+        return replyToPost(Number(message.dataset.postNumber));
+      }
+      return executeSelectionQuote(rawText, message);
+    }
     if (action === "like") return toggleLike(Number(message.dataset.postId), button, message);
     if (action === "reply") {
       if (IS_ZHIHU) {
@@ -35456,10 +35515,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         }
       }
       return replyToPost(Number(message.dataset.postNumber));
-    }
-    if (action === "boost") {
-      if (!IS_LINUXDO) return;
-      return openBoostPopover(message, button);
     }
     if (action === "bookmark") {
       if (!IS_LINUXDO) return;
@@ -35710,6 +35765,13 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       return;
     }
     if (handleChatHeaderClick(event, panel)) return;
+    const msgMoreBtn = event.target.closest(".wecom-msg-more-btn");
+    if (msgMoreBtn && panel.contains(msgMoreBtn)) {
+      consumeClick(event);
+      const msg = msgMoreBtn.closest(".wecom-msg");
+      if (msg) toggleMsgToolsMenu(msg, panel);
+      return;
+    }
     if (handleMessageToolClick(event, panel)) return;
 
     // V2EX / Zhihu 点击加载下一页底栏
@@ -35862,173 +35924,116 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   function computeMsgToolsPlacement(metrics) {
     const {
       isMe = false,
-      isThreadChild = false,
-      safeLeft = 0,
+      safeLeft = 8,
       safeRight = 800,
-      safeTop = null,
-      contentRect = { left: 0, top: 0, right: 200, bottom: 60, width: 200, height: 60 },
-      bubbleRect = contentRect,
-      headerRect = { left: contentRect.left, top: contentRect.top, right: contentRect.right, bottom: contentRect.top, width: contentRect.width, height: 0 },
-      headerItemsLeft = Infinity,
-      headerItemsRight = -Infinity,
-      toolsWidth = 168,
-      toolsHeight = 28
+      safeTop = 8,
+      safeBottom = 700,
+      anchorRect = { left: 100, top: 100, right: 120, bottom: 120, width: 20, height: 20 },
+      menuWidth = 160,
+      menuHeight = 240
     } = metrics || {};
 
-    const bubbleGap = 6;
-    const headerClearGap = 12;
-    const minLeft = safeLeft;
-    const maxLeft = Math.max(minLeft, safeRight - toolsWidth);
-    const clampViewportX = (x) => Math.max(minLeft, Math.min(maxLeft, x));
-    const applyVisibleTopClamp = (topOffset) => {
-      if (!Number.isFinite(safeTop)) return topOffset;
-      const headerScrolledOut = !headerRect || headerRect.height <= 0 || headerRect.bottom < safeTop;
-      if (headerScrolledOut && (contentRect.top + topOffset) < safeTop && (bubbleRect.bottom - toolsHeight - 4) > safeTop) {
-        return Math.round(Math.min(bubbleRect.bottom - toolsHeight - 4, safeTop) - contentRect.top);
+    const gap = 4;
+    const minLeft = Number(safeLeft) || 0;
+    const maxLeft = Math.max(minLeft, (Number(safeRight) || 0) - menuWidth);
+    const minTop = Number(safeTop) || 0;
+    const maxTop = Math.max(minTop, (Number(safeBottom) || 0) - menuHeight);
+
+    // 垂直优先向下贴合触发按钮；下方空间不足时自动向上弹出并限制在可视范围内
+    const belowTop = anchorRect.bottom + gap;
+    const aboveTop = anchorRect.top - menuHeight - gap;
+    let placement = "bottom";
+    let rawTop = belowTop;
+    if (belowTop + menuHeight > safeBottom) {
+      if (aboveTop >= minTop || (safeBottom - belowTop) < (anchorRect.top - minTop)) {
+        placement = "top";
+        rawTop = aboveTop;
       }
-      return topOffset;
-    };
-    const buildResult = (targetX, rawTop, placement) => ({
-      left: Math.round(targetX - contentRect.left),
-      right: Math.round(contentRect.right - (targetX + toolsWidth)),
-      top: applyVisibleTopClamp(Math.round(rawTop)),
-      placement
+    }
+    const top = Math.round(Math.max(minTop, Math.min(maxTop, rawTop)));
+
+    // 水平贴合“更多”按钮：他人消息优先左对齐、本人右侧消息优先右对齐，超出边界时自动翻转夹紧
+    const leftAlignX = anchorRect.left;
+    const rightAlignX = anchorRect.right - menuWidth;
+    let rawLeft = isMe ? rightAlignX : leftAlignX;
+    if (!isMe && rawLeft + menuWidth > safeRight && rightAlignX >= minLeft) {
+      rawLeft = rightAlignX;
+    } else if (isMe && rawLeft < minLeft && leftAlignX + menuWidth <= safeRight) {
+      rawLeft = leftAlignX;
+    }
+    const left = Math.round(Math.max(minLeft, Math.min(maxLeft, rawLeft)));
+
+    return { placement, left, top };
+  }
+
+  function closeAllMsgToolsMenus(root = document) {
+    if (!root || typeof root.querySelectorAll !== "function") return;
+    root.querySelectorAll(".wecom-msg.is-tools-open").forEach((msgEl) => {
+      msgEl.classList.remove("is-tools-open");
+      const btn = msgEl.querySelector(":scope > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn") ||
+        msgEl.querySelector(".wecom-msg-more-btn");
+      if (btn) btn.setAttribute("aria-expanded", "false");
     });
-
-    const headerBottomOffset = headerRect && headerRect.height > 0
-      ? Math.max(0, headerRect.bottom - contentRect.top)
-      : 0;
-    const rawBubbleTop = Math.max(0, bubbleRect.top - contentRect.top);
-    const belowHeaderTop = Math.max(rawBubbleTop, headerBottomOffset > 0 ? headerBottomOffset + 2 : 0);
-
-    const verticalCenterAdjust = (bubbleRect.height >= toolsHeight && bubbleRect.height <= 48)
-      ? Math.round((bubbleRect.height - toolsHeight) / 2)
-      : (bubbleRect.height > 48 ? 2 : 0);
-    const besideTop = belowHeaderTop + Math.max(0, verticalCenterAdjust);
-
-    if (isThreadChild) {
-      const targetX = clampViewportX(Math.min(contentRect.right, safeRight) - toolsWidth);
-      const headerHasClearance = !headerRect || headerRect.height <= 0 || headerItemsRight === -Infinity ||
-        targetX >= headerItemsRight + headerClearGap;
-      const top = headerHasClearance ? 0 : belowHeaderTop + 2;
-      return buildResult(targetX, top, headerHasClearance ? "thread-right" : "thread-below-header");
-    }
-
-    if (isMe) {
-      const besideX = bubbleRect.left - bubbleGap - toolsWidth;
-      if (besideX >= minLeft && besideX <= maxLeft) {
-        return buildResult(besideX, besideTop, "beside-left");
-      }
-      const leftAnchorX = clampViewportX(minLeft);
-      const headerFitsLeft = !headerRect || headerRect.height <= 0 || headerItemsLeft === Infinity ||
-        (leftAnchorX + toolsWidth) <= (headerItemsLeft - headerClearGap);
-      if (headerFitsLeft) {
-        return buildResult(leftAnchorX, 0, "header-left");
-      }
-      return buildResult(leftAnchorX, belowHeaderTop + 2, "bubble-left");
-    }
-
-    const besideX = bubbleRect.right + bubbleGap;
-    if ((besideX + toolsWidth) <= safeRight && besideX >= minLeft) {
-      return buildResult(clampViewportX(besideX), besideTop, "beside-right");
-    }
-
-    const rightAnchorX = clampViewportX(safeRight - toolsWidth);
-    const headerFitsRight = !headerRect || headerRect.height <= 0 || headerItemsRight === -Infinity ||
-      rightAnchorX >= (headerItemsRight + headerClearGap);
-    if (headerFitsRight) {
-      return buildResult(rightAnchorX, 0, "header-right");
-    }
-
-    return buildResult(rightAnchorX, belowHeaderTop + 2, "bubble-right");
   }
 
   function positionMsgTools(msgEl, containerEl = null) {
     if (!msgEl || typeof msgEl.querySelector !== "function") return null;
     const tools = msgEl.querySelector(":scope > .wecom-msg-content > .wecom-msg-tools") ||
       msgEl.querySelector(".wecom-msg-tools");
-    const content = tools?.parentElement;
-    if (!tools || !content) return null;
+    const moreBtn = msgEl.querySelector(":scope > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn") ||
+      msgEl.querySelector(".wecom-msg-more-btn");
+    if (!tools || !moreBtn) return null;
 
     const container = containerEl || msgEl.closest(".wecom-chat-body, .wecom-chat-messages");
-    if (!container) return null;
+    const cRect = container?.getBoundingClientRect?.();
+    const winW = typeof window !== "undefined" ? (window.innerWidth || 1280) : 1280;
+    const winH = typeof window !== "undefined" ? (window.innerHeight || 800) : 800;
 
-    const cRect = container.getBoundingClientRect();
-    if (!cRect || cRect.width <= 0) return null;
+    const innerRight = (container && container.clientWidth > 0 && cRect) ? (cRect.left + container.clientWidth) : winW;
+    const safeLeft = cRect && cRect.width > 0 ? Math.max(8, cRect.left + 4) : 8;
+    const safeRight = cRect && cRect.width > 0 ? Math.min(winW - 8, innerRight - 4) : (winW - 8);
+    const safeTop = cRect && cRect.height > 0 ? Math.max(8, cRect.top + 4) : 8;
+    const safeBottom = winH - 8;
 
-    const cs = typeof window !== "undefined" && window.getComputedStyle ? window.getComputedStyle(container) : null;
-    const padLeft = cs ? (parseFloat(cs.paddingLeft) || 0) : 12;
-    const padRight = cs ? (parseFloat(cs.paddingRight) || 0) : 12;
-    const innerRight = container.clientWidth > 0 ? (cRect.left + container.clientWidth) : cRect.right;
-
-    let safeLeft = cRect.left + Math.max(8, padLeft);
-    let safeRight = innerRight - Math.max(8, padRight);
+    const anchorRect = moreBtn.getBoundingClientRect();
+    const tRect = tools.getBoundingClientRect();
+    const menuWidth = tools.offsetWidth || tRect.width || 160;
+    const menuHeight = tools.offsetHeight || tRect.height || 240;
 
     const isThreadChild = msgEl.classList.contains("is-thread-child") || Boolean(msgEl.closest(".wecom-reply-children"));
     const isMe = msgEl.classList.contains("wecom-msg-me") && !isThreadChild;
 
-    const contentRect = content.getBoundingClientRect();
-    const bubble = content.querySelector(":scope > .wecom-msg-bubble");
-    const bubbleRect = bubble ? bubble.getBoundingClientRect() : contentRect;
-    const header = content.querySelector(":scope > .wecom-msg-header");
-    const headerRect = header ? header.getBoundingClientRect() : {
-      left: contentRect.left, top: contentRect.top, right: contentRect.right, bottom: contentRect.top,
-      width: contentRect.width, height: 0
-    };
-
-    const tRect = tools.getBoundingClientRect();
-    const toolsWidth = tools.offsetWidth || tRect.width || 168;
-    const toolsHeight = tools.offsetHeight || tRect.height || 28;
-
-    if (isThreadChild) {
-      const parentBubble = msgEl.closest(".wecom-reply-children")?.closest(".wecom-msg-bubble");
-      if (parentBubble) {
-        const pRect = parentBubble.getBoundingClientRect();
-        if ((pRect.right - pRect.left) >= (toolsWidth + 16)) {
-          safeLeft = Math.max(safeLeft, pRect.left + 4);
-          safeRight = Math.min(safeRight, pRect.right - 4);
-        }
-      }
-    }
-
-    let headerItemsLeft = Infinity;
-    let headerItemsRight = -Infinity;
-    if (header) {
-      for (const child of header.children) {
-        const r = child.getBoundingClientRect();
-        if (r.width > 0 && r.height > 0) {
-          if (r.left < headerItemsLeft) headerItemsLeft = r.left;
-          if (r.right > headerItemsRight) headerItemsRight = r.right;
-        }
-      }
-    }
-
     const pos = computeMsgToolsPlacement({
       isMe,
-      isThreadChild,
       safeLeft,
       safeRight,
-      safeTop: cRect.top + 8,
-      contentRect,
-      bubbleRect,
-      headerRect,
-      headerItemsLeft,
-      headerItemsRight,
-      toolsWidth,
-      toolsHeight
+      safeTop,
+      safeBottom,
+      anchorRect,
+      menuWidth,
+      menuHeight
     });
 
     tools.dataset.toolsPos = pos.placement;
-    if (isThreadChild) {
-      tools.style.setProperty("left", "auto", "important");
-      tools.style.setProperty("right", `${pos.right}px`, "important");
-      tools.style.setProperty("top", `${pos.top}px`, "important");
-    } else {
-      tools.style.setProperty("left", `${pos.left}px`);
-      tools.style.setProperty("right", "auto");
-      tools.style.setProperty("top", `${pos.top}px`);
-    }
+    tools.style.setProperty("left", `${pos.left}px`, "important");
+    tools.style.setProperty("top", `${pos.top}px`, "important");
+    tools.style.setProperty("right", "auto", "important");
     return pos;
+  }
+
+  function toggleMsgToolsMenu(msgEl, panel = null) {
+    if (!msgEl) return false;
+    const wasOpen = msgEl.classList.contains("is-tools-open");
+    closeAllMsgToolsMenus(document);
+    closeBoostPopover();
+    if (wasOpen) return false;
+    msgEl.classList.add("is-tools-open");
+    const moreBtn = msgEl.querySelector(":scope > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn") ||
+      msgEl.querySelector(".wecom-msg-more-btn");
+    if (moreBtn) moreBtn.setAttribute("aria-expanded", "true");
+    const container = panel?.querySelector?.(".wecom-chat-body") || msgEl.closest?.(".wecom-chat-body, .wecom-chat-messages");
+    positionMsgTools(msgEl, container);
+    return true;
   }
 
   function bindChatPanelEvents(panel) {
@@ -36036,23 +36041,23 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     panel.addEventListener("keydown", handleChatImageKeydown);
     document.removeEventListener("fullscreenchange", syncWinMaxState);
     document.addEventListener("fullscreenchange", syncWinMaxState);
+    if (!window.__wecomMsgToolsDocBound) {
+      window.__wecomMsgToolsDocBound = true;
+      document.addEventListener("mousedown", (event) => {
+        if (!document.querySelector(".wecom-msg.is-tools-open")) return;
+        if (event.target?.closest?.(".wecom-msg-tools, .wecom-msg-more-btn, .wecom-boost-popover")) return;
+        closeAllMsgToolsMenus(document);
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && document.querySelector(".wecom-msg.is-tools-open")) {
+          closeAllMsgToolsMenus(document);
+        }
+      });
+    }
     bindChatTitleLongPress(panel);
     let chatScrollTimer = null;
     let chatBodyScrollThrottleTimer = null;
     const chatBody = panel.querySelector(".wecom-chat-body");
-    chatBody.addEventListener("mouseover", (event) => {
-      if (event.target?.closest?.(".wecom-msg-tools")) return;
-      const msgEl = event.target?.closest?.(".wecom-msg");
-      if (!msgEl || !chatBody.contains(msgEl)) return;
-      positionMsgTools(msgEl, chatBody);
-    });
-    chatBody.addEventListener("focusin", (event) => {
-      const msgEl = event.target?.closest?.(".wecom-msg");
-      if (!msgEl || !chatBody.contains(msgEl)) return;
-      const inTools = Boolean(event.target?.closest?.(".wecom-msg-tools"));
-      if (inTools && msgEl.querySelector(":scope > .wecom-msg-content > .wecom-msg-tools")?.dataset?.toolsPos) return;
-      positionMsgTools(msgEl, chatBody);
-    });
     const cancelPin = () => {
       chatState.pinnedPost = 0;
       chatState.pinningScroll = false;
@@ -36061,6 +36066,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     chatBody.addEventListener("touchstart", cancelPin, { passive: true });
     chatBody.addEventListener("pointerdown", cancelPin, { passive: true });
     chatBody.addEventListener("scroll", () => {
+      closeAllMsgToolsMenus(chatBody);
       closeQuoteTooltip();
       closeLikesPopover();
       closeMentionPopup();
@@ -37226,7 +37232,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       activeBoostPopover = null;
     }
     document.querySelectorAll(".wecom-msg.has-boost-popover").forEach((el) => {
-      el.classList.remove("has-boost-popover");
+      el.classList.remove("has-boost-popover", "is-tools-open");
+      const btn = el.querySelector(":scope > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn") ||
+        el.querySelector(".wecom-msg-more-btn");
+      if (btn) btn.setAttribute("aria-expanded", "false");
     });
   }
 
@@ -37413,6 +37422,25 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     }
   }
 
+  function msgMoreTriggerHtml() {
+    return `<button type="button" class="wecom-msg-more-btn" data-action="msg-more" title="更多操作" aria-label="更多操作" aria-haspopup="menu" aria-expanded="false">${ICONS.dots}</button>`;
+  }
+
+  function msgToolItemHtml({ action, icon, label, title = label, extraClass = "", extraAttrs = "", arrow = false }) {
+    return `<button type="button" class="wecom-msg-tool${extraClass ? ` ${extraClass}` : ""}" data-action="${escapeHtml(action)}" title="${escapeHtml(title)}" role="menuitem"${extraAttrs ? ` ${extraAttrs}` : ""}>` +
+      `<span class="wecom-msg-tool-icon">${icon}</span>` +
+      `<span class="wecom-msg-tool-label">${escapeHtml(label)}</span>` +
+      `${arrow ? `<span class="wecom-msg-tool-arrow">${ICONS.chevronRight}</span>` : ""}` +
+      `</button>`;
+  }
+
+  function renderMsgToolsMenuHtml(groups) {
+    const sections = (groups || [])
+      .map((items) => (Array.isArray(items) ? items.filter(Boolean).join("") : ""))
+      .filter(Boolean);
+    return `<div class="wecom-msg-tools">${sections.join('<div class="wecom-msg-tools-divider" role="separator"></div>')}</div>`;
+  }
+
   function bubbleHtml(post, myName, childrenHtml = "") {
     const me = isMyPost(post, myName);
     const side = me ? "me" : "other";
@@ -37431,20 +37459,28 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const isBookmarked = booleanFlag(post.bookmarked) || Boolean(post.bookmark_id);
     const bookmarkClass = isBookmarked ? " bookmarked" : "";
     const bookmarkLabel = isBookmarked ? "编辑楼层书签" : "收藏本楼层";
+    const bookmarkMenuLabel = isBookmarked ? "已收藏" : "收藏";
     const bookmarkButton = IS_LINUXDO && post.id
-      ? `<button type="button" class="wecom-msg-tool${bookmarkClass}" data-action="bookmark" title="${bookmarkLabel}" aria-label="${bookmarkLabel}" aria-pressed="${isBookmarked}">${ICONS.bookmark}</button>`
+      ? msgToolItemHtml({
+          action: "bookmark",
+          icon: ICONS.bookmark,
+          label: bookmarkMenuLabel,
+          title: bookmarkLabel,
+          extraClass: bookmarkClass.trim(),
+          extraAttrs: `aria-label="${escapeHtml(bookmarkLabel)}" aria-pressed="${isBookmarked}"`
+        })
       : "";
     const editButton = IS_LINUXDO && me && (post.id || post.post_number)
-      ? `<button type="button" class="wecom-msg-tool" data-action="edit" title="编辑">${ICONS.edit}</button>`
+      ? msgToolItemHtml({ action: "edit", icon: ICONS.edit, label: "编辑", title: "编辑" })
       : "";
     const canDelete = IS_LINUXDO && (me || post.can_delete) && post.id;
     const deleteButton = canDelete
-      ? `<button type="button" class="wecom-msg-tool" data-action="delete" title="撤回 / 删除">${ICONS.trash}</button>`
+      ? msgToolItemHtml({ action: "delete", icon: ICONS.trash, label: "删除", title: "撤回 / 删除", extraClass: "is-danger" })
       : "";
-    const shareButton = `<button type="button" class="wecom-msg-tool" data-action="share" title="分享 / 复制链接">${ICONS.share}</button>`;
+    const shareButton = msgToolItemHtml({ action: "share", icon: ICONS.forward || ICONS.share, label: "分享链接", title: "分享 / 复制链接" });
     const canFlag = IS_LINUXDO && !me && post.id && (post.can_flag !== false);
     const flagButton = canFlag
-      ? `<button type="button" class="wecom-msg-tool" data-action="flag" title="举报 / 反馈">${ICONS.flag}</button>`
+      ? msgToolItemHtml({ action: "flag", icon: ICONS.flag, label: "举报", title: "举报 / 反馈" })
       : "";
     const isAcceptedSolution = Boolean(
       post.accepted_answer ||
@@ -37457,17 +37493,43 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
     let solutionButton = "";
     if (canUnaccept) {
-      solutionButton = `<button type="button" class="wecom-msg-tool is-solved-tool" data-action="unaccept-solution" title="取消采纳解答">${ICONS.checkCircle}</button>`;
+      solutionButton = msgToolItemHtml({
+        action: "unaccept-solution",
+        icon: ICONS.checkCircle,
+        label: "取消采纳",
+        title: "取消采纳解答",
+        extraClass: "is-solved-tool"
+      });
     } else if (canAccept) {
-      solutionButton = `<button type="button" class="wecom-msg-tool" data-action="accept-solution" title="采纳为解答">${ICONS.checkCircle}</button>`;
+      solutionButton = msgToolItemHtml({
+        action: "accept-solution",
+        icon: ICONS.checkCircle,
+        label: "采纳为解答",
+        title: "采纳为解答"
+      });
     }
 
     const boostButton = IS_LINUXDO
-      ? `<button type="button" class="wecom-msg-tool" data-action="boost" title="添加 Boost">${ICONS.boost}</button>`
+      ? msgToolItemHtml({ action: "boost", icon: ICONS.emoji || ICONS.boost, label: "贴表情", title: "添加 Boost", arrow: true })
       : "";
     const likeCount = Number(post.like_count) || (post.actions_summary || []).find((a) => a.id === 2)?.count || 0;
     const likeLabel = IS_V2EX ? "感谢回复" : (IS_ZHIHU ? "赞同" : "点赞");
     const likeToolIcon = IS_V2EX ? ICONS.heart : ICONS.like;
+    const copyButton = msgToolItemHtml({ action: "copy", icon: ICONS.copy, label: "复制", title: "复制消息内容" });
+    const quoteButton = msgToolItemHtml({ action: "quote", icon: ICONS.quote, label: "引用", title: "引用回复" });
+    const replyButton = msgToolItemHtml({ action: "reply", icon: ICONS.reply, label: "回复", title: "回复" });
+    const likeButton = msgToolItemHtml({
+      action: "like",
+      icon: likeToolIcon,
+      label: likeLabel,
+      title: likeLabel,
+      extraClass: liked.trim()
+    });
+    const toolsMenuHtml = renderMsgToolsMenuHtml([
+      [copyButton, shareButton, quoteButton, replyButton, likeButton, boostButton],
+      [bookmarkButton, solutionButton],
+      [editButton, flagButton, deleteButton]
+    ]);
     const likesBadgeHtml = likeCount > 0
       ? `<span class="wecom-msg-likes" title="${likeLabel}：${likeCount}"><span class="wecom-msg-like-icon">${ICONS.heart}</span><span class="wecom-msg-like-num">${likeCount}</span></span>`
       : "";
@@ -37512,6 +37574,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             <span class="wecom-msg-name"${userCardAttributes(post)}>${escapeHtml(displayName)}</span>
             ${replyInd}
             ${metaHtml}
+            ${msgMoreTriggerHtml()}
           </div>
           <div class="wecom-msg-bubble">
             ${replyReferenceHtml(post)}
@@ -37519,17 +37582,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             ${childrenHtml || ""}
           </div>
           ${boostsHtml(post)}
-          <div class="wecom-msg-tools">
-            <button type="button" class="wecom-msg-tool${liked}" data-action="like" title="${likeLabel}">${likeToolIcon}</button>
-            <button type="button" class="wecom-msg-tool" data-action="reply" title="回复">${ICONS.reply}</button>
-            ${shareButton}
-            ${boostButton}
-            ${bookmarkButton}
-            ${solutionButton}
-            ${flagButton}
-            ${editButton}
-            ${deleteButton}
-          </div>
+          ${toolsMenuHtml}
         </div>
       </div>`;
   }
@@ -38667,6 +38720,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     button.setAttribute("aria-pressed", active ? "true" : "false");
     button.setAttribute("aria-label", label);
     button.title = label;
+    const labelEl = button.querySelector(".wecom-msg-tool-label");
+    if (labelEl) labelEl.textContent = active ? "已收藏" : "收藏";
   }
 
   async function resolveOriginalPostModel(model, postId, postNumber) {
@@ -41679,14 +41734,16 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
               <span class="wecom-msg-floor" data-floor="${floorNum}" title="${floorNum}楼">#${floorNum}</span>
               ${likeHtml}
             </span>
+            ${msgMoreTriggerHtml()}
           </div>
           <div class="wecom-msg-bubble">
             <div class="wecom-msg-body">${contentHtml}</div>
             ${childrenHtml}
           </div>
-          <div class="wecom-msg-tools">
-            <button type="button" class="wecom-msg-tool" data-action="reply" title="回复">${ICONS.reply}</button>
-          </div>
+          ${renderMsgToolsMenuHtml([[
+            msgToolItemHtml({ action: "copy", icon: ICONS.copy, label: "复制", title: "复制消息内容" }),
+            msgToolItemHtml({ action: "reply", icon: ICONS.reply, label: "回复", title: "回复" })
+          ]])}
         </div>
       </div>`;
   }
@@ -44295,6 +44352,12 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   function handleChatNavigationKeydown(event) {
     if (event.key === "Escape") {
+      if (document.querySelector(".wecom-msg.is-tools-open")) {
+        event.preventDefault();
+        event.stopPropagation();
+        closeAllMsgToolsMenus(document);
+        return;
+      }
       if (zhihuCommentThreadState.active) {
         event.preventDefault();
         event.stopPropagation();

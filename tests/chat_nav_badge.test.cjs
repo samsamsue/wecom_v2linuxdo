@@ -6563,16 +6563,17 @@ test("V2EX member profile card handles 404 user profiles as banned or renamed (v
 });
 
 test("Test 89: Floor message metadata (wecom-msg-meta) positioned inside wecom-msg-header row (v0.7.62)", () => {
-  // 1. 验证 HTML 模板结构：wecom-msg-meta 紧随 displayName / replyInd 渲染在 wecom-msg-header 内部
+  // 1. 验证 HTML 模板结构：wecom-msg-meta 紧随 displayName / replyInd 渲染在 wecom-msg-header 内部（末尾为更多按钮）
   const expectedHeaderPattern =
     '<div class="wecom-msg-header">\\s*' +
     '<span class="wecom-msg-name"\\${userCardAttributes\\(post\\)}>\\${escapeHtml\\(displayName\\)}<\\/span>\\s*' +
     '\\${replyInd}\\s*' +
     '\\${metaHtml}\\s*' +
+    '\\$\\{msgMoreTriggerHtml\\(\\)\\}\\s*' +
     '<\\/div>';
   assert.ok(
     new RegExp(expectedHeaderPattern).test(scriptContent),
-    "wecom-msg-header must contain displayName, replyInd, and metaHtml inline"
+    "wecom-msg-header must contain displayName, replyInd, metaHtml, and more trigger inline"
   );
 
   // 2. 验证 wecom-msg-bubble 之后不再多余渲染 metaHtml
@@ -6583,9 +6584,10 @@ test("Test 89: Floor message metadata (wecom-msg-meta) positioned inside wecom-m
     '\\${childrenHtml \\|\\| ""}\\s*' +
     '<\\/div>\\s*' +
     '\\${boostsHtml\\(post\\)}\\s*' +
-    '<div class="wecom-msg-tools">';
+    '\\${toolsMenuHtml}';
   assert.ok(
-    new RegExp(postBubbleFragment).test(scriptContent),
+    new RegExp(postBubbleFragment).test(scriptContent) &&
+    scriptContent.includes('<div class="wecom-msg-tools">'),
     "metaHtml must not be rendered after wecom-msg-bubble"
   );
 
@@ -8999,12 +9001,13 @@ test("Test 117: Recall/delete, share link, liked users popover, post flagging, s
   assert.ok(scriptContent.includes(".wecom-quote-tooltip:hover"), "CSS must style selection quote tooltip hover state");
   assert.ok(scriptContent.includes("html.wecom-dark .wecom-quote-tooltip"), "CSS must style selection quote tooltip for dark mode");
 
-  // 3. Verify tool action buttons in bubbleHtml and handleMessageToolClick
-  assert.ok(scriptContent.includes('data-action="delete"'), "bubbleHtml must render delete tool button for own posts");
-  assert.ok(scriptContent.includes('data-action="share"'), "bubbleHtml must render share tool button");
-  assert.ok(scriptContent.includes('data-action="flag"'), "bubbleHtml must render flag tool button for other posts");
-  assert.ok(scriptContent.includes('data-action="accept-solution"'), "bubbleHtml must support accept-solution tool button");
-  assert.ok(scriptContent.includes('data-action="unaccept-solution"'), "bubbleHtml must support unaccept-solution tool button");
+  // 3. Verify tool action items in msgToolItemHtml / bubbleHtml and handleMessageToolClick
+  assert.ok(scriptContent.includes('action: "delete"'), "bubbleHtml must configure delete menu action for own posts");
+  assert.ok(scriptContent.includes('action: "share"'), "bubbleHtml must configure share menu action");
+  assert.ok(scriptContent.includes('action: "flag"'), "bubbleHtml must configure flag menu action for other posts");
+  assert.ok(scriptContent.includes('action: "accept-solution"'), "bubbleHtml must support accept-solution menu action");
+  assert.ok(scriptContent.includes('action: "unaccept-solution"'), "bubbleHtml must support unaccept-solution menu action");
+  assert.ok(scriptContent.includes('data-action="${escapeHtml(action)}"'), "msgToolItemHtml must render data-action attributes");
 
   assert.ok(scriptContent.includes('if (action === "delete")'), "handleMessageToolClick must handle delete action");
   assert.ok(scriptContent.includes('if (action === "share")'), "handleMessageToolClick must handle share action");
@@ -10605,33 +10608,35 @@ test("Test 123: V2EX notification click and floor reply username preservation (D
   assert.strictEqual(indicatorText, "回复 @alice #15", "cross-page reply indicator must clearly show @alice and #15");
 });
 
-test("Test 124: Floating message action toolbar does not block username/avatar clicks and is not blocked by text", () => {
-  // 1. Floating tools must have elevated z-index (25) so they are never blocked by bubble text
+test("Test 124: Click-triggered WeCom message action menu stays above bubble text and never triggers on hover", () => {
+  // 1. Popup action menu uses elevated fixed z-index (950) so it is never obscured by text or adjacent bubbles
   assert.ok(
-    scriptContent.includes("z-index: 25 !important;"),
-    ".wecom-msg-tools must have elevated z-index (25) so it is never obscured by text"
+    scriptContent.includes("z-index: 950 !important;"),
+    ".wecom-msg-tools must have elevated z-index (950) so menu is never obscured by text"
   );
 
-  // 2. Moving mouse to tools maintains visibility and clickability (no premature hover suppression)
+  // 2. Visibility is triggered explicitly by click state (.is-tools-open / .has-boost-popover), never :hover
   assert.ok(
-    scriptContent.includes(".wecom-msg-tools:hover") &&
+    scriptContent.includes(".wecom-msg.is-tools-open > .wecom-msg-content > .wecom-msg-tools") &&
     scriptContent.includes("pointer-events: auto !important;") &&
-    scriptContent.includes("display: flex !important;"),
-    "moving mouse to .wecom-msg-tools must maintain pointer-events and display flex"
+    scriptContent.includes("display: flex !important;") &&
+    !scriptContent.includes(".wecom-msg-tools:hover") &&
+    !scriptContent.includes(".wecom-msg:hover:not(:has(.wecom-msg:hover)) > .wecom-msg-content > .wecom-msg-tools"),
+    "message tools menu must open via explicit click state without any hover-reveal CSS"
   );
 
-  // 3. Nested replies in thread view always pin tools to the right edge
+  // 3. Trigger button resides inline inside .wecom-msg-header
   assert.ok(
-    scriptContent.includes(".wecom-reply-children .wecom-msg-tools") &&
-    scriptContent.includes("right: 0 !important;") &&
-    scriptContent.includes("left: auto !important;"),
-    "nested reply tools must always be pinned to the right edge to avoid overlapping left-aligned author name"
+    scriptContent.includes('class="wecom-msg-more-btn"') &&
+    scriptContent.includes("function msgMoreTriggerHtml()"),
+    ".wecom-msg-header must render .wecom-msg-more-btn trigger button"
   );
 
-  // 4. .wecom-msg-me tools rule is strictly scoped to top-level messages
+  // 4. Vertical WeCom dropdown menu item & divider layout
   assert.ok(
-    scriptContent.includes(".wecom-msg-me:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-tools"),
-    ".wecom-msg-me tools rule must use :not(.is-thread-child) to avoid placing tools on the left in nested replies"
+    scriptContent.includes("flex-direction: column;") &&
+    scriptContent.includes(".wecom-msg-tools-divider"),
+    ".wecom-msg-tools must use vertical grouped WeCom dropdown menu styling"
   );
 });
 
@@ -11459,11 +11464,14 @@ test("Test 138: Zhihu reply thread pure comments view (omit parent answer card) 
     "must format sub-reply mentions with standard .wecom-msg-reply-indicator"
   );
 
-  // 4. Action tools toolbar on hover
+  // 4. Action tools menu triggered from header More icon
   assert.ok(
-    scriptContent.includes('<div class="wecom-msg-tools">') &&
-    scriptContent.includes('data-action="reply" title="回复"'),
-    "must include .wecom-msg-tools with reply action on comment bubble"
+    scriptContent.includes("renderMsgToolsMenuHtml([[") &&
+    scriptContent.includes('action: "reply"') &&
+    scriptContent.includes('label: "回复"') &&
+    scriptContent.includes('title: "回复"') &&
+    scriptContent.includes('<div class="wecom-msg-tools">'),
+    "must include .wecom-msg-tools menu with reply action on comment bubble"
   );
 });
 
@@ -12616,207 +12624,144 @@ test("Test 161: Image layout thumbnail magnifying glass with mouse wheel zoom sc
   );
 });
 
-test("Test 162: Floating message toolbar avoids blocking nickname/header, clamps within viewport bounds, and bridges hover gap", () => {
+test("Test 162: Header More button click opens WeCom grouped dropdown menu without hover reveal and clamps within bounds", () => {
   const vm = require("node:vm");
 
-  // 1. Safe CSS baseline and hover bridge pseudo-elements
+  // 1. No hover reveal CSS or hover listeners on .wecom-msg-tools
   assert.ok(
-    !scriptContent.includes("position: absolute;\n      top: -14px;\n      right: 0;"),
-    "WECOM_LATEST_REFINEMENTS .wecom-msg-tools must no longer use overlapping top: -14px; right: 0;"
+    !scriptContent.includes(".wecom-msg-tools:hover") &&
+    !scriptContent.includes(".wecom-msg:hover:not(:has(.wecom-msg:hover)) > .wecom-msg-content > .wecom-msg-tools") &&
+    !scriptContent.includes('chatBody.addEventListener("mouseover"'),
+    ".wecom-msg-tools must never reveal or reposition on hover"
   );
+
+  // 2. Trigger button inside .wecom-msg-header & vertical grouped WeCom menu styling
   assert.ok(
-    scriptContent.includes('.wecom-msg-tools[data-tools-pos="beside-right"]::before') &&
-    scriptContent.includes('.wecom-msg-tools[data-tools-pos="beside-left"]::before') &&
-    scriptContent.includes('.wecom-msg-tools[data-tools-pos="bubble-right"]::before'),
-    "must define directional ::before hover bridge selectors so moving cursor from bubble to tools never drops hover"
+    scriptContent.includes('data-action="msg-more"') &&
+    scriptContent.includes("function msgMoreTriggerHtml()") &&
+    scriptContent.includes("function msgToolItemHtml(") &&
+    scriptContent.includes("function renderMsgToolsMenuHtml(") &&
+    scriptContent.includes(".wecom-msg-tools-divider") &&
+    scriptContent.includes(".wecom-msg-tool-arrow") &&
+    scriptContent.includes('action: "copy"') &&
+    scriptContent.includes('action: "quote"') &&
+    scriptContent.includes('action: "boost", icon: ICONS.emoji || ICONS.boost, label: "贴表情", title: "添加 Boost", arrow: true'),
+    "must render header More trigger and vertical WeCom grouped context menu items (copy, quote, share, reply, like, boost submenu arrow, etc.)"
   );
+
+  // 3. Click handling, outside dismiss, Escape close, and scroll close
   assert.ok(
+    scriptContent.includes("function toggleMsgToolsMenu(msgEl, panel = null)") &&
+    scriptContent.includes("function closeAllMsgToolsMenus(root = document)") &&
     scriptContent.includes("function positionMsgTools(msgEl, containerEl = null)") &&
-    scriptContent.includes("if (msgEl) positionMsgTools(msgEl);"),
-    "must define positionMsgTools and invoke it when opening boost popover"
+    scriptContent.includes("closeAllMsgToolsMenus(chatBody);"),
+    "must toggle menu on .wecom-msg-more-btn click and dismiss on outside click, Escape, or scroll"
   );
+
+  // 4. Verify render helpers + computeMsgToolsPlacement geometry in Node VM
+  const helperMatch = scriptContent.match(
+    /function msgMoreTriggerHtml\(\)\s*\{[\s\S]*?function renderMsgToolsMenuHtml\(groups\)\s*\{[\s\S]*?\n  \}/
+  );
+  const placementMatch = scriptContent.match(
+    /function computeMsgToolsPlacement\(metrics\)\s*\{[\s\S]*?\n  \}(?=\n\n  function closeAllMsgToolsMenus)/
+  );
+  assert.ok(helperMatch && placementMatch, "must extract menu render helpers and computeMsgToolsPlacement");
+
+  const escapeHtml = (s) => String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+  const sandbox = {
+    Math,
+    Number,
+    escapeHtml,
+    ICONS: { dots: "<svg>dots</svg>", copy: "<svg>copy</svg>", chevronRight: "<svg>arrow</svg>", trash: "<svg>trash</svg>" }
+  };
+  vm.runInNewContext(
+    `${helperMatch[0]}\n${placementMatch[0]}\nthis.msgMoreTriggerHtml = msgMoreTriggerHtml;\nthis.msgToolItemHtml = msgToolItemHtml;\nthis.renderMsgToolsMenuHtml = renderMsgToolsMenuHtml;\nthis.computeMsgToolsPlacement = computeMsgToolsPlacement;`,
+    sandbox
+  );
+
+  // Validate grouped menu markup skips empty groups cleanly and renders divider + right arrow
+  const renderedMenu = sandbox.renderMsgToolsMenuHtml([
+    [
+      sandbox.msgToolItemHtml({ action: "copy", icon: sandbox.ICONS.copy, label: "复制" }),
+      sandbox.msgToolItemHtml({ action: "boost", icon: sandbox.ICONS.dots, label: "贴表情", arrow: true })
+    ],
+    [],
+    [
+      sandbox.msgToolItemHtml({ action: "delete", icon: sandbox.ICONS.trash, label: "删除", extraClass: "is-danger" })
+    ]
+  ]);
   assert.ok(
-    scriptContent.includes('chatBody.addEventListener("mouseover"') &&
-    scriptContent.includes('chatBody.addEventListener("focusin"'),
-    "bindChatPanelEvents must reposition .wecom-msg-tools dynamically on hover and focus"
+    renderedMenu.includes('<div class="wecom-msg-tools">') &&
+    renderedMenu.includes('<span class="wecom-msg-tool-arrow"><svg>arrow</svg></span>') &&
+    renderedMenu.includes('is-danger') &&
+    (renderedMenu.match(/wecom-msg-tools-divider/g) || []).length === 1,
+    "renderMsgToolsMenuHtml must emit separators only between non-empty groups and support arrow/danger rows"
   );
 
-  // 2. Extract live computeMsgToolsPlacement function and validate all layout geometry scenarios
-  const fnMatch = scriptContent.match(
-    /function computeMsgToolsPlacement\(metrics\)\s*\{[\s\S]*?\n  \}(?=\n\n  function positionMsgTools)/
-  );
-  assert.ok(fnMatch, "must find computeMsgToolsPlacement function body");
-  const sandbox = { Math, Number, Infinity };
-  vm.runInNewContext(`${fnMatch[0]}\nthis.computeMsgToolsPlacement = computeMsgToolsPlacement;`, sandbox);
   const calc = sandbox.computeMsgToolsPlacement;
-  assert.strictEqual(typeof calc, "function");
 
-  // Scenario A: Screenshot regression (narrow .wecom-msg-other bubble with hidden avatars near left edge)
-  const narrowOther = calc({
+  // Scenario A: Normal left message with ample room opens downward aligned to trigger left
+  const downLeft = calc({
     isMe: false,
-    isThreadChild: false,
-    safeLeft: 420,
+    safeLeft: 320,
     safeRight: 1180,
-    safeTop: 68,
-    contentRect: { left: 420, top: 210, right: 540, bottom: 290, width: 120, height: 80 },
-    bubbleRect: { left: 420, top: 230, right: 520, bottom: 290, width: 100, height: 60 },
-    headerRect: { left: 420, top: 210, right: 540, bottom: 226, width: 120, height: 16 },
-    headerItemsLeft: 420,
-    headerItemsRight: 535,
-    toolsWidth: 168,
-    toolsHeight: 28
+    safeTop: 60,
+    safeBottom: 780,
+    anchorRect: { left: 450, top: 200, right: 470, bottom: 220, width: 20, height: 20 },
+    menuWidth: 164,
+    menuHeight: 240
   });
-  assert.strictEqual(narrowOther.placement, "beside-right", "narrow bubble with open right whitespace places tools beside bubble");
-  assert.ok(420 + narrowOther.left >= 526, "must sit cleanly to the right of bubble");
-  assert.ok(420 + narrowOther.left >= 420, "must never overflow left chat boundary");
-  assert.ok(narrowOther.top >= 18, "must sit below header so nickname/time/floor are never obscured");
+  assert.strictEqual(downLeft.placement, "bottom");
+  assert.strictEqual(downLeft.left, 450);
+  assert.strictEqual(downLeft.top, 224);
 
-  // Scenario B: Wide .wecom-msg-other bubble + short header -> clean header-right clear of nickname
-  const wideOtherShortHeader = calc({
+  // Scenario B: Bottom-edge message flips upward above trigger button
+  const flipUp = calc({
     isMe: false,
-    isThreadChild: false,
-    safeLeft: 420,
-    safeRight: 1000,
-    safeTop: 68,
-    contentRect: { left: 420, top: 200, right: 920, bottom: 320, width: 500, height: 120 },
-    bubbleRect: { left: 420, top: 222, right: 920, bottom: 320, width: 500, height: 98 },
-    headerRect: { left: 420, top: 200, right: 920, bottom: 218, width: 500, height: 18 },
-    headerItemsLeft: 420,
-    headerItemsRight: 560,
-    toolsWidth: 168,
-    toolsHeight: 28
+    safeLeft: 320,
+    safeRight: 1180,
+    safeTop: 60,
+    safeBottom: 780,
+    anchorRect: { left: 450, top: 680, right: 470, bottom: 700, width: 20, height: 20 },
+    menuWidth: 164,
+    menuHeight: 240
   });
-  assert.strictEqual(wideOtherShortHeader.placement, "header-right");
-  assert.ok(420 + wideOtherShortHeader.left >= 560 + 12, "header-right must preserve >=12px horizontal clearance from header text");
-  assert.ok(420 + wideOtherShortHeader.left + 168 <= 1000, "header-right must not overflow right boundary");
-  assert.strictEqual(wideOtherShortHeader.top, 0, "header-right must stay inside own message bounds without touching previous message");
+  assert.strictEqual(flipUp.placement, "top");
+  assert.strictEqual(flipUp.top, 436);
+  assert.ok(flipUp.top + 240 <= 780 && flipUp.top >= 60);
 
-  // Scenario C: Wide .wecom-msg-other bubble + wide header -> drops below header to bubble-right
-  const wideOtherWideHeader = calc({
-    isMe: false,
-    isThreadChild: false,
-    safeLeft: 420,
-    safeRight: 1000,
-    safeTop: 68,
-    contentRect: { left: 420, top: 200, right: 920, bottom: 320, width: 500, height: 120 },
-    bubbleRect: { left: 420, top: 222, right: 920, bottom: 320, width: 500, height: 98 },
-    headerRect: { left: 420, top: 200, right: 920, bottom: 218, width: 500, height: 18 },
-    headerItemsLeft: 420,
-    headerItemsRight: 880,
-    toolsWidth: 168,
-    toolsHeight: 28
-  });
-  assert.strictEqual(wideOtherWideHeader.placement, "bubble-right");
-  assert.ok(wideOtherWideHeader.top >= 20, "bubble-right must sit below header when header occupies right side");
-  assert.ok(420 + wideOtherWideHeader.left + 168 <= 1000 && 420 + wideOtherWideHeader.left >= 420);
-
-  // Scenario D: Ultra-narrow container clamps strictly inside [safeLeft, safeRight]
-  const ultraNarrow = calc({
-    isMe: false,
-    isThreadChild: false,
-    safeLeft: 16,
-    safeRight: 240,
-    safeTop: 10,
-    contentRect: { left: 16, top: 100, right: 150, bottom: 160, width: 134, height: 60 },
-    bubbleRect: { left: 16, top: 120, right: 96, bottom: 160, width: 80, height: 40 },
-    headerRect: { left: 16, top: 100, right: 150, bottom: 116, width: 134, height: 16 },
-    headerItemsLeft: 16,
-    headerItemsRight: 145,
-    toolsWidth: 168,
-    toolsHeight: 28
-  });
-  assert.ok(16 + ultraNarrow.left >= 16, "ultra-narrow must never overflow safeLeft");
-  assert.ok(16 + ultraNarrow.left + 168 <= 240, "ultra-narrow must never overflow safeRight");
-  assert.ok(ultraNarrow.top >= 18, "ultra-narrow must avoid obscuring header text");
-
-  // Scenario E: Short & tight .wecom-msg-me bubbles stay clear of header and viewport bounds
-  const shortMe = calc({
+  // Scenario C: Self message aligns right edge to trigger right, clamping cleanly at left edge if narrow
+  const selfRight = calc({
     isMe: true,
-    isThreadChild: false,
-    safeLeft: 420,
+    safeLeft: 320,
     safeRight: 1180,
-    safeTop: 68,
-    contentRect: { left: 1080, top: 200, right: 1180, bottom: 260, width: 100, height: 60 },
-    bubbleRect: { left: 1080, top: 222, right: 1180, bottom: 260, width: 100, height: 38 },
-    headerRect: { left: 1100, top: 200, right: 1180, bottom: 218, width: 80, height: 18 },
-    headerItemsLeft: 1110,
-    headerItemsRight: 1180,
-    toolsWidth: 168,
-    toolsHeight: 28
+    safeTop: 60,
+    safeBottom: 780,
+    anchorRect: { left: 1130, top: 200, right: 1150, bottom: 220, width: 20, height: 20 },
+    menuWidth: 164,
+    menuHeight: 240
   });
-  assert.strictEqual(shortMe.placement, "beside-left");
-  assert.ok(1080 + shortMe.left + 168 <= 1080 - 6, "short self bubble places tools cleanly to the left of bubble");
-  assert.ok(1080 + shortMe.left >= 420, "short self bubble tools remain inside safeLeft");
+  assert.strictEqual(selfRight.placement, "bottom");
+  assert.strictEqual(selfRight.left, 1150 - 164);
+  assert.ok(selfRight.left + 164 <= 1180);
 
-  const tightMe = calc({
-    isMe: true,
-    isThreadChild: false,
-    safeLeft: 16,
-    safeRight: 320,
-    safeTop: 10,
-    contentRect: { left: 60, top: 200, right: 320, bottom: 280, width: 260, height: 80 },
-    bubbleRect: { left: 60, top: 222, right: 320, bottom: 280, width: 260, height: 58 },
-    headerRect: { left: 60, top: 200, right: 320, bottom: 218, width: 260, height: 18 },
-    headerItemsLeft: 90,
-    headerItemsRight: 320,
-    toolsWidth: 168,
-    toolsHeight: 28
-  });
-  assert.strictEqual(tightMe.placement, "bubble-left");
-  assert.ok(60 + tightMe.left >= 16 && 60 + tightMe.left + 168 <= 320, "tight self bubble clamps strictly inside bounds");
-  assert.ok(tightMe.top >= 20, "tight self bubble drops below header items when left header lacks space");
-
-  // Scenario F: Nested thread child keeps right pin when space suffices and drops below header when crowded
-  const childClean = calc({
+  // Scenario D: Near right edge of panel flips left to remain strictly inside [safeLeft, safeRight]
+  const nearRightEdge = calc({
     isMe: false,
-    isThreadChild: true,
-    safeLeft: 440,
-    safeRight: 940,
-    safeTop: 68,
-    contentRect: { left: 460, top: 300, right: 920, bottom: 380, width: 460, height: 80 },
-    bubbleRect: { left: 460, top: 320, right: 920, bottom: 380, width: 460, height: 60 },
-    headerRect: { left: 460, top: 300, right: 920, bottom: 316, width: 460, height: 16 },
-    headerItemsLeft: 460,
-    headerItemsRight: 580,
-    toolsWidth: 168,
-    toolsHeight: 28
+    safeLeft: 320,
+    safeRight: 1000,
+    safeTop: 60,
+    safeBottom: 780,
+    anchorRect: { left: 960, top: 200, right: 980, bottom: 220, width: 20, height: 20 },
+    menuWidth: 164,
+    menuHeight: 240
   });
-  assert.strictEqual(childClean.placement, "thread-right");
-  assert.strictEqual(childClean.right, 0);
-
-  const childCrowded = calc({
-    isMe: false,
-    isThreadChild: true,
-    safeLeft: 440,
-    safeRight: 700,
-    safeTop: 68,
-    contentRect: { left: 460, top: 300, right: 700, bottom: 380, width: 240, height: 80 },
-    bubbleRect: { left: 460, top: 320, right: 700, bottom: 380, width: 240, height: 60 },
-    headerRect: { left: 460, top: 300, right: 700, bottom: 316, width: 240, height: 16 },
-    headerItemsLeft: 460,
-    headerItemsRight: 640,
-    toolsWidth: 168,
-    toolsHeight: 28
-  });
-  assert.strictEqual(childCrowded.placement, "thread-below-header");
-  assert.ok(childCrowded.top >= 18, "crowded thread child tools must drop below header to clear author name");
-
-  // Scenario G: Long scrolled post keeps toolbar pinned inside visible chat top edge
-  const longScrolled = calc({
-    isMe: false,
-    isThreadChild: false,
-    safeLeft: 420,
-    safeRight: 1180,
-    safeTop: 68,
-    contentRect: { left: 420, top: -400, right: 860, bottom: 500, width: 440, height: 900 },
-    bubbleRect: { left: 420, top: -378, right: 860, bottom: 500, width: 440, height: 878 },
-    headerRect: { left: 420, top: -400, right: 860, bottom: -382, width: 440, height: 18 },
-    headerItemsLeft: 420,
-    headerItemsRight: 550,
-    toolsWidth: 168,
-    toolsHeight: 28
-  });
-  assert.strictEqual(-400 + longScrolled.top, 68, "long scrolled message clamps toolbar to visible top viewport edge");
+  assert.strictEqual(nearRightEdge.left, 980 - 164);
+  assert.ok(nearRightEdge.left + 164 <= 1000 && nearRightEdge.left >= 320);
 });
 
 test("Test 163: Subframe guard prevents WeCom rail/shell injection in iframes and iframe messages expand bubble to max width", () => {
