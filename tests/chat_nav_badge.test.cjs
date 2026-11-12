@@ -13923,6 +13923,53 @@ test("Test 168: lightbox-wrapper images inside <details> are auto-laid out in an
   assert.strictEqual(detOneboxImg.closest("aside.onebox"), detOnebox, "onebox img inside <details> stays untouched");
 });
 
+test("Test 169: .wecom-msg-bubble hugs content without being stretched to wide .wecom-msg-header", () => {
+  // Base .wecom-msg-content and WECOM_LATEST_REFINEMENTS .wecom-msg-content must align-items: flex-start
+  const contentBlocks = [...scriptContent.matchAll(/^\s*\.wecom-msg-content\s*\{[^}]*\}/gm)].map((m) => m[0]);
+  assert.ok(contentBlocks.length >= 2, "must find both .wecom-msg-content blocks");
+  for (const block of contentBlocks) {
+    assert.ok(
+      block.includes("align-items: flex-start;"),
+      `every .wecom-msg-content rule must set align-items: flex-start so header width does not stretch sibling bubble: ${block}`
+    );
+  }
+
+  // .wecom-msg-me still aligns right, and nested replies remain flex-start
+  assert.ok(
+    scriptContent.includes(".wecom-msg-me .wecom-msg-content {\n      align-items: flex-end;\n    }"),
+    "outgoing .wecom-msg-me content must keep align-items: flex-end"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-reply-children .wecom-msg.wecom-msg-me .wecom-msg-content {\n      align-items: flex-start !important;"),
+    "thread child replies must keep align-items: flex-start !important"
+  );
+
+  // Base & latest .wecom-msg-bubble shrink-wrap their content cleanly
+  const bubbleBlocks = [...scriptContent.matchAll(/^\s*\.wecom-msg-bubble\s*\{[^}]*\}/gm)].map((m) => m[0]);
+  const themedBubbles = bubbleBlocks.filter((b) => b.includes("padding:"));
+  assert.ok(themedBubbles.length >= 2, "must inspect .wecom-msg-bubble styling blocks");
+  assert.ok(
+    themedBubbles.some((b) => b.includes("width: fit-content;") && b.includes("max-width: 100%;") && b.includes("box-sizing: border-box;")),
+    ".wecom-msg-bubble must set width: fit-content, max-width: 100%, box-sizing: border-box"
+  );
+
+  // Last override block (WECOM_LATEST_REFINEMENTS) specifically enforces fit-content & box-sizing
+  const latestBubble = bubbleBlocks.find((b) => b.includes("padding: 8px 12px !important;"));
+  assert.ok(latestBubble, "must locate latest .wecom-msg-bubble refinement block");
+  assert.ok(
+    latestBubble.includes("width: fit-content;") &&
+    latestBubble.includes("max-width: 100%;") &&
+    latestBubble.includes("box-sizing: border-box;"),
+    "latest .wecom-msg-bubble block must keep width: fit-content; max-width: 100%; box-sizing: border-box"
+  );
+
+  // Iframe bubbles still stretch full width
+  assert.ok(
+    scriptContent.includes(".wecom-msg.has-iframe > .wecom-msg-content > .wecom-msg-bubble {\n      width: 100% !important;\n      max-width: 100% !important;\n      align-self: stretch !important;"),
+    "iframe message bubbles must still override to full width"
+  );
+});
+
 
 
 

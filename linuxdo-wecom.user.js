@@ -4188,7 +4188,7 @@
     }
     .wecom-topic-bookmark.is-bookmarked svg path { fill: currentColor; }
     .wecom-chat-panel[data-empty="1"] .wecom-topic-bookmark { display: none; }
-    .wecom-msg-content { min-width: 0; display: flex; flex-direction: column; position: relative; }
+    .wecom-msg-content { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; position: relative; }
     .wecom-msg-me .wecom-msg-content { align-items: flex-end; }
     .wecom-msg-name { font-size: 12px; color: var(--wc-text-3); margin-bottom: 0 !important; }
     .wecom-msg-me:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-header > .wecom-msg-name { display: none !important; }
@@ -4434,6 +4434,9 @@
       color: inherit;
     }
     .wecom-msg-bubble {
+      width: fit-content;
+      max-width: 100%;
+      box-sizing: border-box;
       padding: 10px 14px;
       font-size: 14px; line-height: 1.6;
       color: var(--wc-text);
@@ -11612,8 +11615,11 @@
       border-radius: 8px !important;
     }
     .wecom-msg-content {
+      min-width: 0;
+      max-width: 100%;
       display: flex;
       flex-direction: column;
+      align-items: flex-start;
       position: relative;
     }
     .wecom-msg-name {
@@ -11796,6 +11802,9 @@
 
     /* 气泡样式规范（圆角矩形，去除三角箭头，纯净优雅） */
     .wecom-msg-bubble {
+      width: fit-content;
+      max-width: 100%;
+      box-sizing: border-box;
       padding: 8px 12px !important;
       border-radius: 8px !important;
       font-size: 14px !important;
