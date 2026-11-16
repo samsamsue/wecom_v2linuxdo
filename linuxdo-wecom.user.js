@@ -9007,71 +9007,11 @@
 
     /* ---------- 气泡排版切换悬浮钮 ---------- */
     .wecom-bubble-layout-toggle {
-      position: absolute !important;
-      top: 6px !important;
-      right: 8px !important;
-      z-index: 10 !important;
-      display: inline-flex !important;
-      align-items: center !important;
-      gap: 4px !important;
-      height: 22px !important;
-      padding: 0 8px !important;
-      border-radius: 11px !important;
-      font-size: 11px !important;
-      font-weight: 500 !important;
-      font-family: var(--wc-font) !important;
-      line-height: 1 !important;
-      color: #4E5359 !important;
-      background: rgba(255, 255, 255, 0.94) !important;
-      backdrop-filter: blur(4px) !important;
-      border: 1px solid rgba(0, 0, 0, 0.12) !important;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
-      cursor: pointer !important;
-      opacity: 0 !important;
-      visibility: hidden !important;
-      pointer-events: none !important;
-      transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease !important;
-      user-select: none !important;
+      display: none !important;
     }
     .wecom-msg-bubble:hover .wecom-bubble-layout-toggle,
     .wecom-msg:hover .wecom-bubble-layout-toggle {
-      opacity: 1 !important;
-      visibility: visible !important;
-      pointer-events: auto !important;
-    }
-    .wecom-bubble-layout-toggle:hover {
-      background: #FFFFFF !important;
-      color: #267EF0 !important;
-      border-color: rgba(38, 126, 240, 0.4) !important;
-      box-shadow: 0 2px 8px rgba(38, 126, 240, 0.15) !important;
-    }
-    .wecom-bubble-layout-toggle.is-raw {
-      color: #267EF0 !important;
-      border-color: rgba(38, 126, 240, 0.3) !important;
-    }
-    .wecom-bubble-layout-toggle svg {
-      width: 12px !important;
-      height: 12px !important;
-      flex-shrink: 0 !important;
-    }
-    .wecom-msg-me .wecom-bubble-layout-toggle {
-      right: auto !important;
-      left: 8px !important;
-    }
-    html.wecom-dark .wecom-bubble-layout-toggle {
-      background: rgba(35, 37, 41, 0.94) !important;
-      border-color: rgba(255, 255, 255, 0.15) !important;
-      color: #C5C8CC !important;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
-    }
-    html.wecom-dark .wecom-bubble-layout-toggle:hover {
-      background: #2B2D31 !important;
-      color: #3A8BFD !important;
-      border-color: rgba(58, 139, 253, 0.5) !important;
-    }
-    html.wecom-dark .wecom-bubble-layout-toggle.is-raw {
-      color: #3A8BFD !important;
-      border-color: rgba(58, 139, 253, 0.4) !important;
+      display: none !important;
     }
 
     /* ---------- 聊天图片预览 ---------- */
@@ -33672,15 +33612,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         bodyEl.classList.add("is-empty");
       }
 
-      // 添加气泡排版切换悬浮钮
-      let toggleBtn = findOwnMsgElement(bubble, ".wecom-bubble-layout-toggle", ".wecom-msg-bubble");
-      if (!toggleBtn) {
-        toggleBtn = document.createElement("button");
-        toggleBtn.type = "button";
-        toggleBtn.className = "wecom-bubble-layout-toggle";
-        bubble.appendChild(toggleBtn);
-      }
-      setBubbleLayoutButtonState(toggleBtn, false);
+      // 气泡内不展示浮动排版切换钮（已移至气泡长按操作菜单）
+      findOwnMsgElement(bubble, ".wecom-bubble-layout-toggle", ".wecom-msg-bubble")?.remove();
       bubble.dataset.layoutMode = "auto";
       syncMsgToolsLayoutItem(bubble.closest(".wecom-msg"));
     }
@@ -33791,7 +33724,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       ownImages.forEach((el) => el.remove());
       applyImageAutoLayout(msgEl);
       const activeBtn = btn || findOwnMsgElement(bubble, ".wecom-bubble-layout-toggle", ".wecom-msg-bubble");
-      setBubbleLayoutButtonState(activeBtn, false);
+      if (activeBtn) setBubbleLayoutButtonState(activeBtn, false);
     } else {
       // 切换到原排版
       bubble.dataset.layoutMode = "raw";
@@ -33800,8 +33733,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         bodyEl.innerHTML = rawContent;
         bodyEl.classList?.remove?.("is-empty");
       }
-      setBubbleLayoutButtonState(btn, true);
+      const activeBtn = btn || findOwnMsgElement(bubble, ".wecom-bubble-layout-toggle", ".wecom-msg-bubble");
+      if (activeBtn) setBubbleLayoutButtonState(activeBtn, true);
     }
+    findOwnMsgElement(bubble, ".wecom-bubble-layout-toggle", ".wecom-msg-bubble")?.remove();
     syncMsgToolsLayoutItem(msgEl);
     hydrateChatImages(bubble);
     return true;

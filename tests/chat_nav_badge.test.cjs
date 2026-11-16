@@ -13988,6 +13988,34 @@ test("Test 170: .wecom-msg-bubble uses equal top/right/bottom/left inner padding
   );
 });
 
+test("Test 171: bubble does not display floating .wecom-bubble-layout-toggle button and removes any existing button", () => {
+  // 1. CSS disables and hides .wecom-bubble-layout-toggle
+  assert.ok(
+    scriptContent.includes(".wecom-bubble-layout-toggle {\n      display: none !important;\n    }"),
+    ".wecom-bubble-layout-toggle must be hidden via display: none !important"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-msg-bubble:hover .wecom-bubble-layout-toggle,\n    .wecom-msg:hover .wecom-bubble-layout-toggle {\n      display: none !important;\n    }"),
+    "bubble hover must not show .wecom-bubble-layout-toggle"
+  );
+
+  // 2. applyImageAutoLayout removes any existing toggle button and sets layoutMode to auto
+  const fnStart = scriptContent.indexOf("  function applyImageAutoLayout(root) {");
+  const fnEnd = scriptContent.indexOf("  function findOwnMsgElement(root,", fnStart);
+  assert.ok(fnStart >= 0 && fnEnd > fnStart);
+  const fnCode = scriptContent.slice(fnStart, fnEnd);
+  assert.ok(
+    !fnCode.includes('document.createElement("button")') &&
+    !fnCode.includes('toggleBtn.className = "wecom-bubble-layout-toggle"'),
+    "applyImageAutoLayout must NOT create floating toggle button in bubble"
+  );
+  assert.ok(
+    fnCode.includes('findOwnMsgElement(bubble, ".wecom-bubble-layout-toggle", ".wecom-msg-bubble")?.remove()'),
+    "applyImageAutoLayout must clean up any existing .wecom-bubble-layout-toggle in bubble"
+  );
+});
+
+
 
 
 
