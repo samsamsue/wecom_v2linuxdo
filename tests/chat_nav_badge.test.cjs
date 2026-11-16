@@ -12534,10 +12534,10 @@ test("Test 161: Image layout thumbnail magnifying glass with mouse wheel zoom sc
   const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
-  // 1. Version 0.8.35
-  assert.ok(metaContent.includes("@version      0.8.35"), "meta.js version must be 0.8.35");
-  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.35";'), "user.js version must be 0.8.35");
-  assert.ok(readmeContent.includes("0.8.35"), "README.md version must be 0.8.35");
+  // 1. Version 0.8.35 or newer
+  assert.ok(/@version\s+0\.8\.(3[5-9]|[4-9]\d)/.test(metaContent), "meta.js version must be 0.8.35 or newer");
+  assert.ok(/SCRIPT_VERSION = "0\.8\.(3[5-9]|[4-9]\d)"/.test(scriptContent), "user.js version must be 0.8.35 or newer");
+  assert.ok(/0\.8\.(3[5-9]|[4-9]\d)/.test(readmeContent), "README.md version must be 0.8.35 or newer");
 
   // 2. Constants definition
   assert.ok(scriptContent.includes('const IMAGE_MAGNIFIER_KEY = "linuxdo-wecom-image-magnifier";'), "must define IMAGE_MAGNIFIER_KEY");
@@ -13988,7 +13988,13 @@ test("Test 170: .wecom-msg-bubble uses equal top/right/bottom/left inner padding
   );
 });
 
-test("Test 171: bubble does not display floating .wecom-bubble-layout-toggle button and removes any existing button", () => {
+test("Test 171: bubble does not display floating .wecom-bubble-layout-toggle button and bumps version to 0.8.36", () => {
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+  assert.ok(metaContent.includes("@version      0.8.36"), "meta.js version must be 0.8.36");
+  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.36";'), "user.js version must be 0.8.36");
+  assert.ok(readmeContent.includes("0.8.36"), "README.md version must be 0.8.36");
+
   // 1. CSS disables and hides .wecom-bubble-layout-toggle
   assert.ok(
     scriptContent.includes(".wecom-bubble-layout-toggle {\n      display: none !important;\n    }"),
