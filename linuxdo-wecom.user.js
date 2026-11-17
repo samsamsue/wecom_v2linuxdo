@@ -4731,7 +4731,7 @@
       display: block !important;
     }
 
-    /* Reddit 树状引导线与子楼层缩进：某层级是一条完整直线主干，弯曲线是分支线 */
+    /* Reddit 树状引导线与子楼层缩进：上级的直线与下级分支的弯曲线 */
     html.wecom-thread-style-reddit .wecom-reply-children {
       display: flex !important;
       flex-direction: column !important;
@@ -4746,24 +4746,6 @@
       box-sizing: border-box !important;
     }
 
-    /* 本层级完整连续的直线主干：从 top: -1px 无缝接力父级折叠圈，垂直贯穿到底！ */
-    html.wecom-thread-style-reddit .wecom-reply-children::before {
-      content: "" !important;
-      position: absolute !important;
-      left: 0 !important;
-      top: -1px !important;
-      bottom: 0 !important;
-      width: 1px !important;
-      background: var(--wc-border, rgba(0, 0, 0, 0.14)) !important;
-      z-index: 1 !important;
-      pointer-events: none !important;
-      transition: background 0.16s ease !important;
-    }
-    html.wecom-thread-style-reddit.wecom-dark .wecom-reply-children::before,
-    html.wecom-dark.wecom-thread-style-reddit .wecom-reply-children::before {
-      background: rgba(255, 255, 255, 0.16) !important;
-    }
-
     html.wecom-thread-style-reddit .wecom-thread-node,
     html.wecom-thread-style-reddit .wecom-msg,
     html.wecom-thread-style-reddit .wecom-reddit-node,
@@ -4774,6 +4756,8 @@
       margin-left: 0 !important;
       padding-left: 0 !important;
       margin-bottom: 0 !important;
+      margin-top: 0 !important;
+      padding-top: 0 !important;
     }
     html.wecom-thread-style-reddit .wecom-reply-children > .wecom-thread-node,
     html.wecom-thread-style-reddit .wecom-reply-children > .wecom-reddit-node {
@@ -4781,15 +4765,15 @@
       position: relative !important;
     }
 
-    /* 子楼层弯曲分支线 ╰─► 从直线主干引出直达子头像中心 (14px) */
+    /* 下级分支弯曲线 ╰─► 向上延伸无缝咬合上级折叠圈 ⊖ 与直线，平滑弯入子头像中心 (14px) */
     html.wecom-thread-style-reddit .wecom-reply-children > .wecom-thread-node > .wecom-reddit-node > .wecom-reddit-row > .wecom-reddit-gutter::before,
     html.wecom-thread-style-reddit .wecom-reply-children > .wecom-reddit-node > .wecom-reddit-row > .wecom-reddit-gutter::before {
       content: "" !important;
       position: absolute !important;
       left: -21px !important;
-      top: -1px !important;
+      top: -14px !important; /* 向上延伸 14px，严丝合缝紧贴上级折叠圈 ⊖ 与垂直直线 */
       width: 21px !important;
-      height: 15px !important;
+      height: 28px !important; /* 总高度 28px (-14px ~ 14px)，刚好在 14px 处水平弯入头像中心 */
       border-left: 1px solid var(--wc-border, rgba(0, 0, 0, 0.14)) !important;
       border-bottom: 1px solid var(--wc-border, rgba(0, 0, 0, 0.14)) !important;
       border-bottom-left-radius: 12px !important;
@@ -4805,42 +4789,44 @@
       border-color: rgba(255, 255, 255, 0.16) !important;
     }
 
-    /* 末尾子楼层 (:last-child)：在 14px 处将直线主干遮挡，形成最末分支自然收尾终止，决无出头！ */
-    html.wecom-thread-style-reddit .wecom-reply-children > .wecom-thread-node:last-child::after,
-    html.wecom-thread-style-reddit .wecom-reply-children > .wecom-reddit-node:last-child::after {
+    /* 非末尾子楼层：从头像中心 (14px) 向下延伸竖线，与下一个兄弟楼层相接 */
+    html.wecom-thread-style-reddit .wecom-reply-children > .wecom-thread-node:not(:last-child)::after,
+    html.wecom-thread-style-reddit .wecom-reply-children > .wecom-reddit-node:not(:last-child)::after {
       content: "" !important;
       position: absolute !important;
-      left: -22px !important;
-      top: 14.5px !important;
+      left: -21px !important;
+      top: 14px !important;
       bottom: 0 !important;
-      width: 4px !important;
-      background: var(--wc-bg, #FFFFFF) !important;
-      z-index: 2 !important;
+      width: 0 !important;
+      border-left: 1px solid var(--wc-border, rgba(0, 0, 0, 0.14)) !important;
       pointer-events: none !important;
+      z-index: 1 !important;
+      transition: border-color 0.16s ease !important;
     }
-    html.wecom-thread-style-reddit.wecom-dark .wecom-reply-children > .wecom-thread-node:last-child::after,
-    html.wecom-dark.wecom-thread-style-reddit .wecom-reply-children > .wecom-thread-node:last-child::after,
-    html.wecom-thread-style-reddit.wecom-dark .wecom-reply-children > .wecom-reddit-node:last-child::after,
-    html.wecom-dark.wecom-thread-style-reddit .wecom-reply-children > .wecom-reddit-node:last-child::after {
-      background: var(--wc-bg, #202328) !important;
+    html.wecom-thread-style-reddit.wecom-dark .wecom-reply-children > .wecom-thread-node:not(:last-child)::after,
+    html.wecom-dark.wecom-thread-style-reddit .wecom-reply-children > .wecom-thread-node:not(:last-child)::after,
+    html.wecom-thread-style-reddit.wecom-dark .wecom-reply-children > .wecom-reddit-node:not(:last-child)::after,
+    html.wecom-dark.wecom-thread-style-reddit .wecom-reply-children > .wecom-reddit-node:not(:last-child)::after {
+      border-left-color: rgba(255, 255, 255, 0.16) !important;
     }
 
-    /* 整条线高亮联动（直线主干 + 弯曲线同步高亮变蓝，且不冒泡波及祖先楼层） */
-    html.wecom-thread-style-reddit .wecom-reply-children:hover:not(:has(.wecom-reply-children:hover))::before {
-      background: var(--wc-accent, #267EF0) !important;
+    /* 末尾子楼层 (:last-child)：完全没有 ::after 竖线，在 14px 头像中心处自然收尾终止，决无出头！ */
+
+    /* 整条线高亮联动：悬停当前子回复时，直接上级的垂直直线 + 前序兄弟接力竖线 + 该子回复的弯曲分支同步高亮变蓝 */
+    html.wecom-thread-style-reddit .wecom-thread-node:hover:not(:has(.wecom-thread-node:hover)) > .wecom-reddit-node > .wecom-reddit-row > .wecom-reddit-gutter::before,
+    html.wecom-thread-style-reddit .wecom-reddit-node:hover:not(:has(.wecom-reddit-node:hover)) > .wecom-reddit-row > .wecom-reddit-gutter::before {
+      border-color: var(--wc-accent, #267EF0) !important;
     }
-    html.wecom-thread-style-reddit .wecom-msg:has(> .wecom-reply-children:hover:not(:has(.wecom-reply-children:hover))) > .wecom-reddit-row > .wecom-reddit-gutter > .wecom-reddit-line,
-    html.wecom-thread-style-reddit .wecom-msg:has(> .wecom-reply-children:hover:not(:has(.wecom-reply-children:hover))) > .wecom-reddit-row > .wecom-reddit-gutter > .wecom-reddit-collapse-circle {
+    html.wecom-thread-style-reddit .wecom-reply-children > .wecom-thread-node:has(~ .wecom-thread-node:hover)::after,
+    html.wecom-thread-style-reddit .wecom-reply-children > .wecom-reddit-node:has(~ .wecom-reddit-node:hover)::after {
+      border-left-color: var(--wc-accent, #267EF0) !important;
+    }
+    html.wecom-thread-style-reddit .wecom-msg:has(> .wecom-reply-children > .wecom-thread-node:hover:not(:has(.wecom-thread-node:hover))) > .wecom-reddit-row > .wecom-reddit-gutter > .wecom-reddit-line,
+    html.wecom-thread-style-reddit .wecom-msg:has(> .wecom-reply-children > .wecom-thread-node:hover:not(:has(.wecom-thread-node:hover))) > .wecom-reddit-row > .wecom-reddit-gutter > .wecom-reddit-collapse-circle,
+    html.wecom-thread-style-reddit .wecom-msg:has(> .wecom-reply-children > .wecom-reddit-node:hover:not(:has(.wecom-reddit-node:hover))) > .wecom-reddit-row > .wecom-reddit-gutter > .wecom-reddit-line,
+    html.wecom-thread-style-reddit .wecom-msg:has(> .wecom-reply-children > .wecom-reddit-node:hover:not(:has(.wecom-reddit-node:hover))) > .wecom-reddit-row > .wecom-reddit-gutter > .wecom-reddit-collapse-circle {
       background: var(--wc-accent, #267EF0) !important;
       color: var(--wc-accent, #267EF0) !important;
-    }
-    html.wecom-thread-style-reddit .wecom-msg:has(> .wecom-reddit-row > .wecom-reddit-gutter > .wecom-reddit-line:hover) > .wecom-reply-children::before,
-    html.wecom-thread-style-reddit .wecom-msg:has(> .wecom-reddit-row > .wecom-reddit-gutter > .wecom-reddit-collapse-circle:hover) > .wecom-reply-children::before {
-      background: var(--wc-accent, #267EF0) !important;
-    }
-    html.wecom-thread-style-reddit .wecom-reddit-node:hover:not(:has(.wecom-reddit-node:hover)) > .wecom-reddit-row > .wecom-reddit-gutter::before,
-    html.wecom-thread-style-reddit .wecom-thread-node:hover:not(:has(.wecom-thread-node:hover)) > .wecom-reddit-node > .wecom-reddit-row > .wecom-reddit-gutter::before {
-      border-color: var(--wc-accent, #267EF0) !important;
     }
 
     /* Reddit 折叠状态处理 */

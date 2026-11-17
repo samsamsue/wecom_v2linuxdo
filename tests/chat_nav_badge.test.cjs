@@ -14117,13 +14117,12 @@ test("Test 174: Reddit thread tree authentic alignment (gutter column, curved br
   assert.ok(scriptContent.includes("align-items: center !important;"), "header items must be vertically centered");
   assert.ok(scriptContent.includes(".wecom-msg.is-tools-open .wecom-msg-tools"), "more menu dropdown must open under reddit node");
 
-  // 4. CSS alignment, single-layer geometry (1px fine line, top:-1px seamless union, non-propagating hover)
+  // 4. CSS alignment, single-layer geometry (1px fine line, top:-14px seamless union, non-propagating hover)
   assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reddit-gutter"), "must style .wecom-reddit-gutter");
   assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reddit-collapse-circle"), "must style circular collapse button");
   assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reddit-line:hover"), "must highlight line on hover");
   assert.ok(scriptContent.includes("left: -21px !important;"), "curved branch must connect seamlessly from parent line");
-  assert.ok(scriptContent.includes("top: -1px !important;"), "curved branch must reach top: -1px to meet parent line or sibling");
-  assert.ok(scriptContent.includes("height: 15px !important;"), "curved branch must enter vertical center of child avatar (14px)");
+  assert.ok(scriptContent.includes("border-bottom-left-radius: 12px !important;"), "curved branch must enter vertical center of child avatar (14px)");
   assert.ok(scriptContent.includes(":last-child"), "continuation line must close branch cleanly at last child");
   assert.ok(scriptContent.includes(":not(:has(.wecom-reddit-node:hover))"), "hover on child branch must not highlight ancestors");
   assert.ok(scriptContent.includes('fill="var(--wc-bg, #FFFFFF)"'), "collapse button must use single-layer SVG circle mask");
@@ -14133,23 +14132,24 @@ test("Test 174: Reddit thread tree authentic alignment (gutter column, curved br
   assert.ok(scriptContent.includes('const button = event.target.closest(".wecom-msg-tool");'), "must route message tool button clicks to handler");
 });
 
-test("Test 175: Reddit thread tree continuous straight trunk line per hierarchy level, branch arcs, and unified hover highlighting (v0.8.39)", () => {
-  // 1. Continuous straight trunk line on .wecom-reply-children::before across the entire level
-  assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children::before"), "must define straight trunk line on reply container");
-  assert.ok(scriptContent.includes("left: 0 !important;"), "trunk line must be on the left axis of replies container");
-  assert.ok(scriptContent.includes("top: -1px !important;"), "trunk line must seamlessly meet parent collapse button");
-  assert.ok(scriptContent.includes("bottom: 0 !important;"), "trunk line must span to bottom");
+test("Test 175: Reddit thread tree continuous parent straight line and child branch arc model (v0.8.39)", () => {
+  // 1. Parent straight line and child indentation geometry
+  assert.ok(scriptContent.includes("margin-left: 13.5px !important;"), "replies container aligns with parent 14px axis");
+  assert.ok(scriptContent.includes("padding-left: 21px !important;"), "child nodes indent by 21px");
 
-  // 2. Branch arc entering child avatar
+  // 2. Child branch arc ╰─► reaching up to seamlessly overlap parent line/collapse button
   assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children > .wecom-thread-node > .wecom-reddit-node > .wecom-reddit-row > .wecom-reddit-gutter::before"), "must define curved branch line");
-  assert.ok(scriptContent.includes("border-bottom-left-radius: 12px !important;"), "branch line must have rounded curve");
+  assert.ok(scriptContent.includes("top: -14px !important;"), "branch curve must extend upwards to overlap parent collapse button with zero gap");
+  assert.ok(scriptContent.includes("height: 28px !important;"), "branch curve must span to avatar center at 14px");
+  assert.ok(scriptContent.includes("border-bottom-left-radius: 12px !important;"), "branch curve must have rounded corner");
 
-  // 3. Last child terminates trunk line cleanly
-  assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children > .wecom-thread-node:last-child::after"), "must mask trunk line after last child to terminate cleanly");
+  // 3. Sibling continuation line for non-last children and zero protrusion on last child
+  assert.ok(scriptContent.includes(".wecom-thread-node:not(:last-child)::after"), "non-last children must continue parent line downwards");
+  assert.ok(scriptContent.includes("top: 14px !important;"), "continuation line begins at avatar center");
 
-  // 4. Unified hover highlight (trunk line + curved branch sync highlight)
-  assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children:hover:not(:has(.wecom-reply-children:hover))::before"), "trunk line must highlight when child replies container is hovered");
-  assert.ok(scriptContent.includes(".wecom-reddit-node:hover:not(:has(.wecom-reddit-node:hover)) > .wecom-reddit-row > .wecom-reddit-gutter::before"), "curved branch must highlight when node is hovered");
+  // 4. Selective path hover highlighting (parent line + branch curve + preceding siblings, without bubbling)
+  assert.ok(scriptContent.includes(":has(~ .wecom-thread-node:hover)::after"), "preceding siblings continue highlight downwards to hovered child");
+  assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-msg:has(> .wecom-reply-children"), "direct parent highlights on child hover without bubbling to ancestors");
 });
 
 
