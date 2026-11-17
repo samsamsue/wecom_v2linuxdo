@@ -13991,9 +13991,9 @@ test("Test 170: .wecom-msg-bubble uses equal top/right/bottom/left inner padding
 test("Test 171: bubble does not display floating .wecom-bubble-layout-toggle button and bumps version to 0.8.36", () => {
   const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
-  assert.ok(metaContent.includes("@version      0.8.36"), "meta.js version must be 0.8.36");
-  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.36";'), "user.js version must be 0.8.36");
-  assert.ok(readmeContent.includes("0.8.36"), "README.md version must be 0.8.36");
+  assert.ok(/@version\s+0\.8\.(3[6-9]|[4-9]\d)/.test(metaContent), "meta.js version must be 0.8.36 or newer");
+  assert.ok(/SCRIPT_VERSION = "0\.8\.(3[6-9]|[4-9]\d)"/.test(scriptContent), "user.js version must be 0.8.36 or newer");
+  assert.ok(/0\.8\.(3[6-9]|[4-9]\d)/.test(readmeContent), "README.md version must be 0.8.36 or newer");
 
   // 1. CSS disables and hides .wecom-bubble-layout-toggle
   assert.ok(
@@ -14018,6 +14018,35 @@ test("Test 171: bubble does not display floating .wecom-bubble-layout-toggle but
   assert.ok(
     fnCode.includes('findOwnMsgElement(bubble, ".wecom-bubble-layout-toggle", ".wecom-msg-bubble")?.remove()'),
     "applyImageAutoLayout must clean up any existing .wecom-bubble-layout-toggle in bubble"
+  );
+});
+
+test("Test 172: nested replies in .wecom-reply-children stay strictly left-aligned under outgoing bubbles (.wecom-msg-me) (v0.8.37)", () => {
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+  assert.ok(metaContent.includes("@version      0.8.37"), "meta.js version must be 0.8.37");
+  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.37";'), "user.js version must be 0.8.37");
+  assert.ok(readmeContent.includes("0.8.37"), "README.md version must be 0.8.37");
+
+  // 1. All reply messages & contents inside .wecom-reply-children (and within .wecom-msg-me) are left-aligned
+  assert.ok(
+    scriptContent.includes(".wecom-reply-children .wecom-msg,\n    .wecom-msg-me .wecom-reply-children .wecom-msg {\n      max-width: 100% !important;\n      width: 100% !important;\n      gap: 5px !important;\n      margin-bottom: 0 !important;\n      flex-direction: row !important;\n      align-self: flex-start !important;\n      text-align: left !important;\n    }"),
+    ".wecom-reply-children .wecom-msg must be strictly flex-direction: row, align-self: flex-start, text-align: left"
+  );
+
+  assert.ok(
+    scriptContent.includes(".wecom-reply-children .wecom-msg-content,\n    .wecom-msg-me .wecom-reply-children .wecom-msg-content {\n      min-width: 0 !important;\n      width: 100% !important;\n      flex: 1 1 auto !important;\n      display: flex !important;\n      flex-direction: column !important;\n      align-items: flex-start !important;\n      text-align: left !important;\n    }"),
+    "nested reply content must enforce align-items: flex-start !important and text-align: left !important"
+  );
+
+  assert.ok(
+    scriptContent.includes(".wecom-reply-children .wecom-msg-bubble,\n    .wecom-msg-me .wecom-reply-children .wecom-msg-bubble {\n      background: transparent !important;\n      border: none !important;\n      box-shadow: none !important;\n      padding: 0 !important;\n      margin: 0 !important;\n      border-radius: 0 !important;\n      font-size: 13px !important;\n      color: inherit !important;\n      align-self: flex-start !important;\n      text-align: left !important;\n      width: auto !important;\n      max-width: 100% !important;\n    }"),
+    "nested reply bubble must enforce align-self: flex-start !important and text-align: left !important"
+  );
+
+  assert.ok(
+    scriptContent.includes(".wecom-reply-children .wecom-msg-header,\n    .wecom-msg-me .wecom-reply-children .wecom-msg-header {\n      margin-bottom: 2px !important;\n      gap: 4px !important;\n      align-self: flex-start !important;\n      justify-content: flex-start !important;\n      text-align: left !important;\n      width: 100% !important;\n    }"),
+    "nested reply header must enforce justify-content: flex-start !important"
   );
 });
 

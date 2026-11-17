@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.36
+// @version      0.8.37
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -4306,13 +4306,34 @@
       border-radius: 2px !important;
       display: block !important;
     }
-    .wecom-reply-children .wecom-msg-content {
-      min-width: 0;
-      flex: 1;
+    .wecom-reply-children .wecom-msg,
+    .wecom-msg-me .wecom-reply-children .wecom-msg {
+      max-width: 100% !important;
+      width: 100% !important;
+      gap: 5px !important;
+      margin-bottom: 0 !important;
+      flex-direction: row !important;
+      align-self: flex-start !important;
+      text-align: left !important;
     }
-    .wecom-reply-children .wecom-msg-header {
-      margin-bottom: 2px;
-      gap: 4px;
+    .wecom-reply-children .wecom-msg-content,
+    .wecom-msg-me .wecom-reply-children .wecom-msg-content {
+      min-width: 0 !important;
+      width: 100% !important;
+      flex: 1 1 auto !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: flex-start !important;
+      text-align: left !important;
+    }
+    .wecom-reply-children .wecom-msg-header,
+    .wecom-msg-me .wecom-reply-children .wecom-msg-header {
+      margin-bottom: 2px !important;
+      gap: 4px !important;
+      align-self: flex-start !important;
+      justify-content: flex-start !important;
+      text-align: left !important;
+      width: 100% !important;
     }
     .wecom-reply-children .wecom-msg-name {
       display: inline-flex !important;
@@ -4327,7 +4348,8 @@
       display: inline-flex !important;
       color: var(--wc-text) !important;
     }
-    .wecom-reply-children .wecom-msg-bubble {
+    .wecom-reply-children .wecom-msg-bubble,
+    .wecom-msg-me .wecom-reply-children .wecom-msg-bubble {
       background: transparent !important;
       border: none !important;
       box-shadow: none !important;
@@ -4336,11 +4358,25 @@
       border-radius: 0 !important;
       font-size: 13px !important;
       color: inherit !important;
+      align-self: flex-start !important;
+      text-align: left !important;
+      width: auto !important;
+      max-width: 100% !important;
     }
-    .wecom-reply-children .wecom-msg-meta {
-      margin-top: 0;
-      font-size: 10px;
-      gap: 5px;
+    .wecom-reply-children .wecom-msg-body,
+    .wecom-msg-me .wecom-reply-children .wecom-msg-body {
+      text-align: left !important;
+      width: auto !important;
+      max-width: 100% !important;
+    }
+    .wecom-reply-children .wecom-msg-meta,
+    .wecom-msg-me .wecom-reply-children .wecom-msg-meta {
+      margin-top: 0 !important;
+      font-size: 10px !important;
+      gap: 5px !important;
+      align-self: flex-start !important;
+      justify-content: flex-start !important;
+      text-align: left !important;
     }
     .wecom-reply-children .wecom-reply-children {
       margin-top: 5px;
@@ -4365,8 +4401,8 @@
       justify-content: flex-start !important;
     }
     .wecom-msg-me .wecom-reply-children {
-      text-align: left;
-      direction: ltr;
+      text-align: left !important;
+      direction: ltr !important;
     }
     .wecom-msg-header {
       display: flex;
@@ -21500,7 +21536,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.36";
+  const SCRIPT_VERSION = "0.8.37";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
