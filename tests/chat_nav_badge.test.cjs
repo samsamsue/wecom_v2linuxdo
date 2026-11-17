@@ -14087,8 +14087,7 @@ test("Test 173: Reddit-style hierarchical thread tree with guide lines, independ
   assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children .wecom-msg-bubble"), "Reddit style must define bubble rules");
   assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reddit-node:hover:not(:has(.wecom-reddit-node:hover))"), "Reddit thread lines must highlight on hover without bubbling");
   assert.ok(scriptContent.includes("border-bottom-left-radius: 12px"), "Reddit style must render curved branches into child avatars");
-  assert.ok(scriptContent.includes('class="wecom-collapse-minus"'), "collapse button must include SVG minus line");
-  assert.ok(scriptContent.includes('class="wecom-collapse-plus"'), "collapse button must include SVG plus line");
+  assert.ok(scriptContent.includes('wecom-collapse-chevron'), "collapse button must include sleek chevron");
 
   // 6. Direct child combinator prevents .wecom-msg-me from pushing nested replies to the right
   assert.ok(scriptContent.includes(".wecom-msg-me:not(.is-thread-child) > .wecom-msg-content"), "must use child combinator to keep nested replies left-aligned");
@@ -14125,7 +14124,7 @@ test("Test 174: Reddit thread tree authentic alignment (gutter column, curved br
   assert.ok(scriptContent.includes("border-bottom-left-radius: 12px !important;"), "curved branch must enter vertical center of child avatar (14px)");
   assert.ok(scriptContent.includes(":last-child"), "must close branch cleanly at last child");
   assert.ok(scriptContent.includes(":not(:has(.wecom-reddit-node:hover))"), "hover on child branch must not highlight ancestors");
-  assert.ok(scriptContent.includes('fill="var(--wc-bg, #FFFFFF)"'), "collapse button must use single-layer SVG circle mask");
+  assert.ok(scriptContent.includes("wecom-collapse-chevron"), "collapse button must use modern SVG chevron");
 
   // 5. Interactive collapse handlers
   assert.ok(scriptContent.includes('const collapseTrigger = event.target.closest(".wecom-thread-collapse-btn, .wecom-reddit-line, .wecom-reddit-collapsed-hint");'), "must allow collapsing via line, circle button or hint");
@@ -14133,9 +14132,11 @@ test("Test 174: Reddit thread tree authentic alignment (gutter column, curved br
 });
 
 test("Test 175: Reddit thread tree clean 1px fine line without white mask blocks (v0.8.39)", () => {
-  // 1. Indentation geometry
+  // 1. Indentation geometry & shreddit-comment / ssr-thread-line
   assert.ok(scriptContent.includes("margin-left: 13.5px !important;"), "replies container aligns with parent 14px axis");
   assert.ok(scriptContent.includes("padding-left: 21px !important;"), "child nodes indent by 21px");
+  assert.ok(scriptContent.includes("shreddit-comment"), "must define shreddit-comment standard web component class");
+  assert.ok(scriptContent.includes("ssr-thread-line"), "must define ssr-thread-line continuous trunk line");
 
   // 2. Child branch arc ╰─► branching off into avatar center
   assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children > .wecom-thread-node > .wecom-reddit-node > .wecom-reddit-row > .wecom-reddit-gutter::before"), "must define curved branch line");
@@ -14143,12 +14144,11 @@ test("Test 175: Reddit thread tree clean 1px fine line without white mask blocks
   assert.ok(scriptContent.includes("height: 15px !important;"), "branch curve reaches avatar center at 14px");
   assert.ok(scriptContent.includes("border-bottom-left-radius: 12px !important;"), "branch curve must have rounded corner");
 
-  // 3. Sibling continuation line for non-last children
-  assert.ok(scriptContent.includes(".wecom-thread-node:not(:last-child)::after"), "non-last children must continue line downwards");
-  assert.ok(scriptContent.includes("top: 14px !important;"), "continuation line begins at avatar center");
+  // 3. Clean line termination matching chat background seamlessly without white stripes
+  assert.ok(scriptContent.includes(".wecom-thread-node:last-child::after"), "last child terminates line cleanly without protrusion");
+  assert.ok(scriptContent.includes("background: var(--wc-chat-bg, #F5F7FB) !important;"), "mask must match chat background seamlessly");
 
   // 4. Hover highlighting without bubbling to ancestors
-  assert.ok(scriptContent.includes(":has(~ .wecom-thread-node:hover)::after"), "preceding siblings continue highlight downwards to hovered child");
   assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-msg:has(> .wecom-reply-children"), "direct parent highlights on child hover without bubbling to ancestors");
 });
 
