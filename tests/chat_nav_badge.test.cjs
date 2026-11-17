@@ -1196,7 +1196,8 @@ test("Linux DO notification menu teardown, route synchronization, and topic navi
   assert.ok(
     scriptContent.includes('navigateInApp(IS_V2EX ? "/?tab=all" : "/latest");') ||
     scriptContent.includes('navigateInApp(IS_V2EX ? "/?tab=all" : (IS_JUEJIN ? "/pins/recommended" : "/latest"));') ||
-    scriptContent.includes('navigateInApp(IS_ZHIHU ? "/hot" : (IS_V2EX ? "/?tab=all" : (IS_JUEJIN ? "/pins/recommended" : "/latest")));'),
+    scriptContent.includes('navigateInApp(IS_ZHIHU ? "/hot" : (IS_V2EX ? "/?tab=all" : (IS_JUEJIN ? "/pins/recommended" : "/latest")));') ||
+    scriptContent.includes('navigateInApp(IS_ZHIHU ? "/" : (IS_V2EX ? "/?tab=all" : (IS_JUEJIN ? "/pins/recommended" : "/latest")));'),
     "handleChatNavClick must route to latest when clicking from unsupported path"
   );
 
@@ -14024,9 +14025,9 @@ test("Test 171: bubble does not display floating .wecom-bubble-layout-toggle but
 test("Test 172: nested replies in .wecom-reply-children stay strictly left-aligned under outgoing bubbles (.wecom-msg-me) (v0.8.37)", () => {
   const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
-  assert.ok(metaContent.includes("@version      0.8.37"), "meta.js version must be 0.8.37");
-  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.37";'), "user.js version must be 0.8.37");
-  assert.ok(readmeContent.includes("0.8.37"), "README.md version must be 0.8.37");
+  assert.match(metaContent, /@version\s+0\.8\.(3[7-9]|[4-9]\d)/, "meta.js version must be 0.8.37+");
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.(3[7-9]|[4-9]\d)";/, "user.js version must be 0.8.37+");
+  assert.match(readmeContent, /0\.8\.(3[7-9]|[4-9]\d)/, "README.md version must be 0.8.37+");
 
   // 1. All reply messages & contents inside .wecom-reply-children (and within .wecom-msg-me) are left-aligned
   assert.ok(
@@ -14048,6 +14049,49 @@ test("Test 172: nested replies in .wecom-reply-children stay strictly left-align
     scriptContent.includes(".wecom-reply-children .wecom-msg-header,\n    .wecom-msg-me .wecom-reply-children .wecom-msg-header {\n      margin-bottom: 2px !important;\n      gap: 4px !important;\n      align-self: flex-start !important;\n      justify-content: flex-start !important;\n      text-align: left !important;\n      width: 100% !important;\n    }"),
     "nested reply header must enforce justify-content: flex-start !important"
   );
+});
+
+test("Test 173: Reddit-style hierarchical thread tree with guide lines, independent bubbles, interactive collapse, and settings switcher (v0.8.38)", () => {
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+  assert.ok(metaContent.includes("@version      0.8.38"), "meta.js version must be 0.8.38");
+  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.38";'), "user.js version must be 0.8.38");
+  assert.ok(readmeContent.includes("0.8.38"), "README.md version must be 0.8.38");
+
+  // 1. Thread style storage constants & helpers
+  assert.ok(scriptContent.includes('const THREAD_VIEW_STYLE_KEY = "linuxdo-wecom-thread-view-style";'), "THREAD_VIEW_STYLE_KEY must be defined");
+  assert.ok(scriptContent.includes('const THREAD_STYLE_BUBBLE = "bubble";'), "THREAD_STYLE_BUBBLE constant must be defined");
+  assert.ok(scriptContent.includes('const THREAD_STYLE_REDDIT = "reddit";'), "THREAD_STYLE_REDDIT constant must be defined");
+  assert.ok(scriptContent.includes("function getThreadViewStyle()"), "getThreadViewStyle must be defined");
+  assert.ok(scriptContent.includes("function isRedditThreadStyle()"), "isRedditThreadStyle must be defined");
+  assert.ok(scriptContent.includes("function applyThreadViewStyleClass()"), "applyThreadViewStyleClass must be defined");
+  assert.ok(scriptContent.includes("function setThreadViewStyle(style)"), "setThreadViewStyle must be defined");
+
+  // 2. Settings menu controls
+  assert.ok(scriptContent.includes('class="wecom-menu-thread-style-row"'), "settings menu must contain thread style row");
+  assert.ok(scriptContent.includes('class="wecom-thread-style-chip" data-style="bubble"'), "bubble style chip must exist");
+  assert.ok(scriptContent.includes('class="wecom-thread-style-chip" data-style="reddit"'), "reddit style chip must exist");
+  assert.ok(scriptContent.includes("setThreadViewStyle(styleVal)"), "settings click handler must call setThreadViewStyle");
+
+  // 3. Conditional placement in bubbleHtml and renderZhihuCommentBubble
+  assert.ok(scriptContent.includes('${!isReddit ? (childrenHtml || "") : ""}'), "bubbleHtml must render children conditionally for bubble style");
+  assert.ok(scriptContent.includes('${isReddit ? (childrenHtml || "") : ""}'), "bubbleHtml must render children conditionally for reddit style");
+  assert.ok(scriptContent.includes('${!isReddit ? childrenHtml : ""}'), "renderZhihuCommentBubble must render children conditionally for bubble style");
+  assert.ok(scriptContent.includes('${isReddit ? childrenHtml : ""}'), "renderZhihuCommentBubble must render children conditionally for reddit style");
+
+  // 4. Interactive thread collapse button & class
+  assert.ok(scriptContent.includes('class="wecom-thread-collapse-btn"'), "collapse button must be rendered on thread headers with children");
+  assert.ok(scriptContent.includes('msgEl.classList.toggle("is-thread-collapsed")'), "clicking collapse button must toggle is-thread-collapsed");
+  assert.ok(scriptContent.includes(".wecom-msg.is-thread-collapsed > .wecom-msg-content > .wecom-msg-bubble"), "is-thread-collapsed must hide bubble and children");
+
+  // 5. Reddit tree styling & hover line highlights
+  assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children"), "Reddit style must define .wecom-reply-children rules");
+  assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children .wecom-msg-bubble"), "Reddit style child messages must have dedicated bubbles");
+  assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children:hover:not(:has(.wecom-reply-children:hover))"), "Reddit thread lines must highlight on hover");
+
+  // 6. Direct child combinator prevents .wecom-msg-me from pushing nested replies to the right
+  assert.ok(scriptContent.includes(".wecom-msg-me:not(.is-thread-child) > .wecom-msg-content"), "must use child combinator to keep nested replies left-aligned");
+  assert.ok(scriptContent.includes(".wecom-msg-images {\n      display: flex !important;\n      flex-wrap: wrap !important;\n      gap: 8px !important;\n      margin-top: 8px !important;\n      width: fit-content !important;\n      max-width: 100% !important;\n      box-sizing: border-box !important;\n    }"), "image gallery must use fit-content to avoid stretching narrow bubble");
 });
 
 
