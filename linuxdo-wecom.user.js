@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.38
+// @version      0.8.39
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -4192,6 +4192,9 @@
     .wecom-topic-bookmark.is-bookmarked svg path { fill: currentColor; }
     .wecom-chat-panel[data-empty="1"] .wecom-topic-bookmark { display: none; }
     .wecom-msg-content { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; position: relative; }
+    .wecom-msg-me .wecom-msg-content {
+      align-items: flex-end;
+    }
     .wecom-msg-me:not(.is-thread-child) > .wecom-msg-content { align-items: flex-end; }
     .wecom-msg-name { font-size: 12px; color: var(--wc-text-3); margin-bottom: 0 !important; }
     .wecom-msg-me:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-header > .wecom-msg-name { display: none !important; }
@@ -4452,31 +4455,104 @@
     /* Reddit 模式全局消息去气泡化、纯净流式阅读排版 */
     html.wecom-thread-style-reddit .wecom-chat-body {
       gap: 12px !important;
+      padding: 16px 20px !important;
     }
     html.wecom-thread-style-reddit .wecom-msg,
     html.wecom-thread-style-reddit .wecom-msg.wecom-msg-me {
       display: flex !important;
-      flex-direction: row !important;
+      flex-direction: column !important;
       align-self: flex-start !important;
       align-items: flex-start !important;
-      gap: 10px !important;
       max-width: 100% !important;
       width: 100% !important;
       position: relative !important;
-      margin-bottom: 4px !important;
+      margin-bottom: 6px !important;
+      background: transparent !important;
     }
-    html.wecom-thread-style-reddit .wecom-msg-avatar {
+    html.wecom-thread-style-reddit .wecom-reddit-row {
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: flex-start !important;
+      width: 100% !important;
+      position: relative !important;
+    }
+    html.wecom-thread-style-reddit .wecom-reddit-gutter {
+      width: 28px !important;
+      flex: 0 0 28px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      position: relative !important;
+      align-self: stretch !important;
+    }
+    html.wecom-thread-style-reddit .wecom-msg-avatar,
+    html.wecom-thread-style-reddit .wecom-reddit-avatar {
       width: 28px !important;
       height: 28px !important;
       min-width: 28px !important;
       border-radius: 50% !important;
       flex: 0 0 28px !important;
       overflow: hidden !important;
+      z-index: 2 !important;
     }
     html.wecom-thread-style-reddit .wecom-msg-avatar img {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
       border-radius: 50% !important;
     }
+    html.wecom-thread-style-reddit .wecom-reddit-line {
+      position: absolute !important;
+      top: 32px !important;
+      bottom: 0 !important;
+      left: 13px !important;
+      width: 2px !important;
+      background: rgba(0, 0, 0, 0.12) !important;
+      cursor: pointer !important;
+      z-index: 1 !important;
+      transition: background 0.16s ease !important;
+    }
+    html.wecom-thread-style-reddit.wecom-dark .wecom-reddit-line,
+    html.wecom-dark.wecom-thread-style-reddit .wecom-reddit-line {
+      background: rgba(255, 255, 255, 0.15) !important;
+    }
+    html.wecom-thread-style-reddit .wecom-reddit-node:hover > .wecom-reddit-row > .wecom-reddit-gutter > .wecom-reddit-line,
+    html.wecom-thread-style-reddit .wecom-reddit-line:hover {
+      background: var(--wc-accent, #267EF0) !important;
+    }
+    html.wecom-thread-style-reddit .wecom-reddit-collapse-circle {
+      position: absolute !important;
+      left: 6px !important;
+      bottom: 4px !important;
+      width: 16px !important;
+      height: 16px !important;
+      border-radius: 50% !important;
+      background: var(--wc-bg, #FFFFFF) !important;
+      border: 1.5px solid rgba(0, 0, 0, 0.28) !important;
+      color: var(--wc-text-3, #7C7C7C) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      cursor: pointer !important;
+      z-index: 3 !important;
+      outline: none !important;
+      transition: transform 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
+    }
+    html.wecom-thread-style-reddit.wecom-dark .wecom-reddit-collapse-circle,
+    html.wecom-dark.wecom-thread-style-reddit .wecom-reddit-collapse-circle {
+      background: var(--wc-bg, #1A1A1B) !important;
+      border-color: rgba(255, 255, 255, 0.3) !important;
+      color: #818384 !important;
+    }
+    html.wecom-thread-style-reddit .wecom-reddit-collapse-circle:hover {
+      border-color: var(--wc-accent, #267EF0) !important;
+      color: var(--wc-accent, #267EF0) !important;
+      transform: scale(1.15) !important;
+    }
     html.wecom-thread-style-reddit .wecom-msg-content,
+    html.wecom-thread-style-reddit .wecom-reddit-body-col,
     html.wecom-thread-style-reddit .wecom-msg.wecom-msg-me .wecom-msg-content {
       min-width: 0 !important;
       width: 100% !important;
@@ -4485,8 +4561,10 @@
       flex-direction: column !important;
       align-items: flex-start !important;
       text-align: left !important;
+      padding-left: 10px !important;
     }
     html.wecom-thread-style-reddit .wecom-msg-header,
+    html.wecom-thread-style-reddit .wecom-reddit-header,
     html.wecom-thread-style-reddit .wecom-msg.wecom-msg-me .wecom-msg-header {
       align-self: flex-start !important;
       justify-content: flex-start !important;
@@ -4495,22 +4573,43 @@
       margin-bottom: 2px !important;
       font-size: 12px !important;
       gap: 6px !important;
+      display: flex !important;
+      flex-wrap: wrap !important;
+      align-items: center !important;
     }
     html.wecom-thread-style-reddit .wecom-msg-name,
     html.wecom-thread-style-reddit .wecom-msg-me:not(.is-thread-child) > .wecom-msg-content > .wecom-msg-header > .wecom-msg-name {
       display: inline-flex !important;
       font-size: 12.5px !important;
-      font-weight: 600 !important;
+      font-weight: 700 !important;
       color: var(--wc-text) !important;
       cursor: pointer !important;
     }
+    html.wecom-thread-style-reddit .wecom-msg-name:hover {
+      text-decoration: underline !important;
+    }
+    html.wecom-thread-style-reddit .wecom-reddit-dot {
+      color: var(--wc-text-3, #7C7C7C) !important;
+      font-size: 12px !important;
+    }
+    html.wecom-thread-style-reddit .wecom-reddit-collapsed-hint {
+      display: none !important;
+      font-size: 12px !important;
+      color: var(--wc-accent, #267EF0) !important;
+      cursor: pointer !important;
+      margin-left: 4px !important;
+    }
+    html.wecom-thread-style-reddit .is-thread-collapsed .wecom-reddit-collapsed-hint {
+      display: inline-block !important;
+    }
     html.wecom-thread-style-reddit .wecom-msg-bubble,
+    html.wecom-thread-style-reddit .wecom-reddit-content,
     html.wecom-thread-style-reddit .wecom-reply-children .wecom-msg-bubble,
     html.wecom-thread-style-reddit .wecom-msg.wecom-msg-me .wecom-msg-bubble {
       background: transparent !important;
       border: none !important;
       box-shadow: none !important;
-      padding: 2px 0 4px 0 !important;
+      padding: 2px 0 6px 0 !important;
       margin: 0 !important;
       border-radius: 0 !important;
       font-size: 14px !important;
@@ -4523,22 +4622,74 @@
     }
     html.wecom-thread-style-reddit.wecom-dark .wecom-msg-bubble,
     html.wecom-dark.wecom-thread-style-reddit .wecom-msg-bubble,
+    html.wecom-thread-style-reddit.wecom-dark .wecom-reddit-content,
+    html.wecom-dark.wecom-thread-style-reddit .wecom-reddit-content,
     html.wecom-thread-style-reddit.wecom-dark .wecom-msg.wecom-msg-me .wecom-msg-bubble,
     html.wecom-dark.wecom-thread-style-reddit .wecom-msg.wecom-msg-me .wecom-msg-bubble {
       color: var(--wc-text, #E1E4EA) !important;
+    }
+
+    /* Reddit 底部操作条 (对齐官方布局与交互) */
+    html.wecom-thread-style-reddit .wecom-reddit-actions {
+      display: flex !important;
+      align-items: center !important;
+      gap: 8px !important;
+      margin-top: 4px !important;
+      user-select: none !important;
+    }
+    html.wecom-thread-style-reddit .wecom-reddit-vote {
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 3px !important;
+      font-size: 12px !important;
+      font-weight: 600 !important;
+      color: var(--wc-text-3, #7C7C7C) !important;
+    }
+    html.wecom-thread-style-reddit .wecom-reddit-act-btn {
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 4px !important;
+      background: none !important;
+      border: none !important;
+      padding: 4px 8px !important;
+      border-radius: 4px !important;
+      color: var(--wc-text-3, #7C7C7C) !important;
+      font-size: 12px !important;
+      font-weight: 600 !important;
+      cursor: pointer !important;
+      transition: background 0.12s, color 0.12s !important;
+      line-height: 1 !important;
+    }
+    html.wecom-thread-style-reddit .wecom-reddit-act-btn:hover {
+      background: rgba(0, 0, 0, 0.05) !important;
+      color: var(--wc-text) !important;
+    }
+    html.wecom-thread-style-reddit.wecom-dark .wecom-reddit-act-btn:hover,
+    html.wecom-dark.wecom-thread-style-reddit .wecom-reddit-act-btn:hover {
+      background: rgba(255, 255, 255, 0.08) !important;
+      color: #D7DADC !important;
+    }
+    html.wecom-thread-style-reddit .wecom-reddit-vote-btn.liked {
+      color: #FF4500 !important;
+    }
+    html.wecom-thread-style-reddit .wecom-reddit-vote-count {
+      min-width: 14px !important;
+      text-align: center !important;
     }
 
     /* Reddit 树状引导线与子楼层缩进 */
     html.wecom-thread-style-reddit .wecom-reply-children {
       display: flex !important;
       flex-direction: column !important;
-      gap: 10px !important;
-      margin-top: 6px !important;
+      gap: 8px !important;
+      margin-top: 4px !important;
       margin-left: 13px !important; /* 对齐 28px 头像中心 14px */
       padding-top: 4px !important;
-      padding-left: 20px !important;
+      padding-left: 21px !important;
       border-left: 2px solid rgba(0, 0, 0, 0.12) !important;
       position: relative !important;
+      width: calc(100% - 13px) !important;
+      box-sizing: border-box !important;
       transition: border-left-color 0.16s ease !important;
     }
     html.wecom-thread-style-reddit.wecom-dark .wecom-reply-children,
@@ -4550,35 +4701,50 @@
       border-left-color: var(--wc-accent, #267EF0) !important;
     }
 
-    /* Reddit 风格：每个子回复左侧圆润弧形分支线 ╰─► 直通子头像 */
+    /* Reddit 风格：每个子回复左侧圆润弧形分支线 ╰─► 直通子头像中心 */
+    html.wecom-thread-style-reddit .wecom-reply-children > .wecom-reddit-node > .wecom-reddit-row > .wecom-reddit-gutter::before,
+    html.wecom-thread-style-reddit .wecom-reply-children > .wecom-thread-node > .wecom-reddit-node > .wecom-reddit-row > .wecom-reddit-gutter::before,
     html.wecom-thread-style-reddit .wecom-reply-children > .wecom-msg.is-thread-child::before,
     html.wecom-thread-style-reddit .wecom-reply-children > .wecom-thread-node > .wecom-msg.is-thread-child::before {
       content: "" !important;
       position: absolute !important;
-      left: -20px !important;
+      left: -23px !important;
       top: 0 !important;
-      width: 16px !important;
+      width: 23px !important;
       height: 14px !important;
+      border-left: 2px solid rgba(0, 0, 0, 0.12) !important;
       border-bottom: 2px solid rgba(0, 0, 0, 0.12) !important;
       border-bottom-left-radius: 12px !important;
       pointer-events: none !important;
       transition: border-color 0.16s ease !important;
     }
+    html.wecom-thread-style-reddit.wecom-dark .wecom-reply-children > .wecom-reddit-node > .wecom-reddit-row > .wecom-reddit-gutter::before,
+    html.wecom-dark.wecom-thread-style-reddit .wecom-reply-children > .wecom-reddit-node > .wecom-reddit-row > .wecom-reddit-gutter::before,
+    html.wecom-thread-style-reddit.wecom-dark .wecom-reply-children > .wecom-thread-node > .wecom-reddit-node > .wecom-reddit-row > .wecom-reddit-gutter::before,
+    html.wecom-dark.wecom-thread-style-reddit .wecom-reply-children > .wecom-thread-node > .wecom-reddit-node > .wecom-reddit-row > .wecom-reddit-gutter::before,
     html.wecom-thread-style-reddit.wecom-dark .wecom-reply-children > .wecom-msg.is-thread-child::before,
-    html.wecom-dark.wecom-thread-style-reddit .wecom-reply-children > .wecom-msg.is-thread-child::before,
-    html.wecom-thread-style-reddit.wecom-dark .wecom-reply-children > .wecom-thread-node > .wecom-msg.is-thread-child::before,
-    html.wecom-dark.wecom-thread-style-reddit .wecom-reply-children > .wecom-thread-node > .wecom-msg.is-thread-child::before {
-      border-bottom-color: rgba(255, 255, 255, 0.15) !important;
+    html.wecom-dark.wecom-thread-style-reddit .wecom-reply-children > .wecom-msg.is-thread-child::before {
+      border-color: rgba(255, 255, 255, 0.15) !important;
     }
+    html.wecom-thread-style-reddit .wecom-reply-children:hover:not(:has(.wecom-reply-children:hover)) > .wecom-reddit-node > .wecom-reddit-row > .wecom-reddit-gutter::before,
+    html.wecom-thread-style-reddit .wecom-reply-children:hover:not(:has(.wecom-reply-children:hover)) > .wecom-thread-node > .wecom-reddit-node > .wecom-reddit-row > .wecom-reddit-gutter::before,
     html.wecom-thread-style-reddit .wecom-reply-children:hover:not(:has(.wecom-reply-children:hover)) > .wecom-msg.is-thread-child::before,
     html.wecom-thread-style-reddit .wecom-reply-children:hover:not(:has(.wecom-reply-children:hover)) > .wecom-thread-node > .wecom-msg.is-thread-child::before {
-      border-bottom-color: var(--wc-accent, #267EF0) !important;
+      border-color: var(--wc-accent, #267EF0) !important;
     }
     html.wecom-thread-style-reddit .wecom-reply-children .wecom-msg-avatar {
-      width: 24px !important;
-      height: 24px !important;
-      min-width: 24px !important;
-      flex: 0 0 24px !important;
+      width: 28px !important;
+      height: 28px !important;
+      min-width: 28px !important;
+      flex: 0 0 28px !important;
+    }
+
+    /* Reddit 折叠状态处理 */
+    html.wecom-thread-style-reddit .wecom-msg.is-thread-collapsed > .wecom-reddit-row > .wecom-reddit-body-col > .wecom-msg-bubble,
+    html.wecom-thread-style-reddit .wecom-msg.is-thread-collapsed > .wecom-reddit-row > .wecom-reddit-body-col > .wecom-reddit-actions,
+    html.wecom-thread-style-reddit .wecom-msg.is-thread-collapsed > .wecom-reply-children,
+    html.wecom-thread-style-reddit .wecom-msg.is-thread-collapsed > .wecom-reddit-row > .wecom-reddit-gutter > .wecom-reddit-line {
+      display: none !important;
     }
     .wecom-msg-header {
       display: flex;
@@ -16210,9 +16376,7 @@
   })();
 
   function isNav2Open() {
-    if (typeof document !== "undefined" && document.documentElement?.classList.contains("wecom-nav2-open")) {
-      return true;
-    }
+    if (IS_JUEJIN || IS_ZHIHU) return false;
     try { return localStorage.getItem(NAV2_KEY) === "1"; } catch { return false; }
   }
 
@@ -16266,6 +16430,10 @@
   }
 
   function setNav2Open(open) {
+    if (IS_JUEJIN || IS_ZHIHU) {
+      setListNavOpen(open);
+      return;
+    }
     const shouldOpen = Boolean(open);
     try { localStorage.setItem(NAV2_KEY, shouldOpen ? "1" : "0"); } catch { /* ignore */ }
     document.documentElement.classList.toggle("wecom-nav2-open", shouldOpen);
@@ -21860,7 +22028,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.38";
+  const SCRIPT_VERSION = "0.8.39";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -35941,12 +36109,25 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   }
 
   function handleMessageToolClick(event, panel) {
-    const button = event.target.closest(".wecom-msg-tool");
+    const button = event.target.closest(".wecom-msg-tool") || event.target.closest(".wecom-reddit-act-btn");
     if (!button || !panel.contains(button)) return;
     const message = button.closest(".wecom-msg");
     if (!message) return;
     consumeClick(event);
     const action = button.dataset.action;
+    if (action === "msg-more") {
+      const isOpen = message.classList.contains("is-tools-open");
+      closeAllMsgToolsMenus(panel);
+      if (!isOpen) {
+        message.classList.add("is-tools-open");
+        button.setAttribute("aria-expanded", "true");
+      }
+      return;
+    }
+    if (action === "dislike") {
+      showWecomToast("已收到您的反馈", "info", 1500);
+      return;
+    }
     if (action === "boost") {
       const result = IS_LINUXDO ? openBoostPopover(message, button) : undefined;
       closeAllMsgToolsMenus(panel);
@@ -36025,15 +36206,18 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       closeZhihuCommentThread(panel);
       return;
     }
-    const collapseBtn = event.target.closest(".wecom-thread-collapse-btn");
-    if (collapseBtn && panel.contains(collapseBtn)) {
+    const collapseTrigger = event.target.closest(".wecom-thread-collapse-btn, .wecom-reddit-line, .wecom-reddit-collapsed-hint");
+    if (collapseTrigger && panel.contains(collapseTrigger)) {
       consumeClick(event);
-      const msgEl = collapseBtn.closest(".wecom-msg");
+      const msgEl = collapseTrigger.closest(".wecom-msg");
       if (msgEl) {
         const isCollapsed = msgEl.classList.toggle("is-thread-collapsed");
-        collapseBtn.title = isCollapsed ? "展开楼层回复" : "折叠楼层回复";
-        collapseBtn.setAttribute("aria-label", isCollapsed ? "展开楼层回复" : "折叠楼层回复");
-        collapseBtn.setAttribute("aria-expanded", isCollapsed ? "false" : "true");
+        const collapseBtn = msgEl.querySelector(".wecom-thread-collapse-btn");
+        if (collapseBtn) {
+          collapseBtn.title = isCollapsed ? "展开楼层回复" : "折叠楼层回复";
+          collapseBtn.setAttribute("aria-label", isCollapsed ? "展开楼层回复" : "折叠楼层回复");
+          collapseBtn.setAttribute("aria-expanded", isCollapsed ? "false" : "true");
+        }
       }
       return;
     }
@@ -38239,10 +38423,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const metaHtml = metaParts ? `<span class="wecom-msg-meta">${metaParts}</span>` : "";
     const isReddit = isRedditThreadStyle();
     const hasChildren = Boolean(childrenHtml);
-    const collapseBtnHtml = (isReddit && hasChildren)
-      ? `<button type="button" class="wecom-thread-collapse-btn" title="折叠/展开楼层" aria-label="折叠/展开楼层"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="6.2"></circle><line class="wecom-collapse-minus" x1="4.5" y1="8" x2="11.5" y2="8"></line><line class="wecom-collapse-plus" x1="8" y1="4.5" x2="8" y2="11.5"></line></svg></button>`
-      : "";
-    return `
+
+    if (!isReddit) {
+      return `
       <div class="wecom-msg wecom-msg-${side}${threadClass}" data-post-number="${post.post_number}"${post.id ? ` data-post-id="${post.id}"` : ""}${post.floor != null ? ` data-floor="${post.floor}"` : ""}${threadAttr} data-username="${escapeHtml(post.username || "")}"${me ? ' data-mine="1"' : ""}${post.zhihu_pending ? ' data-zhihu-pending="1"' : ""}>
         <span class="wecom-msg-avatar" style="background:${avatarBg}"${userCardAttributes(post)}>${avatar}</span>
         <div class="wecom-msg-content">
@@ -38250,18 +38433,74 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             <span class="wecom-msg-name"${userCardAttributes(post)}>${escapeHtml(displayName)}</span>
             ${replyInd}
             ${metaHtml}
-            ${collapseBtnHtml}
             ${msgMoreTriggerHtml()}
           </div>
           <div class="wecom-msg-bubble">
             ${replyReferenceHtml(post)}
             <div class="wecom-msg-body">${bodyHtml}</div>
-            ${!isReddit ? (childrenHtml || "") : ""}
+            ${childrenHtml || ""}
           </div>
-          ${isReddit ? (childrenHtml || "") : ""}
           ${boostsHtml(post)}
           ${toolsMenuHtml}
         </div>
+      </div>`;
+    }
+
+    return `
+      <div class="wecom-msg wecom-reddit-node wecom-msg-${side}${threadClass}" data-post-number="${post.post_number}"${post.id ? ` data-post-id="${post.id}"` : ""}${post.floor != null ? ` data-floor="${post.floor}"` : ""}${threadAttr} data-username="${escapeHtml(post.username || "")}"${me ? ' data-mine="1"' : ""}${post.zhihu_pending ? ' data-zhihu-pending="1"' : ""}>
+        <div class="wecom-reddit-row">
+          <div class="wecom-reddit-gutter">
+            <span class="wecom-msg-avatar wecom-reddit-avatar" style="background:${avatarBg}"${userCardAttributes(post)}>${avatar}</span>
+            <div class="wecom-reddit-line" title="折叠/展开楼层"></div>
+            ${hasChildren ? `
+            <button type="button" class="wecom-thread-collapse-btn wecom-reddit-collapse-circle" title="折叠/展开此讨论" aria-label="折叠/展开此讨论">
+              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="8" cy="8" r="6.2"></circle>
+                <line class="wecom-collapse-minus" x1="4" y1="8" x2="12" y2="8"></line>
+                <line class="wecom-collapse-plus" x1="8" y1="4" x2="8" y2="12"></line>
+              </svg>
+            </button>` : ""}
+          </div>
+          <div class="wecom-msg-content wecom-reddit-body-col">
+            <div class="wecom-msg-header wecom-reddit-header">
+              <span class="wecom-msg-name"${userCardAttributes(post)}>${escapeHtml(displayName)}</span>
+              <span class="wecom-reddit-dot">·</span>
+              ${metaHtml}
+              ${replyInd ? `<span class="wecom-reddit-reply-ind">${replyInd}</span>` : ""}
+              <span class="wecom-reddit-collapsed-hint">(已折叠此讨论 - 点击展开)</span>
+              ${msgMoreTriggerHtml()}
+            </div>
+            <div class="wecom-msg-bubble wecom-reddit-content">
+              ${replyReferenceHtml(post)}
+              <div class="wecom-msg-body">${bodyHtml}</div>
+            </div>
+            <div class="wecom-reddit-actions">
+              <div class="wecom-reddit-vote" title="${likeLabel}">
+                <button type="button" class="wecom-reddit-act-btn wecom-reddit-vote-btn up${liked.trim()}" data-action="like" title="${likeLabel}">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4l-7 7h4v9h6v-9h4l-7-7z"/></svg>
+                </button>
+                <span class="wecom-reddit-vote-count">${likeCount > 0 ? likeCount : (liked ? 1 : "")}</span>
+                <button type="button" class="wecom-reddit-act-btn wecom-reddit-vote-btn down" data-action="dislike" title="反对">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20l7-7h-4V4h-6v9H5l7 7z"/></svg>
+                </button>
+              </div>
+              <button type="button" class="wecom-reddit-act-btn" data-action="reply" title="回复此楼层">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+                <span>回复</span>
+              </button>
+              <button type="button" class="wecom-reddit-act-btn" data-action="quote" title="引用此楼层">
+                ${ICONS.quote}
+                <span>引用</span>
+              </button>
+              <button type="button" class="wecom-reddit-act-btn wecom-msg-more-btn" data-action="msg-more" title="更多操作">
+                ···
+              </button>
+            </div>
+            ${boostsHtml(post)}
+            ${toolsMenuHtml}
+          </div>
+        </div>
+        ${childrenHtml || ""}
       </div>`;
   }
 
@@ -42401,11 +42640,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       : "";
     const isReddit = isRedditThreadStyle();
     const hasChildren = Boolean(childrenHtml);
-    const collapseBtnHtml = (isReddit && hasChildren)
-      ? `<button type="button" class="wecom-thread-collapse-btn" title="折叠/展开楼层" aria-label="折叠/展开楼层"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="6.2"></circle><line class="wecom-collapse-minus" x1="4.5" y1="8" x2="11.5" y2="8"></line><line class="wecom-collapse-plus" x1="8" y1="4.5" x2="8" y2="11.5"></line></svg></button>`
-      : "";
 
-    return `
+    if (!isReddit) {
+      return `
       <div class="wecom-msg wecom-msg-other${childClass}" data-comment-id="${escapeHtml(String(comm.id || ''))}" data-post-number="${floorNum}" data-floor="${floorNum}"${depthAttr} data-username="${authorName}">
         <span class="wecom-msg-avatar" style="background:${avatarBg}">${avatarHtml}</span>
         <div class="wecom-msg-content">
@@ -42417,19 +42654,80 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
               <span class="wecom-msg-floor" data-floor="${floorNum}" title="${floorNum}楼">#${floorNum}</span>
               ${likeHtml}
             </span>
-            ${collapseBtnHtml}
             ${msgMoreTriggerHtml()}
           </div>
           <div class="wecom-msg-bubble">
             <div class="wecom-msg-body">${contentHtml}</div>
-            ${!isReddit ? childrenHtml : ""}
+            ${childrenHtml}
           </div>
-          ${isReddit ? childrenHtml : ""}
           ${renderMsgToolsMenuHtml([[
             msgToolItemHtml({ action: "copy", icon: ICONS.copy, label: "复制", title: "复制消息内容" }),
             msgToolItemHtml({ action: "reply", icon: ICONS.reply, label: "回复", title: "回复" })
           ]])}
         </div>
+      </div>`;
+    }
+
+    return `
+      <div class="wecom-msg wecom-reddit-node wecom-msg-other${childClass}" data-comment-id="${escapeHtml(String(comm.id || ''))}" data-post-number="${floorNum}" data-floor="${floorNum}"${depthAttr} data-username="${authorName}">
+        <div class="wecom-reddit-row">
+          <div class="wecom-reddit-gutter">
+            <span class="wecom-msg-avatar wecom-reddit-avatar" style="background:${avatarBg}">${avatarHtml}</span>
+            <div class="wecom-reddit-line" title="折叠/展开楼层"></div>
+            ${hasChildren ? `
+            <button type="button" class="wecom-thread-collapse-btn wecom-reddit-collapse-circle" title="折叠/展开此讨论" aria-label="折叠/展开此讨论">
+              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="8" cy="8" r="6.2"></circle>
+                <line class="wecom-collapse-minus" x1="3.5" y1="8" x2="12.5" y2="8"></line>
+                <line class="wecom-collapse-plus" x1="8" y1="3.5" x2="8" y2="12.5"></line>
+              </svg>
+            </button>` : ""}
+          </div>
+          <div class="wecom-msg-content wecom-reddit-body-col">
+            <div class="wecom-msg-header wecom-reddit-header">
+              <span class="wecom-msg-name">${authorName}</span>
+              <span class="wecom-reddit-dot">·</span>
+              <span class="wecom-msg-meta">
+                <span class="wecom-msg-time"${timeAttr}>${escapeHtml(timeStr)}</span>
+                <span class="wecom-reddit-dot">·</span>
+                <span class="wecom-msg-floor" data-floor="${floorNum}" title="${floorNum}楼">#${floorNum}</span>
+              </span>
+              ${replyInd ? `<span class="wecom-reddit-reply-ind">${replyInd}</span>` : ""}
+              <span class="wecom-reddit-collapsed-hint">(已折叠此讨论 - 点击展开)</span>
+              ${msgMoreTriggerHtml()}
+            </div>
+            <div class="wecom-msg-bubble wecom-reddit-content">
+              <div class="wecom-msg-body">${contentHtml}</div>
+            </div>
+            <div class="wecom-reddit-actions">
+              <div class="wecom-reddit-vote" title="赞同">
+                <button type="button" class="wecom-reddit-act-btn wecom-reddit-vote-btn up${likeCount > 0 ? " liked" : ""}" data-action="like" title="赞同">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4l-7 7h4v9h6v-9h4l-7-7z"/></svg>
+                </button>
+                <span class="wecom-reddit-vote-count">${likeCount > 0 ? likeCount : ""}</span>
+                <button type="button" class="wecom-reddit-act-btn wecom-reddit-vote-btn down" data-action="dislike" title="反对">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20l7-7h-4V4h-6v9H5l7 7z"/></svg>
+                </button>
+              </div>
+              <button type="button" class="wecom-reddit-act-btn" data-action="reply" title="回复此评论">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+                <span>回复</span>
+              </button>
+              <button type="button" class="wecom-reddit-act-btn" data-action="copy" title="复制评论内容">
+                ${ICONS.copy}
+                <span>复制</span>
+              </button>
+              <button type="button" class="wecom-reddit-act-btn wecom-msg-more-btn" data-action="msg-more" title="更多操作">
+                ···
+              </button>
+            </div>
+            ${renderMsgToolsMenuHtml([[
+              msgToolItemHtml({ action: "copy", icon: ICONS.copy, label: "复制", title: "复制消息内容" }),
+              msgToolItemHtml({ action: "reply", icon: ICONS.reply, label: "回复", title: "回复" })
+            ]])}
+          </div>
+        </div>
+        ${childrenHtml}
       </div>`;
   }
 

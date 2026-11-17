@@ -14054,9 +14054,9 @@ test("Test 172: nested replies in .wecom-reply-children stay strictly left-align
 test("Test 173: Reddit-style hierarchical thread tree with guide lines, independent bubbles, interactive collapse, and settings switcher (v0.8.38)", () => {
   const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
-  assert.ok(metaContent.includes("@version      0.8.38"), "meta.js version must be 0.8.38");
-  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.38";'), "user.js version must be 0.8.38");
-  assert.ok(readmeContent.includes("0.8.38"), "README.md version must be 0.8.38");
+  assert.ok(/0\.8\.(3[8-9]|[4-9]\d)/.test(metaContent), "meta.js version must be 0.8.38+");
+  assert.ok(/0\.8\.(3[8-9]|[4-9]\d)/.test(scriptContent), "user.js version must be 0.8.38+");
+  assert.ok(/0\.8\.(3[8-9]|[4-9]\d)/.test(readmeContent), "README.md version must be 0.8.38+");
 
   // 1. Thread style storage constants & helpers
   assert.ok(scriptContent.includes('const THREAD_VIEW_STYLE_KEY = "linuxdo-wecom-thread-view-style";'), "THREAD_VIEW_STYLE_KEY must be defined");
@@ -14074,13 +14074,11 @@ test("Test 173: Reddit-style hierarchical thread tree with guide lines, independ
   assert.ok(scriptContent.includes("setThreadViewStyle(styleVal)"), "settings click handler must call setThreadViewStyle");
 
   // 3. Conditional placement in bubbleHtml and renderZhihuCommentBubble
-  assert.ok(scriptContent.includes('${!isReddit ? (childrenHtml || "") : ""}'), "bubbleHtml must render children conditionally for bubble style");
-  assert.ok(scriptContent.includes('${isReddit ? (childrenHtml || "") : ""}'), "bubbleHtml must render children conditionally for reddit style");
-  assert.ok(scriptContent.includes('${!isReddit ? childrenHtml : ""}'), "renderZhihuCommentBubble must render children conditionally for bubble style");
-  assert.ok(scriptContent.includes('${isReddit ? childrenHtml : ""}'), "renderZhihuCommentBubble must render children conditionally for reddit style");
+  assert.ok(scriptContent.includes("if (!isReddit)"), "bubbleHtml must branch on !isReddit for bubble style");
+  assert.ok(scriptContent.includes('class="wecom-msg wecom-reddit-node'), "bubbleHtml must render wecom-reddit-node for reddit style");
 
   // 4. Interactive thread collapse button & class
-  assert.ok(scriptContent.includes('class="wecom-thread-collapse-btn"'), "collapse button must be rendered on thread headers with children");
+  assert.ok(scriptContent.includes('wecom-thread-collapse-btn'), "collapse button must be rendered on thread headers with children");
   assert.ok(scriptContent.includes('msgEl.classList.toggle("is-thread-collapsed")'), "clicking collapse button must toggle is-thread-collapsed");
   assert.ok(scriptContent.includes(".wecom-msg.is-thread-collapsed > .wecom-msg-content > .wecom-msg-bubble"), "is-thread-collapsed must hide bubble and children");
 
@@ -14095,6 +14093,39 @@ test("Test 173: Reddit-style hierarchical thread tree with guide lines, independ
   // 6. Direct child combinator prevents .wecom-msg-me from pushing nested replies to the right
   assert.ok(scriptContent.includes(".wecom-msg-me:not(.is-thread-child) > .wecom-msg-content"), "must use child combinator to keep nested replies left-aligned");
   assert.ok(scriptContent.includes(".wecom-msg-images {\n      display: flex !important;\n      flex-wrap: wrap !important;\n      gap: 8px !important;\n      margin-top: 8px !important;\n      width: fit-content !important;\n      max-width: 100% !important;\n      box-sizing: border-box !important;\n    }"), "image gallery must use fit-content to avoid stretching narrow bubble");
+});
+
+test("Test 174: Reddit thread tree authentic alignment (gutter column, curved branches into child avatar, circular minus collapse button on line, actions bar, hover highlights) (v0.8.39)", () => {
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+  assert.ok(metaContent.includes("@version      0.8.39"), "meta.js version must be 0.8.39");
+  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.39";'), "user.js version must be 0.8.39");
+  assert.ok(readmeContent.includes("0.8.39"), "README.md version must be 0.8.39");
+
+  // 1. Reddit gutter structure & elements
+  assert.ok(scriptContent.includes('class="wecom-reddit-row"'), "must define .wecom-reddit-row");
+  assert.ok(scriptContent.includes('class="wecom-reddit-gutter"'), "must define .wecom-reddit-gutter");
+  assert.ok(scriptContent.includes('class="wecom-reddit-line"'), "must define .wecom-reddit-line");
+  assert.ok(scriptContent.includes('wecom-reddit-collapse-circle'), "must define circular collapse button on line");
+
+  // 2. Reddit action toolbar with up/downvote, reply, quote, more
+  assert.ok(scriptContent.includes('class="wecom-reddit-actions"'), "must render .wecom-reddit-actions");
+  assert.ok(scriptContent.includes('class="wecom-reddit-vote"'), "must render vote section");
+  assert.ok(scriptContent.includes('data-action="like"'), "must include like action on reddit bar");
+  assert.ok(scriptContent.includes('data-action="reply"'), "must include reply action on reddit bar");
+  assert.ok(scriptContent.includes('data-action="quote"'), "must include quote action on reddit bar");
+
+  // 3. CSS alignment and curved branch geometry
+  assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reddit-gutter"), "must style .wecom-reddit-gutter");
+  assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reddit-collapse-circle"), "must style circular collapse button");
+  assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reddit-line:hover"), "must highlight line on hover");
+  assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reddit-actions"), "must style actions toolbar");
+  assert.ok(scriptContent.includes("left: -23px !important;"), "curved branch must connect seamlessly from parent line");
+  assert.ok(scriptContent.includes("height: 14px !important;"), "curved branch must enter vertical center of child avatar");
+
+  // 4. Interactive collapse handlers
+  assert.ok(scriptContent.includes('const collapseTrigger = event.target.closest(".wecom-thread-collapse-btn, .wecom-reddit-line, .wecom-reddit-collapsed-hint");'), "must allow collapsing via line, circle button or hint");
+  assert.ok(scriptContent.includes('const button = event.target.closest(".wecom-msg-tool") || event.target.closest(".wecom-reddit-act-btn");'), "must route reddit action button clicks to handler");
 });
 
 
