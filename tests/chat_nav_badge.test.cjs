@@ -14084,10 +14084,13 @@ test("Test 173: Reddit-style hierarchical thread tree with guide lines, independ
   assert.ok(scriptContent.includes('msgEl.classList.toggle("is-thread-collapsed")'), "clicking collapse button must toggle is-thread-collapsed");
   assert.ok(scriptContent.includes(".wecom-msg.is-thread-collapsed > .wecom-msg-content > .wecom-msg-bubble"), "is-thread-collapsed must hide bubble and children");
 
-  // 5. Reddit tree styling & hover line highlights
+  // 5. Reddit tree styling & hover line highlights & curved branches
   assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children"), "Reddit style must define .wecom-reply-children rules");
-  assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children .wecom-msg-bubble"), "Reddit style child messages must have dedicated bubbles");
+  assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children .wecom-msg-bubble"), "Reddit style must define bubble rules");
   assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children:hover:not(:has(.wecom-reply-children:hover))"), "Reddit thread lines must highlight on hover");
+  assert.ok(scriptContent.includes("border-bottom-left-radius: 12px"), "Reddit style must render curved branches into child avatars");
+  assert.ok(scriptContent.includes('class="wecom-collapse-minus"'), "collapse button must include SVG minus line");
+  assert.ok(scriptContent.includes('class="wecom-collapse-plus"'), "collapse button must include SVG plus line");
 
   // 6. Direct child combinator prevents .wecom-msg-me from pushing nested replies to the right
   assert.ok(scriptContent.includes(".wecom-msg-me:not(.is-thread-child) > .wecom-msg-content"), "must use child combinator to keep nested replies left-aligned");
