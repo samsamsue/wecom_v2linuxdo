@@ -14115,13 +14115,16 @@ test("Test 174: Reddit thread tree authentic alignment (gutter column, curved br
   assert.ok(scriptContent.includes('data-action="reply"'), "must include reply action on reddit bar");
   assert.ok(scriptContent.includes('data-action="quote"'), "must include quote action on reddit bar");
 
-  // 3. CSS alignment and curved branch geometry
+  // 3. CSS alignment and curved branch geometry (1px fine line, zero-gap upward overlap, authentic last-child closure)
   assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reddit-gutter"), "must style .wecom-reddit-gutter");
   assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reddit-collapse-circle"), "must style circular collapse button");
   assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reddit-line:hover"), "must highlight line on hover");
   assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reddit-actions"), "must style actions toolbar");
-  assert.ok(scriptContent.includes("left: -23px !important;"), "curved branch must connect seamlessly from parent line");
-  assert.ok(scriptContent.includes("height: 14px !important;"), "curved branch must enter vertical center of child avatar");
+  assert.ok(scriptContent.includes("left: -21px !important;"), "curved branch must connect seamlessly from parent line");
+  assert.ok(scriptContent.includes("top: -6px !important;"), "curved branch must reach up 6px to eliminate gap under collapse circle");
+  assert.ok(scriptContent.includes("height: 20px !important;"), "curved branch must enter vertical center of child avatar");
+  assert.ok(scriptContent.includes("border-left: 1px solid rgba(0, 0, 0, 0.14) !important;"), "curved branch must use 1px fine line");
+  assert.ok(scriptContent.includes(":not(:last-child)"), "continuation line must only be rendered for non-last children to close branch at last child");
 
   // 4. Interactive collapse handlers
   assert.ok(scriptContent.includes('const collapseTrigger = event.target.closest(".wecom-thread-collapse-btn, .wecom-reddit-line, .wecom-reddit-collapsed-hint");'), "must allow collapsing via line, circle button or hint");
