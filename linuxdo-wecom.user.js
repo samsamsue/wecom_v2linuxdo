@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.44
+// @version      0.8.45
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -14353,271 +14353,240 @@
       flex-shrink: 0;
     }
 
-    /* ==================== 全局 Alt+滚轮 话题快速切换导航 HUD (低调紧凑版) ==================== */
-    /* 遮罩：不用颜色（透明背景+轻度背景模糊），黑暗模式下用黑色遮罩 */
+    /* ==================== 全局 Alt+滚轮 话题快速切换导航 HUD (层叠卡片堆叠版) ==================== */
+    /* 彻底移除全屏遮罩，背景无遮挡，还原纯净视野 */
     .wecom-topic-wheel-backdrop {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: transparent;
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
-      z-index: 99990;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.16s ease;
-    }
-    .wecom-topic-wheel-backdrop.is-visible {
-      opacity: 1;
-      pointer-events: auto;
+      display: none !important;
     }
 
-    body.wecom-dark .wecom-topic-wheel-backdrop,
-    html.wecom-dark .wecom-topic-wheel-backdrop {
-      background: rgba(0, 0, 0, 0.40);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-    }
-
-    /* HUD 面板：紧凑低调小巧设计 (宽 350px，高 152px) */
+    /* HUD 根容器：悬浮居中，无全屏遮罩，自身不吞噬点击事件 */
     .wecom-topic-wheel-hud {
       position: fixed;
       top: 50%;
       left: 50%;
-      transform: translate(-50%, -50%) scale(0.96);
-      width: 350px;
-      max-width: calc(100vw - 24px);
-      height: 152px;
-      background: rgba(255, 255, 255, 0.88); /* 柔和白底磨砂玻璃 */
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
-      border: 1px solid rgba(0, 0, 0, 0.08);
-      border-radius: 14px;
-      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.10), 0 2px 6px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9);
-      z-index: 99995;
-      box-sizing: border-box;
-      padding: 8px 12px 24px 12px;
+      transform: translate(-50%, -50%);
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.16s ease, transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1);
+      z-index: 99995;
       user-select: none;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.16s ease, transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1);
     }
     .wecom-topic-wheel-hud.is-visible {
       opacity: 1;
       pointer-events: auto;
-      transform: translate(-50%, -50%) scale(1);
     }
 
-    body.wecom-dark .wecom-topic-wheel-hud,
-    html.wecom-dark .wecom-topic-wheel-hud {
-      background: rgba(28, 32, 40, 0.78);
-      border-color: rgba(255, 255, 255, 0.12);
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.50), 0 2px 8px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-    }
-
-    .wecom-topic-wheel-viewport {
-      width: 100%;
-      height: 120px; /* 3 行 * 40px */
-      overflow: hidden;
+    /* 卡片堆叠舞台 (宽 360px，高 98px) */
+    .wecom-topic-wheel-stage {
       position: relative;
-      perspective: 460px;
-      mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
-      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+      width: 360px;
+      max-width: calc(100vw - 24px);
+      height: 98px;
+      pointer-events: auto;
     }
 
-    /* 居中高亮槽位底色 */
-    .wecom-topic-wheel-slot {
+    /* 堆叠卡片通用基底：当前项透明度 70% + 背景模糊 */
+    .wecom-topic-wheel-card {
       position: absolute;
-      top: 40px;
-      left: 6px;
-      right: 6px;
-      height: 40px;
-      background: rgba(0, 0, 0, 0.035);
-      border: 1px solid rgba(0, 0, 0, 0.06);
-      border-radius: 8px;
-      pointer-events: none;
-      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
-      box-sizing: border-box;
-    }
-    body.wecom-dark .wecom-topic-wheel-slot,
-    html.wecom-dark .wecom-topic-wheel-slot {
-      background: rgba(255, 255, 255, 0.08);
-      border-color: rgba(255, 255, 255, 0.12);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
-    }
-
-    .wecom-topic-wheel-track {
-      width: 100%;
-      position: absolute;
-      top: 0;
       left: 0;
-      display: flex;
-      flex-direction: column;
-      transform-style: preserve-3d;
-      transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
-      will-change: transform;
-    }
-
-    .wecom-topic-wheel-item {
-      height: 40px;
-      padding: 2px 10px;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 2px;
-      box-sizing: border-box;
-      transform-origin: center center;
-      transform: scale(0.90);
-      opacity: 0.32;
-      transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-                  opacity 0.22s ease;
-      cursor: pointer;
-    }
-
-    .wecom-topic-wheel-title {
+      bottom: 0;
       width: 100%;
+      height: 98px;
+      border-radius: 16px;
+      box-sizing: border-box;
+      padding: 12px 16px 10px 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      cursor: pointer;
+      transform-origin: center bottom;
+      transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+                  opacity 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+                  box-shadow 0.26s ease;
+      will-change: transform, opacity;
+
+      /* 磨砂玻璃质感：当前项 70% 透明度 + 模糊 */
+      background: rgba(255, 255, 255, 0.70);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.88);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.09), 0 2px 6px rgba(0, 0, 0, 0.03);
+    }
+
+    /* 黑暗模式适配：黑色 70% 磨砂玻璃 */
+    body.wecom-dark .wecom-topic-wheel-card,
+    html.wecom-dark .wecom-topic-wheel-card {
+      background: rgba(30, 32, 38, 0.70);
+      border-color: rgba(255, 255, 255, 0.12);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.25);
+    }
+
+    /* 层叠卡片各级状态与整体不透明度 (opacity) 递减 */
+    /* 当前项 (完全聚焦展示) */
+    .wecom-topic-wheel-card.is-active {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+      z-index: 100;
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.12), 0 3px 10px rgba(0, 0, 0, 0.04);
+      pointer-events: auto;
+    }
+
+    /* 后面第 1 项 (上浮露出，整体不透明度 0.60 递减) */
+    .wecom-topic-wheel-card.is-next-1 {
+      transform: translateY(-24px) scale(0.95);
+      opacity: 0.60;
+      z-index: 99;
+      pointer-events: none;
+    }
+
+    /* 后面第 2 项 (更靠后，整体不透明度 0.28 递减) */
+    .wecom-topic-wheel-card.is-next-2 {
+      transform: translateY(-46px) scale(0.90);
+      opacity: 0.28;
+      z-index: 98;
+      pointer-events: none;
+    }
+
+    /* 后面第 3 项及更后 (整体不透明度 0 隐去) */
+    .wecom-topic-wheel-card.is-next-hidden {
+      transform: translateY(-64px) scale(0.85);
+      opacity: 0;
+      z-index: 97;
+      pointer-events: none;
+    }
+
+    /* 刚滚过去的上一项 (平滑下滑淡出) */
+    .wecom-topic-wheel-card.is-prev-1 {
+      transform: translateY(32px) scale(1.04);
+      opacity: 0;
+      z-index: 101;
+      pointer-events: none;
+    }
+
+    /* 更早滚过去的项 */
+    .wecom-topic-wheel-card.is-prev-hidden {
+      transform: translateY(54px) scale(1.08);
+      opacity: 0;
+      z-index: 102;
+      pointer-events: none;
+    }
+
+    /* 卡片内部元素 */
+    .wecom-wheel-card-top {
+      width: 100%;
+    }
+    .wecom-wheel-card-title {
+      font-size: 14.5px;
+      font-weight: 500;
+      color: #1f2329;
+      line-height: 1.35;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      font-size: 12px;
-      color: #8c939d;
-      transition: color 0.2s ease, font-size 0.2s ease, font-weight 0.2s ease;
+      letter-spacing: -0.1px;
     }
-    body.wecom-dark .wecom-topic-wheel-title,
-    html.wecom-dark .wecom-topic-wheel-title {
-      color: rgba(255, 255, 255, 0.45);
+    body.wecom-dark .wecom-wheel-card-title,
+    html.wecom-dark .wecom-wheel-card-title {
+      color: #f2f3f5;
     }
 
-    .wecom-topic-wheel-meta {
+    .wecom-wheel-card-divider {
+      height: 1px;
+      background: rgba(0, 0, 0, 0.06);
+      margin: 8px 0;
+    }
+    body.wecom-dark .wecom-wheel-card-divider,
+    html.wecom-dark .wecom-wheel-card-divider {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .wecom-wheel-card-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+      color: #86909c;
+    }
+    body.wecom-dark .wecom-wheel-card-meta,
+    html.wecom-dark .wecom-wheel-card-meta {
+      color: #9499a0;
+    }
+
+    .wecom-wheel-author {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 450;
+      color: #4e5969;
+      min-width: 0;
+    }
+    body.wecom-dark .wecom-wheel-author,
+    html.wecom-dark .wecom-wheel-author {
+      color: #c9cdd4;
+    }
+
+    .wecom-wheel-username {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 85px;
+    }
+
+    .wecom-wheel-avatar {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #e2e8f0;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
-      font-size: 9.5px;
-      color: #a4abb5;
-      transition: color 0.2s ease;
+      overflow: hidden;
+      font-size: 11px;
+      color: #4a5568;
+      flex-shrink: 0;
     }
-    body.wecom-dark .wecom-topic-wheel-meta,
-    html.wecom-dark .wecom-topic-wheel-meta {
-      color: rgba(255, 255, 255, 0.32);
+    .wecom-wheel-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
 
-    .wecom-topic-wheel-stat {
+    .wecom-wheel-stat-item {
       display: inline-flex;
       align-items: center;
-      gap: 2px;
+      gap: 3.5px;
+      flex-shrink: 0;
     }
-    .wecom-topic-wheel-stat svg {
-      width: 10px;
-      height: 10px;
+    .wecom-wheel-stat-item svg {
+      width: 13px;
+      height: 13px;
+      stroke: currentColor;
       opacity: 0.85;
     }
 
-    .wecom-topic-wheel-dot {
-      opacity: 0.4;
-    }
-
-    /* 相邻项微倾斜 3D 动效 */
-    .wecom-topic-wheel-item.is-prev {
-      opacity: 0.6;
-      transform: scale(0.92) rotateX(18deg);
-    }
-    .wecom-topic-wheel-item.is-prev .wecom-topic-wheel-title {
-      font-size: 12px;
-      color: #79818c;
-    }
-    body.wecom-dark .wecom-topic-wheel-item.is-prev .wecom-topic-wheel-title,
-    html.wecom-dark .wecom-topic-wheel-item.is-prev .wecom-topic-wheel-title {
-      color: rgba(255, 255, 255, 0.60);
-    }
-    .wecom-topic-wheel-item.is-prev .wecom-topic-wheel-meta {
-      color: #9299a4;
-    }
-    body.wecom-dark .wecom-topic-wheel-item.is-prev .wecom-topic-wheel-meta,
-    html.wecom-dark .wecom-topic-wheel-item.is-prev .wecom-topic-wheel-meta {
-      color: rgba(255, 255, 255, 0.40);
-    }
-
-    .wecom-topic-wheel-item.is-active {
-      opacity: 1;
-      transform: scale(1) rotateX(0deg);
-    }
-    .wecom-topic-wheel-item.is-active .wecom-topic-wheel-title {
-      font-size: 13.5px;
-      font-weight: 600;
-      color: #1f2329;
-    }
-    body.wecom-dark .wecom-topic-wheel-item.is-active .wecom-topic-wheel-title,
-    html.wecom-dark .wecom-topic-wheel-item.is-active .wecom-topic-wheel-title {
-      color: #f3f4f6;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-    }
-    .wecom-topic-wheel-item.is-active .wecom-topic-wheel-meta {
-      font-size: 10px;
-      font-weight: 500;
-      color: #5e6573;
-    }
-    body.wecom-dark .wecom-topic-wheel-item.is-active .wecom-topic-wheel-meta,
-    html.wecom-dark .wecom-topic-wheel-item.is-active .wecom-topic-wheel-meta {
-      color: rgba(255, 255, 255, 0.75);
-    }
-    .wecom-topic-wheel-item.is-active .wecom-topic-wheel-stat svg {
-      color: #267ef0;
-      opacity: 1;
-    }
-    body.wecom-dark .wecom-topic-wheel-item.is-active .wecom-topic-wheel-stat svg,
-    html.wecom-dark .wecom-topic-wheel-item.is-active .wecom-topic-wheel-stat svg {
-      color: #5ba2f8;
-      opacity: 1;
-    }
-
-    .wecom-topic-wheel-item.is-next {
-      opacity: 0.6;
-      transform: scale(0.92) rotateX(-18deg);
-    }
-    .wecom-topic-wheel-item.is-next .wecom-topic-wheel-title {
-      font-size: 12px;
-      color: #79818c;
-    }
-    body.wecom-dark .wecom-topic-wheel-item.is-next .wecom-topic-wheel-title,
-    html.wecom-dark .wecom-topic-wheel-item.is-next .wecom-topic-wheel-title {
-      color: rgba(255, 255, 255, 0.60);
-    }
-    .wecom-topic-wheel-item.is-next .wecom-topic-wheel-meta {
-      color: #9299a4;
-    }
-    body.wecom-dark .wecom-topic-wheel-item.is-next .wecom-topic-wheel-meta,
-    html.wecom-dark .wecom-topic-wheel-item.is-next .wecom-topic-wheel-meta {
-      color: rgba(255, 255, 255, 0.40);
-    }
-
-    /* 底部操作指引微标 */
+    /* 底部操作快捷键提示 */
     .wecom-topic-wheel-tip {
-      position: absolute;
-      right: 10px;
-      bottom: 5px;
-      padding: 1.5px 7px;
-      background: rgba(0, 0, 0, 0.04);
-      border: 1px solid rgba(0, 0, 0, 0.06);
-      border-radius: 8px;
-      font-size: 10px;
-      font-weight: 500;
-      color: #b45309;
-      letter-spacing: 0.3px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
+      margin-top: 14px;
+      font-size: 11px;
+      color: #8c939d;
+      background: rgba(255, 255, 255, 0.70);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      padding: 3px 10px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      pointer-events: auto;
     }
     body.wecom-dark .wecom-topic-wheel-tip,
     html.wecom-dark .wecom-topic-wheel-tip {
-      background: rgba(0, 0, 0, 0.35);
-      border-color: rgba(255, 255, 255, 0.08);
-      color: #f5b025;
+      background: rgba(30, 32, 38, 0.70);
+      color: #86909c;
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     }
 
     /* 左侧列表项焦点轮廓跟随 */
@@ -22475,7 +22444,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.44";
+  const SCRIPT_VERSION = "0.8.45";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -45743,12 +45712,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   let _wheelHudRows = [];
   let _wheelLastTickTime = 0;
   let _wheelDeltaAccum = 0;
-  let _wheelBackdrop = null;
   let _wheelHud = null;
-  let _wheelTrack = null;
+  let _wheelStage = null;
   let _wheelHudObserver = null;
 
-  const WHEEL_ROW_HEIGHT = 40;
+  const WHEEL_ICON_CLOCK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
   const WHEEL_ICON_EYE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
   const WHEEL_ICON_CHAT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
 
@@ -45760,27 +45728,20 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   }
 
   function ensureWheelHudDOM() {
-    if (_wheelHud && _wheelBackdrop) return;
-
-    _wheelBackdrop = document.createElement("div");
-    _wheelBackdrop.className = "wecom-topic-wheel-backdrop";
-    _wheelBackdrop.addEventListener("click", () => closeWheelHud(true));
+    if (_wheelHud) return;
 
     _wheelHud = document.createElement("div");
     _wheelHud.className = "wecom-topic-wheel-hud";
     _wheelHud.innerHTML = `
-      <div class="wecom-topic-wheel-viewport">
-        <div class="wecom-topic-wheel-slot"></div>
-        <div class="wecom-topic-wheel-track"></div>
-      </div>
-      <div class="wecom-topic-wheel-tip">Alt+Enter 确定进入 , Esc 退出</div>
+      <div class="wecom-topic-wheel-stage"></div>
+      <div class="wecom-topic-wheel-tip">Alt+Enter 确定进入 · Esc 退出</div>
     `;
 
-    _wheelTrack = _wheelHud.querySelector(".wecom-topic-wheel-track");
-    _wheelTrack.addEventListener("click", (e) => {
-      const item = e.target.closest(".wecom-topic-wheel-item");
-      if (!item) return;
-      const idx = Number(item.dataset.index);
+    _wheelStage = _wheelHud.querySelector(".wecom-topic-wheel-stage");
+    _wheelStage.addEventListener("click", (e) => {
+      const card = e.target.closest(".wecom-topic-wheel-card");
+      if (!card) return;
+      const idx = Number(card.dataset.index);
       if (!Number.isNaN(idx)) {
         if (idx === _wheelHudIndex) {
           confirmWheelHud();
@@ -45791,8 +45752,41 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       }
     });
 
-    document.body.appendChild(_wheelBackdrop);
     document.body.appendChild(_wheelHud);
+  }
+
+  function buildWheelCardHtml(r, i) {
+    const vStr = formatWheelMetric(r.views);
+    const rStr = formatWheelMetric(r.replies);
+    return `
+      <div class="wecom-topic-wheel-card" data-index="${i}">
+        <div class="wecom-wheel-card-top">
+          <div class="wecom-wheel-card-title">${escapeHtml(r.title)}</div>
+        </div>
+        <div class="wecom-wheel-card-divider"></div>
+        <div class="wecom-wheel-card-meta">
+          <div class="wecom-wheel-author">
+            <div class="wecom-wheel-avatar">
+              ${r.avatarSrc ? `<img src="${escapeHtml(r.avatarSrc)}" alt="" onerror="this.parentNode.innerHTML='👤'">` : `👤`}
+            </div>
+            <span class="wecom-wheel-username">${escapeHtml(r.author)}</span>
+          </div>
+          ${r.time ? `
+          <div class="wecom-wheel-stat-item">
+            ${WHEEL_ICON_CLOCK}
+            <span>${escapeHtml(r.time)}</span>
+          </div>` : ""}
+          <div class="wecom-wheel-stat-item">
+            ${WHEEL_ICON_EYE}
+            <span>${vStr}</span>
+          </div>
+          <div class="wecom-wheel-stat-item">
+            ${WHEEL_ICON_CHAT}
+            <span>${rStr}</span>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   function getWheelTopicRows() {
@@ -45805,7 +45799,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       const realTitle = topicObj?.title || el.dataset.realTitle || el.getAttribute("title") || el.querySelector(".wecom-conv-title .wecom-conv-name")?.textContent?.trim() || "话题 " + (i + 1);
       const views = Number(topicObj?.views || topicObj?.visit_count || el.dataset.views) || 0;
       const replies = Number(topicObj?.reply_count ?? (topicObj?.posts_count ? Math.max(0, topicObj.posts_count - 1) : (el.dataset.replies ?? 0))) || 0;
-      return { element: el, title: realTitle, views, replies, id: topicId };
+      const author = topicObj?.last_poster_username || topicObj?.creator_username || topicObj?.author || el.dataset.targetAuthor || el.querySelector(".wecom-conv-msg")?.textContent?.split(":")[0]?.trim() || "用户";
+      const time = el.querySelector(".wecom-conv-time")?.textContent?.trim() || "";
+      const avatarImg = el.querySelector(".wecom-conv-avatar img");
+      const avatarSrc = avatarImg ? avatarImg.getAttribute("src") : "";
+      return { element: el, title: realTitle, views, replies, id: topicId, author, time, avatarSrc };
     });
   }
 
@@ -45815,26 +45813,12 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     _wheelHudRows = getWheelTopicRows();
     if (!_wheelHudRows.length) return;
 
-    _wheelTrack.innerHTML = _wheelHudRows.map((r, i) => {
-      const vStr = formatWheelMetric(r.views);
-      const rStr = formatWheelMetric(r.replies);
-      return `
-        <div class="wecom-topic-wheel-item" data-index="${i}">
-          <div class="wecom-topic-wheel-title">${escapeHtml(r.title)}</div>
-          <div class="wecom-topic-wheel-meta">
-            <span class="wecom-topic-wheel-stat">${WHEEL_ICON_EYE} ${vStr} 浏览</span>
-            <span class="wecom-topic-wheel-dot">·</span>
-            <span class="wecom-topic-wheel-stat">${WHEEL_ICON_CHAT} ${rStr} 评论</span>
-          </div>
-        </div>
-      `;
-    }).join("");
+    _wheelStage.innerHTML = _wheelHudRows.map((r, i) => buildWheelCardHtml(r, i)).join("");
 
     const activeIdx = _wheelHudRows.findIndex(r => r.element.classList.contains("is-active") || r.element.classList.contains("active"));
     _wheelHudIndex = activeIdx >= 0 ? activeIdx : 0;
 
     _wheelHudVisible = true;
-    _wheelBackdrop.classList.add("is-visible");
     _wheelHud.classList.add("is-visible");
 
     startWheelHudObserver();
@@ -45873,7 +45857,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   }
 
   function syncWheelHudOnAppend(freshTopics = []) {
-    if (!_wheelHudVisible || !_wheelTrack) return;
+    if (!_wheelHudVisible || !_wheelStage) return;
     const newRows = getWheelTopicRows();
     if (newRows.length <= _wheelHudRows.length) return;
 
@@ -45882,65 +45866,46 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     _wheelHudRows = newRows;
 
     const fragment = document.createDocumentFragment();
-    addedRows.forEach((r, offset) => {
-      const idx = startIndex + offset;
-      const vStr = formatWheelMetric(r.views);
-      const rStr = formatWheelMetric(r.replies);
-      const div = document.createElement("div");
-      div.className = "wecom-topic-wheel-item";
-      div.dataset.index = String(idx);
-      div.innerHTML = `
-        <div class="wecom-topic-wheel-title">${escapeHtml(r.title)}</div>
-        <div class="wecom-topic-wheel-meta">
-          <span class="wecom-topic-wheel-stat">${WHEEL_ICON_EYE} ${vStr} 浏览</span>
-          <span class="wecom-topic-wheel-dot">·</span>
-          <span class="wecom-topic-wheel-stat">${WHEEL_ICON_CHAT} ${rStr} 评论</span>
-        </div>
-      `;
-      fragment.appendChild(div);
-    });
-    _wheelTrack.appendChild(fragment);
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = addedRows.map((r, offset) => buildWheelCardHtml(r, startIndex + offset)).join("");
+    while (tempDiv.firstChild) {
+      fragment.appendChild(tempDiv.firstChild);
+    }
+    _wheelStage.appendChild(fragment);
 
     syncWheelHudUI(true);
   }
 
   function syncWheelHudOnReset() {
-    if (!_wheelHudVisible || !_wheelTrack) return;
+    if (!_wheelHudVisible || !_wheelStage) return;
     _wheelHudRows = getWheelTopicRows();
-    _wheelTrack.innerHTML = _wheelHudRows.map((r, i) => {
-      const vStr = formatWheelMetric(r.views);
-      const rStr = formatWheelMetric(r.replies);
-      return `
-        <div class="wecom-topic-wheel-item" data-index="${i}">
-          <div class="wecom-topic-wheel-title">${escapeHtml(r.title)}</div>
-          <div class="wecom-topic-wheel-meta">
-            <span class="wecom-topic-wheel-stat">${WHEEL_ICON_EYE} ${vStr} 浏览</span>
-            <span class="wecom-topic-wheel-dot">·</span>
-            <span class="wecom-topic-wheel-stat">${WHEEL_ICON_CHAT} ${rStr} 评论</span>
-          </div>
-        </div>
-      `;
-    }).join("");
+    _wheelStage.innerHTML = _wheelHudRows.map((r, i) => buildWheelCardHtml(r, i)).join("");
     syncWheelHudUI(true);
   }
 
   function syncWheelHudUI(smooth = true) {
-    if (!_wheelHudRows.length) return;
+    if (!_wheelHudRows.length || !_wheelStage) return;
     _wheelHudIndex = Math.max(0, Math.min(_wheelHudRows.length - 1, _wheelHudIndex));
 
-    _wheelTrack.style.transition = smooth ? "transform 0.22s cubic-bezier(0.22, 1, 0.36, 1)" : "none";
-    const offset = (1 - _wheelHudIndex) * WHEEL_ROW_HEIGHT;
-    _wheelTrack.style.transform = `translateY(${offset}px)`;
-
-    const items = _wheelTrack.querySelectorAll(".wecom-topic-wheel-item");
-    items.forEach((item, idx) => {
-      item.classList.remove("is-active", "is-prev", "is-next");
-      if (idx === _wheelHudIndex) {
-        item.classList.add("is-active");
-      } else if (idx === _wheelHudIndex - 1) {
-        item.classList.add("is-prev");
-      } else if (idx === _wheelHudIndex + 1) {
-        item.classList.add("is-next");
+    const cards = _wheelStage.querySelectorAll(".wecom-topic-wheel-card");
+    cards.forEach((card, idx) => {
+      const diff = idx - _wheelHudIndex;
+      card.style.transition = smooth
+        ? "transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.26s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.26s ease"
+        : "none";
+      card.className = "wecom-topic-wheel-card";
+      if (diff === 0) {
+        card.classList.add("is-active");
+      } else if (diff === 1) {
+        card.classList.add("is-next-1");
+      } else if (diff === 2) {
+        card.classList.add("is-next-2");
+      } else if (diff > 2) {
+        card.classList.add("is-next-hidden");
+      } else if (diff === -1) {
+        card.classList.add("is-prev-1");
+      } else if (diff < -1) {
+        card.classList.add("is-prev-hidden");
       }
     });
 
@@ -45963,7 +45928,6 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   function closeWheelHud(cancelled = true) {
     _wheelHudVisible = false;
     stopWheelHudObserver();
-    if (_wheelBackdrop) _wheelBackdrop.classList.remove("is-visible");
     if (_wheelHud) _wheelHud.classList.remove("is-visible");
     document.querySelectorAll(".wecom-conv.wecom-hud-focused").forEach(el => {
       el.classList.remove("wecom-hud-focused");
@@ -45996,6 +45960,13 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   function bindWheelTopicNavigator() {
     if (window.__wecomWheelTopicNavigatorBound) return;
     window.__wecomWheelTopicNavigatorBound = true;
+
+    // 点击 HUD 外部任意区域时优雅退出
+    window.addEventListener("pointerdown", (event) => {
+      if (_wheelHudVisible && _wheelHud && !_wheelHud.contains(event.target)) {
+        closeWheelHud(true);
+      }
+    }, true);
 
     window.addEventListener("wheel", (event) => {
       if (getViewMode() === "native" || otherThemeActive()) return;

@@ -14167,27 +14167,20 @@ test("Test 175: Reddit thread tree SVG Bézier curves, zero protrusion without w
   assert.ok(scriptContent.includes("_redditTreeHash"), "must use dirty-checking hash to skip redundant re-renders");
 });
 
-test("Test 176: Global Alt + Mouse Wheel topic quick-scroll preview HUD navigator (v0.8.44)", () => {
+test("Test 176: Global Alt + Mouse Wheel topic quick-scroll preview HUD navigator (v0.8.44/v0.8.45)", () => {
   // 1. Version bump
-  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.(4[4-9]|[5-9]\d)";/, "user.js version must be 0.8.44+");
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.(4[5-9]|[5-9]\d)";/, "user.js version must be 0.8.45+");
 
-  // 2. HUD & backdrop CSS classes and styles (compact low-key design, white light scrim, black dark scrim)
+  // 2. HUD & backdrop CSS classes and styles (card stack design)
   assert.ok(scriptContent.includes(".wecom-topic-wheel-backdrop"), "must define wheel HUD backdrop overlay");
-  assert.ok(scriptContent.includes("background: transparent;"), "light mode backdrop must use transparent scrim without color tint");
-  assert.ok(scriptContent.includes("body.wecom-dark .wecom-topic-wheel-backdrop"), "dark mode backdrop must use black translucent overlay");
   assert.ok(scriptContent.includes(".wecom-topic-wheel-hud"), "must define centered frosted-glass HUD card");
-  assert.ok(scriptContent.includes("width: 350px"), "HUD must feature compact 350px width");
-  assert.ok(scriptContent.includes("height: 152px"), "HUD must feature compact 152px height");
-  assert.ok(scriptContent.includes(".wecom-topic-wheel-viewport"), "must define 3D viewport for drum roller");
-  assert.ok(scriptContent.includes(".wecom-topic-wheel-slot"), "must define illuminated slot pill for center active row");
-  assert.ok(scriptContent.includes(".wecom-topic-wheel-track"), "must define track container with transform-style: preserve-3d");
-  assert.ok(scriptContent.includes(".wecom-topic-wheel-title"), "must define title container with scaled down font size");
-  assert.ok(scriptContent.includes(".wecom-topic-wheel-meta"), "must define metadata container for views & comments");
-  assert.ok(scriptContent.includes(".wecom-topic-wheel-stat"), "must define metric stat item with icon");
-  assert.ok(scriptContent.includes(".wecom-topic-wheel-item.is-active"), "must style active center topic item");
-  assert.ok(scriptContent.includes(".wecom-topic-wheel-item.is-prev"), "must style tilted previous topic item");
-  assert.ok(scriptContent.includes(".wecom-topic-wheel-item.is-next"), "must style tilted next topic item");
-  assert.ok(scriptContent.includes(".wecom-topic-wheel-tip"), "must define yellow shortcut hint");
+  assert.ok(scriptContent.includes(".wecom-topic-wheel-stage"), "must define card stack stage container");
+  assert.ok(scriptContent.includes(".wecom-topic-wheel-card"), "must define stacked card item with frosted glass");
+  assert.ok(scriptContent.includes("rgba(255, 255, 255, 0.70)"), "current active card must use 70% opacity frosted glass background");
+  assert.ok(scriptContent.includes(".wecom-topic-wheel-card.is-active"), "must style active front topic card");
+  assert.ok(scriptContent.includes(".wecom-topic-wheel-card.is-next-1"), "must style next topic card with decreasing opacity");
+  assert.ok(scriptContent.includes(".wecom-topic-wheel-card.is-next-2"), "must style 2nd next topic card with lower opacity");
+  assert.ok(scriptContent.includes(".wecom-topic-wheel-tip"), "must define shortcut hint");
   assert.ok(scriptContent.includes(".wecom-conv.wecom-hud-focused"), "must define left list focus outline & highlight");
 
   // 3. Real title extraction and metric formatting
@@ -14197,7 +14190,6 @@ test("Test 176: Global Alt + Mouse Wheel topic quick-scroll preview HUD navigato
   assert.ok(scriptContent.includes("realTitle = topicObj?.title || el.dataset.realTitle"), "getWheelTopicRows must retrieve real title rather than fake disguise title");
 
   // 4. Core DOM and logic functions
-  assert.ok(scriptContent.includes("const WHEEL_ROW_HEIGHT = 40;"), "must define compact WHEEL_ROW_HEIGHT");
   assert.ok(scriptContent.includes("function ensureWheelHudDOM()"), "must define ensureWheelHudDOM helper");
   assert.ok(scriptContent.includes("function getWheelTopicRows()"), "must define getWheelTopicRows query helper");
   assert.ok(scriptContent.includes("function openWheelHud()"), "must define openWheelHud activator");
@@ -14210,7 +14202,7 @@ test("Test 176: Global Alt + Mouse Wheel topic quick-scroll preview HUD navigato
 
   // 5. Shortcut bindings and keyboard interactions
   assert.ok(scriptContent.includes("event.altKey || _wheelHudVisible"), "wheel listener must check altKey or active HUD visibility");
-  assert.ok(scriptContent.includes("Alt+Enter 确定进入 , Esc 退出"), "must display exact yellow shortcut guide text");
+  assert.ok(scriptContent.includes("Alt+Enter 确定进入 · Esc 退出"), "must display exact shortcut guide text");
   assert.ok(scriptContent.includes('event.key === "Escape"'), "Escape key must cancel and dismiss HUD");
   assert.ok(scriptContent.includes('event.key === "Enter"'), "Enter / Alt+Enter must confirm and load topic");
   assert.ok(scriptContent.includes("bindWheelTopicNavigator()"), "bootstrap must call bindWheelTopicNavigator");
@@ -14239,6 +14231,78 @@ test("Test 177: Reddit thread tree completely isolates nested replies from bubbl
   assert.ok(
     scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children .wecom-msg-content"),
     "must enforce left-aligned vertical content layout for nested reddit messages"
+  );
+});
+
+test("Test 178: Stacked card deck HUD navigator with smooth transitions, 70% transparency frosted glass, decreasing opacity stack, and zero fullscreen mask (v0.8.45)", () => {
+  // 1. Backdrop is completely disabled/hidden to avoid any fullscreen mask
+  assert.ok(
+    scriptContent.includes(".wecom-topic-wheel-backdrop {\n      display: none !important;"),
+    "backdrop overlay must be display: none !important to ensure no fullscreen mask"
+  );
+
+  // 2. Card stage and card dimensions
+  assert.ok(
+    scriptContent.includes("width: 360px"),
+    "stage must feature 360px compact width matching card stack design"
+  );
+  assert.ok(
+    scriptContent.includes("height: 98px"),
+    "cards must feature 98px height"
+  );
+
+  // 3. Current active card: 70% opacity + backdrop blur
+  assert.ok(
+    scriptContent.includes("background: rgba(255, 255, 255, 0.70);") &&
+    scriptContent.includes("backdrop-filter: blur(20px) saturate(180%);"),
+    "current card must have 70% background opacity with backdrop blur in light mode"
+  );
+  assert.ok(
+    scriptContent.includes("background: rgba(30, 32, 38, 0.70);"),
+    "dark mode card must have 70% background opacity with backdrop blur"
+  );
+
+  // 4. Stacked cards behind: decreasing opacity
+  assert.ok(
+    scriptContent.includes(".wecom-topic-wheel-card.is-next-1") &&
+    scriptContent.includes("opacity: 0.60;"),
+    "1st next card must have decreasing opacity 0.60"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-topic-wheel-card.is-next-2") &&
+    scriptContent.includes("opacity: 0.28;"),
+    "2nd next card must have decreasing opacity 0.28"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-topic-wheel-card.is-next-hidden") &&
+    scriptContent.includes("opacity: 0;"),
+    "further cards must have opacity 0"
+  );
+
+  // 5. Smooth transition effect
+  assert.ok(
+    scriptContent.includes("transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),") &&
+    scriptContent.includes("opacity 0.26s cubic-bezier(0.22, 1, 0.36, 1)"),
+    "card stacking must feature smooth transform and opacity transitions"
+  );
+
+  // 6. Meta row features avatar, author, time, views, replies
+  assert.ok(
+    scriptContent.includes("WHEEL_ICON_CLOCK") &&
+    scriptContent.includes("WHEEL_ICON_EYE") &&
+    scriptContent.includes("WHEEL_ICON_CHAT"),
+    "must define clock, eye, and chat icons for metadata"
+  );
+  assert.ok(
+    scriptContent.includes("wecom-wheel-avatar") &&
+    scriptContent.includes("wecom-wheel-username"),
+    "must display author avatar and username in metadata"
+  );
+
+  // 7. Outside click dismissal
+  assert.ok(
+    scriptContent.includes("if (_wheelHudVisible && _wheelHud && !_wheelHud.contains(event.target))"),
+    "must dismiss HUD when clicking outside the card stage"
   );
 });
 
