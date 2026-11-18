@@ -401,6 +401,8 @@ function createSVG() {
 
 /* 折叠或展开 */
 function toggleArea(area) {
+  delete area._treeHash;
+  area.querySelectorAll?.(".children-area").forEach(a => { delete a._treeHash; });
   const collapsed = area.classList.toggle("collapsed");
   const toggle = area.querySelector(":scope > .collapse-btn");
 
@@ -420,7 +422,7 @@ function toggleArea(area) {
 }
 
 /* 添加路径：可见线 + 点击感应线 */
-function addPath(network, d, area) {
+function createPathPair(d, area) {
   const visible = document.createElementNS(NS, "path");
   visible.setAttribute("d", d);
   visible.classList.add("line-visible");
@@ -435,76 +437,87 @@ function addPath(network, d, area) {
     toggleArea(area);
   });
 
-  network.append(visible, hit);
+  return [visible, hit];
 }
 
-/* 绘制连接线 */
-function drawTree(area) {
+function addPath(network, d, area) {
+  const pair = createPathPair(d, area);
+  if (pair) network.append(pair[0], pair[1]);
+}
+
+/* 批量只读计算阶段：纯读取并计算坐标，0 次 DOM/样式修改，彻底消除强制同步重排 (Layout Thrashing) */
+function computeTreePlan(area) {
   const svg = area.querySelector(":scope > .tree-svg");
   const children = area.querySelector(":scope > .children");
   const toggle = area.querySelector(":scope > .collapse-btn");
 
-  if (!svg || !children || !toggle) return;
+  if (!svg || !children || !toggle) return null;
 
   const network = svg.querySelector(".line-network");
-  network.innerHTML = "";
+  if (!network) return null;
 
   const parentAvatar = area.parentElement.querySelector(":scope > .comment-row > .avatar");
-  if (!parentAvatar) return;
+  if (!parentAvatar) return null;
 
   const areaRect = area.getBoundingClientRect();
   const parentRect = parentAvatar.getBoundingClientRect();
 
-  if (areaRect.width === 0 || parentRect.width === 0) return;
+  if (areaRect.width === 0 || parentRect.width === 0) return null;
 
   const parentCenterX = parentRect.left + parentRect.width / 2;
   const parentCenterY = parentRect.top + parentRect.height / 2;
 
-  const trunkX = parentCenterX - areaRect.left;
-  const parentBottom = parentRect.bottom - parentCenterY;
-  const upward = areaRect.top - parentCenterY;
+  const trunkX = Math.round(parentCenterX - areaRect.left);
+  const parentBottom = Math.round(parentRect.bottom - parentCenterY);
+  const upward = Math.round(areaRect.top - parentCenterY);
 
   const collapsed = area.classList.contains("collapsed");
 
   if (collapsed) {
     const buttonTop = parseFloat(toggle.style.top) || 8;
-    const buttonCenterY = areaRect.top + buttonTop + 8 - parentCenterY;
+    const buttonCenterY = Math.round(areaRect.top + buttonTop + 8 - parentCenterY);
     const svgHeight = Math.max(1, upward + area.clientHeight);
+    const clientWidth = Math.max(20, area.clientWidth);
+    const hash = `c|${trunkX}|${parentBottom}|${buttonCenterY}|${svgHeight}|${clientWidth}`;
 
-    svg.style.top = -upward + "px";
-    svg.style.height = svgHeight + "px";
-    svg.style.width = "100%";
+    if (area._treeHash === hash) return null;
 
-    svg.setAttribute("viewBox", `0 0 ${Math.max(20, area.clientWidth)} ${svgHeight}`);
-
+    const pathDefs = [];
     if (buttonCenterY >= parentBottom) {
-      addPath(network, `M ${trunkX} ${parentBottom} V ${buttonCenterY}`, area);
+      pathDefs.push(`M ${trunkX} ${parentBottom} V ${buttonCenterY}`);
     }
-    return;
+    return {
+      area, svg, network, toggle, hash,
+      top: -upward, height: svgHeight, width: "100%",
+      viewBox: `0 0 ${clientWidth} ${svgHeight}`,
+      pathDefs, buttonLeft: null, buttonTop: null
+    };
   }
 
   const comments = [...children.children];
-  if (!comments.length) return;
+  if (!comments.length) return null;
 
   const points = comments.map(comment => {
     const avatar = comment.querySelector(":scope > .comment-row > .avatar");
     if (!avatar) return null;
     const rect = avatar.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return null;
     return {
-      y: rect.top + rect.height / 2 - parentCenterY,
-      endX: rect.left - areaRect.left
+      y: Math.round(rect.top + rect.height / 2 - parentCenterY),
+      endX: Math.round(rect.left - areaRect.left)
     };
   }).filter(Boolean);
 
-  if (!points.length) return;
+  if (!points.length) return null;
 
   const curve = 12;
   const straightLength = 10;
   const lastStart = points[points.length - 1].y - curve;
+  const pathDefs = [];
 
   // 主干：从父头像底端直通最后一个子楼层分支弧线起点
   if (lastStart >= parentBottom) {
-    addPath(network, `M ${trunkX} ${parentBottom} V ${lastStart}`, area);
+    pathDefs.push(`M ${trunkX} ${parentBottom} V ${lastStart}`);
   }
 
   // 每条分支：贝塞尔曲线圆滑过渡
@@ -518,34 +531,75 @@ function drawTree(area) {
     const controlY1 = point.y - curve * 0.35;
     const controlX2 = straightStartX - Math.min(4, elbowWidth * 0.45);
 
-    const d = `
+    pathDefs.push(`
       M ${trunkX} ${startY}
       C ${controlX1} ${controlY1},
         ${controlX2} ${point.y},
         ${straightStartX} ${point.y}
       L ${endX} ${point.y}
-    `;
-
-    addPath(network, d, area);
+    `);
   });
 
   const svgHeight = Math.max(1, upward + area.clientHeight);
-
-  svg.style.top = -upward + "px";
-  svg.style.height = svgHeight + "px";
-  svg.style.width = "100%";
-
-  svg.setAttribute("viewBox", `0 0 ${Math.max(20, area.clientWidth)} ${svgHeight}`);
+  const clientWidth = Math.max(20, area.clientWidth);
 
   // 折叠按钮位置：紧贴父头像下方
+  let buttonLeft = null;
+  let buttonTop = null;
   if (toggle) {
     const parentBottomInArea = parentRect.bottom - areaRect.top;
     const firstBranchInArea = points[0].y - curve - upward;
     const gap = firstBranchInArea - parentBottomInArea;
-    const buttonTop = gap >= 24 ? (parentBottomInArea + 8) : (parentBottomInArea + Math.max(2, (gap - 18) / 2));
-    toggle.style.left = (trunkX - 8) + "px";
+    buttonTop = Math.round(gap >= 24 ? (parentBottomInArea + 8) : (parentBottomInArea + Math.max(2, (gap - 18) / 2)));
+    buttonLeft = trunkX - 8;
+  }
+
+  const hash = `e|${trunkX}|${parentBottom}|${svgHeight}|${clientWidth}|${points.length}|${points[points.length - 1].y}`;
+  if (area._treeHash === hash) return null;
+
+  return {
+    area, svg, network, toggle, hash,
+    top: -upward, height: svgHeight, width: "100%",
+    viewBox: `0 0 ${clientWidth} ${svgHeight}`,
+    pathDefs, buttonLeft, buttonTop
+  };
+}
+
+/* 批量只写提交阶段：使用 DocumentFragment 批量应用 DOM 和样式 */
+function applyTreePlan(plan) {
+  if (!plan) return;
+  const { area, svg, network, toggle, hash, top, height, width, viewBox, pathDefs, buttonLeft, buttonTop } = plan;
+
+  const fragment = document.createDocumentFragment();
+  for (const d of pathDefs) {
+    const pair = createPathPair(d, area);
+    if (pair) fragment.append(pair[0], pair[1]);
+  }
+
+  if (typeof network.replaceChildren === "function") {
+    network.replaceChildren(fragment);
+  } else {
+    network.innerHTML = "";
+    network.append(fragment);
+  }
+
+  svg.style.top = top + "px";
+  svg.style.height = height + "px";
+  svg.style.width = width;
+  svg.setAttribute("viewBox", viewBox);
+
+  if (toggle && buttonTop !== null) {
+    toggle.style.left = buttonLeft + "px";
     toggle.style.top = buttonTop + "px";
   }
+
+  area._treeHash = hash;
+}
+
+/* 绘制单个区域连接线 */
+function drawTree(area) {
+  const plan = computeTreePlan(area);
+  if (plan) applyTreePlan(plan);
 }
 
 /* 创建评论节点 */
@@ -615,9 +669,22 @@ function createComment(item) {
   return el;
 }
 
-/* 重绘全部连接线 */
+/* 重绘全部连接线（读写分离批处理） */
 function redrawAll() {
-  document.querySelectorAll(".children-area").forEach(drawTree);
+  const areas = [...document.querySelectorAll(".children-area")];
+  if (!areas.length) return;
+
+  // Phase 1: 批量只读测量
+  const plans = [];
+  for (const area of areas) {
+    const plan = computeTreePlan(area);
+    if (plan) plans.push(plan);
+  }
+
+  // Phase 2: 批量写入更新
+  for (const plan of plans) {
+    applyTreePlan(plan);
+  }
 }
 
 let redrawRaf = null;

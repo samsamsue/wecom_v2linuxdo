@@ -14159,6 +14159,11 @@ test("Test 175: Reddit thread tree SVG Bézier curves, zero protrusion without w
   assert.ok(scriptContent.includes("if (isRedditThreadStyle()) return false;"), "isHideChatAvatar must return false in Reddit mode");
   assert.ok(scriptContent.includes("html.wecom-hide-chat-avatar:not(.wecom-thread-style-reddit)"), "CSS must exclude Reddit mode from hiding avatars");
   assert.ok(scriptContent.includes("Reddit 树状模式不支持隐藏头像"), "must alert user that avatar hiding is unsupported in Reddit mode");
+
+  // 7. Route A performance optimization: batch read/write, DocumentFragment, hash caching (v0.8.42)
+  assert.ok(scriptContent.includes("computeRedditTreePlan"), "must define pure read measurement function computeRedditTreePlan");
+  assert.ok(scriptContent.includes("applyRedditTreePlan"), "must define pure write DOM applicator applyRedditTreePlan");
+  assert.ok(scriptContent.includes("_redditTreeHash"), "must use dirty-checking hash to skip redundant re-renders");
 });
 
 

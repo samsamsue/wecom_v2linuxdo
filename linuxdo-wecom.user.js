@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.41
+// @version      0.8.42
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -22169,7 +22169,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.41";
+  const SCRIPT_VERSION = "0.8.42";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -38657,8 +38657,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     return svg;
   }
 
-  function addRedditPath(network, d, area) {
-    if (typeof document === "undefined" || !document.createElementNS) return;
+  function createRedditPathPair(d, area) {
+    if (typeof document === "undefined" || !document.createElementNS) return null;
     const visible = document.createElementNS(REDDIT_SVG_NS, "path");
     visible.setAttribute("d", d);
     visible.classList.add("line-visible");
@@ -38673,11 +38673,19 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       toggleRedditTreeArea(area);
     });
 
-    network.append(visible, hit);
+    return [visible, hit];
+  }
+
+  function addRedditPath(network, d, area) {
+    if (!network || !d) return;
+    const pair = createRedditPathPair(d, area);
+    if (pair) network.append(pair[0], pair[1]);
   }
 
   function toggleRedditTreeArea(area) {
     if (!area) return;
+    delete area._redditTreeHash;
+    area.querySelectorAll?.(".children-area").forEach((a) => { delete a._redditTreeHash; });
     const collapsed = area.classList.toggle("collapsed");
     const toggle = area.querySelector(":scope > .collapse-btn, :scope > .wecom-thread-collapse-btn");
 
@@ -38698,59 +38706,65 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     scheduleRedditTreeRedraw();
   }
 
-  function drawRedditTree(area) {
-    if (!area || typeof window === "undefined") return;
-    if (typeof area.isConnected === "boolean" && !area.isConnected) return;
+  /* 批量只读计算阶段：纯读取并计算坐标，0 次 DOM/样式修改，彻底消除强制同步重排 (Layout Thrashing) */
+  function computeRedditTreePlan(area) {
+    if (!area || typeof window === "undefined") return null;
+    if (typeof area.isConnected === "boolean" && !area.isConnected) return null;
     const svg = area.querySelector(":scope > .tree-svg");
     const children = area.querySelector(":scope > .children");
     const toggle = area.querySelector(":scope > .collapse-btn, :scope > .wecom-thread-collapse-btn");
 
-    if (!svg || !children) return;
+    if (!svg || !children) return null;
 
     const network = svg.querySelector(".line-network");
-    if (!network) return;
-    network.innerHTML = "";
+    if (!network) return null;
 
     const parentNode = area.closest(".wecom-reddit-node") || area.parentElement;
     const parentAvatar = parentNode?.querySelector(
       ":scope > .wecom-reddit-row .wecom-msg-avatar, :scope > .comment-row > .avatar, .wecom-reddit-avatar, .wecom-msg-avatar"
     );
 
-    if (!parentAvatar) return;
+    if (!parentAvatar) return null;
 
     const areaRect = area.getBoundingClientRect();
     const parentRect = parentAvatar.getBoundingClientRect();
 
-    if (areaRect.width === 0 || parentRect.width === 0) return;
+    if (areaRect.width === 0 || parentRect.width === 0) return null;
 
     const parentCenterX = parentRect.left + parentRect.width / 2;
     const parentCenterY = parentRect.top + parentRect.height / 2;
 
-    const trunkX = parentCenterX - areaRect.left;
-    const parentBottom = parentRect.bottom - parentCenterY;
-    const upward = areaRect.top - parentCenterY;
+    const trunkX = Math.round(parentCenterX - areaRect.left);
+    const parentBottom = Math.round(parentRect.bottom - parentCenterY);
+    const upward = Math.round(areaRect.top - parentCenterY);
 
     const collapsed = area.classList.contains("collapsed");
 
     // 折叠状态：只保留父头像到折叠按钮的连接线
     if (collapsed) {
       const buttonTop = toggle ? (parseFloat(toggle.style.top) || 8) : 8;
-      const buttonCenterY = areaRect.top + buttonTop + 9 - parentCenterY;
+      const buttonCenterY = Math.round(areaRect.top + buttonTop + 9 - parentCenterY);
       const svgHeight = Math.max(1, upward + area.clientHeight);
+      const clientWidth = Math.max(20, area.clientWidth);
+      const hash = `c|${trunkX}|${parentBottom}|${buttonCenterY}|${svgHeight}|${clientWidth}`;
 
-      svg.style.top = -upward + "px";
-      svg.style.height = svgHeight + "px";
-      svg.style.width = "100%";
-      svg.setAttribute("viewBox", `0 0 ${Math.max(20, area.clientWidth)} ${svgHeight}`);
+      if (area._redditTreeHash === hash) return null;
 
+      const pathDefs = [];
       if (buttonCenterY >= parentBottom) {
-        addRedditPath(network, `M ${trunkX} ${parentBottom} V ${buttonCenterY}`, area);
+        pathDefs.push(`M ${trunkX} ${parentBottom} V ${buttonCenterY}`);
       }
-      return;
+
+      return {
+        area, svg, network, toggle, hash,
+        top: -upward, height: svgHeight, width: "100%",
+        viewBox: `0 0 ${clientWidth} ${svgHeight}`,
+        pathDefs, buttonLeft: null, buttonTop: null
+      };
     }
 
     const commentElements = [...children.children];
-    if (!commentElements.length) return;
+    if (!commentElements.length) return null;
 
     const points = [];
     for (const comment of commentElements) {
@@ -38761,21 +38775,22 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       const rect = avatar.getBoundingClientRect();
       if (rect.width === 0 && rect.height === 0) continue;
       points.push({
-        y: rect.top + rect.height / 2 - parentCenterY,
-        endX: rect.left - areaRect.left
+        y: Math.round(rect.top + rect.height / 2 - parentCenterY),
+        endX: Math.round(rect.left - areaRect.left)
       });
     }
 
-    if (!points.length) return;
+    if (!points.length) return null;
 
     // 圆角高度与水平线长度
     const curve = 12;
     const straightLength = 10;
     const lastStart = points[points.length - 1].y - curve;
+    const pathDefs = [];
 
     // 主干线（上级直线）
     if (lastStart >= parentBottom) {
-      addRedditPath(network, `M ${trunkX} ${parentBottom} V ${lastStart}`, area);
+      pathDefs.push(`M ${trunkX} ${parentBottom} V ${lastStart}`);
     }
 
     // 每条分支线（下级弯曲分支）
@@ -38795,33 +38810,91 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           ${straightStartX} ${point.y}
         L ${endX} ${point.y}
       `;
-      addRedditPath(network, d, area);
+      pathDefs.push(d);
     }
 
     // SVG 尺寸与位置
     const svgHeight = Math.max(1, upward + area.clientHeight);
-    svg.style.top = -upward + "px";
-    svg.style.height = svgHeight + "px";
-    svg.style.width = "100%";
-    svg.setAttribute("viewBox", `0 0 ${Math.max(20, area.clientWidth)} ${svgHeight}`);
+    const clientWidth = Math.max(20, area.clientWidth);
 
     // 折叠按钮位置：紧贴父头像下方
+    let buttonLeft = null;
+    let buttonTop = null;
     if (toggle) {
       const parentBottomInArea = parentRect.bottom - areaRect.top;
       const firstBranchInArea = points[0].y - curve - upward;
       const gap = firstBranchInArea - parentBottomInArea;
-      const buttonTop = gap >= 24 ? (parentBottomInArea + 8) : (parentBottomInArea + Math.max(2, (gap - 18) / 2));
-      toggle.style.left = (trunkX - 9) + "px";
-      toggle.style.top = buttonTop + "px";
+      buttonTop = Math.round(gap >= 24 ? (parentBottomInArea + 8) : (parentBottomInArea + Math.max(2, (gap - 18) / 2)));
+      buttonLeft = trunkX - 9;
     }
+
+    const hash = `e|${trunkX}|${parentBottom}|${svgHeight}|${clientWidth}|${points.length}|${points[points.length - 1].y}`;
+    if (area._redditTreeHash === hash) return null;
+
+    return {
+      area, svg, network, toggle, hash,
+      top: -upward, height: svgHeight, width: "100%",
+      viewBox: `0 0 ${clientWidth} ${svgHeight}`,
+      pathDefs, buttonLeft, buttonTop
+    };
   }
 
+  /* 批量只写提交阶段：使用 DocumentFragment 一次性提交 DOM 和样式 */
+  function applyRedditTreePlan(plan) {
+    if (!plan) return;
+    const { area, svg, network, toggle, hash, top, height, width, viewBox, pathDefs, buttonLeft, buttonTop } = plan;
+
+    const fragment = document.createDocumentFragment();
+    for (const d of pathDefs) {
+      const pair = createRedditPathPair(d, area);
+      if (pair) fragment.append(pair[0], pair[1]);
+    }
+
+    if (typeof network.replaceChildren === "function") {
+      network.replaceChildren(fragment);
+    } else {
+      network.innerHTML = "";
+      network.append(fragment);
+    }
+
+    svg.style.top = top + "px";
+    svg.style.height = height + "px";
+    svg.style.width = width;
+    svg.setAttribute("viewBox", viewBox);
+
+    if (toggle && buttonTop !== null) {
+      toggle.style.left = buttonLeft + "px";
+      toggle.style.top = buttonTop + "px";
+    }
+
+    area._redditTreeHash = hash;
+  }
+
+  /* 单节点兼容绘制入口 */
+  function drawRedditTree(area) {
+    const plan = computeRedditTreePlan(area);
+    if (plan) applyRedditTreePlan(plan);
+  }
+
+  /* 全局批量重绘调度：读写分离批处理 + 脏数据哈希跳过，将 100+ 次重排彻底降为 1 次 */
   function redrawAllRedditTrees(root) {
     if (typeof window === "undefined" || !isRedditThreadStyle()) return;
     const base = root && root.querySelectorAll ? root : document;
     if (!base.querySelectorAll) return;
-    const areas = base.querySelectorAll(".children-area");
-    areas.forEach(drawRedditTree);
+    const areas = [...base.querySelectorAll(".children-area")];
+    if (!areas.length) return;
+
+    // Phase 1: 批量测量读取（所有 getBoundingClientRect 集中执行，浏览器仅 1 次重排）
+    const plans = [];
+    for (const area of areas) {
+      const plan = computeRedditTreePlan(area);
+      if (plan) plans.push(plan);
+    }
+
+    // Phase 2: 批量写入更新（批量注入 DocumentFragment，无交叉重排）
+    for (const plan of plans) {
+      applyRedditTreePlan(plan);
+    }
   }
 
   let _redditTreeRafId = null;
