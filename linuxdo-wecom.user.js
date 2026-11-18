@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.45
+// @version      0.8.46
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -648,6 +648,7 @@
 
   const ICONS = {
     // 停靠栏填充型图标 (Tabler filled 规范)
+    tips: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z"/><path d="M9 21h6"/></svg>`,
     msg: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M18 3a4 4 0 0 1 4 4v8a4 4 0 0 1 -4 4h-4.724l-4.762 2.857a1 1 0 0 1 -1.508 -.743l-.006 -.114v-2h-1a4 4 0 0 1 -3.995 -3.8l-.005 -.2v-8a4 4 0 0 1 4 -4zm-4 9h-6a1 1 0 0 0 0 2h6a1 1 0 0 0 0 -2m2 -4h-8a1 1 0 1 0 0 2h8a1 1 0 0 0 0 -2" /></svg>`,
     history: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M17 3.34a10 10 0 1 1 -14.995 8.984l-.005 -.324l.005 -.324a10 10 0 0 1 14.995 -8.336zm-5 2.66a1 1 0 0 0 -1 1v5a1 1 0 0 0 .293 .707l3 3a1 1 0 0 0 1.414 -1.414l-2.707 -2.707v-4.586a1 1 0 0 0 -1 -1z" /></svg>`,
     doc: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M12 2l.117 .007a1 1 0 0 1 .876 .876l.007 .117v4l.005 .15a2 2 0 0 0 1.838 1.844l.157 .006h4l.117 .007a1 1 0 0 1 .876 .876l.007 .117v9a3 3 0 0 1 -2.824 2.995l-.176 .005h-10a3 3 0 0 1 -2.995 -2.824l-.005 -.176v-14a3 3 0 0 1 2.824 -2.995l.176 -.005zm3 14h-6a1 1 0 0 0 0 2h6a1 1 0 0 0 0 -2m0 -4h-6a1 1 0 0 0 0 2h6a1 1 0 0 0 0 -2m-5 -4h-1a1 1 0 1 0 0 2h1a1 1 0 0 0 0 -2" /><path d="M19 7h-4l-.001 -4.001z" /></svg>`,
@@ -4119,6 +4120,202 @@
     }
     .wecom-list-status.is-clickable:hover {
       color: var(--wc-blue);
+    }
+
+    /* ---------- 使用技巧与快捷键指南弹窗 ---------- */
+    .wecom-tips-dialog {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 99998;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+    .wecom-tips-dialog * {
+      box-sizing: border-box;
+    }
+    .wecom-tips-card {
+      width: 580px;
+      max-width: 95vw;
+      max-height: 85vh;
+      background: var(--wc-bg, #FFFFFF);
+      border-radius: 12px;
+      border: 1px solid var(--wc-border, #E6E8EB);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: wecomFadeIn 0.16s ease-out;
+    }
+    html.wecom-dark .wecom-tips-card {
+      background: #23272E;
+      border-color: rgba(255, 255, 255, 0.12);
+      color: #E4E7EB;
+    }
+    .wecom-tips-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px 12px;
+      border-bottom: 1px solid var(--wc-border, #E6E8EB);
+      flex-shrink: 0;
+    }
+    html.wecom-dark .wecom-tips-head {
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    .wecom-tips-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--wc-text, #1A1D24);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    html.wecom-dark .wecom-tips-title {
+      color: #FFFFFF;
+    }
+    .wecom-tips-title svg {
+      color: #F5A623;
+    }
+    .wecom-tips-close {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--wc-text-3, #8A8F99);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+    .wecom-tips-close:hover {
+      background: rgba(0, 0, 0, 0.06);
+      color: var(--wc-text, #1A1D24);
+    }
+    html.wecom-dark .wecom-tips-close:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #FFFFFF;
+    }
+    .wecom-tips-body {
+      padding: 16px 20px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      user-select: text;
+    }
+    .wecom-tips-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .wecom-tips-section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--wc-blue, #267EF0);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      letter-spacing: 0.2px;
+    }
+    .wecom-tips-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .wecom-tips-item {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 9px 12px;
+      background: rgba(0, 0, 0, 0.025);
+      border-radius: 8px;
+      border: 1px solid rgba(0, 0, 0, 0.04);
+    }
+    html.wecom-dark .wecom-tips-item {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.06);
+    }
+    .wecom-tips-item-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      flex: 1;
+    }
+    .wecom-tips-item-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--wc-text, #1F2329);
+    }
+    html.wecom-dark .wecom-tips-item-name {
+      color: #F0F2F5;
+    }
+    .wecom-tips-item-desc {
+      font-size: 12px;
+      color: var(--wc-text-3, #8F959E);
+      line-height: 1.45;
+    }
+    .wecom-tips-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+      padding-top: 1px;
+    }
+    .wecom-kbd {
+      display: inline-block;
+      padding: 3px 6px;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1;
+      color: var(--wc-text, #2F3542);
+      background: #F4F6F8;
+      border: 1px solid #DCDFE6;
+      border-radius: 4px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    }
+    html.wecom-dark .wecom-kbd {
+      color: #E2E8F0;
+      background: #2D333B;
+      border-color: #444C56;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    }
+    .wecom-tips-footer {
+      padding: 10px 20px;
+      border-top: 1px solid var(--wc-border, #E6E8EB);
+      display: flex;
+      justify-content: flex-end;
+      flex-shrink: 0;
+      background: var(--wc-composer-bg, #FAFAFA);
+    }
+    html.wecom-dark .wecom-tips-footer {
+      border-color: rgba(255, 255, 255, 0.08);
+      background: #1C1E22;
+    }
+    .wecom-tips-btn-confirm {
+      height: 32px;
+      padding: 0 20px;
+      background: var(--wc-blue, #267EF0);
+      color: #FFFFFF;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .wecom-tips-btn-confirm:hover {
+      background: #1D6FD8;
     }
 
     /* ---------- 右栏：聊天详情 ---------- */
@@ -18242,6 +18439,186 @@
     if (dialog) dialog.remove();
   }
 
+  function closeUsageTipsDialog() {
+    const dialog = document.querySelector(".wecom-tips-dialog");
+    if (dialog) dialog.remove();
+  }
+
+  function openUsageTipsDialog() {
+    closeUsageTipsDialog();
+    closeAllPlatformDropdowns();
+    setThemeMenuOpen(false);
+
+    const { overlay, close } = createWecomModalShell({
+      overlayClass: "wecom-tips-dialog",
+      closeSelectors: [".wecom-tips-close", ".wecom-tips-btn-confirm"],
+      contentHtml: `
+        <div class="wecom-tips-card" role="dialog" aria-modal="true" aria-labelledby="wecom-tips-title">
+          <div class="wecom-tips-head">
+            <div id="wecom-tips-title" class="wecom-tips-title">
+              ${ICONS.tips || ""} <span>使用技巧与快捷键指南</span>
+            </div>
+            <button type="button" class="wecom-tips-close" aria-label="关闭">&times;</button>
+          </div>
+          <div class="wecom-tips-body">
+            <!-- 核心快捷键 -->
+            <div class="wecom-tips-section">
+              <div class="wecom-tips-section-title">
+                <span>⚡</span> <span>核心全局快捷键</span>
+              </div>
+              <div class="wecom-tips-list">
+                <div class="wecom-tips-item">
+                  <div class="wecom-tips-item-info">
+                    <div class="wecom-tips-item-name">话题快速预览滚动 (3D堆叠卡片)</div>
+                    <div class="wecom-tips-item-desc">呼出 3D 层叠卡片预览导航，滚动滚轮即可在列表中快速滑动预览话题与真实标题。</div>
+                  </div>
+                  <div class="wecom-tips-badge">
+                    <kbd class="wecom-kbd">Alt</kbd> + <kbd class="wecom-kbd">滚轮</kbd>
+                  </div>
+                </div>
+
+                <div class="wecom-tips-item">
+                  <div class="wecom-tips-item-info">
+                    <div class="wecom-tips-item-name">确认进入选中的话题</div>
+                    <div class="wecom-tips-item-desc">在话题卡片预览面板呼出时，直接确认进入当前聚焦话题；也可直接单击当前卡片。</div>
+                  </div>
+                  <div class="wecom-tips-badge">
+                    <kbd class="wecom-kbd">Alt</kbd> + <kbd class="wecom-kbd">Enter</kbd>
+                  </div>
+                </div>
+
+                <div class="wecom-tips-item">
+                  <div class="wecom-tips-item-info">
+                    <div class="wecom-tips-item-name">切换企业微信视图 / 原站视图</div>
+                    <div class="wecom-tips-item-desc">全局一键在企业微信 IM 风格与论坛官方网页风格之间无缝切换。</div>
+                  </div>
+                  <div class="wecom-tips-badge">
+                    <kbd class="wecom-kbd">Alt</kbd> + <kbd class="wecom-kbd">W</kbd>
+                  </div>
+                </div>
+
+                <div class="wecom-tips-item">
+                  <div class="wecom-tips-item-info">
+                    <div class="wecom-tips-item-name">聚焦会话列表搜索框</div>
+                    <div class="wecom-tips-item-desc">光标瞬间聚焦到左侧搜索栏，直接输入关键词检索全站话题。</div>
+                  </div>
+                  <div class="wecom-tips-badge">
+                    <kbd class="wecom-kbd">Ctrl</kbd> + <kbd class="wecom-kbd">K</kbd>
+                  </div>
+                </div>
+
+                <div class="wecom-tips-item">
+                  <div class="wecom-tips-item-info">
+                    <div class="wecom-tips-item-name">插入 Base64 编码</div>
+                    <div class="wecom-tips-item-desc">在消息发送框中快速打开文本转 Base64 工具，自动生成编码字符串。</div>
+                  </div>
+                  <div class="wecom-tips-badge">
+                    <kbd class="wecom-kbd">Alt</kbd> + <kbd class="wecom-kbd">B</kbd>
+                  </div>
+                </div>
+
+                <div class="wecom-tips-item">
+                  <div class="wecom-tips-item-info">
+                    <div class="wecom-tips-item-name">平滑滚动到首楼 / 尾楼</div>
+                    <div class="wecom-tips-item-desc">在右侧聊天对话中按键，仅平滑滚动当前话题消息体，绝不触碰左侧列表。</div>
+                  </div>
+                  <div class="wecom-tips-badge">
+                    <kbd class="wecom-kbd">Home</kbd> / <kbd class="wecom-kbd">End</kbd>
+                  </div>
+                </div>
+
+                <div class="wecom-tips-item">
+                  <div class="wecom-tips-item-info">
+                    <div class="wecom-tips-item-name">关闭弹窗 / 取消预览</div>
+                    <div class="wecom-tips-item-desc">随时退出当前预览面板、大图浮窗、弹窗菜单或设置面板。</div>
+                  </div>
+                  <div class="wecom-tips-badge">
+                    <kbd class="wecom-kbd">Esc</kbd>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 摸鱼与伪装技巧 -->
+            <div class="wecom-tips-section">
+              <div class="wecom-tips-section-title">
+                <span>🕶️</span> <span>摸鱼伪装与防偷窥</span>
+              </div>
+              <div class="wecom-tips-list">
+                <div class="wecom-tips-item">
+                  <div class="wecom-tips-item-info">
+                    <div class="wecom-tips-item-name">多级标题伪装模式</div>
+                    <div class="wecom-tips-item-desc">点击左侧列表栏右上角的 <strong>[窗口]</strong> 图标，可在“全部伪装 / 仅列表 / 仅详情 / 关闭”间循环切换，标题自动变更为微信工作群；鼠标悬停可偷瞄真标题。</div>
+                  </div>
+                </div>
+
+                <div class="wecom-tips-item">
+                  <div class="wecom-tips-item-info">
+                    <div class="wecom-tips-item-name">全站九宫格群头像伪装</div>
+                    <div class="wecom-tips-item-desc">点击左侧列表栏右上角的 <strong>[面具]</strong> 图标，一键将全站所有用户头像替换为企业微信标准群聊网格头像。</div>
+                  </div>
+                </div>
+
+                <div class="wecom-tips-item">
+                  <div class="wecom-tips-item-info">
+                    <div class="wecom-tips-item-name">背景防窥全屏水印</div>
+                    <div class="wecom-tips-item-desc">在右上角更多菜单中点击“背景水印设置”，可开启带有自定义文字或企业微信号的半透明倾斜防偷窥水印。</div>
+                  </div>
+                </div>
+
+                <div class="wecom-tips-item">
+                  <div class="wecom-tips-item-info">
+                    <div class="wecom-tips-item-name">划词 Base64 自动解密</div>
+                    <div class="wecom-tips-item-desc">划词选中页面中任意 Base64 密文（如绿泡泡号、网盘链接），自动弹出浮窗解密并支持一键复制或跳转。</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 浏览与效率技巧 -->
+            <div class="wecom-tips-section">
+              <div class="wecom-tips-section-title">
+                <span>🚀</span> <span>浏览与效率神器</span>
+              </div>
+              <div class="wecom-tips-list">
+                <div class="wecom-tips-item">
+                  <div class="wecom-tips-item-info">
+                    <div class="wecom-tips-item-name">图片悬浮无级放大镜</div>
+                    <div class="wecom-tips-item-desc">将鼠标悬停在聊天中的图片上，自动呼出高清透镜；滚动滚轮可自由调节 1.2x ~ 4x 放大倍率，单击图片进入全屏高清画廊。</div>
+                  </div>
+                </div>
+
+                <div class="wecom-tips-item">
+                  <div class="wecom-tips-item-info">
+                    <div class="wecom-tips-item-name">Reddit 树状多级回复与折叠</div>
+                    <div class="wecom-tips-item-desc">在左下角设置中可开启 Reddit 树状视图，通过优雅的平滑贝塞尔引导线连接子回复，点击引导线圆形折叠按钮即可折叠分支。</div>
+                  </div>
+                </div>
+
+                <div class="wecom-tips-item">
+                  <div class="wecom-tips-item-info">
+                    <div class="wecom-tips-item-name">多社区一键秒级切换</div>
+                    <div class="wecom-tips-item-desc">在右上角“更多”菜单中可一键在 Linux DO、V2EX、稀土掘金、知乎 之间来回切换，所有平台均统一享有企业微信界面与快捷特性。</div>
+                  </div>
+                </div>
+
+                <div class="wecom-tips-item">
+                  <div class="wecom-tips-item-info">
+                    <div class="wecom-tips-item-name">AI 智能总结与漫画生图</div>
+                    <div class="wecom-tips-item-desc">点击右上角闪烁星标图标，一键自动抓取本帖正文与各楼层热议回复，进行核心提炼与生动生图。</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="wecom-tips-footer">
+            <button type="button" class="wecom-tips-btn-confirm">我知道了</button>
+          </div>
+        </div>
+      `
+    });
+  }
+
   function openWindowShortcutDialog() {
     closeWindowShortcutDialog();
     closeSystemFontPicker();
@@ -22444,7 +22821,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.45";
+  const SCRIPT_VERSION = "0.8.46";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -35171,6 +35548,17 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       panel = null;
     }
     if (panel) {
+      if (!panel.querySelector(".wecom-chat-usage-tips")) {
+        const moreActions = panel.querySelector(".wecom-chat-more-actions");
+        if (moreActions) {
+          moreActions.insertAdjacentHTML("beforeend", `
+            <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-chat-usage-tips" title="使用技巧与快捷键指南" aria-label="使用技巧与快捷键指南">
+              <span class="wecom-chat-more-icon">${ICONS.tips}</span>
+              <span class="wecom-chat-more-label">使用技巧</span>
+            </button>
+          `);
+        }
+      }
       if (!panel.querySelector(".wecom-chat-back-btn")) {
         const headMain = panel.querySelector(".wecom-chat-head-main");
         if (headMain) {
@@ -35287,6 +35675,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
                 <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-watermark-settings" title="背景水印设置" aria-label="背景水印设置" aria-expanded="false" aria-pressed="false">
                   <span class="wecom-chat-more-icon">${ICONS.watermark}</span>
                   <span class="wecom-chat-more-label">背景水印设置</span>
+                </button>
+                <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-chat-usage-tips" title="使用技巧与快捷键指南" aria-label="使用技巧与快捷键指南">
+                  <span class="wecom-chat-more-icon">${ICONS.tips}</span>
+                  <span class="wecom-chat-more-label">使用技巧</span>
                 </button>
               </div>
               <div class="wecom-chat-more-divider"></div>
@@ -36388,6 +36780,12 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       } else if (target === "zhihu" && !IS_ZHIHU) {
         navigateWithAiSync("https://www.zhihu.com/hot"); // window.location.href = "https://www.zhihu.com/hot"
       }
+      return true;
+    }
+    if (event.target.closest(".wecom-chat-usage-tips")) {
+      consumeClick(event);
+      closeAllPlatformDropdowns();
+      openUsageTipsDialog();
       return true;
     }
     if (event.target.closest(".wecom-chat-ai-summary, .wecom-chat-ai-summary-menu")) {

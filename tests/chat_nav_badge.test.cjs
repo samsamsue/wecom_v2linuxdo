@@ -14306,6 +14306,52 @@ test("Test 178: Stacked card deck HUD navigator with smooth transitions, 70% tra
   );
 });
 
+test("Test 179: Top-right More menu Usage Tips (使用技巧) modal covering Alt+Wheel preview, Alt+W theme switcher, privacy disguises, and shortcuts (v0.8.46)", () => {
+  // 1. Version bump
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.(4[6-9]|[5-9]\d)";/, "user.js version must be 0.8.46+");
+
+  // 2. ICONS.tips lightbulb icon
+  assert.ok(
+    scriptContent.includes("tips: `<svg width=\"18\" height=\"18\""),
+    "must define ICONS.tips with lightbulb SVG"
+  );
+
+  // 3. Top-right more actions menu button
+  assert.ok(
+    scriptContent.includes('class="wecom-icon-btn wecom-chat-more-item wecom-chat-usage-tips"'),
+    "must include wecom-chat-usage-tips button in chat more menu"
+  );
+  assert.ok(
+    scriptContent.includes('title="使用技巧与快捷键指南"'),
+    "must provide descriptive tooltip for usage tips button"
+  );
+
+  // 4. Modal CSS classes
+  assert.ok(scriptContent.includes(".wecom-tips-dialog"), "must style .wecom-tips-dialog backdrop");
+  assert.ok(scriptContent.includes(".wecom-tips-card"), "must style .wecom-tips-card modal body");
+  assert.ok(scriptContent.includes(".wecom-kbd"), "must style .wecom-kbd keyboard key badge");
+
+  // 5. Open and close helpers
+  assert.ok(scriptContent.includes("function openUsageTipsDialog()"), "must define openUsageTipsDialog");
+  assert.ok(scriptContent.includes("function closeUsageTipsDialog()"), "must define closeUsageTipsDialog");
+
+  // 6. Content coverage: Alt+滚轮, Alt+W, Alt+Enter, Ctrl+K, Alt+B, 伪装, 放大镜, 树状
+  assert.ok(scriptContent.includes("话题快速预览滚动 (3D堆叠卡片)"), "must document Alt+滚轮 preview feature");
+  assert.ok(scriptContent.includes("Alt") && scriptContent.includes("滚轮"), "must show Alt+滚轮 key tags");
+  assert.ok(scriptContent.includes("切换企业微信视图 / 原站视图"), "must document Alt+W view switcher");
+  assert.ok(scriptContent.includes("确认进入选中的话题"), "must document Alt+Enter confirmation");
+  assert.ok(scriptContent.includes("多级标题伪装模式"), "must document title disguise feature");
+  assert.ok(scriptContent.includes("全站九宫格群头像伪装"), "must document avatar disguise feature");
+  assert.ok(scriptContent.includes("图片悬浮无级放大镜"), "must document image magnifier feature");
+  assert.ok(scriptContent.includes("Reddit 树状多级回复与折叠"), "must document Reddit thread tree feature");
+
+  // 7. Click event dispatch
+  assert.ok(
+    scriptContent.includes('event.target.closest(".wecom-chat-usage-tips")'),
+    "handleChatHeaderClick must capture .wecom-chat-usage-tips clicks and open tips dialog"
+  );
+});
+
 
 
 
