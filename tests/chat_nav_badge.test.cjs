@@ -14166,14 +14166,17 @@ test("Test 175: Reddit thread tree SVG Bézier curves, zero protrusion without w
   assert.ok(scriptContent.includes("_redditTreeHash"), "must use dirty-checking hash to skip redundant re-renders");
 });
 
-test("Test 176: Global Alt + Mouse Wheel topic quick-scroll preview HUD navigator (v0.8.43)", () => {
+test("Test 176: Global Alt + Mouse Wheel topic quick-scroll preview HUD navigator (v0.8.44)", () => {
   // 1. Version bump
-  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.(4[3-9]|[5-9]\d)";/, "user.js version must be 0.8.43+");
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.(4[4-9]|[5-9]\d)";/, "user.js version must be 0.8.44+");
 
-  // 2. HUD & backdrop CSS classes and styles (50% opacity, frosted glass, slot highlight)
+  // 2. HUD & backdrop CSS classes and styles (compact low-key design, white light scrim, black dark scrim)
   assert.ok(scriptContent.includes(".wecom-topic-wheel-backdrop"), "must define wheel HUD backdrop overlay");
+  assert.ok(scriptContent.includes("background: transparent;"), "light mode backdrop must use transparent scrim without color tint");
+  assert.ok(scriptContent.includes("body.wecom-dark .wecom-topic-wheel-backdrop"), "dark mode backdrop must use black translucent overlay");
   assert.ok(scriptContent.includes(".wecom-topic-wheel-hud"), "must define centered frosted-glass HUD card");
-  assert.ok(scriptContent.includes("rgba(22, 26, 33, 0.50)") || scriptContent.includes("0.50"), "HUD must feature ~50% translucent glass background");
+  assert.ok(scriptContent.includes("width: 350px"), "HUD must feature compact 350px width");
+  assert.ok(scriptContent.includes("height: 152px"), "HUD must feature compact 152px height");
   assert.ok(scriptContent.includes(".wecom-topic-wheel-viewport"), "must define 3D viewport for drum roller");
   assert.ok(scriptContent.includes(".wecom-topic-wheel-slot"), "must define illuminated slot pill for center active row");
   assert.ok(scriptContent.includes(".wecom-topic-wheel-track"), "must define track container with transform-style: preserve-3d");
@@ -14193,6 +14196,7 @@ test("Test 176: Global Alt + Mouse Wheel topic quick-scroll preview HUD navigato
   assert.ok(scriptContent.includes("realTitle = topicObj?.title || el.dataset.realTitle"), "getWheelTopicRows must retrieve real title rather than fake disguise title");
 
   // 4. Core DOM and logic functions
+  assert.ok(scriptContent.includes("const WHEEL_ROW_HEIGHT = 40;"), "must define compact WHEEL_ROW_HEIGHT");
   assert.ok(scriptContent.includes("function ensureWheelHudDOM()"), "must define ensureWheelHudDOM helper");
   assert.ok(scriptContent.includes("function getWheelTopicRows()"), "must define getWheelTopicRows query helper");
   assert.ok(scriptContent.includes("function openWheelHud()"), "must define openWheelHud activator");
@@ -14200,6 +14204,8 @@ test("Test 176: Global Alt + Mouse Wheel topic quick-scroll preview HUD navigato
   assert.ok(scriptContent.includes("function closeWheelHud("), "must define closeWheelHud dismisser");
   assert.ok(scriptContent.includes("function confirmWheelHud()"), "must define confirmWheelHud enter trigger");
   assert.ok(scriptContent.includes("function bindWheelTopicNavigator()"), "must define bindWheelTopicNavigator listener binder");
+  assert.ok(scriptContent.includes("function syncWheelHudOnAppend"), "must define syncWheelHudOnAppend for infinite scroll synchronization");
+  assert.ok(scriptContent.includes("function triggerWheelHudLoadMore"), "must define triggerWheelHudLoadMore for prefetching next page");
 
   // 5. Shortcut bindings and keyboard interactions
   assert.ok(scriptContent.includes("event.altKey || _wheelHudVisible"), "wheel listener must check altKey or active HUD visibility");
