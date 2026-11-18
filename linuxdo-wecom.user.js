@@ -4797,11 +4797,9 @@
       box-sizing: border-box !important;
     }
 
-    html.wecom-thread-style-reddit .wecom-thread-node,
-    html.wecom-thread-style-reddit .wecom-msg,
-    html.wecom-thread-style-reddit .wecom-reddit-node,
     html.wecom-thread-style-reddit .wecom-reply-children .wecom-msg,
-    html.wecom-thread-style-reddit .wecom-reply-children .wecom-thread-node {
+    html.wecom-thread-style-reddit .wecom-reply-children .wecom-thread-node,
+    html.wecom-thread-style-reddit .wecom-reply-children .wecom-reddit-node {
       position: relative !important;
       width: 100% !important;
       margin-left: 0 !important;
@@ -4842,6 +4840,19 @@
     html.wecom-thread-style-reddit .wecom-msg.is-thread-collapsed > .wecom-reddit-row > .wecom-reddit-body-col > .wecom-msg-bubble,
     html.wecom-thread-style-reddit .wecom-msg.is-thread-collapsed > .wecom-reply-children {
       display: none !important;
+    }
+
+    /* Reddit 树状模式最高优先级约束：确保所有直接位于 chat-body 下的根元素（.wecom-thread-node、无子回复的根级 .wecom-msg 等）严格限宽 700px 且水平居中，同时滚动条保持在最右侧窗口边缘 */
+    html.wecom-thread-style-reddit .wecom-chat-body > .wecom-thread-node,
+    html.wecom-thread-style-reddit .wecom-chat-body > .wecom-msg,
+    html.wecom-thread-style-reddit .wecom-chat-body > .wecom-reddit-row,
+    html.wecom-thread-style-reddit .wecom-chat-body > * {
+      width: 100% !important;
+      max-width: 700px !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
+      align-self: center !important;
+      box-sizing: border-box !important;
     }
 
     .wecom-msg-header {
