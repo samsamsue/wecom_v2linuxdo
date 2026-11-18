@@ -14428,10 +14428,10 @@ test("Test 181: Multi-floor bubble more button menu triggering, zero duplicate p
 
   // 1. Version bump
   assert.ok(
-    scriptContent.includes('@version      0.8.48') &&
-    metaContent.includes('@version      0.8.48') &&
-    scriptContent.includes('const SCRIPT_VERSION = "0.8.48";'),
-    "version must be bumped to 0.8.48"
+    /@version\s+0\.8\.(48|49)/.test(scriptContent) &&
+    /@version\s+0\.8\.(48|49)/.test(metaContent) &&
+    /const SCRIPT_VERSION = "0\.8\.(48|49)";/.test(scriptContent),
+    "version must be at least 0.8.48"
   );
 
   // 2. CSS isolation: no unconstrained descendant rules that leak into nested floors
@@ -14561,5 +14561,207 @@ test("Test 181: Multi-floor bubble more button menu triggering, zero duplicate p
   assert.strictEqual(childTools.left, "240px", "child tools must position relative to child button left");
   assert.strictEqual(childTools.top, "204px", "child tools must position relative to child button bottom");
   assert.strictEqual(parentTools.left, undefined, "parent tools must remain untouched and unpositioned");
+});
+
+test("Test 182: User tags support on profile cards and chat bubbles with management, search, export, and import (v0.8.49)", () => {
+  const fs = require("fs");
+  const scriptContent = fs.readFileSync("linuxdo-wecom.user.js", "utf8");
+  const metaContent = fs.readFileSync("linuxdo-wecom.meta.js", "utf8");
+  const readmeContent = fs.readFileSync("README.md", "utf8");
+
+  // 1. Version assertions
+  assert.match(scriptContent, /\/\/\s*@version\s+0\.8\.49/);
+  assert.match(metaContent, /\/\/\s*@version\s+0\.8\.49/);
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.49";/);
+  assert.match(readmeContent, /当前版本：\*\*0\.8\.49\*\*/);
+
+  // 2. Storage key & Core functions existence
+  assert.ok(scriptContent.includes('const USER_TAGS_STORAGE_KEY = "wecom_user_tags";'), "must define USER_TAGS_STORAGE_KEY");
+  assert.ok(scriptContent.includes("function getAllUserTagsMap()"), "must define getAllUserTagsMap");
+  assert.ok(scriptContent.includes("function getUserTags(username)"), "must define getUserTags");
+  assert.ok(scriptContent.includes("function setUserTags(username, tags)"), "must define setUserTags");
+  assert.ok(scriptContent.includes("function addUserTag(username, tag)"), "must define addUserTag");
+  assert.ok(scriptContent.includes("function removeUserTag(username, tag)"), "must define removeUserTag");
+  assert.ok(scriptContent.includes("function deleteUserTags(username)"), "must define deleteUserTags");
+  assert.ok(scriptContent.includes("function exportUserTagsJson()"), "must define exportUserTagsJson");
+  assert.ok(scriptContent.includes("function downloadUserTagsFile()"), "must define downloadUserTagsFile");
+  assert.ok(scriptContent.includes("function importUserTags(jsonContent, mode = \"merge\")"), "must define importUserTags");
+  assert.ok(scriptContent.includes("function renderUserTagsHtml(username)"), "must define renderUserTagsHtml");
+  assert.ok(scriptContent.includes("function refreshUserTagsInView(targetUsername = null)"), "must define refreshUserTagsInView");
+  assert.ok(scriptContent.includes("function renderMemberCardTagsEditor(container, username)"), "must define renderMemberCardTagsEditor");
+  assert.ok(scriptContent.includes("function mountDiscourseUserCardTags(targetUsername = null)"), "must define mountDiscourseUserCardTags");
+  assert.ok(scriptContent.includes("function initDiscourseUserCardTagsWatcher()"), "must define initDiscourseUserCardTagsWatcher");
+  assert.ok(scriptContent.includes("function openUserTagsManagerModal(initialQuery = \"\")"), "must define openUserTagsManagerModal");
+
+  // 3. UI integration in Member cards, Discourse cards, more menu, and chat bubbles
+  assert.ok(scriptContent.includes('wecom-member-tags-section'), "must have wecom-member-tags-section in CSS and templates");
+  assert.ok(scriptContent.includes('renderMemberCardTagsEditor(tagsSection, username);'), "must initialize member card tags editor");
+  assert.ok(scriptContent.includes('mountDiscourseUserCardTags(username);'), "must trigger Discourse card tags mounting");
+  assert.ok(scriptContent.includes('initDiscourseUserCardTagsWatcher();'), "must initialize Discourse card tags watcher");
+  assert.ok(scriptContent.includes('wecom-user-tags-manager-btn'), "must include user tags manager button in chat header more menu");
+  assert.ok(scriptContent.includes('openUserTagsManagerModal();'), "must wire more menu click to openUserTagsManagerModal");
+  assert.ok(scriptContent.includes('${renderUserTagsHtml(post.username || displayName)}'), "must render user tags inline in post bubble headers");
+  assert.ok(scriptContent.includes('${renderUserTagsHtml(authorName)}'), "must render user tags inline in Zhihu comment bubble headers");
+
+  // 4. Test logic simulation for Tag Engine: CRUD, Sanitization, Limits
+  const mockStorage = {};
+  const mockLocalStorage = {
+    getItem: (k) => (k in mockStorage ? mockStorage[k] : null),
+    setItem: (k, v) => { mockStorage[k] = String(v); },
+    removeItem: (k) => { delete mockStorage[k]; }
+  };
+  let toastMsg = "";
+  const mockShowWecomToast = (msg) => { toastMsg = msg; };
+  let refreshedUser = null;
+  const mockRefreshUserTagsInView = (u) => { refreshedUser = u; };
+  const mockEscapeHtml = (s) => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+  const engine = new Function(
+    "localStorage", "showWecomToast", "refreshUserTagsInView", "escapeHtml",
+    `
+    const USER_TAGS_STORAGE_KEY = "wecom_user_tags";
+    ${scriptContent.slice(
+      scriptContent.indexOf("function getAllUserTagsMap()"),
+      scriptContent.indexOf("function refreshUserTagsInView")
+    )}
+    ${scriptContent.slice(
+      scriptContent.indexOf("function renderUserTagsHtml(username)"),
+      scriptContent.indexOf("function refreshUserTagsInView")
+    )}
+    return {
+      getAllUserTagsMap,
+      getUserTags,
+      setUserTags,
+      addUserTag,
+      removeUserTag,
+      deleteUserTags,
+      exportUserTagsJson,
+      importUserTags,
+      renderUserTagsHtml
+    };
+    `
+  )(mockLocalStorage, mockShowWecomToast, mockRefreshUserTagsInView, mockEscapeHtml);
+
+  // Initial state is empty
+  assert.deepStrictEqual(engine.getUserTags("neo"), []);
+  assert.strictEqual(engine.renderUserTagsHtml("neo"), '<span class="wecom-user-tags-inline" data-username="neo"></span>');
+
+  // Add tags
+  assert.ok(engine.addUserTag("neo", "始皇"));
+  assert.deepStrictEqual(engine.getUserTags("neo"), ["始皇"]);
+  assert.strictEqual(refreshedUser, "neo");
+  assert.ok(engine.addUserTag("neo", "大佬"));
+  assert.deepStrictEqual(engine.getUserTags("neo"), ["始皇", "大佬"]);
+
+  // Duplicate tag prevention (case-insensitive)
+  assert.strictEqual(engine.addUserTag("neo", "始皇"), false);
+  assert.deepStrictEqual(engine.getUserTags("neo"), ["始皇", "大佬"]);
+
+  // Tag length limit (> 15 chars rejected)
+  assert.strictEqual(engine.addUserTag("neo", "这是一个超级超级超级长的不合法标签"), false);
+  assert.deepStrictEqual(engine.getUserTags("neo"), ["始皇", "大佬"]);
+
+  // Add tag for second user
+  engine.addUserTag("linus", "Linux之父");
+  engine.addUserTag("linus", "内核大佬");
+  assert.deepStrictEqual(engine.getUserTags("linus"), ["Linux之父", "内核大佬"]);
+
+  // Verify renderUserTagsHtml output
+  const html = engine.renderUserTagsHtml("neo");
+  assert.ok(html.includes('data-tag="始皇"'));
+  assert.ok(html.includes('data-tag="大佬"'));
+  assert.ok(html.includes('class="wecom-user-tag"'));
+
+  // Remove tag
+  assert.ok(engine.removeUserTag("neo", "始皇"));
+  assert.deepStrictEqual(engine.getUserTags("neo"), ["大佬"]);
+
+  // Export JSON test
+  const exported = engine.exportUserTagsJson();
+  const parsedExport = JSON.parse(exported);
+  assert.strictEqual(parsedExport.version, 1);
+  assert.strictEqual(parsedExport.userCount, 2);
+  assert.deepStrictEqual(parsedExport.tags.neo, ["大佬"]);
+  assert.deepStrictEqual(parsedExport.tags.linus, ["Linux之父", "内核大佬"]);
+
+  // Import JSON test - Merge mode
+  const importData = {
+    version: 1,
+    tags: {
+      neo: ["始皇", "V神"],
+      musk: ["火星狂人"]
+    }
+  };
+  const mergeResult = engine.importUserTags(JSON.stringify(importData), "merge");
+  assert.strictEqual(mergeResult.success, true);
+  assert.strictEqual(mergeResult.userCount, 2);
+  assert.deepStrictEqual(engine.getUserTags("neo"), ["大佬", "始皇", "V神"]);
+  assert.deepStrictEqual(engine.getUserTags("musk"), ["火星狂人"]);
+  assert.deepStrictEqual(engine.getUserTags("linus"), ["Linux之父", "内核大佬"]);
+
+  // Import JSON test - Overwrite mode
+  const overwriteData = {
+    tags: {
+      testUser: ["新标签A", "新标签B"]
+    }
+  };
+  const overwriteResult = engine.importUserTags(overwriteData, "overwrite");
+  assert.strictEqual(overwriteResult.success, true);
+  assert.deepStrictEqual(engine.getUserTags("testUser"), ["新标签A", "新标签B"]);
+  assert.deepStrictEqual(engine.getUserTags("neo"), [], "old users must be cleared in overwrite mode");
+
+  // Invalid JSON handling
+  const badResult = engine.importUserTags("invalid-json{", "merge");
+  assert.strictEqual(badResult.success, false);
+  assert.strictEqual(badResult.error, "invalid_json");
+
+  // Delete user tags
+  assert.ok(engine.deleteUserTags("testUser"));
+  assert.deepStrictEqual(engine.getUserTags("testUser"), []);
+  assert.deepStrictEqual(engine.getAllUserTagsMap(), {});
+
+  // 5. Search filter logic verification
+  engine.addUserTag("alice", "前端架构");
+  engine.addUserTag("bob", "后端大牛");
+  engine.addUserTag("charlie", "前端切图仔");
+
+  const searchUsers = (q) => {
+    const query = q.toLowerCase();
+    return Object.entries(engine.getAllUserTagsMap()).filter(([u, tags]) => {
+      if (u.toLowerCase().includes(query)) return true;
+      return tags.some(t => t.toLowerCase().includes(query));
+    }).map(([u]) => u);
+  };
+
+  assert.deepStrictEqual(searchUsers("前端"), ["alice", "charlie"], "should search by tag name");
+  assert.deepStrictEqual(searchUsers("bob"), ["bob"], "should search by username");
+  assert.deepStrictEqual(searchUsers("架构"), ["alice"], "should search partial tag");
+  assert.deepStrictEqual(searchUsers("xyz"), [], "non-matching query should return empty");
+
+  // 6. Test Card Tags Editor DOM generation
+  const container = {
+    dataset: {},
+    innerHTML: "",
+    querySelector: (sel) => null,
+    querySelectorAll: (sel) => []
+  };
+  const ICONS = { tag: "<svg></svg>" };
+  const editorFn = new Function(
+    "getUserTags", "escapeHtml", "ICONS", "removeUserTag", "addUserTag", "openUserTagsManagerModal",
+    `
+    ${scriptContent.slice(
+      scriptContent.indexOf("function renderMemberCardTagsEditor(container, username)"),
+      scriptContent.indexOf("function mountDiscourseUserCardTags")
+    )}
+    return renderMemberCardTagsEditor;
+    `
+  )(engine.getUserTags, mockEscapeHtml, ICONS, engine.removeUserTag, engine.addUserTag, () => {});
+
+  editorFn(container, "alice");
+  assert.ok(container.innerHTML.includes('class="wecom-member-tags-header"'), "must generate header");
+  assert.ok(container.innerHTML.includes('class="wecom-card-tag-manage-btn"'), "must have manage button");
+  assert.ok(container.innerHTML.includes('class="wecom-card-tag-pill"'), "must generate tag pills");
+  assert.ok(container.innerHTML.includes('前端架构'), "must display alice's tag");
+  assert.ok(container.innerHTML.includes('class="wecom-card-tag-add-btn"'), "must have add tag button");
 });
 

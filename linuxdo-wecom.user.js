@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.48
+// @version      0.8.49
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -752,7 +752,10 @@
     quote: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v6c0 2.667-1.333 4.333-4 5" /><path d="M20 11h-4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v6c0 2.667-1.333 4.333-4 5" /></svg>`,
     eye: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6" /></svg>`,
     eyeOff: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.585 10.587a2 2 0 0 0 2.829 2.828" /><path d="M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c1.272 -2.12 2.712 -3.678 4.32 -4.674m2.86 -1.146a9.055 9.055 0 0 1 1.82 -.18c3.6 0 6.6 2 9 6c-.666 1.11 -1.379 2.067 -2.138 2.87" /><path d="M3 3l18 18" /></svg>`,
-    forward: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5 -5l-5 -5" /><path d="M4 20v-7a4 4 0 0 1 4 -4h12" /></svg>`
+    forward: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5 -5l-5 -5" /><path d="M4 20v-7a4 4 0 0 1 4 -4h12" /></svg>`,
+    tag: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`,
+    download: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
+    upload: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>`
   };
   ICONS.chat = ICONS.msg;
   ICONS.list = ICONS.msg;
@@ -4316,6 +4319,630 @@
     }
     .wecom-tips-btn-confirm:hover {
       background: #1D6FD8;
+    }
+
+    /* ---------- 用户标签系统样式 ---------- */
+    .wecom-user-tags-inline {
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px;
+      vertical-align: middle;
+      margin-left: 6px;
+    }
+    .wecom-user-tag {
+      display: inline-flex;
+      align-items: center;
+      font-size: 11px;
+      line-height: 1.2;
+      font-weight: 500;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: rgba(43, 153, 255, 0.1);
+      color: #1890ff;
+      border: 1px solid rgba(43, 153, 255, 0.22);
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .wecom-user-tag:hover {
+      background: rgba(43, 153, 255, 0.18);
+      border-color: rgba(43, 153, 255, 0.35);
+    }
+    html.wecom-dark .wecom-user-tag {
+      background: rgba(77, 161, 255, 0.15);
+      color: #79bbff;
+      border-color: rgba(77, 161, 255, 0.3);
+    }
+    html.wecom-dark .wecom-user-tag:hover {
+      background: rgba(77, 161, 255, 0.25);
+      border-color: rgba(77, 161, 255, 0.45);
+    }
+
+    /* 个人资料卡片内的标签区 */
+    .wecom-member-tags-section {
+      margin: 10px 0;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--wc-surface-2, #F7F8FA);
+      border: 1px solid var(--wc-border, #E6E8EB);
+      box-sizing: border-box;
+    }
+    html.wecom-dark .wecom-member-tags-section {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+    .wecom-member-tags-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .wecom-member-tags-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--wc-text-2, #5A606B);
+    }
+    html.wecom-dark .wecom-member-tags-title {
+      color: #C0C4CC;
+    }
+    .wecom-card-tag-manage-btn {
+      background: transparent;
+      border: none;
+      font-size: 11px;
+      color: #1890ff;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: all 0.15s ease;
+    }
+    .wecom-card-tag-manage-btn:hover {
+      background: rgba(24, 144, 255, 0.1);
+    }
+    .wecom-member-tags-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .wecom-card-tag-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      line-height: 1.3;
+      background: #FFFFFF;
+      color: var(--wc-text, #1A1D24);
+      border: 1px solid var(--wc-border, #D9DCE0);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    html.wecom-dark .wecom-card-tag-pill {
+      background: #2B2F38;
+      color: #E4E7EB;
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+    .wecom-card-tag-del {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: var(--wc-text-3, #909399);
+      cursor: pointer;
+      font-size: 13px;
+      line-height: 1;
+      padding: 0;
+      transition: all 0.15s ease;
+    }
+    .wecom-card-tag-del:hover {
+      color: #FF4D4F;
+      background: rgba(255, 77, 79, 0.12);
+    }
+    .wecom-card-tag-empty {
+      font-size: 11px;
+      color: var(--wc-text-3, #909399);
+    }
+    .wecom-card-tag-add-btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      line-height: 1.3;
+      background: transparent;
+      color: #1890ff;
+      border: 1px dashed rgba(24, 144, 255, 0.45);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .wecom-card-tag-add-btn:hover {
+      background: rgba(24, 144, 255, 0.08);
+      border-color: #1890ff;
+    }
+    .wecom-card-tag-input-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .wecom-card-tag-input {
+      flex: 1;
+      height: 26px;
+      padding: 2px 8px;
+      font-size: 12px;
+      border-radius: 4px;
+      border: 1px solid var(--wc-border, #D9DCE0);
+      background: var(--wc-bg, #FFFFFF);
+      color: var(--wc-text, #1A1D24);
+      outline: none;
+      box-sizing: border-box;
+    }
+    .wecom-card-tag-input:focus {
+      border-color: #1890ff;
+      box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.15);
+    }
+    html.wecom-dark .wecom-card-tag-input {
+      background: #23272E;
+      border-color: rgba(255, 255, 255, 0.15);
+      color: #E4E7EB;
+    }
+    .wecom-card-tag-save-btn,
+    .wecom-card-tag-cancel-btn {
+      height: 26px;
+      padding: 0 10px;
+      font-size: 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s ease;
+    }
+    .wecom-card-tag-save-btn {
+      background: #1890ff;
+      color: #fff;
+    }
+    .wecom-card-tag-save-btn:hover {
+      background: #40a9ff;
+    }
+    .wecom-card-tag-cancel-btn {
+      background: rgba(0, 0, 0, 0.05);
+      color: var(--wc-text-2, #606266);
+    }
+    .wecom-card-tag-cancel-btn:hover {
+      background: rgba(0, 0, 0, 0.1);
+    }
+    html.wecom-dark .wecom-card-tag-cancel-btn {
+      background: rgba(255, 255, 255, 0.1);
+      color: #C0C4CC;
+    }
+
+    /* Discourse 用户卡片内部标签样式 */
+    #user-card .wecom-member-tags-section,
+    .user-card .wecom-member-tags-section {
+      margin: 8px 10px 10px;
+      padding: 8px 10px;
+    }
+
+    /* ==================== 标签管理弹窗样式 ==================== */
+    .wecom-tags-manager-dialog {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+    .wecom-tags-manager-dialog * {
+      box-sizing: border-box;
+    }
+    .wecom-tags-manager-card {
+      width: 680px;
+      max-width: 95vw;
+      max-height: 85vh;
+      background: var(--wc-bg, #FFFFFF);
+      border-radius: 12px;
+      border: 1px solid var(--wc-border, #E6E8EB);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: wecomFadeIn 0.16s ease-out;
+    }
+    html.wecom-dark .wecom-tags-manager-card {
+      background: #23272E;
+      border-color: rgba(255, 255, 255, 0.12);
+      color: #E4E7EB;
+    }
+    .wecom-tags-manager-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px 12px;
+      border-bottom: 1px solid var(--wc-border, #E6E8EB);
+      flex-shrink: 0;
+    }
+    html.wecom-dark .wecom-tags-manager-head {
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    .wecom-tags-manager-title-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .wecom-tags-manager-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--wc-text, #1A1D24);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    html.wecom-dark .wecom-tags-manager-title {
+      color: #FFFFFF;
+    }
+    .wecom-tags-manager-title svg {
+      color: #1890ff;
+    }
+    .wecom-tags-manager-count-badge {
+      font-size: 12px;
+      color: var(--wc-text-3, #909399);
+      background: rgba(0, 0, 0, 0.04);
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+    html.wecom-dark .wecom-tags-manager-count-badge {
+      background: rgba(255, 255, 255, 0.08);
+      color: #A0A5AF;
+    }
+    .wecom-tags-manager-close {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--wc-text-3, #8A8F99);
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+    .wecom-tags-manager-close:hover {
+      background: rgba(0, 0, 0, 0.06);
+      color: var(--wc-text, #1A1D24);
+    }
+    html.wecom-dark .wecom-tags-manager-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #FFFFFF;
+    }
+    .wecom-tags-manager-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--wc-border, #E6E8EB);
+      background: var(--wc-surface-2, #FAFBFD);
+      flex-shrink: 0;
+    }
+    html.wecom-dark .wecom-tags-manager-toolbar {
+      background: rgba(255, 255, 255, 0.02);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    .wecom-tags-search-wrap {
+      position: relative;
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+    .wecom-tags-search-icon {
+      position: absolute;
+      left: 10px;
+      color: var(--wc-text-3, #909399);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+    }
+    .wecom-tags-search-input {
+      width: 100%;
+      height: 32px;
+      padding: 0 30px 0 32px;
+      border-radius: 6px;
+      border: 1px solid var(--wc-border, #D9DCE0);
+      background: var(--wc-bg, #FFFFFF);
+      color: var(--wc-text, #1A1D24);
+      font-size: 13px;
+      outline: none;
+      transition: all 0.15s ease;
+      box-sizing: border-box;
+    }
+    .wecom-tags-search-input:focus {
+      border-color: #1890ff;
+      box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.15);
+    }
+    html.wecom-dark .wecom-tags-search-input {
+      background: #1E222A;
+      border-color: rgba(255, 255, 255, 0.15);
+      color: #E4E7EB;
+    }
+    .wecom-tags-search-clear {
+      position: absolute;
+      right: 8px;
+      border: none;
+      background: transparent;
+      color: var(--wc-text-3, #909399);
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+    }
+    .wecom-tags-actions-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .wecom-tags-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      height: 32px;
+      padding: 0 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      border: 1px solid var(--wc-border, #D9DCE0);
+      background: var(--wc-bg, #FFFFFF);
+      color: var(--wc-text, #1A1D24);
+    }
+    .wecom-tags-btn:hover {
+      background: rgba(0, 0, 0, 0.04);
+    }
+    .wecom-tags-btn.primary {
+      background: #1890ff;
+      border-color: #1890ff;
+      color: #FFFFFF;
+    }
+    .wecom-tags-btn.primary:hover {
+      background: #40a9ff;
+      border-color: #40a9ff;
+    }
+    html.wecom-dark .wecom-tags-btn {
+      background: #2A2E38;
+      border-color: rgba(255, 255, 255, 0.15);
+      color: #E4E7EB;
+    }
+    html.wecom-dark .wecom-tags-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    /* 标签快速筛选 Chips */
+    .wecom-tags-chips-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 20px;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--wc-border, #E6E8EB);
+      background: var(--wc-bg, #FFFFFF);
+      flex-shrink: 0;
+    }
+    html.wecom-dark .wecom-tags-chips-row {
+      background: #23272E;
+      border-color: rgba(255, 255, 255, 0.06);
+    }
+    .wecom-tags-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      cursor: pointer;
+      background: rgba(0, 0, 0, 0.04);
+      color: var(--wc-text-2, #606266);
+      border: 1px solid transparent;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .wecom-tags-chip:hover {
+      background: rgba(24, 144, 255, 0.1);
+      color: #1890ff;
+    }
+    .wecom-tags-chip.is-active {
+      background: #1890ff;
+      color: #FFFFFF;
+    }
+    html.wecom-dark .wecom-tags-chip {
+      background: rgba(255, 255, 255, 0.06);
+      color: #B0B5C0;
+    }
+    html.wecom-dark .wecom-tags-chip.is-active {
+      background: #1890ff;
+      color: #FFFFFF;
+    }
+
+    /* 添加用户表单面板 */
+    .wecom-tags-add-panel {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: rgba(24, 144, 255, 0.05);
+      border-bottom: 1px solid rgba(24, 144, 255, 0.15);
+      animation: wecomFadeIn 0.15s ease-out;
+    }
+    .wecom-tags-add-input {
+      height: 30px;
+      padding: 2px 8px;
+      font-size: 12px;
+      border-radius: 4px;
+      border: 1px solid var(--wc-border, #D9DCE0);
+      background: var(--wc-bg, #FFFFFF);
+      color: var(--wc-text, #1A1D24);
+      outline: none;
+      box-sizing: border-box;
+    }
+    .wecom-tags-add-input:focus {
+      border-color: #1890ff;
+    }
+    html.wecom-dark .wecom-tags-add-input {
+      background: #1E222A;
+      border-color: rgba(255, 255, 255, 0.15);
+      color: #E4E7EB;
+    }
+
+    /* 导入模式确认条 */
+    .wecom-tags-import-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 20px;
+      background: #FFFBE6;
+      border-bottom: 1px solid #FFE58F;
+      color: #D48806;
+      font-size: 12px;
+      animation: wecomFadeIn 0.15s ease-out;
+    }
+    html.wecom-dark .wecom-tags-import-banner {
+      background: rgba(250, 173, 20, 0.12);
+      border-color: rgba(250, 173, 20, 0.3);
+      color: #FADB14;
+    }
+    .wecom-tags-import-banner-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* 用户列表主体 */
+    .wecom-tags-manager-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .wecom-tags-user-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: var(--wc-surface-2, #FAFBFD);
+      border: 1px solid var(--wc-border, #E6E8EB);
+      transition: all 0.15s ease;
+    }
+    .wecom-tags-user-row:hover {
+      background: var(--wc-surface-1, #F0F2F5);
+      border-color: rgba(0, 0, 0, 0.12);
+    }
+    html.wecom-dark .wecom-tags-user-row {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    html.wecom-dark .wecom-tags-user-row:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+    .wecom-tags-user-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 130px;
+    }
+    .wecom-tags-user-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #1890ff;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .wecom-tags-user-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--wc-text, #1A1D24);
+      word-break: break-all;
+    }
+    html.wecom-dark .wecom-tags-user-name {
+      color: #E4E7EB;
+    }
+    .wecom-tags-user-pills {
+      flex: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .wecom-tags-user-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      background: #FFFFFF;
+      color: var(--wc-text, #1A1D24);
+      border: 1px solid var(--wc-border, #D9DCE0);
+    }
+    html.wecom-dark .wecom-tags-user-pill {
+      background: #2B2F38;
+      color: #E4E7EB;
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+    .wecom-tags-user-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .wecom-tags-del-user-btn {
+      border: none;
+      background: transparent;
+      color: var(--wc-text-3, #909399);
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      transition: all 0.15s ease;
+    }
+    .wecom-tags-del-user-btn:hover {
+      color: #FF4D4F;
+      background: rgba(255, 77, 79, 0.1);
+    }
+    .wecom-tags-empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 20px;
+      color: var(--wc-text-3, #909399);
+      gap: 8px;
+      text-align: center;
+    }
+    .wecom-tags-empty-icon {
+      font-size: 32px;
+      margin-bottom: 4px;
     }
 
     /* ---------- 右栏：聊天详情 ---------- */
@@ -18713,6 +19340,13 @@
                     <div class="wecom-tips-item-desc">点击右上角闪烁星标图标，一键自动抓取本帖正文与各楼层热议回复，进行核心提炼与生动生图。</div>
                   </div>
                 </div>
+
+                <div class="wecom-tips-item">
+                  <div class="wecom-tips-item-info">
+                    <div class="wecom-tips-item-name">用户标签与备注管理</div>
+                    <div class="wecom-tips-item-desc">点击任意用户头像或用户名呼出资料卡，可直接为该用户添加自定义标签（如大佬、OP、好胸弟）；右上角更多菜单可随时打开“用户标签管理”进行全局搜索、快速筛选、JSON 导出与导入备份。</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -18722,6 +19356,801 @@
         </div>
       `
     });
+  }
+
+  /* ============================== 用户标签系统 (支持管理、搜索、导出、导入) ============================== */
+
+  const USER_TAGS_STORAGE_KEY = "wecom_user_tags";
+
+  function getAllUserTagsMap() {
+    try {
+      const raw = localStorage.getItem(USER_TAGS_STORAGE_KEY);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const map = (parsed.tags && typeof parsed.tags === "object" && !Array.isArray(parsed.tags))
+          ? parsed.tags
+          : ((parsed.userTags && typeof parsed.userTags === "object" && !Array.isArray(parsed.userTags)) ? parsed.userTags : parsed);
+        const cleanMap = {};
+        for (const [key, val] of Object.entries(map)) {
+          const u = String(key || "").trim();
+          if (!u) continue;
+          let list = [];
+          if (Array.isArray(val)) {
+            list = val.map(t => String(t || "").trim()).filter(Boolean);
+          } else if (typeof val === "string" && val.trim()) {
+            list = val.split(/[,，]/).map(t => t.trim()).filter(Boolean);
+          }
+          if (list.length > 0) {
+            cleanMap[u] = Array.from(new Set(list)).slice(0, 15);
+          }
+        }
+        return cleanMap;
+      }
+    } catch (err) {
+      console.warn("[WeCom] 读取用户标签失败", err);
+    }
+    return {};
+  }
+
+  function getUserTags(username) {
+    const u = String(username || "").trim();
+    if (!u) return [];
+    const map = getAllUserTagsMap();
+    return map[u] ? [...map[u]] : [];
+  }
+
+  function setUserTags(username, tags) {
+    const u = String(username || "").trim();
+    if (!u) return false;
+    const map = getAllUserTagsMap();
+    const cleanTags = Array.isArray(tags)
+      ? Array.from(new Set(tags.map(t => String(t || "").trim()).filter(Boolean))).slice(0, 15)
+      : [];
+
+    if (cleanTags.length > 0) {
+      map[u] = cleanTags;
+    } else {
+      delete map[u];
+    }
+
+    try {
+      localStorage.setItem(USER_TAGS_STORAGE_KEY, JSON.stringify(map));
+    } catch (err) {
+      console.error("[WeCom] 存储用户标签失败", err);
+      showWecomToast("存储用户标签失败，存储空间可能已满", "error");
+      return false;
+    }
+
+    refreshUserTagsInView(u);
+    try {
+      window.dispatchEvent(new CustomEvent("wecom:user-tags-changed", { detail: { username: u, tags: cleanTags } }));
+    } catch {}
+    return true;
+  }
+
+  function addUserTag(username, tag) {
+    const u = String(username || "").trim();
+    const t = String(tag || "").trim();
+    if (!u || !t) return false;
+    if (t.length > 15) {
+      showWecomToast("标签长度不能超过 15 个字符", "warning");
+      return false;
+    }
+    const tags = getUserTags(u);
+    if (tags.some(existing => existing.toLowerCase() === t.toLowerCase())) {
+      showWecomToast(`用户已存在标签「${t}」`, "info");
+      return false;
+    }
+    if (tags.length >= 15) {
+      showWecomToast("每个用户最多添加 15 个标签", "warning");
+      return false;
+    }
+    tags.push(t);
+    const ok = setUserTags(u, tags);
+    if (ok) {
+      showWecomToast(`已为 ${u} 添加标签「${t}」`, "success");
+    }
+    return ok;
+  }
+
+  function removeUserTag(username, tag) {
+    const u = String(username || "").trim();
+    const t = String(tag || "").trim();
+    if (!u || !t) return false;
+    const tags = getUserTags(u);
+    const next = tags.filter(existing => existing !== t);
+    const ok = setUserTags(u, next);
+    if (ok) {
+      showWecomToast(`已移除标签「${t}」`, "info");
+    }
+    return ok;
+  }
+
+  function deleteUserTags(username) {
+    const u = String(username || "").trim();
+    if (!u) return false;
+    const ok = setUserTags(u, []);
+    if (ok) {
+      showWecomToast(`已清空用户 ${u} 的所有标签`, "info");
+    }
+    return ok;
+  }
+
+  function exportUserTagsJson() {
+    const map = getAllUserTagsMap();
+    const exportData = {
+      version: 1,
+      generator: "LinuxDo-WeCom-UserTags",
+      exportedAt: new Date().toISOString(),
+      userCount: Object.keys(map).length,
+      tags: map
+    };
+    return JSON.stringify(exportData, null, 2);
+  }
+
+  function downloadUserTagsFile() {
+    const map = getAllUserTagsMap();
+    const count = Object.keys(map).length;
+    if (count === 0) {
+      showWecomToast("当前没有任何用户标签可导出", "warning");
+      return;
+    }
+    const jsonStr = exportUserTagsJson();
+    try {
+      if (typeof Blob !== "undefined" && typeof URL?.createObjectURL === "function") {
+        const blob = new Blob([jsonStr], { type: "application/json;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `wecom_user_tags_${dateStr}.json`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          try {
+            URL.revokeObjectURL(url);
+            a.remove();
+          } catch {}
+        }, 1000);
+      } else {
+        void copyTextToClipboard(jsonStr);
+        showWecomToast(`已复制 ${count} 位用户的标签 JSON 数据到剪贴板`, "success");
+        return;
+      }
+      showWecomToast(`成功导出 ${count} 位用户的标签数据`, "success");
+    } catch (err) {
+      console.error("[WeCom] 导出标签失败", err);
+      showWecomToast("导出失败，请重试", "error");
+    }
+  }
+
+  function importUserTags(jsonContent, mode = "merge") {
+    let parsed;
+    try {
+      parsed = typeof jsonContent === "string" ? JSON.parse(jsonContent) : jsonContent;
+    } catch (err) {
+      showWecomToast("导入失败：JSON 数据格式不正确", "error");
+      return { success: false, error: "invalid_json" };
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      showWecomToast("导入失败：数据内容必须为 JSON 对象", "error");
+      return { success: false, error: "invalid_format" };
+    }
+    const incomingMap = (parsed.tags && typeof parsed.tags === "object" && !Array.isArray(parsed.tags))
+      ? parsed.tags
+      : ((parsed.userTags && typeof parsed.userTags === "object" && !Array.isArray(parsed.userTags)) ? parsed.userTags : parsed);
+
+    const cleanIncoming = {};
+    let validTagsCount = 0;
+    for (const [key, val] of Object.entries(incomingMap)) {
+      const u = String(key || "").trim();
+      if (!u) continue;
+      let list = [];
+      if (Array.isArray(val)) {
+        list = val.map(t => String(t || "").trim()).filter(Boolean);
+      } else if (typeof val === "string" && val.trim()) {
+        list = val.split(/[,，]/).map(t => t.trim()).filter(Boolean);
+      }
+      if (list.length > 0) {
+        const deduped = Array.from(new Set(list)).slice(0, 15);
+        cleanIncoming[u] = deduped;
+        validTagsCount += deduped.length;
+      }
+    }
+
+    const incomingUsersCount = Object.keys(cleanIncoming).length;
+    if (incomingUsersCount === 0) {
+      showWecomToast("导入失败：未发现有效的用户标签数据", "warning");
+      return { success: false, error: "empty" };
+    }
+
+    let finalMap = {};
+    if (mode === "merge") {
+      finalMap = getAllUserTagsMap();
+      for (const [u, tags] of Object.entries(cleanIncoming)) {
+        const existing = finalMap[u] || [];
+        const merged = Array.from(new Set([...existing, ...tags])).slice(0, 15);
+        finalMap[u] = merged;
+      }
+    } else {
+      finalMap = cleanIncoming;
+    }
+
+    try {
+      localStorage.setItem(USER_TAGS_STORAGE_KEY, JSON.stringify(finalMap));
+    } catch (err) {
+      showWecomToast("保存失败，存储空间可能已满", "error");
+      return { success: false, error: "storage_error" };
+    }
+
+    refreshUserTagsInView();
+    try {
+      window.dispatchEvent(new CustomEvent("wecom:user-tags-changed", { detail: { fullReload: true } }));
+    } catch {}
+    showWecomToast(`已成功导入 ${incomingUsersCount} 位用户的标签数据 (${mode === "merge" ? "合并模式" : "覆盖模式"})`, "success");
+    return { success: true, userCount: incomingUsersCount, tagCount: validTagsCount };
+  }
+
+  function renderUserTagsHtml(username) {
+    const u = String(username || "").trim();
+    if (!u) return "";
+    const tags = getUserTags(u);
+    if (!tags || tags.length === 0) {
+      return `<span class="wecom-user-tags-inline" data-username="${escapeHtml(u)}"></span>`;
+    }
+    const tagsHtml = tags.map(t => `<span class="wecom-user-tag" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</span>`).join("");
+    return `<span class="wecom-user-tags-inline" data-username="${escapeHtml(u)}">${tagsHtml}</span>`;
+  }
+
+  function refreshUserTagsInView(targetUsername = null) {
+    if (typeof document === "undefined") return;
+    const u = targetUsername ? String(targetUsername).trim() : null;
+    const safeEscape = (val) => (typeof CSS?.escape === "function" ? CSS.escape(val) : String(val).replace(/["\\]/g, "\\$&"));
+    if (u) {
+      const escaped = safeEscape(u);
+      const elements = document.querySelectorAll(`[data-username="${escaped}"]`);
+      elements.forEach(el => {
+        const inline = el.querySelector(".wecom-user-tags-inline");
+        if (inline) {
+          inline.outerHTML = renderUserTagsHtml(u);
+        } else {
+          const nameEl = el.querySelector(".wecom-msg-name");
+          if (nameEl) {
+            nameEl.insertAdjacentHTML("afterend", renderUserTagsHtml(u));
+          }
+        }
+      });
+      const cardSection = document.querySelector(`.wecom-member-tags-section[data-username="${escaped}"]`);
+      if (cardSection) {
+        renderMemberCardTagsEditor(cardSection, u);
+      }
+    } else {
+      document.querySelectorAll(".wecom-user-tags-inline").forEach(inline => {
+        const uname = inline.dataset.username;
+        if (uname) {
+          inline.outerHTML = renderUserTagsHtml(uname);
+        }
+      });
+    }
+  }
+
+  function renderMemberCardTagsEditor(container, username) {
+    if (!container) return;
+    const u = String(username || "").trim();
+    container.dataset.username = u;
+    const tags = getUserTags(u);
+
+    const pillsHtml = tags.length > 0
+      ? tags.map(t => `
+          <span class="wecom-card-tag-pill" data-tag="${escapeHtml(t)}">
+            <span class="wecom-card-tag-text">${escapeHtml(t)}</span>
+            <button type="button" class="wecom-card-tag-del" title="删除「${escapeHtml(t)}」" data-tag="${escapeHtml(t)}">&times;</button>
+          </span>
+        `).join("")
+      : `<span class="wecom-card-tag-empty">暂无标签</span>`;
+
+    container.innerHTML = `
+      <div class="wecom-member-tags-header">
+        <div class="wecom-member-tags-title">
+          ${ICONS.tag || ""}
+          <span>用户标签</span>
+        </div>
+        <button type="button" class="wecom-card-tag-manage-btn" title="打开用户标签管理">管理 ⚙️</button>
+      </div>
+      <div class="wecom-member-tags-body">
+        <div class="wecom-member-tags-list">
+          ${pillsHtml}
+          <button type="button" class="wecom-card-tag-add-btn">+ 标签</button>
+        </div>
+        <div class="wecom-card-tag-input-row" style="display:none;">
+          <input type="text" class="wecom-card-tag-input" maxlength="15" placeholder="输入标签名并回车" />
+          <button type="button" class="wecom-card-tag-save-btn">确定</button>
+          <button type="button" class="wecom-card-tag-cancel-btn">取消</button>
+        </div>
+      </div>
+    `;
+
+    const addBtn = container.querySelector(".wecom-card-tag-add-btn");
+    const inputRow = container.querySelector(".wecom-card-tag-input-row");
+    const inputEl = container.querySelector(".wecom-card-tag-input");
+    const saveBtn = container.querySelector(".wecom-card-tag-save-btn");
+    const cancelBtn = container.querySelector(".wecom-card-tag-cancel-btn");
+    const manageBtn = container.querySelector(".wecom-card-tag-manage-btn");
+
+    container.querySelectorAll(".wecom-card-tag-del").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const tag = btn.dataset.tag;
+        removeUserTag(u, tag);
+        renderMemberCardTagsEditor(container, u);
+      });
+    });
+
+    const showInput = () => {
+      addBtn.style.display = "none";
+      inputRow.style.display = "flex";
+      inputEl.value = "";
+      inputEl.focus();
+    };
+
+    const hideInput = () => {
+      inputRow.style.display = "none";
+      addBtn.style.display = "inline-flex";
+    };
+
+    const commitAdd = () => {
+      const val = inputEl.value.trim();
+      if (!val) {
+        hideInput();
+        return;
+      }
+      const ok = addUserTag(u, val);
+      if (ok) {
+        renderMemberCardTagsEditor(container, u);
+      } else {
+        inputEl.focus();
+      }
+    };
+
+    addBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      showInput();
+    });
+
+    saveBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      commitAdd();
+    });
+
+    cancelBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      hideInput();
+    });
+
+    inputEl?.addEventListener("keydown", (e) => {
+      e.stopPropagation();
+      if (e.key === "Enter") {
+        e.preventDefault();
+        commitAdd();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        hideInput();
+      }
+    });
+
+    manageBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      openUserTagsManagerModal(u);
+    });
+  }
+
+  function mountDiscourseUserCardTags(targetUsername = null) {
+    const tryMount = () => {
+      const card = document.getElementById("user-card") || document.querySelector(".user-card");
+      if (!card) return false;
+      let u = targetUsername;
+      if (!u) {
+        const nameEl = card.querySelector(".user-card-avatar a, .names .username a, .names .username, [data-user-card]");
+        u = nameEl?.dataset?.userCard || nameEl?.textContent?.replace(/^@/, "").trim();
+      }
+      if (!u) return false;
+      let section = card.querySelector(".wecom-member-tags-section");
+      if (!section) {
+        section = document.createElement("div");
+        section.className = "wecom-member-tags-section";
+        const targetParent = card.querySelector(".card-row.first-row") || card.querySelector(".names") || card;
+        if (targetParent) {
+          targetParent.appendChild(section);
+        }
+      }
+      renderMemberCardTagsEditor(section, u);
+      return true;
+    };
+
+    if (!tryMount()) {
+      let attempts = 0;
+      const interval = setInterval(() => {
+        attempts++;
+        if (tryMount() || attempts > 15) {
+          clearInterval(interval);
+        }
+      }, 80);
+    }
+  }
+
+  let discourseUserCardObserver = null;
+  function initDiscourseUserCardTagsWatcher() {
+    if (discourseUserCardObserver || !IS_LINUXDO) return;
+    const target = document.getElementById("user-card") || document.querySelector(".user-card") || document.body;
+    if (!target) return;
+    discourseUserCardObserver = new MutationObserver(() => {
+      const card = document.getElementById("user-card") || document.querySelector(".user-card");
+      if (!card || card.style.display === "none" || card.hidden) return;
+      const nameEl = card.querySelector(".user-card-avatar a, .names .username a, .names .username, [data-user-card]");
+      const u = nameEl?.dataset?.userCard || nameEl?.textContent?.replace(/^@/, "").trim();
+      if (u) {
+        const section = card.querySelector(".wecom-member-tags-section");
+        if (!section || section.dataset.username !== u) {
+          mountDiscourseUserCardTags(u);
+        }
+      }
+    });
+    discourseUserCardObserver.observe(target, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style"] });
+  }
+
+  let activeTagsManagerClose = null;
+
+  function closeUserTagsManagerModal() {
+    if (typeof activeTagsManagerClose === "function") {
+      activeTagsManagerClose();
+      activeTagsManagerClose = null;
+    }
+    const dialog = document.querySelector(".wecom-tags-manager-dialog");
+    if (dialog) dialog.remove();
+  }
+
+  function openUserTagsManagerModal(initialQuery = "") {
+    closeUserTagsManagerModal();
+    closeAllPlatformDropdowns();
+    setThemeMenuOpen(false);
+
+    let currentQuery = String(initialQuery || "").trim();
+    let selectedTagFilter = "";
+    let pendingImportData = null;
+
+    const modalShell = createWecomModalShell({
+      overlayClass: "wecom-tags-manager-dialog",
+      closeSelectors: [".wecom-tags-manager-close"],
+      onClose: () => {
+        activeTagsManagerClose = null;
+      },
+      contentHtml: `
+        <div class="wecom-tags-manager-card" role="dialog" aria-modal="true" aria-labelledby="wecom-tags-title">
+          <div class="wecom-tags-manager-head">
+            <div class="wecom-tags-manager-title-box">
+              <span id="wecom-tags-title" class="wecom-tags-manager-title">${ICONS.tag || ""} <span>用户标签管理</span></span>
+              <span class="wecom-tags-manager-count-badge"></span>
+            </div>
+            <button type="button" class="wecom-tags-manager-close" aria-label="关闭">&times;</button>
+          </div>
+          <div class="wecom-tags-manager-toolbar">
+            <div class="wecom-tags-search-wrap">
+              <span class="wecom-tags-search-icon">${ICONS.search || "🔍"}</span>
+              <input type="text" class="wecom-tags-search-input" placeholder="搜索用户名或标签..." value="${escapeHtml(currentQuery)}" />
+              <button type="button" class="wecom-tags-search-clear" style="${currentQuery ? '' : 'display:none;'}">&times;</button>
+            </div>
+            <div class="wecom-tags-actions-wrap">
+              <button type="button" class="wecom-tags-btn primary wecom-tags-add-btn">${ICONS.plus || "+"} 添加标签</button>
+              <button type="button" class="wecom-tags-btn wecom-tags-paste-btn" title="粘贴 JSON 文本导入">粘贴导入</button>
+              <button type="button" class="wecom-tags-btn wecom-tags-export-btn" title="导出标签数据为 JSON">${ICONS.download || "📤"} 导出</button>
+              <button type="button" class="wecom-tags-btn wecom-tags-import-btn" title="选择 JSON 文件导入">${ICONS.upload || "📥"} 文件导入</button>
+              <input type="file" class="wecom-tags-file-input" accept=".json,application/json" style="display:none;" />
+            </div>
+          </div>
+
+          <div class="wecom-tags-import-banner" style="display:none;">
+            <div class="wecom-tags-import-banner-text"></div>
+            <div class="wecom-tags-import-banner-actions">
+              <button type="button" class="wecom-tags-btn primary wecom-tags-import-merge-btn">合并到现有标签</button>
+              <button type="button" class="wecom-tags-btn wecom-tags-import-overwrite-btn">完全覆盖</button>
+              <button type="button" class="wecom-tags-btn wecom-tags-import-cancel-btn">取消</button>
+            </div>
+          </div>
+
+          <div class="wecom-tags-add-panel" style="display:none;">
+            <input type="text" class="wecom-tags-add-input wecom-tags-new-user" placeholder="用户名 (如 linus)" style="width:140px;" />
+            <input type="text" class="wecom-tags-add-input wecom-tags-new-tag" placeholder="标签名 (如 大佬, OP)" style="flex:1;" />
+            <button type="button" class="wecom-tags-btn primary wecom-tags-new-save-btn">确定添加</button>
+            <button type="button" class="wecom-tags-btn wecom-tags-new-cancel-btn">取消</button>
+          </div>
+
+          <div class="wecom-tags-chips-row"></div>
+
+          <div class="wecom-tags-manager-body"></div>
+        </div>
+      `
+    });
+
+    activeTagsManagerClose = modalShell.close;
+    const card = modalShell.overlay.querySelector(".wecom-tags-manager-card");
+    const countBadge = card.querySelector(".wecom-tags-manager-count-badge");
+    const searchInput = card.querySelector(".wecom-tags-search-input");
+    const searchClear = card.querySelector(".wecom-tags-search-clear");
+    const addToggleBtn = card.querySelector(".wecom-tags-add-btn");
+    const pasteBtn = card.querySelector(".wecom-tags-paste-btn");
+    const exportBtn = card.querySelector(".wecom-tags-export-btn");
+    const importBtn = card.querySelector(".wecom-tags-import-btn");
+    const fileInput = card.querySelector(".wecom-tags-file-input");
+    const importBanner = card.querySelector(".wecom-tags-import-banner");
+    const importBannerText = card.querySelector(".wecom-tags-import-banner-text");
+    const mergeBtn = card.querySelector(".wecom-tags-import-merge-btn");
+    const overwriteBtn = card.querySelector(".wecom-tags-import-overwrite-btn");
+    const cancelImportBtn = card.querySelector(".wecom-tags-import-cancel-btn");
+    const addPanel = card.querySelector(".wecom-tags-add-panel");
+    const newUserInput = card.querySelector(".wecom-tags-new-user");
+    const newTagInput = card.querySelector(".wecom-tags-new-tag");
+    const newSaveBtn = card.querySelector(".wecom-tags-new-save-btn");
+    const newCancelBtn = card.querySelector(".wecom-tags-new-cancel-btn");
+    const chipsRow = card.querySelector(".wecom-tags-chips-row");
+    const listBody = card.querySelector(".wecom-tags-manager-body");
+
+    function renderManagerContent() {
+      const allMap = getAllUserTagsMap();
+      const userEntries = Object.entries(allMap);
+      const totalUsers = userEntries.length;
+      let totalTags = 0;
+      const tagFreqMap = {};
+
+      userEntries.forEach(([, tags]) => {
+        totalTags += tags.length;
+        tags.forEach(t => {
+          tagFreqMap[t] = (tagFreqMap[t] || 0) + 1;
+        });
+      });
+
+      countBadge.textContent = `共 ${totalUsers} 位用户 · ${totalTags} 个标签`;
+
+      const sortedTags = Object.entries(tagFreqMap).sort((a, b) => b[1] - a[1]);
+      let chipsHtml = `
+        <span class="wecom-tags-chip${!selectedTagFilter ? ' is-active' : ''}" data-tag="">全部 (${totalUsers})</span>
+      `;
+      sortedTags.forEach(([tag, count]) => {
+        const isActive = selectedTagFilter === tag;
+        chipsHtml += `
+          <span class="wecom-tags-chip${isActive ? ' is-active' : ''}" data-tag="${escapeHtml(tag)}">
+            ${escapeHtml(tag)} <span style="opacity:0.7;margin-left:2px;">(${count})</span>
+          </span>
+        `;
+      });
+      chipsRow.innerHTML = chipsHtml;
+      chipsRow.style.display = totalUsers > 0 ? "flex" : "none";
+
+      chipsRow.querySelectorAll(".wecom-tags-chip").forEach(chip => {
+        chip.addEventListener("click", () => {
+          const t = chip.dataset.tag;
+          selectedTagFilter = (selectedTagFilter === t) ? "" : t;
+          renderManagerContent();
+        });
+      });
+
+      const query = currentQuery.toLowerCase().trim();
+      const filtered = userEntries.filter(([uname, tags]) => {
+        if (selectedTagFilter && !tags.includes(selectedTagFilter)) {
+          return false;
+        }
+        if (!query) return true;
+        if (uname.toLowerCase().includes(query)) return true;
+        return tags.some(t => t.toLowerCase().includes(query));
+      });
+
+      if (filtered.length === 0) {
+        if (totalUsers === 0) {
+          listBody.innerHTML = `
+            <div class="wecom-tags-empty-state">
+              <div class="wecom-tags-empty-icon">${ICONS.tag || "🏷️"}</div>
+              <div style="font-weight:600;font-size:14px;color:var(--wc-text,#1A1D24);">暂无任何用户标签</div>
+              <div style="font-size:12px;">点击上方「添加标签」或者在任意聊天卡片中为用户打上标签</div>
+            </div>
+          `;
+        } else {
+          listBody.innerHTML = `
+            <div class="wecom-tags-empty-state">
+              <div class="wecom-tags-empty-icon">${ICONS.search || "🔍"}</div>
+              <div style="font-weight:600;font-size:14px;color:var(--wc-text,#1A1D24);">未找到匹配的用户或标签</div>
+              <div style="font-size:12px;">搜索关键词「${escapeHtml(currentQuery || selectedTagFilter)}」无结果，可尝试清空搜索</div>
+            </div>
+          `;
+        }
+        return;
+      }
+
+      listBody.innerHTML = filtered.map(([uname, tags]) => {
+        const letter = avatarLetter(uname);
+        const pills = tags.map(t => `
+          <span class="wecom-tags-user-pill">
+            <span>${escapeHtml(t)}</span>
+            <button type="button" class="wecom-card-tag-del wecom-tags-del-pill-btn" data-username="${escapeHtml(uname)}" data-tag="${escapeHtml(t)}" title="删除此标签">&times;</button>
+          </span>
+        `).join("");
+
+        return `
+          <div class="wecom-tags-user-row" data-username="${escapeHtml(uname)}">
+            <div class="wecom-tags-user-info">
+              <div class="wecom-tags-user-avatar">${escapeHtml(letter)}</div>
+              <span class="wecom-tags-user-name" title="${escapeHtml(uname)}">${escapeHtml(uname)}</span>
+            </div>
+            <div class="wecom-tags-user-pills">
+              ${pills}
+              <button type="button" class="wecom-card-tag-add-btn wecom-tags-row-add-btn" data-username="${escapeHtml(uname)}">+ 标签</button>
+            </div>
+            <div class="wecom-tags-user-actions">
+              <button type="button" class="wecom-tags-del-user-btn" data-username="${escapeHtml(uname)}" title="清空该用户所有标签">🗑️</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      listBody.querySelectorAll(".wecom-tags-del-pill-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const u = btn.dataset.username;
+          const t = btn.dataset.tag;
+          removeUserTag(u, t);
+          renderManagerContent();
+        });
+      });
+
+      listBody.querySelectorAll(".wecom-tags-row-add-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const u = btn.dataset.username;
+          newUserInput.value = u;
+          addPanel.style.display = "flex";
+          newTagInput.value = "";
+          newTagInput.focus();
+        });
+      });
+
+      listBody.querySelectorAll(".wecom-tags-del-user-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const u = btn.dataset.username;
+          if (confirm(`确定要清空用户「${u}」的所有标签吗？`)) {
+            deleteUserTags(u);
+            renderManagerContent();
+          }
+        });
+      });
+    }
+
+    searchInput.addEventListener("input", () => {
+      currentQuery = searchInput.value;
+      searchClear.style.display = currentQuery ? "block" : "none";
+      renderManagerContent();
+    });
+
+    searchClear.addEventListener("click", () => {
+      searchInput.value = "";
+      currentQuery = "";
+      searchClear.style.display = "none";
+      searchInput.focus();
+      renderManagerContent();
+    });
+
+    addToggleBtn.addEventListener("click", () => {
+      const isVisible = addPanel.style.display !== "none";
+      addPanel.style.display = isVisible ? "none" : "flex";
+      if (!isVisible) {
+        newUserInput.focus();
+      }
+    });
+
+    const commitNewTag = () => {
+      const u = newUserInput.value.trim();
+      const t = newTagInput.value.trim();
+      if (!u) {
+        showWecomToast("请输入用户名", "warning");
+        newUserInput.focus();
+        return;
+      }
+      if (!t) {
+        showWecomToast("请输入标签名", "warning");
+        newTagInput.focus();
+        return;
+      }
+      const ok = addUserTag(u, t);
+      if (ok) {
+        newTagInput.value = "";
+        newTagInput.focus();
+        renderManagerContent();
+      }
+    };
+
+    newSaveBtn.addEventListener("click", commitNewTag);
+    newCancelBtn.addEventListener("click", () => {
+      addPanel.style.display = "none";
+    });
+    newTagInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        commitNewTag();
+      } else if (e.key === "Escape") {
+        addPanel.style.display = "none";
+      }
+    });
+
+    exportBtn.addEventListener("click", () => {
+      downloadUserTagsFile();
+    });
+
+    pasteBtn.addEventListener("click", () => {
+      const text = prompt("请在此粘贴导出的 JSON 标签数据：");
+      if (!text) return;
+      try {
+        const parsed = JSON.parse(text);
+        pendingImportData = parsed;
+        const incomingMap = (parsed.tags && typeof parsed.tags === "object") ? parsed.tags : parsed;
+        const count = Object.keys(incomingMap).length;
+        importBannerText.textContent = `已识别剪贴板数据，包含 ${count} 位用户的标签。请选择导入方式：`;
+        importBanner.style.display = "flex";
+      } catch {
+        showWecomToast("导入失败：粘贴的内容不是有效的 JSON", "error");
+      }
+    });
+
+    importBtn.addEventListener("click", () => {
+      fileInput.value = "";
+      fileInput.click();
+    });
+
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const content = String(e.target?.result || "");
+          const parsed = JSON.parse(content);
+          pendingImportData = parsed;
+          const incomingMap = (parsed.tags && typeof parsed.tags === "object") ? parsed.tags : parsed;
+          const count = Object.keys(incomingMap).length;
+          importBannerText.textContent = `已读取文件「${escapeHtml(file.name)}」，发现 ${count} 位用户的标签。请选择导入方式：`;
+          importBanner.style.display = "flex";
+        } catch {
+          showWecomToast("导入失败：文件不是有效的 JSON", "error");
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    mergeBtn.addEventListener("click", () => {
+      if (!pendingImportData) return;
+      importUserTags(pendingImportData, "merge");
+      pendingImportData = null;
+      importBanner.style.display = "none";
+      renderManagerContent();
+    });
+
+    overwriteBtn.addEventListener("click", () => {
+      if (!pendingImportData) return;
+      if (confirm("确定要完全覆盖现有所有标签吗？覆盖后原有标签将被替换。")) {
+        importUserTags(pendingImportData, "overwrite");
+        pendingImportData = null;
+        importBanner.style.display = "none";
+        renderManagerContent();
+      }
+    });
+
+    cancelImportBtn.addEventListener("click", () => {
+      pendingImportData = null;
+      importBanner.style.display = "none";
+    });
+
+    renderManagerContent();
   }
 
   function openWindowShortcutDialog() {
@@ -22926,7 +24355,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.48";
+  const SCRIPT_VERSION = "0.8.49";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -27870,6 +29299,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         </div>
       </div>
 
+      <div class="wecom-member-tags-section" data-username="${escapeHtml(username)}"></div>
+
       <div class="wecom-member-notice" style="display:none"></div>
 
       <div class="wecom-member-card-actions" style="display:none">
@@ -27892,6 +29323,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
     document.body.appendChild(card);
     positionWecomFloatingCard(card, triggerEl);
+
+    const tagsSection = card.querySelector(".wecom-member-tags-section");
+    if (tagsSection) {
+      renderMemberCardTagsEditor(tagsSection, username);
+    }
 
     card.querySelector(".wecom-member-card-close")?.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -35653,6 +37089,17 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       panel = null;
     }
     if (panel) {
+      if (!panel.querySelector(".wecom-user-tags-manager-btn")) {
+        const moreActions = panel.querySelector(".wecom-chat-more-actions");
+        if (moreActions) {
+          moreActions.insertAdjacentHTML("beforeend", `
+            <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-user-tags-manager-btn" title="用户标签管理 (搜索/导出/导入)" aria-label="用户标签管理">
+              <span class="wecom-chat-more-icon">${ICONS.tag}</span>
+              <span class="wecom-chat-more-label">用户标签管理</span>
+            </button>
+          `);
+        }
+      }
       if (!panel.querySelector(".wecom-chat-usage-tips")) {
         const moreActions = panel.querySelector(".wecom-chat-more-actions");
         if (moreActions) {
@@ -35780,6 +37227,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
                 <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-watermark-settings" title="背景水印设置" aria-label="背景水印设置" aria-expanded="false" aria-pressed="false">
                   <span class="wecom-chat-more-icon">${ICONS.watermark}</span>
                   <span class="wecom-chat-more-label">背景水印设置</span>
+                </button>
+                <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-user-tags-manager-btn" title="用户标签管理 (搜索/导出/导入)" aria-label="用户标签管理">
+                  <span class="wecom-chat-more-icon">${ICONS.tag}</span>
+                  <span class="wecom-chat-more-label">用户标签管理</span>
                 </button>
                 <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-chat-usage-tips" title="使用技巧与快捷键指南" aria-label="使用技巧与快捷键指南">
                   <span class="wecom-chat-more-icon">${ICONS.tips}</span>
@@ -36983,6 +38434,12 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       } else if (target === "zhihu" && !IS_ZHIHU) {
         navigateWithAiSync("https://www.zhihu.com/hot"); // window.location.href = "https://www.zhihu.com/hot"
       }
+      return true;
+    }
+    if (event.target.closest(".wecom-user-tags-manager-btn")) {
+      consumeClick(event);
+      closeAllPlatformDropdowns();
+      openUserTagsManagerModal();
       return true;
     }
     if (event.target.closest(".wecom-chat-usage-tips")) {
@@ -39500,6 +40957,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         <div class="wecom-msg-content">
           <div class="wecom-msg-header">
             <span class="wecom-msg-name"${userCardAttributes(post)}>${escapeHtml(displayName)}</span>
+            ${renderUserTagsHtml(post.username || displayName)}
             ${replyInd}
             ${metaHtml}
             ${msgMoreTriggerHtml()}
@@ -39524,6 +40982,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           <div class="wecom-msg-content wecom-reddit-body-col">
             <div class="wecom-msg-header wecom-reddit-header">
               <span class="wecom-msg-name"${userCardAttributes(post)}>${escapeHtml(displayName)}</span>
+              ${renderUserTagsHtml(post.username || displayName)}
               <span class="wecom-reddit-dot">·</span>
               ${metaHtml}
               ${replyInd ? `<span class="wecom-reddit-reply-ind">${replyInd}</span>` : ""}
@@ -40839,6 +42298,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       throw new Error("无法连接 Discourse 原生用户卡事件服务");
     }
     appEvents.trigger("topic-header:trigger-user-card", username, trigger, event);
+    mountDiscourseUserCardTags(username);
   }
 
   function userCardTriggerForEvent(event) {
@@ -40870,6 +42330,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     root.dataset.userCardBound = "1";
     root.addEventListener("click", handleUserCardClick);
     root.addEventListener("keydown", handleUserCardKeydown);
+    initDiscourseUserCardTagsWatcher();
   }
 
   function topicBookmarkFrom(data) {
@@ -43988,6 +45449,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         <div class="wecom-msg-content">
           <div class="wecom-msg-header">
             <span class="wecom-msg-name">${authorName}</span>
+            ${renderUserTagsHtml(authorName)}
             ${replyInd}
             <span class="wecom-msg-meta">
               <span class="wecom-msg-time"${timeAttr}>${escapeHtml(timeStr)}</span>
@@ -44017,6 +45479,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           <div class="wecom-msg-content wecom-reddit-body-col">
             <div class="wecom-msg-header wecom-reddit-header">
               <span class="wecom-msg-name">${authorName}</span>
+              ${renderUserTagsHtml(authorName)}
               <span class="wecom-reddit-dot">·</span>
               <span class="wecom-msg-meta">
                 <span class="wecom-msg-time"${timeAttr}>${escapeHtml(timeStr)}</span>
