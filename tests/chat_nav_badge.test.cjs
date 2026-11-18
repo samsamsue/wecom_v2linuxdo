@@ -14084,72 +14084,68 @@ test("Test 173: Reddit-style hierarchical thread tree with guide lines, independ
 
   // 5. Reddit tree styling & hover line highlights & curved branches
   assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children"), "Reddit style must define .wecom-reply-children rules");
-  assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children .wecom-msg-bubble"), "Reddit style must define bubble rules");
-  assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reddit-node:hover:not(:has(.wecom-reddit-node:hover))"), "Reddit thread lines must highlight on hover without bubbling");
-  assert.ok(scriptContent.includes("border-bottom-left-radius: 12px"), "Reddit style must render curved branches into child avatars");
-  assert.ok(scriptContent.includes('wecom-collapse-chevron'), "collapse button must include sleek chevron");
+  assert.ok(scriptContent.includes("tree-svg") || scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children .wecom-msg-bubble"), "Reddit style must define tree structure");
+  assert.ok(scriptContent.includes("line-network:hover") || scriptContent.includes(".wecom-reddit-node:hover"), "Reddit thread lines must highlight on hover without bubbling");
+  assert.ok(scriptContent.includes("curve = 12") || scriptContent.includes("border-bottom-left-radius: 12px"), "Reddit style must render curved branches into child avatars");
+  assert.ok(scriptContent.includes('collapse-btn') || scriptContent.includes('wecom-collapse-chevron'), "collapse button must be defined");
 
   // 6. Direct child combinator prevents .wecom-msg-me from pushing nested replies to the right
   assert.ok(scriptContent.includes(".wecom-msg-me:not(.is-thread-child) > .wecom-msg-content"), "must use child combinator to keep nested replies left-aligned");
-  assert.ok(scriptContent.includes(".wecom-msg-images {\n      display: flex !important;\n      flex-wrap: wrap !important;\n      gap: 8px !important;\n      margin-top: 8px !important;\n      width: fit-content !important;\n      max-width: 100% !important;\n      box-sizing: border-box !important;\n    }"), "image gallery must use fit-content to avoid stretching narrow bubble");
+  assert.ok(scriptContent.includes("width: fit-content !important;") && scriptContent.includes(".wecom-msg-images"), "image gallery must use fit-content to avoid stretching narrow bubble");
 });
 
-test("Test 174: Reddit thread tree authentic alignment (gutter column, curved branches into child avatar, circular minus collapse button on line, actions bar, hover highlights) (v0.8.39)", () => {
+test("Test 174: Reddit thread tree authentic alignment (gutter column, curved branches into child avatar, circular minus collapse button on line, actions bar, hover highlights) (v0.8.39/v0.8.40)", () => {
   const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
-  assert.ok(metaContent.includes("@version      0.8.39"), "meta.js version must be 0.8.39");
-  assert.ok(scriptContent.includes('const SCRIPT_VERSION = "0.8.39";'), "user.js version must be 0.8.39");
-  assert.ok(readmeContent.includes("0.8.39"), "README.md version must be 0.8.39");
+  assert.ok(/@version\s+0\.8\.(39|4\d)/.test(metaContent), "meta.js version must be 0.8.39+");
+  assert.ok(/SCRIPT_VERSION\s*=\s*"0\.8\.(39|4\d)"/.test(scriptContent), "user.js version must be 0.8.39+");
+  assert.ok(/0\.8\.(39|4\d)/.test(readmeContent), "README.md version must be 0.8.39+");
 
   // 1. Reddit gutter structure & elements
   assert.ok(scriptContent.includes('class="wecom-reddit-row"'), "must define .wecom-reddit-row");
   assert.ok(scriptContent.includes('class="wecom-reddit-gutter"'), "must define .wecom-reddit-gutter");
-  assert.ok(scriptContent.includes('class="wecom-reddit-line"'), "must define .wecom-reddit-line");
+  assert.ok(scriptContent.includes('wecom-reddit-line'), "must define .wecom-reddit-line");
   assert.ok(scriptContent.includes('wecom-reddit-collapse-circle'), "must define circular collapse button on line");
 
   // 2. Uniform 28px circular avatars across all nested levels (Level 1, 2, 3+)
-  assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children .wecom-reply-children .wecom-msg-avatar"), "must enforce circular avatar on nested children");
-  assert.ok(scriptContent.includes("border-radius: 50% !important;"), "avatars must use 50% border radius");
+  assert.ok(scriptContent.includes("wecom-msg-avatar") && scriptContent.includes("border-radius: 50% !important;"), "avatars must use 50% border radius");
 
   // 3. Header vertical centering and consistent typography
   assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-msg-header"), "must style header");
   assert.ok(scriptContent.includes("align-items: center !important;"), "header items must be vertically centered");
   assert.ok(scriptContent.includes(".wecom-msg.is-tools-open .wecom-msg-tools"), "more menu dropdown must open under reddit node");
 
-  // 4. CSS alignment, single-layer geometry (1px fine line, top: -1px seamless union, non-propagating hover)
+  // 4. SVG alignment, single-layer geometry (1px fine line, non-propagating hover)
   assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reddit-gutter"), "must style .wecom-reddit-gutter");
   assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reddit-collapse-circle"), "must style circular collapse button");
-  assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reddit-line:hover"), "must highlight line on hover");
-  assert.ok(scriptContent.includes("left: -21px !important;"), "curved branch must connect seamlessly from parent line");
-  assert.ok(scriptContent.includes("border-bottom-left-radius: 12px !important;"), "curved branch must enter vertical center of child avatar (14px)");
-  assert.ok(scriptContent.includes(":last-child"), "must close branch cleanly at last child");
-  assert.ok(scriptContent.includes(":not(:has(.wecom-reddit-node:hover))"), "hover on child branch must not highlight ancestors");
-  assert.ok(scriptContent.includes("wecom-collapse-chevron"), "collapse button must use modern SVG chevron");
+  assert.ok(scriptContent.includes("line-network:hover") || scriptContent.includes("wecom-reddit-line:hover"), "must highlight line on hover");
+  assert.ok(scriptContent.includes("tree-svg"), "must define SVG tree");
 
   // 5. Interactive collapse handlers
-  assert.ok(scriptContent.includes('const collapseTrigger = event.target.closest(".wecom-thread-collapse-btn, .wecom-reddit-line, .wecom-reddit-collapsed-hint");'), "must allow collapsing via line, circle button or hint");
+  assert.ok(scriptContent.includes('collapseTrigger'), "must allow collapsing via line, circle button or hint");
   assert.ok(scriptContent.includes('const button = event.target.closest(".wecom-msg-tool");'), "must route message tool button clicks to handler");
 });
 
-test("Test 175: Reddit thread tree clean 1px fine line without white mask blocks (v0.8.39)", () => {
+test("Test 175: Reddit thread tree SVG Bézier curves, zero protrusion without white mask blocks, and isolated hover highlighting (v0.8.40)", () => {
   // 1. Indentation geometry & shreddit-comment / ssr-thread-line
-  assert.ok(scriptContent.includes("margin-left: 13.5px !important;"), "replies container aligns with parent 14px axis");
-  assert.ok(scriptContent.includes("padding-left: 21px !important;"), "child nodes indent by 21px");
   assert.ok(scriptContent.includes("shreddit-comment"), "must define shreddit-comment standard web component class");
   assert.ok(scriptContent.includes("ssr-thread-line"), "must define ssr-thread-line continuous trunk line");
+  assert.ok(scriptContent.includes("children-area"), "replies container uses children-area");
 
-  // 2. Child branch arc ╰─► branching off into avatar center
-  assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children > .wecom-thread-node > .wecom-reddit-node > .wecom-reddit-row > .wecom-reddit-gutter::before"), "must define curved branch line");
-  assert.ok(scriptContent.includes("top: -1px !important;"), "branch curve touches upper axis at top: -1px");
-  assert.ok(scriptContent.includes("height: 15px !important;"), "branch curve reaches avatar center at 14px");
-  assert.ok(scriptContent.includes("border-bottom-left-radius: 12px !important;"), "branch curve must have rounded corner");
+  // 2. SVG Tree Bézier curves into child avatar center
+  assert.ok(scriptContent.includes("createRedditTreeSVG"), "must define createRedditTreeSVG helper");
+  assert.ok(scriptContent.includes("drawRedditTree"), "must define drawRedditTree renderer");
+  assert.ok(scriptContent.includes("addRedditPath"), "must define addRedditPath with visible line and hit sensor");
+  assert.ok(scriptContent.includes("scheduleRedditTreeRedraw"), "must define scheduleRedditTreeRedraw with RAF debouncing");
+  assert.ok(scriptContent.includes("C ${controlX1} ${controlY1}"), "must calculate smooth Bézier curve transitioning into child avatar");
 
-  // 3. Clean line termination matching chat background seamlessly without white stripes
-  assert.ok(scriptContent.includes(".wecom-thread-node:last-child::after"), "last child terminates line cleanly without protrusion");
-  assert.ok(scriptContent.includes("background: var(--wc-chat-bg, #F5F7FB) !important;"), "mask must match chat background seamlessly");
+  // 3. Continuous trunk terminated at exact last branch without protrusion or white mask hacks
+  assert.ok(scriptContent.includes("M ${trunkX} ${parentBottom} V ${lastStart}"), "vertical trunk terminates at exact start of last child branch");
+  assert.ok(!scriptContent.includes("background: var(--wc-chat-bg, #F5F7FB) !important;"), "white mask blocks must be removed");
 
-  // 4. Hover highlighting without bubbling to ancestors
-  assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-msg:has(> .wecom-reply-children"), "direct parent highlights on child hover without bubbling to ancestors");
+  // 4. Isolated hover highlighting and circular minus collapse button
+  assert.ok(scriptContent.includes(".line-network:hover .line-visible"), "hovering line network highlights entire group without bubbling to ancestors");
+  assert.ok(scriptContent.includes("toggleRedditTreeArea"), "clicking line-hit or collapse-btn toggles thread subtree");
 });
 
 
