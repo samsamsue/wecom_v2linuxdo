@@ -14166,6 +14166,39 @@ test("Test 175: Reddit thread tree SVG Bézier curves, zero protrusion without w
   assert.ok(scriptContent.includes("_redditTreeHash"), "must use dirty-checking hash to skip redundant re-renders");
 });
 
+test("Test 176: Global Alt + Mouse Wheel topic quick-scroll preview HUD navigator (v0.8.43)", () => {
+  // 1. Version bump
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.(4[3-9]|[5-9]\d)";/, "user.js version must be 0.8.43+");
+
+  // 2. HUD & backdrop CSS classes and styles
+  assert.ok(scriptContent.includes(".wecom-topic-wheel-backdrop"), "must define wheel HUD backdrop overlay");
+  assert.ok(scriptContent.includes(".wecom-topic-wheel-hud"), "must define centered frosted-glass HUD card");
+  assert.ok(scriptContent.includes(".wecom-topic-wheel-viewport"), "must define 3D viewport for drum roller");
+  assert.ok(scriptContent.includes(".wecom-topic-wheel-track"), "must define track container with transform-style: preserve-3d");
+  assert.ok(scriptContent.includes(".wecom-topic-wheel-item.is-active"), "must style active center topic item");
+  assert.ok(scriptContent.includes(".wecom-topic-wheel-item.is-prev"), "must style tilted previous topic item");
+  assert.ok(scriptContent.includes(".wecom-topic-wheel-item.is-next"), "must style tilted next topic item");
+  assert.ok(scriptContent.includes(".wecom-topic-wheel-tip"), "must define yellow shortcut hint");
+  assert.ok(scriptContent.includes(".wecom-conv.wecom-hud-focused"), "must define left list focus outline & highlight");
+
+  // 3. Core DOM and logic functions
+  assert.ok(scriptContent.includes("function ensureWheelHudDOM()"), "must define ensureWheelHudDOM helper");
+  assert.ok(scriptContent.includes("function getWheelTopicRows()"), "must define getWheelTopicRows query helper");
+  assert.ok(scriptContent.includes("function openWheelHud()"), "must define openWheelHud activator");
+  assert.ok(scriptContent.includes("function syncWheelHudUI("), "must define syncWheelHudUI animator");
+  assert.ok(scriptContent.includes("function closeWheelHud("), "must define closeWheelHud dismisser");
+  assert.ok(scriptContent.includes("function confirmWheelHud()"), "must define confirmWheelHud enter trigger");
+  assert.ok(scriptContent.includes("function bindWheelTopicNavigator()"), "must define bindWheelTopicNavigator listener binder");
+
+  // 4. Shortcut bindings and keyboard interactions
+  assert.ok(scriptContent.includes("event.altKey || _wheelHudVisible"), "wheel listener must check altKey or active HUD visibility");
+  assert.ok(scriptContent.includes("Alt+Enter 确定进入 , Esc 退出"), "must display exact yellow shortcut guide text");
+  assert.ok(scriptContent.includes('event.key === "Escape"'), "Escape key must cancel and dismiss HUD");
+  assert.ok(scriptContent.includes('event.key === "Enter"'), "Enter / Alt+Enter must confirm and load topic");
+  assert.ok(scriptContent.includes("bindWheelTopicNavigator()"), "bootstrap must call bindWheelTopicNavigator");
+});
+
+
 
 
 

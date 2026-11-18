@@ -3,7 +3,7 @@
 把 [Linux DO](https://linux.do/)、[V2EX](https://v2ex.com/)、[稀土掘金](https://juejin.cn/) 与 [知乎](https://www.zhihu.com/) 深度定制为**企业微信 5.x 桌面端**现代 IM 风格。在保留原站真实数据、动态路由、通知系统、交互逻辑与账号功能的同时，提供极致优雅、沉浸且逼真的“办公”摸鱼体验。
 
 - 作者：**Richy**
-- 当前版本：**0.8.42**
+- 当前版本：**0.8.43**
 - 用户脚本：[`linuxdo-wecom.user.js`](linuxdo-wecom.user.js)
 - 脚本元数据：[`linuxdo-wecom.meta.js`](linuxdo-wecom.meta.js)
 - 许可证：MIT
@@ -119,6 +119,7 @@ https://github.com/samsamsue/wecom_v2linuxdo/raw/main/linuxdo-wecom.user.js
 | 按键 / 操作区域 | 功能说明 |
 | :--- | :--- |
 | **`Alt + W`** / **`Alt + O`** | 随时切换企业微信主题与原站原生网页视图 |
+| **全局 `Alt + 滚轮`** | 调出居中话题滚轮导航 HUD，随滚轮 3D 机械滚动切换焦点；按 **`Alt+Enter`** 确定进入，**`Esc`** 退出 |
 | **左侧个人头像** | 打开通知中心、个人设置与快捷菜单（支持查看 V2EX 金币与签到） |
 | **左侧 Connect 图标** | （Linux DO）打开 Connect 实时信任等级与数据看板 |
 | **会话列表顶部“+”** | 展开或收起板块、分类与节点树 |

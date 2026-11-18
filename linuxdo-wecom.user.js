@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.42
+// @version      0.8.43
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -14326,6 +14326,142 @@
       color: #267EF0;
       flex-shrink: 0;
     }
+
+    /* ==================== 全局 Alt+滚轮 话题快速切换导航 HUD ==================== */
+    .wecom-topic-wheel-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 99990;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease;
+    }
+    .wecom-topic-wheel-backdrop.is-visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .wecom-topic-wheel-hud {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.95);
+      width: 460px;
+      max-width: calc(100vw - 32px);
+      min-height: 180px;
+      background: rgba(85, 90, 95, 0.90);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 16px;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.42), 0 4px 14px rgba(0, 0, 0, 0.25);
+      z-index: 99995;
+      box-sizing: border-box;
+      padding: 30px 24px 38px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease, transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1);
+      user-select: none;
+    }
+    .wecom-topic-wheel-hud.is-visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .wecom-topic-wheel-viewport {
+      width: 100%;
+      height: 108px;
+      overflow: hidden;
+      position: relative;
+      perspective: 400px;
+      mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+    }
+
+    .wecom-topic-wheel-track {
+      width: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: flex;
+      flex-direction: column;
+      transform-style: preserve-3d;
+      transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+      will-change: transform;
+    }
+
+    .wecom-topic-wheel-item {
+      height: 36px;
+      line-height: 36px;
+      padding: 0 16px;
+      text-align: center;
+      font-size: 13.5px;
+      color: rgba(255, 255, 255, 0.5);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      box-sizing: border-box;
+      transform-origin: center center;
+      transform: scale(0.88);
+      opacity: 0.25;
+      transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+                  color 0.2s ease,
+                  opacity 0.2s ease,
+                  font-size 0.2s ease;
+      cursor: pointer;
+    }
+
+    .wecom-topic-wheel-item.is-prev {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.6);
+      opacity: 0.6;
+      transform: scale(0.92) rotateX(20deg);
+    }
+
+    .wecom-topic-wheel-item.is-active {
+      font-size: 19px;
+      font-weight: 600;
+      color: #FFFFFF;
+      opacity: 1;
+      transform: scale(1) rotateX(0deg);
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .wecom-topic-wheel-item.is-next {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.6);
+      opacity: 0.6;
+      transform: scale(0.92) rotateX(-20deg);
+    }
+
+    .wecom-topic-wheel-tip {
+      position: absolute;
+      right: 22px;
+      bottom: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #E5A826;
+      letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* 左侧列表项焦点轮廓跟随 */
+    .wecom-conv.wecom-hud-focused {
+      background: var(--session-hover, rgba(38, 126, 240, 0.15)) !important;
+      outline: 2px solid #267EF0 !important;
+      outline-offset: -2px !important;
+      border-radius: 6px !important;
+    }
   `;
 
   /* 深色主题配色微调 */
@@ -22169,7 +22305,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.42";
+  const SCRIPT_VERSION = "0.8.43";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -45422,6 +45558,203 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     }, true);
   }
 
+  // ==================== 全局 Alt + 滚轮 话题快速切换导航 HUD ====================
+  let _wheelHudVisible = false;
+  let _wheelHudIndex = 0;
+  let _wheelHudRows = [];
+  let _wheelLastTickTime = 0;
+  let _wheelDeltaAccum = 0;
+  let _wheelBackdrop = null;
+  let _wheelHud = null;
+  let _wheelTrack = null;
+
+  function ensureWheelHudDOM() {
+    if (_wheelHud && _wheelBackdrop) return;
+
+    _wheelBackdrop = document.createElement("div");
+    _wheelBackdrop.className = "wecom-topic-wheel-backdrop";
+    _wheelBackdrop.addEventListener("click", () => closeWheelHud(true));
+
+    _wheelHud = document.createElement("div");
+    _wheelHud.className = "wecom-topic-wheel-hud";
+    _wheelHud.innerHTML = `
+      <div class="wecom-topic-wheel-viewport">
+        <div class="wecom-topic-wheel-track"></div>
+      </div>
+      <div class="wecom-topic-wheel-tip">Alt+Enter 确定进入 , Esc 退出</div>
+    `;
+
+    _wheelTrack = _wheelHud.querySelector(".wecom-topic-wheel-track");
+    _wheelTrack.addEventListener("click", (e) => {
+      const item = e.target.closest(".wecom-topic-wheel-item");
+      if (!item) return;
+      const idx = Number(item.dataset.index);
+      if (!Number.isNaN(idx)) {
+        if (idx === _wheelHudIndex) {
+          confirmWheelHud();
+        } else {
+          _wheelHudIndex = idx;
+          syncWheelHudUI(true);
+        }
+      }
+    });
+
+    document.body.appendChild(_wheelBackdrop);
+    document.body.appendChild(_wheelHud);
+  }
+
+  function getWheelTopicRows() {
+    return [...document.querySelectorAll(".wecom-list-body a.wecom-conv")].map((el, i) => {
+      const titleEl = el.querySelector(".wecom-conv-title .wecom-conv-name") || el.querySelector(".wecom-conv-name") || el.querySelector(".wecom-conv-title");
+      const title = titleEl?.textContent?.trim() || el.getAttribute("title") || "话题 " + (i + 1);
+      return { element: el, title, id: el.dataset.topicId || String(i) };
+    });
+  }
+
+  function openWheelHud() {
+    if (getViewMode() === "native" || otherThemeActive()) return;
+    ensureWheelHudDOM();
+    _wheelHudRows = getWheelTopicRows();
+    if (!_wheelHudRows.length) return;
+
+    _wheelTrack.innerHTML = _wheelHudRows.map((r, i) =>
+      `<div class="wecom-topic-wheel-item" data-index="${i}">${escapeHtml(r.title)}</div>`
+    ).join("");
+
+    const activeIdx = _wheelHudRows.findIndex(r => r.element.classList.contains("is-active") || r.element.classList.contains("active"));
+    _wheelHudIndex = activeIdx >= 0 ? activeIdx : 0;
+
+    _wheelHudVisible = true;
+    _wheelBackdrop.classList.add("is-visible");
+    _wheelHud.classList.add("is-visible");
+
+    syncWheelHudUI(false);
+  }
+
+  function syncWheelHudUI(smooth = true) {
+    if (!_wheelHudRows.length) return;
+    _wheelHudIndex = Math.max(0, Math.min(_wheelHudRows.length - 1, _wheelHudIndex));
+
+    _wheelTrack.style.transition = smooth ? "transform 0.2s cubic-bezier(0.22, 1, 0.36, 1)" : "none";
+    const offset = (1 - _wheelHudIndex) * 36;
+    _wheelTrack.style.transform = `translateY(${offset}px)`;
+
+    const items = _wheelTrack.querySelectorAll(".wecom-topic-wheel-item");
+    items.forEach((item, idx) => {
+      item.classList.remove("is-active", "is-prev", "is-next");
+      if (idx === _wheelHudIndex) {
+        item.classList.add("is-active");
+      } else if (idx === _wheelHudIndex - 1) {
+        item.classList.add("is-prev");
+      } else if (idx === _wheelHudIndex + 1) {
+        item.classList.add("is-next");
+      }
+    });
+
+    _wheelHudRows.forEach((r, idx) => {
+      r.element.classList.toggle("wecom-hud-focused", idx === _wheelHudIndex);
+    });
+
+    const activeRow = _wheelHudRows[_wheelHudIndex]?.element;
+    if (activeRow) {
+      activeRow.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      try { activeRow.focus({ preventScroll: true }); } catch { /* ignore */ }
+    }
+  }
+
+  function closeWheelHud(cancelled = true) {
+    _wheelHudVisible = false;
+    if (_wheelBackdrop) _wheelBackdrop.classList.remove("is-visible");
+    if (_wheelHud) _wheelHud.classList.remove("is-visible");
+    document.querySelectorAll(".wecom-conv.wecom-hud-focused").forEach(el => {
+      el.classList.remove("wecom-hud-focused");
+    });
+  }
+
+  function confirmWheelHud() {
+    if (!_wheelHudVisible || !_wheelHudRows.length) return;
+    const target = _wheelHudRows[_wheelHudIndex];
+    closeWheelHud(false);
+    if (target && target.element) {
+      try {
+        target.element.dispatchEvent(new MouseEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+          detail: 1,
+          button: 0,
+          altKey: false,
+          ctrlKey: false,
+          metaKey: false,
+          shiftKey: false
+        }));
+      } catch {
+        target.element.click();
+      }
+    }
+  }
+
+  function bindWheelTopicNavigator() {
+    if (window.__wecomWheelTopicNavigatorBound) return;
+    window.__wecomWheelTopicNavigatorBound = true;
+
+    window.addEventListener("wheel", (event) => {
+      if (getViewMode() === "native" || otherThemeActive()) return;
+      if (event.altKey || _wheelHudVisible) {
+        const rows = getWheelTopicRows();
+        if (!rows.length) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (!_wheelHudVisible) {
+          openWheelHud();
+        }
+
+        const now = performance.now();
+        _wheelDeltaAccum += event.deltaY;
+
+        if (Math.abs(_wheelDeltaAccum) >= 30 || (now - _wheelLastTickTime > 75 && Math.abs(_wheelDeltaAccum) >= 15)) {
+          const step = _wheelDeltaAccum > 0 ? 1 : -1;
+          _wheelDeltaAccum = 0;
+          _wheelLastTickTime = now;
+          _wheelHudIndex = Math.max(0, Math.min(_wheelHudRows.length - 1, _wheelHudIndex + step));
+          syncWheelHudUI(true);
+        }
+      }
+    }, { passive: false, capture: true });
+
+    window.addEventListener("keydown", (event) => {
+      if (!_wheelHudVisible) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        closeWheelHud(true);
+        return;
+      }
+      if (event.key === "Enter") {
+        event.preventDefault();
+        event.stopPropagation();
+        confirmWheelHud();
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        event.stopPropagation();
+        _wheelHudIndex = Math.max(0, _wheelHudIndex - 1);
+        syncWheelHudUI(true);
+        return;
+      }
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        event.stopPropagation();
+        _wheelHudIndex = Math.min(_wheelHudRows.length - 1, _wheelHudIndex + 1);
+        syncWheelHudUI(true);
+        return;
+      }
+    }, true);
+  }
+
   function ensureModeFab() {
     let fab = document.querySelector(".wecom-mode-fab");
     if (getViewMode() !== "native") {
@@ -46401,6 +46734,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     bindV2exEmojiPickerEvents();
     // 快捷键 Alt+W / Alt+O：在企微 IM 视图与原站风格间快速切换
     bindViewModeShortcut();
+    // 全局 Alt+滚轮 话题滚轮导航 HUD
+    bindWheelTopicNavigator();
     // 停靠栏深浅色切换与外观设置全局事件代理
     bindThemeControls();
     // 缩略图悬浮放大镜交互代理
