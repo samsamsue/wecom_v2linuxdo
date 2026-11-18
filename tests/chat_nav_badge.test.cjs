@@ -3,10 +3,11 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const scriptContent = fs.readFileSync(
+const rawScriptContent = fs.readFileSync(
   path.resolve(__dirname, "../linuxdo-wecom.user.js"),
   "utf8"
 );
+const scriptContent = rawScriptContent.replace(/\r\n/g, "\n");
 
 test("linuxdo-wecom includes new topics badge extraction and chat nav click logic", () => {
   assert.ok(
@@ -14213,6 +14214,32 @@ test("Test 176: Global Alt + Mouse Wheel topic quick-scroll preview HUD navigato
   assert.ok(scriptContent.includes('event.key === "Escape"'), "Escape key must cancel and dismiss HUD");
   assert.ok(scriptContent.includes('event.key === "Enter"'), "Enter / Alt+Enter must confirm and load topic");
   assert.ok(scriptContent.includes("bindWheelTopicNavigator()"), "bootstrap must call bindWheelTopicNavigator");
+});
+
+test("Test 177: Reddit thread tree completely isolates nested replies from bubble row styling (.wecom-reply-children .wecom-msg) (v0.8.44)", () => {
+  // 1. In Reddit thread mode, all levels of .wecom-msg (including inside .wecom-reply-children and .wecom-msg-me) must enforce flex-direction: column !important
+  assert.ok(
+    scriptContent.includes("html.wecom-thread-style-reddit .wecom-msg-me .wecom-reply-children .wecom-msg"),
+    "must override .wecom-msg-me .wecom-reply-children .wecom-msg with high specificity"
+  );
+  assert.ok(
+    scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children .wecom-msg"),
+    "must override .wecom-reply-children .wecom-msg in reddit mode"
+  );
+  assert.ok(
+    scriptContent.includes("flex-direction: column !important;\n      align-self: flex-start !important;\n      align-items: flex-start !important;\n      max-width: 100% !important;\n      width: 100% !important;"),
+    "reddit message nodes must enforce vertical column orientation and full width"
+  );
+
+  // 2. .wecom-reddit-row must stay flex-direction: row and 100% width on top of child replies
+  assert.ok(
+    scriptContent.includes("html.wecom-thread-style-reddit .wecom-reddit-row"),
+    "must define reddit comment row container"
+  );
+  assert.ok(
+    scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children .wecom-msg-content"),
+    "must enforce left-aligned vertical content layout for nested reddit messages"
+  );
 });
 
 

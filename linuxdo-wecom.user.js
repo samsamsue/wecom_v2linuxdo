@@ -4476,8 +4476,19 @@
       display: none !important;
     }
 
+    /* Reddit 树状模式下，所有层级的消息容器严格强制垂直 column 布局，
+       彻底覆盖并隔离普通气泡模式下 .wecom-reply-children .wecom-msg 的 flex-direction: row 样式，
+       防止当前消息主体行(.wecom-reddit-row)与子回复容器(.wecom-reply-children)并排横向排布而导致错乱右移！ */
     html.wecom-thread-style-reddit .wecom-msg,
-    html.wecom-thread-style-reddit .wecom-msg.wecom-msg-me {
+    html.wecom-thread-style-reddit .wecom-msg.wecom-msg-me,
+    html.wecom-thread-style-reddit .wecom-thread-node .wecom-msg,
+    html.wecom-thread-style-reddit .wecom-reply-children .wecom-msg,
+    html.wecom-thread-style-reddit .wecom-msg-me .wecom-reply-children .wecom-msg,
+    html.wecom-thread-style-reddit .wecom-reply-children .wecom-msg.wecom-msg-me,
+    html.wecom-thread-style-reddit .wecom-reply-children .wecom-reply-children .wecom-msg,
+    html.wecom-thread-style-reddit .children-area .wecom-msg,
+    html.wecom-thread-style-reddit .children .wecom-msg,
+    html.wecom-thread-style-reddit .wecom-reddit-node {
       display: flex !important;
       flex-direction: column !important;
       align-self: flex-start !important;
@@ -4493,7 +4504,9 @@
       flex-direction: row !important;
       align-items: flex-start !important;
       width: 100% !important;
+      max-width: 100% !important;
       position: relative !important;
+      box-sizing: border-box !important;
     }
     html.wecom-thread-style-reddit .wecom-reddit-gutter {
       width: 28px !important;
@@ -4606,7 +4619,10 @@
     }
     html.wecom-thread-style-reddit .wecom-msg-content,
     html.wecom-thread-style-reddit .wecom-reddit-body-col,
-    html.wecom-thread-style-reddit .wecom-msg.wecom-msg-me .wecom-msg-content {
+    html.wecom-thread-style-reddit .wecom-msg.wecom-msg-me .wecom-msg-content,
+    html.wecom-thread-style-reddit .wecom-reply-children .wecom-msg-content,
+    html.wecom-thread-style-reddit .wecom-msg-me .wecom-reply-children .wecom-msg-content,
+    html.wecom-thread-style-reddit .children .wecom-msg-content {
       min-width: 0 !important;
       width: 100% !important;
       flex: 1 1 auto !important;
@@ -4801,10 +4817,20 @@
     }
 
     html.wecom-thread-style-reddit .wecom-reply-children .wecom-msg,
+    html.wecom-thread-style-reddit .wecom-msg-me .wecom-reply-children .wecom-msg,
+    html.wecom-thread-style-reddit .wecom-reply-children .wecom-msg.wecom-msg-me,
+    html.wecom-thread-style-reddit .wecom-reply-children .wecom-reply-children .wecom-msg,
     html.wecom-thread-style-reddit .wecom-reply-children .wecom-thread-node,
-    html.wecom-thread-style-reddit .wecom-reply-children .wecom-reddit-node {
+    html.wecom-thread-style-reddit .wecom-reply-children .wecom-reddit-node,
+    html.wecom-thread-style-reddit .children-area .wecom-msg,
+    html.wecom-thread-style-reddit .children .wecom-msg,
+    html.wecom-thread-style-reddit .children .wecom-thread-node,
+    html.wecom-thread-style-reddit .children .wecom-reddit-node {
+      display: flex !important;
+      flex-direction: column !important;
       position: relative !important;
       width: 100% !important;
+      max-width: 100% !important;
       margin-left: 0 !important;
       padding-left: 0 !important;
       margin-bottom: 0 !important;
