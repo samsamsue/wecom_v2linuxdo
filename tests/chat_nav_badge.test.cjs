@@ -14170,18 +14170,29 @@ test("Test 176: Global Alt + Mouse Wheel topic quick-scroll preview HUD navigato
   // 1. Version bump
   assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.(4[3-9]|[5-9]\d)";/, "user.js version must be 0.8.43+");
 
-  // 2. HUD & backdrop CSS classes and styles
+  // 2. HUD & backdrop CSS classes and styles (50% opacity, frosted glass, slot highlight)
   assert.ok(scriptContent.includes(".wecom-topic-wheel-backdrop"), "must define wheel HUD backdrop overlay");
   assert.ok(scriptContent.includes(".wecom-topic-wheel-hud"), "must define centered frosted-glass HUD card");
+  assert.ok(scriptContent.includes("rgba(22, 26, 33, 0.50)") || scriptContent.includes("0.50"), "HUD must feature ~50% translucent glass background");
   assert.ok(scriptContent.includes(".wecom-topic-wheel-viewport"), "must define 3D viewport for drum roller");
+  assert.ok(scriptContent.includes(".wecom-topic-wheel-slot"), "must define illuminated slot pill for center active row");
   assert.ok(scriptContent.includes(".wecom-topic-wheel-track"), "must define track container with transform-style: preserve-3d");
+  assert.ok(scriptContent.includes(".wecom-topic-wheel-title"), "must define title container with scaled down font size");
+  assert.ok(scriptContent.includes(".wecom-topic-wheel-meta"), "must define metadata container for views & comments");
+  assert.ok(scriptContent.includes(".wecom-topic-wheel-stat"), "must define metric stat item with icon");
   assert.ok(scriptContent.includes(".wecom-topic-wheel-item.is-active"), "must style active center topic item");
   assert.ok(scriptContent.includes(".wecom-topic-wheel-item.is-prev"), "must style tilted previous topic item");
   assert.ok(scriptContent.includes(".wecom-topic-wheel-item.is-next"), "must style tilted next topic item");
   assert.ok(scriptContent.includes(".wecom-topic-wheel-tip"), "must define yellow shortcut hint");
   assert.ok(scriptContent.includes(".wecom-conv.wecom-hud-focused"), "must define left list focus outline & highlight");
 
-  // 3. Core DOM and logic functions
+  // 3. Real title extraction and metric formatting
+  assert.ok(scriptContent.includes("data-real-title"), "convRowHtml must attach data-real-title attribute");
+  assert.ok(scriptContent.includes("data-views") && scriptContent.includes("data-replies"), "convRowHtml must attach data-views and data-replies attributes");
+  assert.ok(scriptContent.includes("formatWheelMetric"), "must define formatWheelMetric for formatting view and comment counts");
+  assert.ok(scriptContent.includes("realTitle = topicObj?.title || el.dataset.realTitle"), "getWheelTopicRows must retrieve real title rather than fake disguise title");
+
+  // 4. Core DOM and logic functions
   assert.ok(scriptContent.includes("function ensureWheelHudDOM()"), "must define ensureWheelHudDOM helper");
   assert.ok(scriptContent.includes("function getWheelTopicRows()"), "must define getWheelTopicRows query helper");
   assert.ok(scriptContent.includes("function openWheelHud()"), "must define openWheelHud activator");
@@ -14190,7 +14201,7 @@ test("Test 176: Global Alt + Mouse Wheel topic quick-scroll preview HUD navigato
   assert.ok(scriptContent.includes("function confirmWheelHud()"), "must define confirmWheelHud enter trigger");
   assert.ok(scriptContent.includes("function bindWheelTopicNavigator()"), "must define bindWheelTopicNavigator listener binder");
 
-  // 4. Shortcut bindings and keyboard interactions
+  // 5. Shortcut bindings and keyboard interactions
   assert.ok(scriptContent.includes("event.altKey || _wheelHudVisible"), "wheel listener must check altKey or active HUD visibility");
   assert.ok(scriptContent.includes("Alt+Enter 确定进入 , Esc 退出"), "must display exact yellow shortcut guide text");
   assert.ok(scriptContent.includes('event.key === "Escape"'), "Escape key must cancel and dismiss HUD");

@@ -14327,17 +14327,17 @@
       flex-shrink: 0;
     }
 
-    /* ==================== 全局 Alt+滚轮 话题快速切换导航 HUD ==================== */
+    /* ==================== 全局 Alt+滚轮 话题快速切换导航 HUD (美化版) ==================== */
     .wecom-topic-wheel-backdrop {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.28);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
+      background: rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
       z-index: 99990;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.15s ease;
+      transition: opacity 0.18s ease;
     }
     .wecom-topic-wheel-backdrop.is-visible {
       opacity: 1;
@@ -14348,26 +14348,26 @@
       position: fixed;
       top: 50%;
       left: 50%;
-      transform: translate(-50%, -50%) scale(0.95);
-      width: 460px;
+      transform: translate(-50%, -50%) scale(0.96);
+      width: 480px;
       max-width: calc(100vw - 32px);
-      min-height: 180px;
-      background: rgba(85, 90, 95, 0.90);
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      border-radius: 16px;
-      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.42), 0 4px 14px rgba(0, 0, 0, 0.25);
+      height: 246px;
+      background: rgba(22, 26, 33, 0.50); /* 50% 半透明 */
+      backdrop-filter: blur(28px) saturate(190%);
+      -webkit-backdrop-filter: blur(28px) saturate(190%);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 20px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45), 0 4px 18px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
       z-index: 99995;
       box-sizing: border-box;
-      padding: 30px 24px 38px 24px;
+      padding: 20px 20px 42px 20px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.15s ease, transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1);
+      transition: opacity 0.18s ease, transform 0.2s cubic-bezier(0.2, 0.8, 0.3, 1);
       user-select: none;
     }
     .wecom-topic-wheel-hud.is-visible {
@@ -14378,12 +14378,27 @@
 
     .wecom-topic-wheel-viewport {
       width: 100%;
-      height: 108px;
+      height: 168px; /* 3 行 * 56px */
       overflow: hidden;
       position: relative;
-      perspective: 400px;
-      mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
-      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+      perspective: 460px;
+      mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%);
+    }
+
+    /* 居中高亮槽位底色 */
+    .wecom-topic-wheel-slot {
+      position: absolute;
+      top: 56px;
+      left: 8px;
+      right: 8px;
+      height: 56px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      pointer-events: none;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      box-sizing: border-box;
     }
 
     .wecom-topic-wheel-track {
@@ -14394,65 +14409,122 @@
       display: flex;
       flex-direction: column;
       transform-style: preserve-3d;
-      transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+      transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
       will-change: transform;
     }
 
     .wecom-topic-wheel-item {
-      height: 36px;
-      line-height: 36px;
-      padding: 0 16px;
+      height: 56px;
+      padding: 7px 18px;
       text-align: center;
-      font-size: 13.5px;
-      color: rgba(255, 255, 255, 0.5);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
       box-sizing: border-box;
       transform-origin: center center;
       transform: scale(0.88);
       opacity: 0.25;
-      transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
-                  color 0.2s ease,
-                  opacity 0.2s ease,
-                  font-size 0.2s ease;
+      transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+                  opacity 0.22s ease;
       cursor: pointer;
     }
 
+    .wecom-topic-wheel-title {
+      width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 13.5px;
+      color: rgba(255, 255, 255, 0.55);
+      transition: color 0.2s ease, font-size 0.2s ease;
+    }
+
+    .wecom-topic-wheel-meta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.38);
+      transition: color 0.2s ease;
+    }
+
+    .wecom-topic-wheel-stat {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .wecom-topic-wheel-stat svg {
+      width: 12px;
+      height: 12px;
+      opacity: 0.85;
+    }
+
+    .wecom-topic-wheel-dot {
+      opacity: 0.4;
+    }
+
+    /* 相邻项微倾斜 3D 动效 */
     .wecom-topic-wheel-item.is-prev {
-      font-size: 14px;
-      color: rgba(255, 255, 255, 0.6);
       opacity: 0.6;
       transform: scale(0.92) rotateX(20deg);
     }
+    .wecom-topic-wheel-item.is-prev .wecom-topic-wheel-title {
+      font-size: 13.5px;
+      color: rgba(255, 255, 255, 0.68);
+    }
+    .wecom-topic-wheel-item.is-prev .wecom-topic-wheel-meta {
+      color: rgba(255, 255, 255, 0.45);
+    }
 
     .wecom-topic-wheel-item.is-active {
-      font-size: 19px;
-      font-weight: 600;
-      color: #FFFFFF;
       opacity: 1;
       transform: scale(1) rotateX(0deg);
-      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+    }
+    .wecom-topic-wheel-item.is-active .wecom-topic-wheel-title {
+      font-size: 15.5px;
+      font-weight: 600;
+      color: #FFFFFF;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    }
+    .wecom-topic-wheel-item.is-active .wecom-topic-wheel-meta {
+      font-size: 11.5px;
+      color: rgba(255, 255, 255, 0.78);
+    }
+    .wecom-topic-wheel-item.is-active .wecom-topic-wheel-stat svg {
+      opacity: 1;
     }
 
     .wecom-topic-wheel-item.is-next {
-      font-size: 14px;
-      color: rgba(255, 255, 255, 0.6);
       opacity: 0.6;
       transform: scale(0.92) rotateX(-20deg);
     }
+    .wecom-topic-wheel-item.is-next .wecom-topic-wheel-title {
+      font-size: 13.5px;
+      color: rgba(255, 255, 255, 0.68);
+    }
+    .wecom-topic-wheel-item.is-next .wecom-topic-wheel-meta {
+      color: rgba(255, 255, 255, 0.45);
+    }
 
+    /* 底部操作指引胶囊徽标 */
     .wecom-topic-wheel-tip {
       position: absolute;
-      right: 22px;
+      right: 18px;
       bottom: 12px;
-      font-size: 12px;
+      padding: 3px 10px;
+      background: rgba(0, 0, 0, 0.28);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      font-size: 11.5px;
       font-weight: 500;
-      color: #E5A826;
+      color: #F5B025;
       letter-spacing: 0.3px;
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 5px;
     }
 
     /* 左侧列表项焦点轮廓跟随 */
@@ -32654,8 +32726,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const rawTime = topic.bumped_at || topic.last_activity_at || topic.created_at;
     const timeMs = parseTimestamp(rawTime);
     const timeAttr = timeMs ? ` data-time="${timeMs}"` : "";
+    const realTitle = String(topic.title || title || "");
+    const viewsCount = Number(topic.views || topic.visit_count || topic.view_count || 0);
+    const replyCountVal = Number(topic.reply_count ?? (topic.posts_count ? Math.max(0, topic.posts_count - 1) : 0));
     return `
-      <a class="wecom-conv${isPinned ? " is-pinned" : ""}${isNotif ? " is-notif" : ""}" href="${escapeHtml(topicHref(topic))}" data-topic-id="${topic.id}" ${targetAttrs} title="${escapeHtml(String(topic.title || title || ""))}">
+      <a class="wecom-conv${isPinned ? " is-pinned" : ""}${isNotif ? " is-notif" : ""}" href="${escapeHtml(topicHref(topic))}" data-topic-id="${topic.id}" data-real-title="${escapeHtml(realTitle)}" data-views="${viewsCount}" data-replies="${replyCountVal}" ${targetAttrs} title="${escapeHtml(String(topic.title || title || ""))}">
         ${convAvatarHtml(topic, usersById)}
         <span class="wecom-conv-info">
           <span class="wecom-conv-top">
@@ -45558,7 +45633,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     }, true);
   }
 
-  // ==================== 全局 Alt + 滚轮 话题快速切换导航 HUD ====================
+  // ==================== 全局 Alt + 滚轮 话题快速切换导航 HUD (美化版) ====================
   let _wheelHudVisible = false;
   let _wheelHudIndex = 0;
   let _wheelHudRows = [];
@@ -45567,6 +45642,16 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   let _wheelBackdrop = null;
   let _wheelHud = null;
   let _wheelTrack = null;
+
+  const WHEEL_ICON_EYE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+  const WHEEL_ICON_CHAT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
+
+  function formatWheelMetric(num) {
+    const n = Number(num) || 0;
+    if (n >= 10000) return (n / 10000).toFixed(1) + "w";
+    if (n >= 1000) return (n / 1000).toFixed(1) + "k";
+    return String(n);
+  }
 
   function ensureWheelHudDOM() {
     if (_wheelHud && _wheelBackdrop) return;
@@ -45579,6 +45664,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     _wheelHud.className = "wecom-topic-wheel-hud";
     _wheelHud.innerHTML = `
       <div class="wecom-topic-wheel-viewport">
+        <div class="wecom-topic-wheel-slot"></div>
         <div class="wecom-topic-wheel-track"></div>
       </div>
       <div class="wecom-topic-wheel-tip">Alt+Enter 确定进入 , Esc 退出</div>
@@ -45605,9 +45691,15 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   function getWheelTopicRows() {
     return [...document.querySelectorAll(".wecom-list-body a.wecom-conv")].map((el, i) => {
-      const titleEl = el.querySelector(".wecom-conv-title .wecom-conv-name") || el.querySelector(".wecom-conv-name") || el.querySelector(".wecom-conv-title");
-      const title = titleEl?.textContent?.trim() || el.getAttribute("title") || "话题 " + (i + 1);
-      return { element: el, title, id: el.dataset.topicId || String(i) };
+      const topicId = el.dataset.topicId || String(i);
+      const topicObj = (typeof listState !== "undefined" && Array.isArray(listState.topics))
+        ? listState.topics.find((t) => isSameTopic(t.id, topicId))
+        : null;
+      // 优先获取真实主题标题，绝不展示伪装标题
+      const realTitle = topicObj?.title || el.dataset.realTitle || el.getAttribute("title") || el.querySelector(".wecom-conv-title .wecom-conv-name")?.textContent?.trim() || "话题 " + (i + 1);
+      const views = Number(topicObj?.views || topicObj?.visit_count || el.dataset.views) || 0;
+      const replies = Number(topicObj?.reply_count ?? (topicObj?.posts_count ? Math.max(0, topicObj.posts_count - 1) : (el.dataset.replies ?? 0))) || 0;
+      return { element: el, title: realTitle, views, replies, id: topicId };
     });
   }
 
@@ -45617,9 +45709,20 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     _wheelHudRows = getWheelTopicRows();
     if (!_wheelHudRows.length) return;
 
-    _wheelTrack.innerHTML = _wheelHudRows.map((r, i) =>
-      `<div class="wecom-topic-wheel-item" data-index="${i}">${escapeHtml(r.title)}</div>`
-    ).join("");
+    _wheelTrack.innerHTML = _wheelHudRows.map((r, i) => {
+      const vStr = formatWheelMetric(r.views);
+      const rStr = formatWheelMetric(r.replies);
+      return `
+        <div class="wecom-topic-wheel-item" data-index="${i}">
+          <div class="wecom-topic-wheel-title">${escapeHtml(r.title)}</div>
+          <div class="wecom-topic-wheel-meta">
+            <span class="wecom-topic-wheel-stat">${WHEEL_ICON_EYE} ${vStr} 浏览</span>
+            <span class="wecom-topic-wheel-dot">·</span>
+            <span class="wecom-topic-wheel-stat">${WHEEL_ICON_CHAT} ${rStr} 评论</span>
+          </div>
+        </div>
+      `;
+    }).join("");
 
     const activeIdx = _wheelHudRows.findIndex(r => r.element.classList.contains("is-active") || r.element.classList.contains("active"));
     _wheelHudIndex = activeIdx >= 0 ? activeIdx : 0;
@@ -45635,8 +45738,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     if (!_wheelHudRows.length) return;
     _wheelHudIndex = Math.max(0, Math.min(_wheelHudRows.length - 1, _wheelHudIndex));
 
-    _wheelTrack.style.transition = smooth ? "transform 0.2s cubic-bezier(0.22, 1, 0.36, 1)" : "none";
-    const offset = (1 - _wheelHudIndex) * 36;
+    _wheelTrack.style.transition = smooth ? "transform 0.22s cubic-bezier(0.22, 1, 0.36, 1)" : "none";
+    const offset = (1 - _wheelHudIndex) * 56;
     _wheelTrack.style.transform = `translateY(${offset}px)`;
 
     const items = _wheelTrack.querySelectorAll(".wecom-topic-wheel-item");
