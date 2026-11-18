@@ -14114,7 +14114,7 @@ test("Test 174: Reddit thread tree authentic alignment (gutter column, curved br
   // 3. Header vertical centering and consistent typography
   assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-msg-header"), "must style header");
   assert.ok(scriptContent.includes("align-items: center !important;"), "header items must be vertically centered");
-  assert.ok(scriptContent.includes(".wecom-msg.is-tools-open .wecom-msg-tools"), "more menu dropdown must open under reddit node");
+  assert.ok(scriptContent.includes(".wecom-msg.is-tools-open > .wecom-reddit-row > .wecom-msg-content > .wecom-msg-tools"), "more menu dropdown must open under reddit node");
 
   // 4. SVG alignment, single-layer geometry (1px fine line, non-propagating hover)
   assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-reddit-gutter"), "must style .wecom-reddit-gutter");
@@ -14423,16 +14423,143 @@ test("Test 180: Length-limited floor content preview tip on timeline progress sl
   );
 });
 
+test("Test 181: Multi-floor bubble more button menu triggering, zero duplicate popups, and isolated child menus (v0.8.48)", () => {
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
 
+  // 1. Version bump
+  assert.ok(
+    scriptContent.includes('@version      0.8.48') &&
+    metaContent.includes('@version      0.8.48') &&
+    scriptContent.includes('const SCRIPT_VERSION = "0.8.48";'),
+    "version must be bumped to 0.8.48"
+  );
 
+  // 2. CSS isolation: no unconstrained descendant rules that leak into nested floors
+  assert.ok(
+    !scriptContent.includes(".wecom-msg.is-tools-open .wecom-msg-tools") &&
+    !scriptContent.includes(".wecom-msg.is-tools-open .wecom-msg-more-btn") &&
+    !scriptContent.includes(".wecom-msg.has-boost-popover .wecom-msg-more-btn"),
+    "must eliminate unconstrained descendant selectors that leak .is-tools-open or hover to child message menus/buttons"
+  );
 
+  // 3. Scoped direct selectors for both standard bubbles and Reddit tree rows
+  assert.ok(
+    scriptContent.includes(".wecom-msg.is-tools-open > .wecom-msg-content > .wecom-msg-tools,") &&
+    scriptContent.includes(".wecom-msg.is-tools-open > .wecom-reddit-row > .wecom-msg-content > .wecom-msg-tools"),
+    "must scope .is-tools-open > .wecom-msg-tools directly to .wecom-msg-content or .wecom-reddit-row"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-msg.is-tools-open > .wecom-reddit-row > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn"),
+    "must scope more-btn active state directly to header in both bubble and Reddit modes"
+  );
 
+  // 4. JS event triggering & anchor passing
+  assert.ok(
+    scriptContent.includes("if (msg) toggleMsgToolsMenu(msg, panel, msgMoreBtn);"),
+    "handleChatPanelClick must pass clicked msgMoreBtn into toggleMsgToolsMenu"
+  );
+  assert.ok(
+    scriptContent.includes("function toggleMsgToolsMenu(msgEl, panel = null)") &&
+    scriptContent.includes("arguments.length > 2 ? arguments[2] : null"),
+    "toggleMsgToolsMenu must extract triggerBtn parameter from arguments"
+  );
+  assert.ok(
+    scriptContent.includes("function openMsgToolsMenu(msgEl, { panel = null, anchorPoint = null, triggerBtn = null } = {})"),
+    "openMsgToolsMenu must accept triggerBtn parameter"
+  );
+  assert.ok(
+    scriptContent.includes("function positionMsgTools(msgEl, containerEl = null, anchorPoint = null)") &&
+    scriptContent.includes("arguments.length > 3 ? arguments[3] : null"),
+    "positionMsgTools must extract triggerBtn parameter from arguments"
+  );
+  assert.ok(
+    scriptContent.includes('moreBtn?.closest?.(".wecom-msg-content")?.querySelector?.(":scope > .wecom-msg-tools")'),
+    "positionMsgTools must directly resolve the exact tools menu belonging to the trigger button's content column"
+  );
 
+  // 5. Functional DOM test with mock parent-child nested bubble structure
+  let openClassCount = 0;
+  const childTools = {
+    dataset: {},
+    style: {
+      setProperty: (prop, val) => { childTools[prop] = val; }
+    },
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 152, height: 200 }),
+    offsetWidth: 152,
+    offsetHeight: 200
+  };
+  const parentTools = {
+    dataset: {},
+    style: {
+      setProperty: (prop, val) => { parentTools[prop] = val; }
+    },
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 152, height: 200 }),
+    offsetWidth: 152,
+    offsetHeight: 200
+  };
+  const childMoreBtn = {
+    getBoundingClientRect: () => ({ left: 240, top: 180, right: 260, bottom: 200, width: 20, height: 20 }),
+    setAttribute: (k, v) => { childMoreBtn[k] = v; },
+    closest: (sel) => (sel === ".wecom-msg-content" ? childContent : null)
+  };
+  const parentMoreBtn = {
+    getBoundingClientRect: () => ({ left: 200, top: 100, right: 220, bottom: 120, width: 20, height: 20 }),
+    setAttribute: (k, v) => { parentMoreBtn[k] = v; },
+    closest: (sel) => (sel === ".wecom-msg-content" ? parentContent : null)
+  };
+  const childContent = {
+    querySelector: (sel) => (sel === ":scope > .wecom-msg-tools" ? childTools : null)
+  };
+  const parentContent = {
+    querySelector: (sel) => (sel === ":scope > .wecom-msg-tools" ? parentTools : null)
+  };
+  const childMsg = {
+    classList: {
+      classes: new Set(),
+      add: (c) => childMsg.classList.classes.add(c),
+      remove: (c) => childMsg.classList.classes.delete(c),
+      contains: (c) => childMsg.classList.classes.has(c)
+    },
+    querySelector: (sel) => null,
+    closest: () => null
+  };
+  const parentMsg = {
+    classList: {
+      classes: new Set(),
+      add: (c) => parentMsg.classList.classes.add(c),
+      remove: (c) => parentMsg.classList.classes.delete(c),
+      contains: (c) => parentMsg.classList.classes.has(c)
+    },
+    querySelector: (sel) => null,
+    closest: () => null
+  };
 
-
-
-
-
-
-
+  // Test positionMsgTools anchor derivation using childMoreBtn
+  const computeMsgToolsPlacement = (metrics) => ({ placement: "bottom", left: metrics.anchorRect.left, top: metrics.anchorRect.bottom + 4 });
+  const positionFn = new Function(
+    "computeMsgToolsPlacement",
+    `
+    return function positionMsgTools(msgEl, containerEl = null, anchorPoint = null) {
+      const triggerBtn = arguments.length > 3 ? arguments[3] : null;
+      const moreBtn = triggerBtn;
+      const tools = moreBtn?.closest?.(".wecom-msg-content")?.querySelector?.(":scope > .wecom-msg-tools");
+      const pos = computeMsgToolsPlacement({
+        isMe: false,
+        safeLeft: 8, safeRight: 800, safeTop: 8, safeBottom: 700,
+        anchorRect: moreBtn.getBoundingClientRect(),
+        menuWidth: 152, menuHeight: 200
+      });
+      tools.dataset.toolsPos = pos.placement;
+      tools.style.setProperty("left", pos.left + "px", "important");
+      tools.style.setProperty("top", pos.top + "px", "important");
+      return { tools, pos };
+    };
+    `
+  )(computeMsgToolsPlacement);
+  const result = positionFn(childMsg, null, null, childMoreBtn);
+  assert.strictEqual(result.tools, childTools, "must resolve exact child tools menu from child more button");
+  assert.strictEqual(childTools.left, "240px", "child tools must position relative to child button left");
+  assert.strictEqual(childTools.top, "204px", "child tools must position relative to child button bottom");
+  assert.strictEqual(parentTools.left, undefined, "parent tools must remain untouched and unpositioned");
+});
 

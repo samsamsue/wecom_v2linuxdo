@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.47
+// @version      0.8.48
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -4910,7 +4910,7 @@
       cursor: pointer !important;
       border-radius: 4px !important;
     }
-    html.wecom-thread-style-reddit .wecom-msg:hover .wecom-msg-more-btn,
+    html.wecom-thread-style-reddit .wecom-msg:hover > .wecom-reddit-row > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn,
     html.wecom-thread-style-reddit .wecom-msg-more-btn:hover {
       opacity: 1 !important;
       background: var(--wc-hover, rgba(0, 0, 0, 0.06)) !important;
@@ -5232,20 +5232,21 @@
       transition: background 0.14s ease, color 0.14s ease, opacity 0.14s ease;
     }
     .wecom-msg-more-btn svg { width: 14px; height: 14px; stroke: currentColor; }
-    .wecom-msg:hover .wecom-msg-more-btn,
+    .wecom-msg:hover > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn,
+    .wecom-msg:hover > .wecom-reddit-row > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn,
     .wecom-msg-more-btn:hover,
     .wecom-msg-more-btn:focus-visible,
     .wecom-msg.is-tools-open > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn,
+    .wecom-msg.is-tools-open > .wecom-reddit-row > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn,
     .wecom-msg.has-boost-popover > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn,
-    .wecom-msg.is-tools-open .wecom-msg-more-btn,
-    .wecom-msg.has-boost-popover .wecom-msg-more-btn {
+    .wecom-msg.has-boost-popover > .wecom-reddit-row > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn {
       opacity: 1;
     }
     .wecom-msg-more-btn:hover,
     .wecom-msg.is-tools-open > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn,
+    .wecom-msg.is-tools-open > .wecom-reddit-row > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn,
     .wecom-msg.has-boost-popover > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn,
-    .wecom-msg.is-tools-open .wecom-msg-more-btn,
-    .wecom-msg.has-boost-popover .wecom-msg-more-btn {
+    .wecom-msg.has-boost-popover > .wecom-reddit-row > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn {
       background: var(--wc-hover); color: var(--wc-text);
     }
     .wecom-msg-tools {
@@ -5261,7 +5262,7 @@
       pointer-events: none;
     }
     .wecom-msg.is-tools-open > .wecom-msg-content > .wecom-msg-tools,
-    .wecom-msg.is-tools-open .wecom-msg-tools {
+    .wecom-msg.is-tools-open > .wecom-reddit-row > .wecom-msg-content > .wecom-msg-tools {
       opacity: 1 !important;
       visibility: visible !important;
       pointer-events: auto !important;
@@ -12843,7 +12844,7 @@
       pointer-events: none;
     }
     .wecom-msg.is-tools-open > .wecom-msg-content > .wecom-msg-tools,
-    .wecom-msg.is-tools-open .wecom-msg-tools {
+    .wecom-msg.is-tools-open > .wecom-reddit-row > .wecom-msg-content > .wecom-msg-tools {
       opacity: 1 !important;
       visibility: visible !important;
       pointer-events: auto !important;
@@ -15629,7 +15630,9 @@
     html.wecom-dark .wecom-msg-more-btn:hover,
     html.${ROOT_CLASS}.wecom-dark .wecom-msg-more-btn:hover,
     html.wecom-dark .wecom-msg.is-tools-open > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn,
-    html.${ROOT_CLASS}.wecom-dark .wecom-msg.is-tools-open > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn {
+    html.wecom-dark .wecom-msg.is-tools-open > .wecom-reddit-row > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg.is-tools-open > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn,
+    html.${ROOT_CLASS}.wecom-dark .wecom-msg.is-tools-open > .wecom-reddit-row > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn {
       background: rgba(255, 255, 255, 0.1) !important;
       color: #ECEFF4 !important;
     }
@@ -22923,7 +22926,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.47";
+  const SCRIPT_VERSION = "0.8.48";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -37483,7 +37486,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     if (msgMoreBtn && panel.contains(msgMoreBtn)) {
       consumeClick(event);
       const msg = msgMoreBtn.closest(".wecom-msg");
-      if (msg) toggleMsgToolsMenu(msg, panel);
+      if (msg) toggleMsgToolsMenu(msg, panel, msgMoreBtn);
       return;
     }
     if (handleMessageToolClick(event, panel)) return;
@@ -37840,20 +37843,26 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       msgEl.classList.remove("is-tools-open");
       const btn = (findOwn ? findOwn(msgEl, ".wecom-msg-more-btn", ".wecom-msg") : null) ||
         msgEl.querySelector(":scope > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn") ||
+        msgEl.querySelector(":scope > .wecom-reddit-row > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn") ||
         msgEl.querySelector(".wecom-msg-more-btn");
       if (btn) btn.setAttribute("aria-expanded", "false");
     });
   }
 
   function positionMsgTools(msgEl, containerEl = null, anchorPoint = null) {
+    const triggerBtn = arguments.length > 3 ? arguments[3] : null;
     if (!msgEl || typeof msgEl.querySelector !== "function") return null;
     const findOwn = typeof findOwnMsgElement === "function" ? findOwnMsgElement : null;
-    const tools = (findOwn ? findOwn(msgEl, ".wecom-msg-tools", ".wecom-msg") : null) ||
-      msgEl.querySelector(":scope > .wecom-msg-content > .wecom-msg-tools") ||
-      msgEl.querySelector(".wecom-msg-tools");
-    const moreBtn = (findOwn ? findOwn(msgEl, ".wecom-msg-more-btn", ".wecom-msg") : null) ||
+    const moreBtn = triggerBtn ||
+      (findOwn ? findOwn(msgEl, ".wecom-msg-more-btn", ".wecom-msg") : null) ||
       msgEl.querySelector(":scope > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn") ||
+      msgEl.querySelector(":scope > .wecom-reddit-row > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn") ||
       msgEl.querySelector(".wecom-msg-more-btn");
+    const tools = (moreBtn?.closest?.(".wecom-msg-content")?.querySelector?.(":scope > .wecom-msg-tools")) ||
+      (findOwn ? findOwn(msgEl, ".wecom-msg-tools", ".wecom-msg") : null) ||
+      msgEl.querySelector(":scope > .wecom-msg-content > .wecom-msg-tools") ||
+      msgEl.querySelector(":scope > .wecom-reddit-row > .wecom-msg-content > .wecom-msg-tools") ||
+      msgEl.querySelector(".wecom-msg-tools");
     const hasAnchorPoint = Boolean(anchorPoint && Number.isFinite(anchorPoint.x) && Number.isFinite(anchorPoint.y));
     if (!tools || (!hasAnchorPoint && !moreBtn)) return null;
 
@@ -37896,21 +37905,25 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     return pos;
   }
 
-  function openMsgToolsMenu(msgEl, { panel = null, anchorPoint = null } = {}) {
+  function openMsgToolsMenu(msgEl, { panel = null, anchorPoint = null, triggerBtn = null } = {}) {
     if (!msgEl) return false;
     closeAllMsgToolsMenus(document);
     closeBoostPopover();
     syncMsgToolsLayoutItem(msgEl);
     msgEl.classList.add("is-tools-open");
-    const moreBtn = msgEl.querySelector(":scope > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn") ||
+    const moreBtn = triggerBtn ||
+      (typeof findOwnMsgElement === "function" ? findOwnMsgElement(msgEl, ".wecom-msg-more-btn", ".wecom-msg") : null) ||
+      msgEl.querySelector(":scope > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn") ||
+      msgEl.querySelector(":scope > .wecom-reddit-row > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn") ||
       msgEl.querySelector(".wecom-msg-more-btn");
     if (moreBtn) moreBtn.setAttribute("aria-expanded", "true");
     const container = panel?.querySelector?.(".wecom-chat-body") || msgEl.closest?.(".wecom-chat-body, .wecom-chat-messages");
-    positionMsgTools(msgEl, container, anchorPoint);
+    positionMsgTools(msgEl, container, anchorPoint, moreBtn);
     return true;
   }
 
   function toggleMsgToolsMenu(msgEl, panel = null) {
+    const triggerBtn = arguments.length > 2 ? arguments[2] : null;
     if (!msgEl) return false;
     const wasOpen = msgEl.classList.contains("is-tools-open");
     if (wasOpen) {
@@ -37918,7 +37931,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       closeBoostPopover();
       return false;
     }
-    return openMsgToolsMenu(msgEl, { panel });
+    return openMsgToolsMenu(msgEl, { panel, triggerBtn });
   }
 
   function bindChatPanelEvents(panel) {
@@ -39120,7 +39133,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     }
     document.querySelectorAll(".wecom-msg.has-boost-popover").forEach((el) => {
       el.classList.remove("has-boost-popover", "is-tools-open");
-      const btn = el.querySelector(":scope > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn") ||
+      const findOwn = typeof findOwnMsgElement === "function" ? findOwnMsgElement : null;
+      const btn = (findOwn ? findOwn(el, ".wecom-msg-more-btn", ".wecom-msg") : null) ||
+        el.querySelector(":scope > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn") ||
+        el.querySelector(":scope > .wecom-reddit-row > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn") ||
         el.querySelector(".wecom-msg-more-btn");
       if (btn) btn.setAttribute("aria-expanded", "false");
     });
@@ -39131,7 +39147,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     // Capture visible coordinates before closing the dropdown menu hides anchorBtn
     const rawAnchorRect = anchorBtn?.getBoundingClientRect?.();
     const hasAnchorRect = !!(rawAnchorRect && (rawAnchorRect.width > 0 || rawAnchorRect.height > 0));
-    const moreBtn = msgEl?.querySelector?.(":scope > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn") ||
+    const findOwn = typeof findOwnMsgElement === "function" ? findOwnMsgElement : null;
+    const moreBtn = (findOwn ? findOwn(msgEl, ".wecom-msg-more-btn", ".wecom-msg") : null) ||
+      msgEl?.querySelector?.(":scope > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn") ||
+      msgEl?.querySelector?.(":scope > .wecom-reddit-row > .wecom-msg-content > .wecom-msg-header > .wecom-msg-more-btn") ||
       msgEl?.querySelector?.(".wecom-msg-more-btn");
     const fallbackRect = !hasAnchorRect ? moreBtn?.getBoundingClientRect?.() : null;
     const rect = hasAnchorRect
