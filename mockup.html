@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reddit Comment Tree (SVG Architecture)</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --wc-bg: #FFFFFF;
+  --wc-chat-bg: #F5F7FB;
+  --wc-text: #1C1C1C;
+  --wc-text-2: #4A4A4A;
+  --wc-text-3: #7C7C7C;
+  --wc-border: rgba(0, 0, 0, 0.14);
+  --wc-accent: #267EF0;
+  --wc-accent-hover: #1E66C5;
+  --reddit-hover: rgba(0, 0, 0, 0.05);
+  --body-bg: #F5F7FB;
+}
+
+html.dark {
+  --wc-bg: #1A1A1B;
+  --wc-chat-bg: #18191C;
+  --wc-text: #D7DADC;
+  --wc-text-2: #A8AAAB;
+  --wc-text-3: #818384;
+  --wc-border: rgba(255, 255, 255, 0.16);
+  --wc-accent: #267EF0;
+  --wc-accent-hover: #4FBCFF;
+  --reddit-hover: rgba(255, 255, 255, 0.08);
+  --body-bg: #18191C;
+}
+
+body {
+  margin: 0;
+  padding: 24px;
+  background: var(--body-bg);
+  color: var(--wc-text);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  transition: background 0.2s, color 0.2s;
+}
+
+.toolbar {
+  max-width: 700px;
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: var(--wc-bg);
+  border-radius: 8px;
+  border: 1px solid var(--wc-border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.toolbar h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--wc-text);
+}
+
+.toggle-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--wc-border);
+  background: var(--wc-bg);
+  color: var(--wc-text);
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.toggle-btn:hover {
+  background: var(--reddit-hover);
+  border-color: var(--wc-accent);
+  color: var(--wc-accent);
+}
+
+.container {
+  max-width: 700px;
+  margin: 0 auto;
+  background: var(--body-bg);
+  border-radius: 10px;
+  padding: 24px 28px;
+  box-sizing: border-box;
+}
+
+/* 隐藏时间分隔符 */
+.wecom-msg-time-sep {
+  display: none !important;
+}
+
+.comment {
+  position: relative;
+  padding-top: 10px;
+}
+
+.comment-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #B45309;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  user-select: none;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.meta {
+  height: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--wc-text-3);
+  margin-bottom: 2px;
+}
+
+.username {
+  color: var(--wc-text);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.username:hover {
+  text-decoration: underline;
+}
+
+.comment-text {
+  margin: 2px 0 6px;
+  line-height: 1.55;
+  color: var(--wc-text);
+  overflow-wrap: anywhere;
+}
+
+/* 子评论区域 */
+.children-area {
+  position: relative;
+  margin-left: 14px;
+}
+
+/* 子评论缩进 */
+.children {
+  margin-left: 21px;
+}
+
+/* SVG 连接线 */
+.tree-svg {
+  position: absolute;
+  left: 0;
+  overflow: visible;
+  z-index: 3;
+  pointer-events: auto;
+}
+
+/* 可见线条：统一 1px */
+.line-visible {
+  fill: none;
+  stroke: var(--wc-border);
+  stroke-width: 1px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+  transition: stroke .15s ease;
+}
+
+html.dark .line-visible {
+  stroke: rgba(255, 255, 255, 0.18);
+}
+
+/* 透明点击感应区域：宽度 12px，点击直接折叠/展开 */
+.line-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 12px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+/* 悬停任意线段，整组高亮变蓝 */
+.line-network:hover .line-visible {
+  stroke: var(--wc-accent) !important;
+}
+
+/* 折叠按钮 */
+.collapse-btn {
+  position: absolute;
+  z-index: 5;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--wc-border);
+  border-radius: 50%;
+  background: var(--body-bg);
+  color: var(--wc-text-3);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color .15s, color .15s, transform .15s, background-color .15s;
+}
+
+.collapse-btn:hover {
+  border-color: var(--wc-accent);
+  color: var(--wc-accent);
+  background: var(--reddit-hover);
+}
+
+/* 折叠后隐藏子评论，保留 SVG 和按钮 */
+.children-area.collapsed > .children {
+  display: none;
+}
+
+.children-area.collapsed {
+  min-height: 28px;
+}
+</style>
+</head>
+
+<body>
+<div class="toolbar">
+  <h2>Reddit 树状风格 (SVG 动态贝塞尔分支 + 零遮罩零断裂架构)</h2>
+  <button class="toggle-btn" onclick="document.documentElement.classList.toggle('dark')">切换 深色/浅色 模式</button>
+</div>
+
+<div class="container">
+  <div id="commentList"></div>
+</div>
+
+<script>
+const data = [
+  {
+    id: 1,
+    user: "4NF",
+    time: "08:35 · #2 · 回复 @happy99 #1",
+    avatar: "4",
+    avatarBg: "#B45309",
+    text: "@happy99 一般是系统自带的，比如我三星叫安全文件夹",
+    children: [
+      {
+        id: 2,
+        user: "pista",
+        time: "08:42 · #4 · 回复 @4NF #2",
+        avatar: "P",
+        avatarBg: "#0D9488",
+        text: "@4NF 三星安全文件夹不能选择只保留个别 app（比如微信）的同时停用其他 app 吧？",
+        children: [
+          {
+            id: 3,
+            user: "4NF",
+            time: "08:53 · #5 · 回复 @pista #4",
+            avatar: "4",
+            avatarBg: "#B45309",
+            text: "@pista 自带的那些好像不给删",
+            children: []
+          }
+        ]
+      },
+      {
+        id: 4,
+        user: "bzdemo",
+        time: "09:18 · #6 · 回复 @4NF #2",
+        avatar: "B",
+        avatarBg: "#4F46E5",
+        text: "这是我用了五年三星的动力，不过不能刷机，否则会熔断",
+        children: [
+          {
+            id: 5,
+            user: "4NF",
+            time: "10:36 · #12 · 回复 @bzdemo #6",
+            avatar: "4",
+            avatarBg: "#B45309",
+            text: "@bzdemo 现在也没啥折腾的必要了，另外目前好像可以通过漏洞来获取 root 然后配合 kernelSU 来使用，DirtyFrag 这个软件漏洞提权",
+            children: []
+          }
+        ]
+      },
+      {
+        id: 6,
+        user: "titanium98118",
+        time: "09:53 · #10 · 回复 @4NF #2",
+        avatar: "T",
+        avatarBg: "#2563EB",
+        text: "@4NF #2 目前发现工银亚洲的 app 不能在安全文件夹里启用流动保安编码器",
+        children: [
+          {
+            id: 7,
+            user: "4NF",
+            time: "10:37 · #14 · 回复 @titanium98118 #10",
+            avatar: "4",
+            avatarBg: "#B45309",
+            text: "@titanium98118 这玩意我也不咋用，就用来放点瑟瑟 😸",
+            children: []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 10,
+    user: "BeFun",
+    time: "10:43 · #43",
+    avatar: "B",
+    avatarBg: "#E11D48",
+    text: "正常工作时间是这个价格，所以我朋友充电都是凌晨 0 点到早上 7 点前去充电，基本不用服务费，只要 0.2-0.5 一度电",
+    children: [
+      {
+        id: 11,
+        user: "SoulFlame",
+        time: "10:45 · #44 · 回复 @BeFun #43",
+        avatar: "S",
+        avatarBg: "#4F46E5",
+        text: "@BeFun #43 你们那的电鸡充电桩这么细的？还分时间。我们这全天都一样",
+        children: [
+          {
+            id: 12,
+            user: "tudouxiong",
+            time: "10:50 · #45 · 回复 @SoulFlame #44",
+            avatar: "T",
+            avatarBg: "#D97706",
+            text: "@SoulFlame 就算算上这些和地铁公交出门费用也是半斤八两吧。充电费一个月 90 而已，就算没有服务费一个月也得要个四五十吧，要抠这么点钱冒着火灾的风险，能说是因为收费高导致？",
+            children: [
+              {
+                id: 13,
+                user: "SoulFlame",
+                time: "25分钟前 · #52 · 回复 @tudouxiong #45",
+                avatar: "S",
+                avatarBg: "#4F46E5",
+                text: "@tudouxiong #45 车算 2500 元 6 年寿命，电池换一次 400 元 2 年寿命，维修费算每月 15 元，充电费 80，折合算下来每月约 146。不买贵车的情况下还行吧，我地铁每月差不多这个数。关于家里充电，就不是拿四五十去比了，家里充电一个月都不超过 10 块钱，别小看这点差额，普通老百姓的会去节约这个钱",
+                children: []
+              }
+            ]
+          },
+          {
+            id: 14,
+            user: "BeFun",
+            time: "10:53 · #46 · 回复 @SoulFlame #44",
+            avatar: "B",
+            avatarBg: "#E11D48",
+            text: "@SoulFlame 肯定啊，会有波峰波谷啊，波谷充电肯定便宜啊",
+            children: []
+          },
+          {
+            id: 15,
+            user: "BeFun",
+            time: "10:58 · #47 · 回复 @SoulFlame #44",
+            avatar: "B",
+            avatarBg: "#E11D48",
+            text: "@SoulFlame 经常去的那个，波谷一般 1 毛 6",
+            children: []
+          }
+        ]
+      }
+    ]
+  }
+];
+
+const NS = "http://www.w3.org/2000/svg";
+
+/* 创建 SVG */
+function createSVG() {
+  const svg = document.createElementNS(NS, "svg");
+  svg.classList.add("tree-svg");
+  svg.setAttribute("aria-hidden", "true");
+
+  const network = document.createElementNS(NS, "g");
+  network.classList.add("line-network");
+
+  svg.append(network);
+  return svg;
+}
+
+/* 折叠或展开 */
+function toggleArea(area) {
+  const collapsed = area.classList.toggle("collapsed");
+  const toggle = area.querySelector(":scope > .collapse-btn");
+
+  if (toggle) {
+    toggle.textContent = collapsed ? "+" : "−";
+    toggle.title = collapsed ? "展开" : "折叠";
+  }
+
+  if (collapsed) {
+    const top = parseFloat(toggle.style.top) || 8;
+    area.style.minHeight = Math.max(28, top + 20) + "px";
+  } else {
+    area.style.minHeight = "";
+  }
+
+  scheduleRedraw();
+}
+
+/* 添加路径：可见线 + 点击感应线 */
+function addPath(network, d, area) {
+  const visible = document.createElementNS(NS, "path");
+  visible.setAttribute("d", d);
+  visible.classList.add("line-visible");
+
+  const hit = document.createElementNS(NS, "path");
+  hit.setAttribute("d", d);
+  hit.classList.add("line-hit");
+
+  hit.addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleArea(area);
+  });
+
+  network.append(visible, hit);
+}
+
+/* 绘制连接线 */
+function drawTree(area) {
+  const svg = area.querySelector(":scope > .tree-svg");
+  const children = area.querySelector(":scope > .children");
+  const toggle = area.querySelector(":scope > .collapse-btn");
+
+  if (!svg || !children || !toggle) return;
+
+  const network = svg.querySelector(".line-network");
+  network.innerHTML = "";
+
+  const parentAvatar = area.parentElement.querySelector(":scope > .comment-row > .avatar");
+  if (!parentAvatar) return;
+
+  const areaRect = area.getBoundingClientRect();
+  const parentRect = parentAvatar.getBoundingClientRect();
+
+  if (areaRect.width === 0 || parentRect.width === 0) return;
+
+  const parentCenterX = parentRect.left + parentRect.width / 2;
+  const parentCenterY = parentRect.top + parentRect.height / 2;
+
+  const trunkX = parentCenterX - areaRect.left;
+  const parentBottom = parentRect.bottom - parentCenterY;
+  const upward = areaRect.top - parentCenterY;
+
+  const collapsed = area.classList.contains("collapsed");
+
+  if (collapsed) {
+    const buttonTop = parseFloat(toggle.style.top) || 8;
+    const buttonCenterY = areaRect.top + buttonTop + 8 - parentCenterY;
+    const svgHeight = Math.max(1, upward + area.clientHeight);
+
+    svg.style.top = -upward + "px";
+    svg.style.height = svgHeight + "px";
+    svg.style.width = "100%";
+
+    svg.setAttribute("viewBox", `0 0 ${Math.max(20, area.clientWidth)} ${svgHeight}`);
+
+    if (buttonCenterY >= parentBottom) {
+      addPath(network, `M ${trunkX} ${parentBottom} V ${buttonCenterY}`, area);
+    }
+    return;
+  }
+
+  const comments = [...children.children];
+  if (!comments.length) return;
+
+  const points = comments.map(comment => {
+    const avatar = comment.querySelector(":scope > .comment-row > .avatar");
+    if (!avatar) return null;
+    const rect = avatar.getBoundingClientRect();
+    return {
+      y: rect.top + rect.height / 2 - parentCenterY,
+      endX: rect.left - areaRect.left
+    };
+  }).filter(Boolean);
+
+  if (!points.length) return;
+
+  const curve = 12;
+  const straightLength = 10;
+  const lastStart = points[points.length - 1].y - curve;
+
+  // 主干：从父头像底端直通最后一个子楼层分支弧线起点
+  if (lastStart >= parentBottom) {
+    addPath(network, `M ${trunkX} ${parentBottom} V ${lastStart}`, area);
+  }
+
+  // 每条分支：贝塞尔曲线圆滑过渡
+  points.forEach(point => {
+    const startY = point.y - curve;
+    const endX = point.endX;
+    const straightStartX = Math.max(trunkX, endX - straightLength);
+    const elbowWidth = straightStartX - trunkX;
+
+    const controlX1 = trunkX;
+    const controlY1 = point.y - curve * 0.35;
+    const controlX2 = straightStartX - Math.min(4, elbowWidth * 0.45);
+
+    const d = `
+      M ${trunkX} ${startY}
+      C ${controlX1} ${controlY1},
+        ${controlX2} ${point.y},
+        ${straightStartX} ${point.y}
+      L ${endX} ${point.y}
+    `;
+
+    addPath(network, d, area);
+  });
+
+  const svgHeight = Math.max(1, upward + area.clientHeight);
+
+  svg.style.top = -upward + "px";
+  svg.style.height = svgHeight + "px";
+  svg.style.width = "100%";
+
+  svg.setAttribute("viewBox", `0 0 ${Math.max(20, area.clientWidth)} ${svgHeight}`);
+
+  // 折叠按钮位置：紧贴父头像下方
+  if (toggle) {
+    const parentBottomInArea = parentRect.bottom - areaRect.top;
+    const firstBranchInArea = points[0].y - curve - upward;
+    const gap = firstBranchInArea - parentBottomInArea;
+    const buttonTop = gap >= 24 ? (parentBottomInArea + 8) : (parentBottomInArea + Math.max(2, (gap - 18) / 2));
+    toggle.style.left = (trunkX - 8) + "px";
+    toggle.style.top = buttonTop + "px";
+  }
+}
+
+/* 创建评论节点 */
+function createComment(item) {
+  const el = document.createElement("div");
+  el.className = "comment";
+
+  const row = document.createElement("div");
+  row.className = "comment-row";
+
+  const avatar = document.createElement("div");
+  avatar.className = "avatar";
+  avatar.style.background = item.avatarBg || "#B45309";
+  avatar.textContent = item.avatar || item.user[0];
+
+  const content = document.createElement("div");
+  content.className = "content";
+
+  const meta = document.createElement("div");
+  meta.className = "meta";
+
+  const username = document.createElement("span");
+  username.className = "username";
+  username.textContent = item.user;
+
+  const time = document.createElement("span");
+  time.textContent = "· " + item.time;
+
+  meta.append(username, time);
+
+  const text = document.createElement("div");
+  text.className = "comment-text";
+  text.textContent = item.text;
+
+  content.append(meta, text);
+  row.append(avatar, content);
+  el.append(row);
+
+  if (item.children && item.children.length) {
+    const area = document.createElement("div");
+    area.className = "children-area";
+
+    const toggle = document.createElement("button");
+    toggle.className = "collapse-btn";
+    toggle.textContent = "−";
+    toggle.title = "折叠";
+
+    const svg = createSVG();
+
+    const childContainer = document.createElement("div");
+    childContainer.className = "children";
+
+    item.children.forEach(child => {
+      childContainer.append(createComment(child));
+    });
+
+    toggle.addEventListener("click", event => {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleArea(area);
+    });
+
+    area.append(toggle, svg, childContainer);
+    el.append(area);
+  }
+
+  return el;
+}
+
+/* 重绘全部连接线 */
+function redrawAll() {
+  document.querySelectorAll(".children-area").forEach(drawTree);
+}
+
+let redrawRaf = null;
+function scheduleRedraw() {
+  if (redrawRaf) return;
+  redrawRaf = requestAnimationFrame(() => {
+    redrawRaf = null;
+    redrawAll();
+  });
+}
+
+function render() {
+  const container = document.getElementById("commentList");
+  container.innerHTML = "";
+
+  data.forEach(item => {
+    container.append(createComment(item));
+  });
+
+  scheduleRedraw();
+}
+
+window.addEventListener("resize", scheduleRedraw);
+
+if (document.fonts) {
+  document.fonts.ready.then(scheduleRedraw);
+}
+
+if ("ResizeObserver" in window) {
+  const observer = new ResizeObserver(scheduleRedraw);
+  observer.observe(document.getElementById("commentList"));
+}
+
+render();
+</script>
+</body>
+</html>

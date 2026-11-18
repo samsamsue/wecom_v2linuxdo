@@ -14146,6 +14146,12 @@ test("Test 175: Reddit thread tree SVG Bézier curves, zero protrusion without w
   // 4. Isolated hover highlighting and circular minus collapse button
   assert.ok(scriptContent.includes(".line-network:hover .line-visible"), "hovering line network highlights entire group without bubbling to ancestors");
   assert.ok(scriptContent.includes("toggleRedditTreeArea"), "clicking line-hit or collapse-btn toggles thread subtree");
+
+  // 5. Reddit mode 700px centered layout with outer scrollbar and hidden time separators
+  assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-chat-body > *"), "must style direct children of chat body");
+  assert.ok(scriptContent.includes("max-width: 700px !important;"), "content width must be capped at 700px");
+  assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-msg-time-sep") && scriptContent.includes("display: none !important;"), "time separators must be hidden via CSS");
+  assert.ok(scriptContent.includes("depth === 0 && !isReddit"), "time separator markup generation must be suppressed in Reddit mode");
 });
 
 

@@ -4452,11 +4452,30 @@
       display: none !important;
     }
 
-    /* Reddit 模式全局消息去气泡化、纯净流式阅读排版 */
+    /* Reddit 模式全局消息去气泡化、700px 居中流式阅读排版（滚动条保持在最右侧窗口边缘） */
     html.wecom-thread-style-reddit .wecom-chat-body {
       gap: 12px !important;
       padding: 16px 20px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
     }
+    html.wecom-thread-style-reddit .wecom-chat-body > * {
+      width: 100% !important;
+      max-width: 700px !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
+      box-sizing: border-box !important;
+      align-self: center !important;
+    }
+
+    /* Reddit 树状模式下隐藏时间分隔符，保持紧凑连贯 */
+    html.wecom-thread-style-reddit .wecom-msg-time-sep {
+      display: none !important;
+    }
+
     html.wecom-thread-style-reddit .wecom-msg,
     html.wecom-thread-style-reddit .wecom-msg.wecom-msg-me {
       display: flex !important;
@@ -40825,15 +40844,15 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       likedPosts.add(post.id);
     }
     const t = new Date(post.created_at).getTime();
+    const isReddit = isRedditThreadStyle();
     let timeSep = "";
-    if (depth === 0) {
+    if (depth === 0 && !isReddit) {
       if (t - state.lastTime > TIME_SEP_GAP) {
         timeSep = `<div class="wecom-msg-time-sep">${escapeHtml(formatClock(post.created_at))}</div>`;
         state.lastTime = t;
       }
     }
     const hasChildren = Array.isArray(node.children) && node.children.length > 0;
-    const isReddit = isRedditThreadStyle();
     let childrenHtml = "";
     if (hasChildren) {
       const renderedChildNodes = node.children.map((child) => renderThreadNode(child, myName, state, depth + 1)).join("");
