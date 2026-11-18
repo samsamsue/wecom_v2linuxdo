@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.49
+// @version      0.8.50
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -4360,7 +4360,7 @@
 
     /* 个人资料卡片内的标签区 */
     .wecom-member-tags-section {
-      margin: 10px 0;
+      margin: 10px 16px;
       padding: 10px 12px;
       border-radius: 8px;
       background: var(--wc-surface-2, #F7F8FA);
@@ -5236,7 +5236,7 @@
     }
     /* Reddit 树状楼层风格与交互折叠 */
     .wecom-thread-collapse-btn {
-      display: inline-flex;
+      display: none !important;
       align-items: center;
       justify-content: center;
       width: 16px;
@@ -5253,6 +5253,16 @@
       vertical-align: middle;
       box-sizing: border-box;
       flex-shrink: 0;
+    }
+    html.wecom-thread-style-reddit .wecom-reply-children:has(.wecom-msg) > .wecom-thread-collapse-btn,
+    html.wecom-thread-style-reddit .children-area:has(.wecom-msg) > .collapse-btn {
+      display: inline-flex !important;
+    }
+    .wecom-reply-children.has-no-children > .wecom-thread-collapse-btn,
+    .wecom-reply-children:not(:has(.wecom-msg)) > .wecom-thread-collapse-btn,
+    .children-area.has-no-children > .collapse-btn,
+    .children-area:not(:has(.wecom-msg)) > .collapse-btn {
+      display: none !important;
     }
     .wecom-thread-collapse-btn:hover {
       border-color: var(--wc-accent, #267EF0);
@@ -12260,6 +12270,9 @@
       top: calc(100% + 6px);
       right: 0;
       min-width: 224px;
+      max-height: calc(100vh - 70px);
+      overflow-y: auto;
+      overscroll-behavior: contain;
       background: var(--wc-surface-0, #FFFFFF);
       border-radius: 8px;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.06);
@@ -12270,6 +12283,21 @@
       flex-direction: column;
       gap: 2px;
       box-sizing: border-box;
+    }
+    .wecom-platform-dropdown::-webkit-scrollbar {
+      width: 5px;
+    }
+    .wecom-platform-dropdown::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.16);
+      border-radius: 4px;
+    }
+    html.wecom-dark .wecom-platform-dropdown::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.18);
+    }
+    .wecom-chat-more-actions .wecom-chat-ai-summary-menu,
+    .wecom-chat-more-actions .wecom-chat-ai-image-menu,
+    .wecom-chat-more-actions .wecom-chat-ai-history-menu {
+      display: none !important;
     }
     .wecom-platform-dropdown[hidden] {
       display: none !important;
@@ -15351,53 +15379,61 @@
       box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.25);
     }
 
-    /* 层叠卡片各级状态与整体不透明度 (opacity) 递减 */
-    /* 当前项 (完全聚焦展示) */
+    /* 层叠卡片各级状态：后面显示2项，前面显示2项，当前项聚焦，共显示5项，不设置透明度递减，标题不被遮挡 */
+    /* 当前项 (完全聚焦展示，高亮边框与阴影，卡片完全可见) */
     .wecom-topic-wheel-card.is-active {
       transform: translateY(0) scale(1);
-      opacity: 1;
+      opacity: 1 !important;
       z-index: 100;
-      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.12), 0 3px 10px rgba(0, 0, 0, 0.04);
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.14), 0 3px 10px rgba(0, 0, 0, 0.05);
       pointer-events: auto;
     }
 
-    /* 后面第 1 项 (上浮露出，整体不透明度 0.60 递减) */
-    .wecom-topic-wheel-card.is-next-1 {
-      transform: translateY(-24px) scale(0.95);
-      opacity: 0.60;
-      z-index: 99;
-      pointer-events: none;
-    }
-
-    /* 后面第 2 项 (更靠后，整体不透明度 0.28 递减) */
-    .wecom-topic-wheel-card.is-next-2 {
-      transform: translateY(-46px) scale(0.90);
-      opacity: 0.28;
-      z-index: 98;
-      pointer-events: none;
-    }
-
-    /* 后面第 3 项及更后 (整体不透明度 0 隐去) */
-    .wecom-topic-wheel-card.is-next-hidden {
-      transform: translateY(-64px) scale(0.85);
-      opacity: 0;
-      z-index: 97;
-      pointer-events: none;
-    }
-
-    /* 刚滚过去的上一项 (平滑下滑淡出) */
+    /* 前面第 1 项 (上浮露出，标题完全可见不被遮挡，完全不透明) */
     .wecom-topic-wheel-card.is-prev-1 {
-      transform: translateY(32px) scale(1.04);
-      opacity: 0;
-      z-index: 101;
+      transform: translateY(-38px) scale(0.96);
+      opacity: 1 !important;
+      z-index: 99;
+      pointer-events: auto;
+    }
+
+    /* 前面第 2 项 (更靠上露出，标题完全可见不被遮挡，完全不透明) */
+    .wecom-topic-wheel-card.is-prev-2 {
+      transform: translateY(-76px) scale(0.92);
+      opacity: 1 !important;
+      z-index: 98;
+      pointer-events: auto;
+    }
+
+    /* 前面更早的项 (隐去) */
+    .wecom-topic-wheel-card.is-prev-hidden {
+      transform: translateY(-108px) scale(0.88);
+      opacity: 0 !important;
+      z-index: 90;
       pointer-events: none;
     }
 
-    /* 更早滚过去的项 */
-    .wecom-topic-wheel-card.is-prev-hidden {
-      transform: translateY(54px) scale(1.08);
-      opacity: 0;
-      z-index: 102;
+    /* 后面第 1 项 (下浮露出，标题完全可见不被遮挡，完全不透明) */
+    .wecom-topic-wheel-card.is-next-1 {
+      transform: translateY(104px) scale(0.96);
+      opacity: 1 !important;
+      z-index: 99;
+      pointer-events: auto;
+    }
+
+    /* 后面第 2 项 (更靠下露出，标题完全可见不被遮挡，完全不透明) */
+    .wecom-topic-wheel-card.is-next-2 {
+      transform: translateY(142px) scale(0.92);
+      opacity: 1 !important;
+      z-index: 98;
+      pointer-events: auto;
+    }
+
+    /* 后面更后的项 (隐去) */
+    .wecom-topic-wheel-card.is-next-hidden {
+      transform: translateY(178px) scale(0.88);
+      opacity: 0 !important;
+      z-index: 90;
       pointer-events: none;
     }
 
@@ -15496,7 +15532,7 @@
 
     /* 底部操作快捷键提示 */
     .wecom-topic-wheel-tip {
-      margin-top: 14px;
+      margin-top: 154px;
       font-size: 11px;
       color: #8c939d;
       background: rgba(255, 255, 255, 0.70);
@@ -24355,7 +24391,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.49";
+  const SCRIPT_VERSION = "0.8.50";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -37184,15 +37220,15 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             </button>
             <div class="wecom-platform-dropdown" hidden>
               <div class="wecom-chat-more-actions">
-                <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-chat-ai-summary-menu" title="AI 总结本帖" aria-label="AI 总结本帖">
+                <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-chat-ai-summary-menu" style="display:none !important;" title="AI 总结本帖" aria-label="AI 总结本帖">
                   <span class="wecom-chat-more-icon">${ICONS.spark}</span>
                   <span class="wecom-chat-more-label">AI 总结本帖</span>
                 </button>
-                <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-chat-ai-image-menu" title="AI 漫画叙事生图" aria-label="AI 漫画叙事生图">
+                <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-chat-ai-image-menu" style="display:none !important;" title="AI 漫画叙事生图" aria-label="AI 漫画叙事生图">
                   <span class="wecom-chat-more-icon">${ICONS.pic}</span>
                   <span class="wecom-chat-more-label">AI 漫画叙事生图</span>
                 </button>
-                <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-chat-ai-history-menu" title="AI 总结与生图历史" aria-label="AI 总结与生图历史">
+                <button type="button" class="wecom-icon-btn wecom-chat-more-item wecom-chat-ai-history-menu" style="display:none !important;" title="AI 总结与生图历史" aria-label="AI 总结与生图历史">
                   <span class="wecom-chat-more-icon">${ICONS.history || ICONS.spark}</span>
                   <span class="wecom-chat-more-label">AI 总结与生图历史</span>
                 </button>
@@ -38414,7 +38450,17 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       if (switcher) {
         const dropdown = switcher.querySelector(".wecom-platform-dropdown");
         const isOpen = switcher.classList.toggle("is-open");
-        if (dropdown) dropdown.hidden = !isOpen;
+        if (dropdown) {
+          dropdown.hidden = !isOpen;
+          if (isOpen) {
+            const btn = switcher.querySelector(".wecom-platform-btn");
+            const rect = btn?.getBoundingClientRect();
+            if (rect) {
+              const availableBelow = window.innerHeight - rect.bottom - 16;
+              dropdown.style.maxHeight = `${Math.max(180, Math.floor(availableBelow))}px`;
+            }
+          }
+        }
         const btn = switcher.querySelector(".wecom-platform-btn");
         if (btn) btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
       }
@@ -45430,10 +45476,16 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     let childrenHtml = "";
     if (renderedChildren || childMoreHtml) {
       if (isReddit) {
+        const collapseBtnHtml = hasRenderedChildren
+          ? `<button type="button" class="wecom-thread-collapse-btn collapse-btn wecom-reddit-collapse-circle" title="折叠" aria-label="折叠">−</button>`
+          : "";
+        const svgHtml = hasRenderedChildren
+          ? `<svg class="tree-svg ssr-thread-line wecom-reddit-line" aria-hidden="true"><g class="line-network"></g></svg>`
+          : "";
         childrenHtml = `
           <div class="wecom-reply-children children-area${noChildrenClass}">
-            <svg class="tree-svg ssr-thread-line wecom-reddit-line" aria-hidden="true"><g class="line-network"></g></svg>
-            <button type="button" class="wecom-thread-collapse-btn collapse-btn wecom-reddit-collapse-circle" title="折叠" aria-label="折叠">−</button>
+            ${svgHtml}
+            ${collapseBtnHtml}
             <div class="children">${renderedChildren}${childMoreHtml}</div>
           </div>`;
       } else {
@@ -47984,7 +48036,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         card.classList.add("is-next-hidden");
       } else if (diff === -1) {
         card.classList.add("is-prev-1");
-      } else if (diff < -1) {
+      } else if (diff === -2) {
+        card.classList.add("is-prev-2");
+      } else if (diff < -2) {
         card.classList.add("is-prev-hidden");
       }
     });

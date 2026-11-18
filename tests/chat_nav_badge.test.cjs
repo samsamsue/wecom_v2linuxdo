@@ -14098,9 +14098,9 @@ test("Test 173: Reddit-style hierarchical thread tree with guide lines, independ
 test("Test 174: Reddit thread tree authentic alignment (gutter column, curved branches into child avatar, circular minus collapse button on line, actions bar, hover highlights) (v0.8.39/v0.8.40)", () => {
   const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
-  assert.ok(/@version\s+0\.8\.(39|4\d)/.test(metaContent), "meta.js version must be 0.8.39+");
-  assert.ok(/SCRIPT_VERSION\s*=\s*"0\.8\.(39|4\d)"/.test(scriptContent), "user.js version must be 0.8.39+");
-  assert.ok(/0\.8\.(39|4\d)/.test(readmeContent), "README.md version must be 0.8.39+");
+  assert.ok(/@version\s+0\.8\.(39|[4-9]\d)/.test(metaContent), "meta.js version must be 0.8.39+");
+  assert.ok(/SCRIPT_VERSION\s*=\s*"0\.8\.(39|[4-9]\d)"/.test(scriptContent), "user.js version must be 0.8.39+");
+  assert.ok(/0\.8\.(39|[4-9]\d)/.test(readmeContent), "README.md version must be 0.8.39+");
 
   // 1. Reddit gutter structure & elements
   assert.ok(scriptContent.includes('class="wecom-reddit-row"'), "must define .wecom-reddit-row");
@@ -14262,16 +14262,16 @@ test("Test 178: Stacked card deck HUD navigator with smooth transitions, 70% tra
     "dark mode card must have 70% background opacity with backdrop blur"
   );
 
-  // 4. Stacked cards behind: decreasing opacity
+  // 4. Stacked cards behind: decreasing opacity (v0.8.45) or uniform opacity (v0.8.50+)
   assert.ok(
     scriptContent.includes(".wecom-topic-wheel-card.is-next-1") &&
-    scriptContent.includes("opacity: 0.60;"),
-    "1st next card must have decreasing opacity 0.60"
+    (scriptContent.includes("opacity: 0.60;") || scriptContent.includes("opacity: 1 !important;")),
+    "1st next card must have valid opacity rule"
   );
   assert.ok(
     scriptContent.includes(".wecom-topic-wheel-card.is-next-2") &&
-    scriptContent.includes("opacity: 0.28;"),
-    "2nd next card must have decreasing opacity 0.28"
+    (scriptContent.includes("opacity: 0.28;") || scriptContent.includes("opacity: 1 !important;")),
+    "2nd next card must have valid opacity rule"
   );
   assert.ok(
     scriptContent.includes(".wecom-topic-wheel-card.is-next-hidden") &&
@@ -14428,9 +14428,9 @@ test("Test 181: Multi-floor bubble more button menu triggering, zero duplicate p
 
   // 1. Version bump
   assert.ok(
-    /@version\s+0\.8\.(48|49)/.test(scriptContent) &&
-    /@version\s+0\.8\.(48|49)/.test(metaContent) &&
-    /const SCRIPT_VERSION = "0\.8\.(48|49)";/.test(scriptContent),
+    /@version\s+0\.8\.(48|49|[5-9]\d)/.test(scriptContent) &&
+    /@version\s+0\.8\.(48|49|[5-9]\d)/.test(metaContent) &&
+    /const SCRIPT_VERSION = "0\.8\.(48|49|[5-9]\d)";/.test(scriptContent),
     "version must be at least 0.8.48"
   );
 
@@ -14570,10 +14570,10 @@ test("Test 182: User tags support on profile cards and chat bubbles with managem
   const readmeContent = fs.readFileSync("README.md", "utf8");
 
   // 1. Version assertions
-  assert.match(scriptContent, /\/\/\s*@version\s+0\.8\.49/);
-  assert.match(metaContent, /\/\/\s*@version\s+0\.8\.49/);
-  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.49";/);
-  assert.match(readmeContent, /当前版本：\*\*0\.8\.49\*\*/);
+  assert.match(scriptContent, /\/\/\s*@version\s+0\.8\.(49|50)/);
+  assert.match(metaContent, /\/\/\s*@version\s+0\.8\.(49|50)/);
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.(49|50)";/);
+  assert.match(readmeContent, /当前版本：\*\*0\.8\.(49|50)\*\*/);
 
   // 2. Storage key & Core functions existence
   assert.ok(scriptContent.includes('const USER_TAGS_STORAGE_KEY = "wecom_user_tags";'), "must define USER_TAGS_STORAGE_KEY");
@@ -14763,5 +14763,74 @@ test("Test 182: User tags support on profile cards and chat bubbles with managem
   assert.ok(container.innerHTML.includes('class="wecom-card-tag-pill"'), "must generate tag pills");
   assert.ok(container.innerHTML.includes('前端架构'), "must display alice's tag");
   assert.ok(container.innerHTML.includes('class="wecom-card-tag-add-btn"'), "must have add tag button");
+});
+
+test("Test 183: Zhihu non-tree collapse icon hiding, 5-card wheel HUD deck with unblocked titles and no opacity fade, tag section margin, and more menu scrolling with AI items hidden (v0.8.50)", () => {
+  const fs = require("fs");
+  const scriptContent = fs.readFileSync("linuxdo-wecom.user.js", "utf8");
+  const metaContent = fs.readFileSync("linuxdo-wecom.meta.js", "utf8");
+  const readmeContent = fs.readFileSync("README.md", "utf8");
+
+  // 1. Version assertions
+  assert.match(scriptContent, /\/\/\s*@version\s+0\.8\.50/);
+  assert.match(metaContent, /\/\/\s*@version\s+0\.8\.50/);
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.50";/);
+  assert.match(readmeContent, /当前版本：\*\*0\.8\.50\*\*/);
+
+  // 2. Zhihu: non-tree collapse button hiding
+  assert.ok(
+    /\.wecom-thread-collapse-btn\s*\{\s*display:\s*none\s*!important;/.test(scriptContent),
+    "collapse button must be hidden by default"
+  );
+  assert.ok(
+    scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children:has(.wecom-msg) > .wecom-thread-collapse-btn"),
+    "collapse button must only show when in Reddit style and has children messages"
+  );
+  assert.ok(
+    scriptContent.includes("const collapseBtnHtml = hasRenderedChildren"),
+    "Zhihu comments must only construct collapse button when rendered children are present"
+  );
+
+  // 3. Wheel HUD Deck: 5 items (2 ahead, 1 active, 2 behind), no opacity fade (opacity: 1), unblocked titles
+  assert.ok(scriptContent.includes('card.classList.add("is-prev-2");'), "must handle 2nd previous item");
+  assert.ok(scriptContent.includes('card.classList.add("is-prev-1");'), "must handle 1st previous item");
+  assert.ok(scriptContent.includes('card.classList.add("is-active");'), "must handle active item");
+  assert.ok(scriptContent.includes('card.classList.add("is-next-1");'), "must handle 1st next item");
+  assert.ok(scriptContent.includes('card.classList.add("is-next-2");'), "must handle 2nd next item");
+  assert.ok(
+    scriptContent.includes(".wecom-topic-wheel-card.is-prev-1 {") &&
+    scriptContent.includes(".wecom-topic-wheel-card.is-prev-2 {") &&
+    scriptContent.includes(".wecom-topic-wheel-card.is-next-1 {") &&
+    scriptContent.includes(".wecom-topic-wheel-card.is-next-2 {"),
+    "deck cards must define classes for all 5 cards"
+  );
+  assert.ok(
+    /translateY\(-38px\)/.test(scriptContent) &&
+    /translateY\(104px\)/.test(scriptContent),
+    "deck cards must use vertical offsets that leave all titles unblocked"
+  );
+
+  // 4. .wecom-member-tags-section margin
+  assert.ok(
+    /\.wecom-member-tags-section\s*\{\s*margin:\s*10px 16px;/.test(scriptContent),
+    "wecom-member-tags-section must have margin: 10px 16px"
+  );
+
+  // 5. More menu: AI items hidden and dropdown scrollable / height-clamped
+  assert.ok(
+    scriptContent.includes(".wecom-chat-more-actions .wecom-chat-ai-summary-menu") &&
+    scriptContent.includes("display: none !important;"),
+    "AI items in more menu must be hidden via CSS"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-platform-dropdown") &&
+    scriptContent.includes("max-height: calc(100vh - 70px);") &&
+    scriptContent.includes("overflow-y: auto;"),
+    "more menu dropdown must support scrollbars and max-height"
+  );
+  assert.ok(
+    scriptContent.includes("dropdown.style.maxHeight = `${Math.max(180, Math.floor(availableBelow))}px`;"),
+    "more menu dropdown must dynamically clamp max-height within viewport"
+  );
 });
 
