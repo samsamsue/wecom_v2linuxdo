@@ -14352,6 +14352,77 @@ test("Test 179: Top-right More menu Usage Tips (使用技巧) modal covering Alt
   );
 });
 
+test("Test 180: Length-limited floor content preview tip on timeline progress slider (v0.8.47)", () => {
+  // 1. Version bump
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.(4[7-9]|[5-9]\d)";/, "user.js version must be bumped to 0.8.47+");
+
+  // 2. DOM structure in .wecom-timeline-scroller
+  assert.ok(
+    scriptContent.includes('class="wecom-timeline-preview-tip"'),
+    "must include .wecom-timeline-preview-tip container"
+  );
+  assert.ok(
+    scriptContent.includes('class="wecom-timeline-tip-header"'),
+    "must include .wecom-timeline-tip-header"
+  );
+  assert.ok(
+    scriptContent.includes('class="wecom-timeline-tip-floor"'),
+    "must include .wecom-timeline-tip-floor"
+  );
+  assert.ok(
+    scriptContent.includes('class="wecom-timeline-tip-author"'),
+    "must include .wecom-timeline-tip-author"
+  );
+  assert.ok(
+    scriptContent.includes('class="wecom-timeline-tip-snippet"'),
+    "must include .wecom-timeline-tip-snippet"
+  );
+
+  // 3. CSS styling & length constraints
+  assert.ok(
+    scriptContent.includes(".wecom-timeline-preview-tip {"),
+    "must style .wecom-timeline-preview-tip"
+  );
+  assert.ok(
+    scriptContent.includes("max-width: 230px;"),
+    "must constrain maximum tip box width"
+  );
+  assert.ok(
+    scriptContent.includes("-webkit-line-clamp: 2;"),
+    "must limit snippet to 2 lines via CSS clamp"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-timeline-popover.is-dragging .wecom-timeline-preview-tip"),
+    "must reveal preview tip during slider dragging"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-timeline-scroller:hover .wecom-timeline-preview-tip"),
+    "must reveal preview tip when hovering scroller handle"
+  );
+  assert.ok(
+    scriptContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-timeline-preview-tip"),
+    "must support dark mode styling for timeline preview tip"
+  );
+
+  // 4. JS logic & helper
+  assert.ok(
+    scriptContent.includes("TIMELINE_TIP_MAX_LENGTH = 50"),
+    "must define TIMELINE_TIP_MAX_LENGTH limit constant"
+  );
+  assert.ok(
+    scriptContent.includes("function getTimelineFloorPreview(floor)"),
+    "must define getTimelineFloorPreview helper"
+  );
+  assert.ok(
+    scriptContent.includes("getTimelineFloorPreview(displayFloor)"),
+    "syncTimelineSlider must invoke getTimelineFloorPreview"
+  );
+  assert.ok(
+    scriptContent.includes('tipEl.querySelector(".wecom-timeline-tip-snippet")'),
+    "syncTimelineSlider must populate tipEl snippet"
+  );
+});
+
 
 
 

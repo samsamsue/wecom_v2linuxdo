@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.46
+// @version      0.8.47
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -11934,6 +11934,87 @@
     .wecom-timeline-popover.is-dragging .wecom-timeline-handle {
       background: #1B6FE0;
     }
+    .wecom-timeline-preview-tip {
+      position: absolute;
+      right: calc(100% + 24px);
+      top: 50%;
+      transform: translateY(-50%);
+      width: 216px;
+      max-width: 230px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(16px) saturate(160%);
+      -webkit-backdrop-filter: blur(16px) saturate(160%);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.04);
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.16s ease, visibility 0.16s ease;
+      z-index: 520;
+      box-sizing: border-box;
+      text-align: left;
+      user-select: none;
+    }
+    .wecom-timeline-preview-tip::after {
+      content: "";
+      position: absolute;
+      right: -5px;
+      top: 50%;
+      transform: translateY(-50%) rotate(45deg);
+      width: 8px;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.94);
+      border-top: 1px solid rgba(15, 23, 42, 0.08);
+      border-right: 1px solid rgba(15, 23, 42, 0.08);
+    }
+    .wecom-timeline-popover.is-dragging .wecom-timeline-preview-tip,
+    .wecom-timeline-scroller:hover .wecom-timeline-preview-tip {
+      opacity: 1;
+      visibility: visible;
+    }
+    .wecom-timeline-tip-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+      font-size: 11px;
+      line-height: 1.3;
+    }
+    .wecom-timeline-tip-floor {
+      font-weight: 700;
+      color: var(--wc-blue, #267EF0);
+      font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
+    }
+    .wecom-timeline-tip-author {
+      font-weight: 600;
+      color: var(--wc-text, #1F2329);
+      max-width: 90px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .wecom-timeline-tip-time {
+      margin-left: auto;
+      font-size: 10px;
+      color: var(--wc-text-3, #8F959E);
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+    }
+    .wecom-timeline-tip-snippet {
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--wc-text-2, #646A73);
+      word-break: break-all;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-height: 2.9em;
+    }
     .wecom-timeline-info {
       display: flex;
       flex-direction: column;
@@ -12044,6 +12125,27 @@
     html.${ROOT_CLASS}.wecom-dark .wecom-timeline-handle {
       background: #4C98FF;
       box-shadow: 0 0 0 3px rgba(28, 32, 40, 0.94);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-timeline-preview-tip {
+      background: rgba(28, 32, 40, 0.94);
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-timeline-preview-tip::after {
+      background: rgba(28, 32, 40, 0.94);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-timeline-tip-floor {
+      color: #5BA2FF;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-timeline-tip-author {
+      color: #E6EDF5;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-timeline-tip-time {
+      color: #8C99AA;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-timeline-tip-snippet {
+      color: #A0B0C4;
     }
     html.${ROOT_CLASS}.wecom-dark .wecom-timeline-info {
       background: transparent;
@@ -22821,7 +22923,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.46";
+  const SCRIPT_VERSION = "0.8.47";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -35749,6 +35851,14 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             <div class="wecom-timeline-fill"></div>
           </div>
           <div class="wecom-timeline-scroller" style="top: 0%; --tl-pct: 0%;">
+            <div class="wecom-timeline-preview-tip" aria-hidden="true">
+              <div class="wecom-timeline-tip-header">
+                <span class="wecom-timeline-tip-floor">#1</span>
+                <span class="wecom-timeline-tip-author">楼主</span>
+                <span class="wecom-timeline-tip-time"></span>
+              </div>
+              <div class="wecom-timeline-tip-snippet"></div>
+            </div>
             <div class="wecom-timeline-handle"></div>
             <div class="wecom-timeline-info">
               <div class="wecom-timeline-replies" title="点击输入楼层跳转">1 / 1</div>
@@ -36308,6 +36418,74 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     };
   }
 
+  const TIMELINE_TIP_MAX_LENGTH = 50;
+
+  function getTimelineFloorPreview(floor) {
+    const postNum = Math.round(Number(floor) || 1);
+    const post = chatState.postsByNumber?.get(postNum);
+    const body = document.querySelector(".wecom-chat-body");
+    const msgEl = body?.querySelector(`.wecom-msg[data-post-number="${postNum}"], .wecom-msg[data-floor="${postNum - 1}"]`);
+
+    let author = "";
+    let timeAgo = "";
+    let snippet = "";
+
+    if (post) {
+      author = userDisplayName(post, post.username || post.name || `用户 #${postNum}`);
+      if (post.created_at) {
+        timeAgo = formatTime(post.created_at);
+      }
+      const rawCooked = post.cooked || post.excerpt || post.raw || "";
+      if (rawCooked) {
+        const temp = document.createElement("div");
+        temp.innerHTML = rawCooked;
+        temp.querySelectorAll("aside.quote, aside.onebox, blockquote, .aside-quote").forEach((el) => el.remove());
+        const rawText = String(temp.textContent || "").replace(/\s+/g, " ").trim();
+        if (rawText) {
+          snippet = rawText;
+        } else if (temp.querySelector("img") || post.image_url) {
+          snippet = "[图片]";
+        } else if (temp.querySelector(".attachment, a[href]")) {
+          snippet = "[链接或附件]";
+        }
+      }
+    } else if (msgEl) {
+      author = msgEl.querySelector(".wecom-msg-name")?.textContent?.trim() || "";
+      timeAgo = msgEl.querySelector(".wecom-msg-time")?.textContent?.trim() || "";
+      const contentEl = msgEl.querySelector(".wecom-msg-bubble, .wecom-msg-content, .wecom-msg-text, .wecom-msg-body");
+      if (contentEl) {
+        const clone = contentEl.cloneNode(true);
+        clone.querySelectorAll(".wecom-reply-bubble, aside.quote, blockquote, .wecom-msg-time, .wecom-msg-name").forEach((el) => el.remove());
+        const rawText = String(clone.textContent || "").replace(/\s+/g, " ").trim();
+        if (rawText) {
+          snippet = rawText;
+        } else if (clone.querySelector("img")) {
+          snippet = "[图片]";
+        }
+      }
+    }
+
+    if (!author) {
+      author = postNum === 1 ? "楼主 (首楼)" : `第 ${postNum} 楼`;
+    }
+
+    if (!snippet) {
+      snippet = "松开跳转至该楼层查看";
+    }
+
+    const characters = [...snippet];
+    if (characters.length > TIMELINE_TIP_MAX_LENGTH) {
+      snippet = `${characters.slice(0, TIMELINE_TIP_MAX_LENGTH).join("")}…`;
+    }
+
+    return {
+      floor: postNum,
+      author,
+      timeAgo,
+      snippet
+    };
+  }
+
   function syncTimelineSlider(body, previewFloor = 0) {
     const panel = document.querySelector(".wecom-chat-panel");
     if (!panel) return;
@@ -36344,6 +36522,21 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       } else {
         agoEl.textContent = metrics.currentAgo;
       }
+    }
+    const tipEl = popover.querySelector(".wecom-timeline-preview-tip");
+    if (tipEl) {
+      const preview = getTimelineFloorPreview(displayFloor);
+      const floorEl = tipEl.querySelector(".wecom-timeline-tip-floor");
+      const authorEl = tipEl.querySelector(".wecom-timeline-tip-author");
+      const timeEl = tipEl.querySelector(".wecom-timeline-tip-time");
+      const snippetEl = tipEl.querySelector(".wecom-timeline-tip-snippet");
+      if (floorEl) floorEl.textContent = `#${preview.floor}`;
+      if (authorEl) {
+        authorEl.textContent = preview.author;
+        authorEl.title = preview.author;
+      }
+      if (timeEl) timeEl.textContent = preview.timeAgo || (agoEl ? agoEl.textContent : "");
+      if (snippetEl) snippetEl.textContent = preview.snippet;
     }
     if (topBtn) topBtn.textContent = metrics.topLabel;
     if (bottomBtn) bottomBtn.textContent = metrics.bottomLabel;
@@ -36505,6 +36698,13 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
     scrollArea.addEventListener("pointerup", finishDrag);
     scrollArea.addEventListener("pointercancel", finishDrag);
+
+    const scrollerEl = popover.querySelector(".wecom-timeline-scroller");
+    scrollerEl?.addEventListener("mouseenter", () => {
+      if (!dragging) {
+        syncTimelineSlider(panel.querySelector(".wecom-chat-body"));
+      }
+    });
 
     topBtn?.addEventListener("click", (e) => {
       e.preventDefault();
