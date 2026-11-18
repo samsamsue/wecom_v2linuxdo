@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.50
+// @version      0.8.51
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -5450,6 +5450,28 @@
     html.wecom-dark.wecom-thread-style-reddit .wecom-reddit-collapse-circle:hover {
       border-color: var(--wc-accent, #536dfe) !important;
       color: var(--wc-accent, #536dfe) !important;
+    }
+    /* 未展开或无子回复时强制隐藏折叠按钮与连接线，避免空状态孤立按钮 */
+    html.wecom-thread-style-reddit .children-area.has-no-children > .collapse-btn,
+    html.wecom-thread-style-reddit .children-area:not(:has(.wecom-msg)) > .collapse-btn,
+    html.wecom-thread-style-reddit .children-area.has-no-children > .wecom-reddit-collapse-circle,
+    html.wecom-thread-style-reddit .children-area:not(:has(.wecom-msg)) > .wecom-reddit-collapse-circle,
+    html.wecom-thread-style-reddit .children-area.has-no-children > .tree-svg,
+    html.wecom-thread-style-reddit .children-area:not(:has(.wecom-msg)) > .tree-svg,
+    html.wecom-thread-style-reddit .wecom-reply-children.has-no-children > .wecom-thread-collapse-btn,
+    html.wecom-thread-style-reddit .wecom-reply-children:not(:has(.wecom-msg)) > .wecom-thread-collapse-btn,
+    html.wecom-thread-style-reddit .wecom-reply-children.has-no-children > .tree-svg,
+    html.wecom-thread-style-reddit .wecom-reply-children:not(:has(.wecom-msg)) > .tree-svg {
+      display: none !important;
+    }
+    html.wecom-thread-style-reddit .children-area:has(.wecom-msg) > .collapse-btn,
+    html.wecom-thread-style-reddit .children-area:has(.wecom-msg) > .wecom-reddit-collapse-circle,
+    html.wecom-thread-style-reddit .wecom-reply-children:has(.wecom-msg) > .wecom-thread-collapse-btn {
+      display: flex !important;
+    }
+    html.wecom-thread-style-reddit .children-area:has(.wecom-msg) > .tree-svg,
+    html.wecom-thread-style-reddit .wecom-reply-children:has(.wecom-msg) > .tree-svg {
+      display: block !important;
     }
     html.wecom-thread-style-reddit .wecom-msg-content,
     html.wecom-thread-style-reddit .wecom-reddit-body-col,
@@ -15314,24 +15336,30 @@
       display: none !important;
     }
 
-    /* HUD 根容器：悬浮居中，无全屏遮罩，自身不吞噬点击事件 */
+    /* HUD 根容器：悬浮居中，无全屏遮罩；未处于 is-visible 状态时必须彻底隐藏并禁止所有子节点接收指针事件 */
     .wecom-topic-wheel-hud {
       position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      display: flex;
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
       flex-direction: column;
       align-items: center;
       z-index: 99995;
       user-select: none;
-      pointer-events: none;
       opacity: 0;
       transition: opacity 0.16s ease, transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1);
     }
     .wecom-topic-wheel-hud.is-visible {
+      display: flex !important;
+      visibility: visible !important;
       opacity: 1;
-      pointer-events: auto;
+      pointer-events: auto !important;
+    }
+    .wecom-topic-wheel-hud:not(.is-visible) * {
+      pointer-events: none !important;
     }
 
     /* 卡片堆叠舞台 (宽 360px，高 98px) */
@@ -15413,17 +15441,17 @@
       pointer-events: none;
     }
 
-    /* 后面第 1 项 (下浮露出，标题完全可见不被遮挡，完全不透明) */
+    /* 后面第 1 项 (下浮露出，信息与标题换位后标题在底部完全可见，完全不透明) */
     .wecom-topic-wheel-card.is-next-1 {
-      transform: translateY(104px) scale(0.96);
+      transform: translateY(38px) scale(0.96);
       opacity: 1 !important;
       z-index: 99;
       pointer-events: auto;
     }
 
-    /* 后面第 2 项 (更靠下露出，标题完全可见不被遮挡，完全不透明) */
+    /* 后面第 2 项 (更靠下露出，信息与标题换位后标题在底部完全可见，完全不透明) */
     .wecom-topic-wheel-card.is-next-2 {
-      transform: translateY(142px) scale(0.92);
+      transform: translateY(76px) scale(0.92);
       opacity: 1 !important;
       z-index: 98;
       pointer-events: auto;
@@ -15431,10 +15459,18 @@
 
     /* 后面更后的项 (隐去) */
     .wecom-topic-wheel-card.is-next-hidden {
-      transform: translateY(178px) scale(0.88);
+      transform: translateY(108px) scale(0.88);
       opacity: 0 !important;
       z-index: 90;
       pointer-events: none;
+    }
+
+    /* 下方后面项：信息与标题换位置，信息在上方（被前一张卡片自然遮挡），标题在下方（露出区域清晰可见） */
+    .wecom-topic-wheel-card.is-next-1,
+    .wecom-topic-wheel-card.is-next-2,
+    .wecom-topic-wheel-card.is-next-hidden {
+      flex-direction: column-reverse !important;
+      padding: 10px 16px 12px 16px;
     }
 
     /* 卡片内部元素 */
@@ -15532,7 +15568,7 @@
 
     /* 底部操作快捷键提示 */
     .wecom-topic-wheel-tip {
-      margin-top: 154px;
+      margin-top: 86px;
       font-size: 11px;
       color: #8c939d;
       background: rgba(255, 255, 255, 0.70);
@@ -24391,7 +24427,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.50";
+  const SCRIPT_VERSION = "0.8.51";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -41287,7 +41323,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     if (typeof window === "undefined" || !isRedditThreadStyle()) return;
     const base = root && root.querySelectorAll ? root : document;
     if (!base.querySelectorAll) return;
-    const areas = [...base.querySelectorAll(".children-area")];
+    const areas = [
+      ...(base.matches?.(".children-area") ? [base] : []),
+      ...base.querySelectorAll(".children-area")
+    ];
     if (!areas.length) return;
 
     // Phase 1: 批量测量读取（所有 getBoundingClientRect 集中执行，浏览器仅 1 次重排）
@@ -41309,7 +41348,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     if (_redditTreeRafId) cancelAnimationFrame(_redditTreeRafId);
     _redditTreeRafId = requestAnimationFrame(() => {
       _redditTreeRafId = null;
-      redrawAllRedditTrees(root || document);
+      const target = (root && (root.closest?.(".wecom-chat-body") || root.closest?.(".wecom-chat-panel"))) || root || document;
+      redrawAllRedditTrees(target);
     });
   }
 
@@ -46262,26 +46302,73 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       const body = document.querySelector(".wecom-chat-body");
       const rootEl = body?.querySelector(`.wecom-msg[data-comment-id="${cleanRootId}"]`);
       if (rootEl) {
-        let replyChildrenEl = rootEl.querySelector(".wecom-reply-children");
+        const isReddit = isRedditThreadStyle();
+        let replyChildrenEl = rootEl.querySelector(":scope > .wecom-reply-children, .wecom-reply-children");
         if (!replyChildrenEl) {
           replyChildrenEl = document.createElement("div");
-          replyChildrenEl.className = "wecom-reply-children";
-          const bubble = rootEl.querySelector(".wecom-msg-bubble");
-          if (bubble) bubble.appendChild(replyChildrenEl);
+          if (isReddit) {
+            replyChildrenEl.className = "wecom-reply-children children-area";
+            rootEl.appendChild(replyChildrenEl);
+          } else {
+            replyChildrenEl.className = "wecom-reply-children";
+            const bubble = rootEl.querySelector(".wecom-msg-bubble");
+            if (bubble) bubble.appendChild(replyChildrenEl);
+            else rootEl.appendChild(replyChildrenEl);
+          }
+        } else if (isReddit) {
+          replyChildrenEl.classList.add("children-area");
+          if (replyChildrenEl.parentElement !== rootEl) {
+            rootEl.appendChild(replyChildrenEl);
+          }
         }
+
+        if (isReddit) {
+          if (!replyChildrenEl.querySelector(":scope > .tree-svg")) {
+            const svg = createRedditTreeSVG();
+            if (svg) replyChildrenEl.prepend(svg);
+          }
+          if (!replyChildrenEl.querySelector(":scope > .collapse-btn, :scope > .wecom-thread-collapse-btn")) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "wecom-thread-collapse-btn collapse-btn wecom-reddit-collapse-circle";
+            btn.title = "折叠";
+            btn.setAttribute("aria-label", "折叠");
+            btn.textContent = "−";
+            const svg = replyChildrenEl.querySelector(":scope > .tree-svg");
+            if (svg) svg.after(btn);
+            else replyChildrenEl.prepend(btn);
+          }
+          let childrenContainer = replyChildrenEl.querySelector(":scope > .children");
+          if (!childrenContainer) {
+            childrenContainer = document.createElement("div");
+            childrenContainer.className = "children";
+            const toMove = [...replyChildrenEl.childNodes].filter(
+              (n) => !n.matches?.(".tree-svg, .collapse-btn, .wecom-thread-collapse-btn")
+            );
+            toMove.forEach((n) => childrenContainer.appendChild(n));
+            replyChildrenEl.appendChild(childrenContainer);
+          }
+        }
+
         if (added.length > 0) {
           replyChildrenEl.classList.remove("has-no-children");
         }
-        const moreEntry = replyChildrenEl.querySelector(".wecom-zhihu-child-more-entry");
+        const insertTarget = (isReddit && replyChildrenEl.querySelector(":scope > .children")) || replyChildrenEl;
+        const moreEntry = insertTarget.querySelector(".wecom-zhihu-child-more-entry");
         for (const child of added) {
           const childHtml = renderZhihuCommentBubble(child, 0, 1);
           if (moreEntry) {
             moreEntry.insertAdjacentHTML("beforebegin", childHtml);
           } else {
-            replyChildrenEl.insertAdjacentHTML("beforeend", childHtml);
+            insertTarget.insertAdjacentHTML("beforeend", childHtml);
           }
         }
         hydrateChatImages(replyChildrenEl);
+
+        if (isReddit) {
+          delete replyChildrenEl._redditTreeHash;
+          scheduleRedditTreeRedraw(replyChildrenEl);
+        }
 
         if (moreEntry) {
           if (rootItem.childHasMore || remainingCount > 0) {
@@ -47871,6 +47958,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
     _wheelStage = _wheelHud.querySelector(".wecom-topic-wheel-stage");
     _wheelStage.addEventListener("click", (e) => {
+      if (!_wheelHudVisible) return;
       const card = e.target.closest(".wecom-topic-wheel-card");
       if (!card) return;
       const idx = Number(card.dataset.index);
@@ -47951,6 +48039,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     _wheelHudIndex = activeIdx >= 0 ? activeIdx : 0;
 
     _wheelHudVisible = true;
+    _wheelHud.style.display = "flex";
+    _wheelHud.style.visibility = "visible";
     _wheelHud.classList.add("is-visible");
 
     startWheelHudObserver();
@@ -48062,7 +48152,15 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   function closeWheelHud(cancelled = true) {
     _wheelHudVisible = false;
     stopWheelHudObserver();
-    if (_wheelHud) _wheelHud.classList.remove("is-visible");
+    if (_wheelHud) {
+      _wheelHud.classList.remove("is-visible");
+      _wheelHud.style.display = "none";
+      _wheelHud.style.visibility = "hidden";
+    }
+    if (_wheelStage) {
+      _wheelStage.innerHTML = "";
+    }
+    _wheelHudRows = [];
     document.querySelectorAll(".wecom-conv.wecom-hud-focused").forEach(el => {
       el.classList.remove("wecom-hud-focused");
     });

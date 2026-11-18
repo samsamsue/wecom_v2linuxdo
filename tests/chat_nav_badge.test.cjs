@@ -14570,10 +14570,10 @@ test("Test 182: User tags support on profile cards and chat bubbles with managem
   const readmeContent = fs.readFileSync("README.md", "utf8");
 
   // 1. Version assertions
-  assert.match(scriptContent, /\/\/\s*@version\s+0\.8\.(49|50)/);
-  assert.match(metaContent, /\/\/\s*@version\s+0\.8\.(49|50)/);
-  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.(49|50)";/);
-  assert.match(readmeContent, /当前版本：\*\*0\.8\.(49|50)\*\*/);
+  assert.match(scriptContent, /\/\/\s*@version\s+0\.8\.(49|[5-9]\d)/);
+  assert.match(metaContent, /\/\/\s*@version\s+0\.8\.(49|[5-9]\d)/);
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.(49|[5-9]\d)";/);
+  assert.match(readmeContent, /当前版本：\*\*0\.8\.(49|[5-9]\d)\*\*/);
 
   // 2. Storage key & Core functions existence
   assert.ok(scriptContent.includes('const USER_TAGS_STORAGE_KEY = "wecom_user_tags";'), "must define USER_TAGS_STORAGE_KEY");
@@ -14772,10 +14772,10 @@ test("Test 183: Zhihu non-tree collapse icon hiding, 5-card wheel HUD deck with 
   const readmeContent = fs.readFileSync("README.md", "utf8");
 
   // 1. Version assertions
-  assert.match(scriptContent, /\/\/\s*@version\s+0\.8\.50/);
-  assert.match(metaContent, /\/\/\s*@version\s+0\.8\.50/);
-  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.50";/);
-  assert.match(readmeContent, /当前版本：\*\*0\.8\.50\*\*/);
+  assert.match(scriptContent, /\/\/\s*@version\s+0\.8\.(50|[5-9]\d)/);
+  assert.match(metaContent, /\/\/\s*@version\s+0\.8\.(50|[5-9]\d)/);
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.(50|[5-9]\d)";/);
+  assert.match(readmeContent, /当前版本：\*\*0\.8\.(50|[5-9]\d)\*\*/);
 
   // 2. Zhihu: non-tree collapse button hiding
   assert.ok(
@@ -14806,7 +14806,7 @@ test("Test 183: Zhihu non-tree collapse icon hiding, 5-card wheel HUD deck with 
   );
   assert.ok(
     /translateY\(-38px\)/.test(scriptContent) &&
-    /translateY\(104px\)/.test(scriptContent),
+    /translateY\((104px|38px)\)/.test(scriptContent),
     "deck cards must use vertical offsets that leave all titles unblocked"
   );
 
@@ -14831,6 +14831,65 @@ test("Test 183: Zhihu non-tree collapse icon hiding, 5-card wheel HUD deck with 
   assert.ok(
     scriptContent.includes("dropdown.style.maxHeight = `${Math.max(180, Math.floor(availableBelow))}px`;"),
     "more menu dropdown must dynamically clamp max-height within viewport"
+  );
+});
+
+test("Test 184: Zhihu dynamic child comments Reddit tree line connection restoration & wheel preview card inverted bottom info/title layout (v0.8.51)", () => {
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version bump
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.51";/, "user.js version must be 0.8.51");
+  assert.match(metaContent, /@version\s+0\.8\.51/, "meta.js version must be 0.8.51");
+  assert.match(readmeContent, /0\.8\.51/, "README.md version must be 0.8.51");
+
+  // 2. Wheel preview bottom cards inverted layout (title at bottom, meta at top)
+  assert.ok(
+    scriptContent.includes(".wecom-topic-wheel-card.is-next-1,") &&
+    scriptContent.includes(".wecom-topic-wheel-card.is-next-2,") &&
+    scriptContent.includes("flex-direction: column-reverse !important;"),
+    "bottom cards must swap title and meta position via column-reverse"
+  );
+  assert.ok(
+    /is-next-1\s*\{\s*transform:\s*translateY\(38px\)/.test(scriptContent) &&
+    /is-next-2\s*\{\s*transform:\s*translateY\(76px\)/.test(scriptContent),
+    "bottom cards must use symmetrical 38px and 76px offsets"
+  );
+  assert.ok(
+    /\.wecom-topic-wheel-tip\s*\{\s*margin-top:\s*86px;/.test(scriptContent),
+    "wheel tip must sit comfortably below the bottom card"
+  );
+
+  // 3. Zhihu dynamic child comment expansion restores Reddit tree lines
+  assert.ok(
+    scriptContent.includes("replyChildrenEl.className = \"wecom-reply-children children-area\";") &&
+    scriptContent.includes("replyChildrenEl.classList.add(\"children-area\");"),
+    "loadMoreZhihuChildComments must attach children-area class for Reddit mode"
+  );
+  assert.ok(
+    scriptContent.includes("if (!replyChildrenEl.querySelector(\":scope > .tree-svg\"))") &&
+    scriptContent.includes("createRedditTreeSVG()"),
+    "loadMoreZhihuChildComments must ensure tree-svg element is present"
+  );
+  assert.ok(
+    scriptContent.includes("scheduleRedditTreeRedraw(replyChildrenEl)"),
+    "loadMoreZhihuChildComments must invoke scheduleRedditTreeRedraw to compute and draw Bézier lines"
+  );
+
+  // 5. Wheel HUD complete dismissal, zero pointer-events leak, and stage cleanup
+  assert.ok(
+    scriptContent.includes(".wecom-topic-wheel-hud {") &&
+    scriptContent.includes("display: none !important;") &&
+    scriptContent.includes("visibility: hidden !important;") &&
+    scriptContent.includes(".wecom-topic-wheel-hud:not(.is-visible) * {") &&
+    scriptContent.includes("pointer-events: none !important;"),
+    "HUD and its children must be completely hidden and inert when not visible"
+  );
+  assert.ok(
+    scriptContent.includes("_wheelStage.innerHTML = \"\";") &&
+    scriptContent.includes("_wheelHud.style.display = \"none\";") &&
+    scriptContent.includes("if (!_wheelHudVisible) return;"),
+    "closeWheelHud must clear stage cards and click handler must guard against clicks when closed"
   );
 });
 
