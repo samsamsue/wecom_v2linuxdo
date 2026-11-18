@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.40
+// @version      0.8.41
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -4423,7 +4423,7 @@
       color: var(--wc-text-3, #8F959E);
       cursor: pointer;
       padding: 0;
-      margin-left: 4px;
+      margin: 0 !important;
       outline: none;
       transition: all 0.15s ease;
       vertical-align: middle;
@@ -4568,6 +4568,7 @@
       width: 18px !important;
       height: 18px !important;
       padding: 0 !important;
+      margin: 0 !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
@@ -4738,9 +4739,11 @@
       color: var(--wc-text, #E1E4EA) !important;
     }
 
-    /* 头像在所有嵌套层级（根级、2级、3级及以上）严格保持 28px 圆形 */
+    /* 头像在所有嵌套层级（根级、2级、3级及以上）严格保持 28px 圆形，且在 Reddit 模式下强制显示禁止隐藏 */
     html.wecom-thread-style-reddit .wecom-msg-avatar,
     html.wecom-thread-style-reddit .wecom-reddit-avatar,
+    html.wecom-thread-style-reddit.wecom-hide-chat-avatar .wecom-msg-avatar,
+    html.wecom-thread-style-reddit.wecom-hide-chat-avatar .wecom-reddit-avatar,
     html.wecom-thread-style-reddit .wecom-reply-children .wecom-msg-avatar,
     html.wecom-thread-style-reddit .wecom-reply-children .wecom-reddit-avatar,
     html.wecom-thread-style-reddit .wecom-reply-children .wecom-reply-children .wecom-msg-avatar,
@@ -5235,10 +5238,13 @@
       display: none !important;
     }
 
-    /* 允许通过设置隐藏对话详情头像 */
-    html.wecom-hide-chat-avatar .wecom-msg-avatar,
-    html.wecom-hide-chat-avatar .wecom-chat-avatar {
+    /* 允许通过设置隐藏对话详情头像（非 Reddit 树状模式下生效） */
+    html.wecom-hide-chat-avatar:not(.wecom-thread-style-reddit) .wecom-msg-avatar,
+    html.wecom-hide-chat-avatar:not(.wecom-thread-style-reddit) .wecom-chat-avatar {
       display: none !important;
+    }
+    html.wecom-hide-chat-avatar:not(.wecom-thread-style-reddit) .wecom-msg {
+      gap: 0 !important;
     }
 
     /* 仅收起没有独立功能的企微装饰入口，保留全部可用操作。 */
@@ -5259,7 +5265,7 @@
     html.wecom-hide-unused-ui .wecom-tool-quick-meet {
       display: none !important;
     }
-    html.wecom-hide-chat-avatar .wecom-msg {
+    html.wecom-hide-chat-avatar:not(.wecom-thread-style-reddit) .wecom-msg {
       gap: 0 !important;
     }
     .wecom-chat-avatar-toggle.is-active,
@@ -16585,6 +16591,7 @@
   }
 
   function isHideChatAvatar() {
+    if (isRedditThreadStyle()) return false;
     try {
       return localStorage.getItem(HIDE_CHAT_AVATAR_KEY) === "1";
     } catch {
@@ -16593,10 +16600,14 @@
   }
 
   function setHideChatAvatar(on) {
+    if (isRedditThreadStyle() && on) {
+      showMiniToast("Reddit 树状模式不支持隐藏头像");
+      return;
+    }
     try {
       localStorage.setItem(HIDE_CHAT_AVATAR_KEY, on ? "1" : "0");
     } catch { /* ignore */ }
-    document.documentElement.classList.toggle("wecom-hide-chat-avatar", !!on);
+    document.documentElement.classList.toggle("wecom-hide-chat-avatar", isHideChatAvatar());
     syncThemeControls();
   }
 
@@ -16649,7 +16660,9 @@
 
   function applyThreadViewStyleClass() {
     try {
-      document.documentElement.classList.toggle("wecom-thread-style-reddit", isRedditThreadStyle());
+      const isReddit = isRedditThreadStyle();
+      document.documentElement.classList.toggle("wecom-thread-style-reddit", isReddit);
+      document.documentElement.classList.toggle("wecom-hide-chat-avatar", isHideChatAvatar());
     } catch { /* ignore */ }
   }
 
@@ -21551,13 +21564,20 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
     const hideChatAvatarBtn = menu.querySelector(".wecom-menu-toggle-hide-chat-avatar");
     if (hideChatAvatarBtn) {
+      const isReddit = isRedditThreadStyle();
       const on = isHideChatAvatar();
       hideChatAvatarBtn.classList.remove("is-active");
+      hideChatAvatarBtn.classList.toggle("is-disabled", isReddit);
       hideChatAvatarBtn.setAttribute("aria-checked", on ? "true" : "false");
+      if (isReddit) {
+        hideChatAvatarBtn.title = "Reddit 树状模式不支持隐藏头像";
+      } else {
+        hideChatAvatarBtn.removeAttribute("title");
+      }
       const badge = hideChatAvatarBtn.querySelector(".wecom-menu-state-badge");
       if (badge) {
-        badge.textContent = on ? "已开启" : "已关闭";
-        badge.className = `wecom-menu-state-badge ${on ? "is-on" : "is-off"}`;
+        badge.textContent = isReddit ? "不可用" : (on ? "已开启" : "已关闭");
+        badge.className = `wecom-menu-state-badge ${isReddit ? "is-disabled" : (on ? "is-on" : "is-off")}`;
       }
     }
 
@@ -21575,13 +21595,15 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
     const chatAvatarToggleBtn = document.querySelector(".wecom-chat-avatar-toggle");
     if (chatAvatarToggleBtn) {
+      const isReddit = isRedditThreadStyle();
       const hidden = isHideChatAvatar();
-      const labelText = hidden ? "显示对话头像" : "隐藏对话头像";
+      const labelText = isReddit ? "Reddit 模式不支持隐藏头像" : (hidden ? "显示对话头像" : "隐藏对话头像");
       chatAvatarToggleBtn.classList.toggle("is-active", hidden);
+      chatAvatarToggleBtn.classList.toggle("is-disabled", isReddit);
       chatAvatarToggleBtn.setAttribute("aria-pressed", hidden ? "true" : "false");
       chatAvatarToggleBtn.title = labelText;
       const labelEl = chatAvatarToggleBtn.querySelector(".wecom-chat-more-label");
-      if (labelEl) labelEl.textContent = labelText;
+      if (labelEl) labelEl.textContent = isReddit ? "隐藏头像(不可用)" : labelText;
     }
 
     const boostBtn = menu.querySelector(".wecom-menu-toggle-boost");
@@ -21937,6 +21959,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       if (hideChatAvatarBtn) {
         event.preventDefault();
         event.stopPropagation();
+        if (isRedditThreadStyle()) {
+          showMiniToast("Reddit 树状模式不支持隐藏头像");
+          return;
+        }
         setHideChatAvatar(!isHideChatAvatar());
         return;
       }
@@ -22143,7 +22169,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.40";
+  const SCRIPT_VERSION = "0.8.41";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -36111,6 +36137,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     }
     if (event.target.closest(".wecom-chat-avatar-toggle")) {
       consumeClick(event);
+      if (isRedditThreadStyle()) {
+        showMiniToast("Reddit 树状模式不支持隐藏头像");
+        closeAllPlatformDropdowns();
+        return true;
+      }
       setHideChatAvatar(!isHideChatAvatar());
       closeAllPlatformDropdowns();
       return true;

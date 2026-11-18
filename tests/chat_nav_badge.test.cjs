@@ -14152,6 +14152,13 @@ test("Test 175: Reddit thread tree SVG Bézier curves, zero protrusion without w
   assert.ok(scriptContent.includes("max-width: 700px !important;"), "content width must be capped at 700px");
   assert.ok(scriptContent.includes("html.wecom-thread-style-reddit .wecom-msg-time-sep") && scriptContent.includes("display: none !important;"), "time separators must be hidden via CSS");
   assert.ok(scriptContent.includes("depth === 0 && !isReddit"), "time separator markup generation must be suppressed in Reddit mode");
+
+  // 6. Collapse button zero margin and avatar hiding restricted in Reddit mode (v0.8.41)
+  const collapseBtnRule = scriptContent.match(/\.wecom-thread-collapse-btn\s*\{[^}]+\}/)?.[0] || "";
+  assert.ok(!collapseBtnRule.includes("margin-left"), ".wecom-thread-collapse-btn rule must not have margin-left");
+  assert.ok(scriptContent.includes("if (isRedditThreadStyle()) return false;"), "isHideChatAvatar must return false in Reddit mode");
+  assert.ok(scriptContent.includes("html.wecom-hide-chat-avatar:not(.wecom-thread-style-reddit)"), "CSS must exclude Reddit mode from hiding avatars");
+  assert.ok(scriptContent.includes("Reddit 树状模式不支持隐藏头像"), "must alert user that avatar hiding is unsupported in Reddit mode");
 });
 
 
