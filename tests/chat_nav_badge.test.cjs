@@ -15021,3 +15021,34 @@ test("Test 188: Same-platform topic links open in-place without page navigation,
     "clicking back button must pop previous topic from stack and restore it in-place"
   );
 });
+
+test("Test 189: Same-platform user profile links open in-place as profile card without page navigation (v0.8.55)", () => {
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version bump assertions
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.5[5-9]";/, "user.js version must be >= 0.8.55");
+  assert.match(metaContent, /@version\s+0\.8\.5[5-9]/, "meta.js version must be >= 0.8.55");
+  assert.match(readmeContent, /0\.8\.5[5-9]/, "README.md version must be >= 0.8.55");
+
+  // 2. parseSamePlatformMemberTarget implementation
+  assert.ok(
+    scriptContent.includes("function parseSamePlatformMemberTarget(href)") &&
+    scriptContent.includes("/^\\/member\\/([^/?#]+)/i") &&
+    scriptContent.includes("/^\\/u\\/([^/?#]+)/i"),
+    "must implement parseSamePlatformMemberTarget supporting V2EX /member/:username and Linux.do /u/:username"
+  );
+  assert.ok(
+    scriptContent.includes("/^\\/people\\/([^/?#]+)/i") &&
+    scriptContent.includes("/^\\/user\\/([^/?#]+)/i"),
+    "parseSamePlatformMemberTarget must also support Zhihu /people/:token and Juejin /user/:uid"
+  );
+
+  // 3. Chat panel link interception and in-place profile card opening
+  assert.ok(
+    scriptContent.includes("const samePlatformMember = parseSamePlatformMemberTarget(href);") &&
+    scriptContent.includes("generalLink.dataset.userCard = samePlatformMember.username;") &&
+    scriptContent.includes("openOriginalUserCard(generalLink, event);"),
+    "must intercept same-platform member links, attach username to dataset, and call openOriginalUserCard in-place"
+  );
+});

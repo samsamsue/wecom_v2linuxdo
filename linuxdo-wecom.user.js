@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.54
+// @version      0.8.55
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -24510,7 +24510,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.54";
+  const SCRIPT_VERSION = "0.8.55";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -38921,6 +38921,43 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     return null;
   }
 
+  function parseSamePlatformMemberTarget(href) {
+    if (!href || href === "#" || href.startsWith("javascript:")) return null;
+    let urlObj = null;
+    try {
+      urlObj = new URL(href, location.origin);
+    } catch {
+      return null;
+    }
+    if (!isSamePlatformHost(urlObj.hostname)) return null;
+
+    const path = urlObj.pathname;
+    if (IS_V2EX) {
+      const match = path.match(/^\/member\/([^/?#]+)/i);
+      if (match) {
+        return { platform: "v2ex", username: decodeURIComponent(match[1]) };
+      }
+    } else if (IS_LINUXDO) {
+      const match = path.match(/^\/u\/([^/?#]+)/i);
+      if (match) {
+        return { platform: "linuxdo", username: decodeURIComponent(match[1]) };
+      }
+    } else if (IS_ZHIHU) {
+      const match = path.match(/^\/people\/([^/?#]+)/i);
+      if (match) {
+        const token = decodeURIComponent(match[1]);
+        return { platform: "zhihu", username: token, userToken: token };
+      }
+    } else if (IS_JUEJIN) {
+      const match = path.match(/^\/user\/([^/?#]+)/i);
+      if (match) {
+        const uid = decodeURIComponent(match[1]);
+        return { platform: "juejin", username: uid, userId: uid };
+      }
+    }
+    return null;
+  }
+
   function syncTopicBackBtn() {
     const backBtn = document.querySelector(".wecom-chat-back-btn");
     if (!backBtn) return;
@@ -39270,6 +39307,18 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
           loadTopic(samePlatformTopic.topicId, false, samePlatformTopic.postNumber ? { postNumber: samePlatformTopic.postNumber } : null);
           syncTopicBackBtn();
+          return;
+        }
+
+        // 同平台用户主页/成员资料链接拦截：不跳转，直接在当前界面弹出资料卡片
+        const samePlatformMember = parseSamePlatformMemberTarget(href);
+        if (samePlatformMember && samePlatformMember.username) {
+          consumeClick(event);
+          generalLink.dataset.userCard = samePlatformMember.username;
+          if (samePlatformMember.userId || samePlatformMember.userToken) {
+            generalLink.dataset.userId = samePlatformMember.userId || samePlatformMember.userToken;
+          }
+          openOriginalUserCard(generalLink, event);
           return;
         }
 
