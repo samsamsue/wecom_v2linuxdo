@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.55
+// @version      0.8.56
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -24510,7 +24510,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.55";
+  const SCRIPT_VERSION = "0.8.56";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -43505,6 +43505,27 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       }
     }
     const replyTo = composerBridgeState.replyToPostNumber;
+    if (IS_V2EX && replyTo && !composerBridgeState.quoteData) {
+      const postObj = chatState.postsByNumber?.get(Number(replyTo));
+      const message = document.querySelector(`.wecom-msg[data-post-number="${replyTo}"]`);
+      let name = postObj?.username ||
+        message?.dataset?.username ||
+        message?.querySelector("[data-user-card]")?.dataset?.userCard ||
+        message?.querySelector(".wecom-msg-name")?.textContent?.trim();
+      if ((!name || name.startsWith("用户_")) && message?.querySelector("[data-user-card]")?.dataset?.userCard) {
+        const cardUser = message.querySelector("[data-user-card]").dataset.userCard;
+        if (cardUser && !cardUser.startsWith("用户_")) {
+          name = cardUser;
+        }
+      }
+      const floor = postObj?.floor != null
+        ? Number(postObj.floor)
+        : (Number(message?.dataset?.floor) || Math.max(0, Number(replyTo) - 1));
+      if (name && !raw.includes(`@${name}`)) {
+        const floorPrefix = floor > 0 ? `@${name} #${floor} ` : `@${name} `;
+        raw = floorPrefix + raw;
+      }
+    }
     try {
       if (IS_ZHIHU) {
         if (zhihuCommentThreadState.active && zhihuCommentThreadState.answerId) {
@@ -43626,31 +43647,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     showTargetedReply(postNumber);
     const { input } = composeUi();
     if (IS_V2EX && input) {
-      const postObj = chatState.postsByNumber?.get(Number(postNumber));
-      const message = document.querySelector(`.wecom-msg[data-post-number="${postNumber}"]`);
-      let name = postObj?.username ||
-        message?.dataset?.username ||
-        message?.querySelector("[data-user-card]")?.dataset?.userCard ||
-        message?.querySelector(".wecom-msg-name")?.textContent?.trim();
-      if ((!name || name.startsWith("用户_")) && message?.querySelector("[data-user-card]")?.dataset?.userCard) {
-        const cardUser = message.querySelector("[data-user-card]").dataset.userCard;
-        if (cardUser && !cardUser.startsWith("用户_")) {
-          name = cardUser;
-        }
-      }
-      const floor = postObj?.floor != null
-        ? Number(postObj.floor)
-        : (Number(message?.dataset?.floor) || Math.max(0, Number(postNumber) - 1));
-      if (name && !input.value.includes(`@${name}`)) {
-        const floorPrefix = floor > 0 ? `@${name} #${floor} ` : `@${name} `;
-        input.value = floorPrefix + input.value;
-      }
-    } else if ((IS_JUEJIN || IS_ZHIHU) && input) {
-      const message = document.querySelector(`.wecom-msg[data-post-number="${postNumber}"]`);
-      const name = message?.querySelector(".wecom-msg-name")?.textContent?.trim();
-      if (name && !input.value.includes(`@${name}`)) {
-        input.value = `@${name} ` + input.value;
-      }
+      // .wecom-reply-target 这里已经显示了回复对象，编辑器内无需再附带 @mention 前缀
     }
     input?.focus();
   }
@@ -44533,29 +44530,33 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
     // 辅助函数：根据话题及上下文获取有效的发帖 once token 与表单 action
     const resolveOnceAndAction = async (forceRemote = false) => {
-      // 1. 如果当前页面 DOM 确系本话题的回复表单，且有 once，直接使用
+      // 1. 如果缓存了本话题刚解析出的有效 v2ex_once（非强制远端拉取模式）
+      if (!forceRemote && chatState.topicData && Number(chatState.topicData.id) === tid && chatState.topicData.v2ex_once) {
+        const cachedOnce = chatState.topicData.v2ex_once.trim();
+        if (cachedOnce) {
+          // 立即消费该 once，避免二次重用已过期的凭证
+          chatState.topicData.v2ex_once = null;
+          return { once: cachedOnce, actionUrl: `/t/${tid}` };
+        }
+      }
+
+      // 2. 检查当前页面原生 DOM 是否有本话题未消费过的 once（仅首次直开时有效）
       if (!forceRemote) {
         const domForm = document.querySelector(`#Main form[action*='/t/${tid}'], form[action*='/t/${tid}']`);
-        if (domForm && topicIdFromPath(location.pathname) === tid) {
+        if (domForm && topicIdFromPath(location.pathname) === tid && !domForm._wecomOnceConsumed) {
           const domOnce = domForm.querySelector("input[name='once']")?.value?.trim();
           if (domOnce) {
+            domForm._wecomOnceConsumed = true;
             const act = domForm.getAttribute("action") || `/t/${tid}`;
             return { once: domOnce, actionUrl: act.startsWith("/") ? act : "/" + act };
           }
         }
-
-        // 2. 如果 chatState.topicData 记录了刚解析出的 v2ex_once
-        if (chatState.topicData && Number(chatState.topicData.id) === tid && chatState.topicData.v2ex_once) {
-          const cachedOnce = chatState.topicData.v2ex_once.trim();
-          if (cachedOnce) {
-            return { once: cachedOnce, actionUrl: `/t/${tid}` };
-          }
-        }
       }
 
-      // 3. 否则实时从服务端拉取最新的话题页面（使用 no-cache 避免命中过期 HTML）
-      const page = Number(chatState.v2exPage) || 1;
-      const fetchPath = page > 1 ? `/t/${tid}?p=${page}` : `/t/${tid}`;
+      // 3. 实时从服务端拉取最新的话题页面获取新鲜 once token（带 no-cache，避免命中过期缓存）
+      // V2EX 多页话题的回复框与 once token 位于尾页
+      const totalPages = Number(chatState.topicData?.total_pages) || Number(chatState.v2exTotalPages) || Number(chatState.v2exPage) || 1;
+      const fetchPath = totalPages > 1 ? `/t/${tid}?p=${totalPages}` : `/t/${tid}`;
       const res = await fetch(fetchPath, { credentials: "same-origin", cache: "no-cache" });
       if (!res.ok) throw new Error(`获取话题回复表单失败 (HTTP ${res.status})`);
       if (res.redirected && (res.url.includes("/signin") || res.url.includes("/login"))) {
@@ -44620,8 +44621,27 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         if (errorMsg) throw new Error(errorMsg);
       }
 
-      // 提交成功！若返回的新页面中有新的 once token，缓存以便后续连续回复
+      // 严密校验：检查返回结果中是否真实包含新发内容，或 once token 是否已正常轮转
+      const replyCells = Array.from(postDoc.querySelectorAll("#Main .cell[id^='r_'], .cell[id^='r_']"));
+      const myCleanContent = content.trim();
+      const hasMyReply = replyCells.slice(-5).some((cell) => {
+        const cellText = cell.querySelector(".reply_content")?.textContent?.trim() || "";
+        return cellText && (
+          cellText.includes(myCleanContent) ||
+          myCleanContent.includes(cellText) ||
+          (myCleanContent.length > 6 && cellText.includes(myCleanContent.slice(0, 15)))
+        );
+      });
+
       const nextOnce = postDoc.querySelector("input[name='once']")?.value?.trim();
+      // 如果没有找到新发表的回复，且 once token 没变化或返回了未处理页面，说明本次 once 提交被静默忽略
+      if (!hasMyReply && (!nextOnce || nextOnce === once)) {
+        const silentErr = new Error("V2EX 发帖凭证已失效或未生效");
+        silentErr.isOnceError = true;
+        throw silentErr;
+      }
+
+      // 提交成功！若返回的新页面中有新的 once token，缓存以便后续连续回复
       if (nextOnce && chatState.topicData) {
         chatState.topicData.v2ex_once = nextOnce;
       }
@@ -44632,9 +44652,12 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     try {
       await postReply(once, actionUrl);
     } catch (err) {
-      // 若是由于 once 过期/错误导致，立即无感从服务端拉取最新 once 重试一次
-      if (err.isOnceError) {
+      // 若是由于 once 过期/错误导致，立即无感从服务端强制拉取最新 once 重试一次
+      if (err.isOnceError || err.isProblemError) {
         if (chatState.topicData) chatState.topicData.v2ex_once = null;
+        const domForm = document.querySelector(`#Main form[action*='/t/${tid}'], form[action*='/t/${tid}']`);
+        if (domForm) domForm._wecomOnceConsumed = true;
+
         const fresh = await resolveOnceAndAction(true);
         await postReply(fresh.once, fresh.actionUrl);
         return;

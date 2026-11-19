@@ -15052,3 +15052,43 @@ test("Test 189: Same-platform user profile links open in-place as profile card w
     "must intercept same-platform member links, attach username to dataset, and call openOriginalUserCard in-place"
   );
 });
+
+test("Test 190: V2EX reply silent failure prevention with fresh once retry & clean editor without prefix mention (v0.8.56)", () => {
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version bump assertions
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.5[6-9]";/, "user.js version must be >= 0.8.56");
+  assert.match(metaContent, /@version\s+0\.8\.5[6-9]/, "meta.js version must be >= 0.8.56");
+  assert.match(readmeContent, /0\.8\.5[6-9]/, "README.md version must be >= 0.8.56");
+
+  // 2. replyToPost keeps editor clean; submitComposer prepends mention to raw at send time
+  assert.ok(
+    scriptContent.includes(".wecom-reply-target 这里已经显示了回复对象，编辑器内无需再附带 @mention 前缀"),
+    "replyToPost must not inject mention prefix into editor input value"
+  );
+  assert.ok(
+    scriptContent.includes("if (IS_V2EX && replyTo && !composerBridgeState.quoteData)") &&
+    scriptContent.includes("const floorPrefix = floor > 0 ? `@${name} #${floor} ` : `@${name} `;") &&
+    scriptContent.includes("raw = floorPrefix + raw;"),
+    "submitComposer must dynamically prepend floorPrefix to raw when submitting V2EX reply"
+  );
+
+  // 3. submitV2exReply prevents stale once reuse and validates reply existence
+  assert.ok(
+    scriptContent.includes("domForm._wecomOnceConsumed = true;") &&
+    scriptContent.includes("chatState.topicData.v2ex_once = null;"),
+    "submitV2exReply must mark once token as consumed to prevent silent reuse"
+  );
+  assert.ok(
+    scriptContent.includes("const totalPages = Number(chatState.topicData?.total_pages)") &&
+    scriptContent.includes("const fetchPath = totalPages > 1 ? `/t/${tid}?p=${totalPages}` : `/t/${tid}`;"),
+    "submitV2exReply must fetch tail page for once token on multi-page topics"
+  );
+  assert.ok(
+    scriptContent.includes("const hasMyReply = replyCells.slice(-5).some(") &&
+    scriptContent.includes("const silentErr = new Error(\"V2EX 发帖凭证已失效或未生效\");") &&
+    scriptContent.includes("silentErr.isOnceError = true;"),
+    "submitV2exReply must verify that reply was actually published and catch silent drops"
+  );
+});
