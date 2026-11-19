@@ -14839,16 +14839,15 @@ test("Test 184: Zhihu dynamic child comments Reddit tree line connection restora
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
   // 1. Version bump
-  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.51";/, "user.js version must be 0.8.51");
-  assert.match(metaContent, /@version\s+0\.8\.51/, "meta.js version must be 0.8.51");
-  assert.match(readmeContent, /0\.8\.51/, "README.md version must be 0.8.51");
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.(5[1-9]|\d{3,})";/, "user.js version must be >= 0.8.51");
+  assert.match(metaContent, /@version\s+0\.8\.(5[1-9]|\d{3,})/, "meta.js version must be >= 0.8.51");
+  assert.match(readmeContent, /0\.8\.(5[1-9]|\d{3,})/, "README.md version must be >= 0.8.51");
 
   // 2. Wheel preview bottom cards inverted layout (title at bottom, meta at top)
   assert.ok(
     scriptContent.includes(".wecom-topic-wheel-card.is-next-1,") &&
-    scriptContent.includes(".wecom-topic-wheel-card.is-next-2,") &&
-    scriptContent.includes("flex-direction: column-reverse !important;"),
-    "bottom cards must swap title and meta position via column-reverse"
+    scriptContent.includes(".wecom-topic-wheel-card.is-next-2,"),
+    "bottom card CSS classes must exist"
   );
   assert.ok(
     /is-next-1\s*\{\s*transform:\s*translateY\(38px\)/.test(scriptContent) &&
@@ -14893,3 +14892,52 @@ test("Test 184: Zhihu dynamic child comments Reddit tree line connection restora
   );
 });
 
+
+test("Test 185: Non-Reddit collapse btn fully hidden, wheel bottom cards use CSS order to surface title (v0.8.52)", () => {
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version bump
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.5[2-9]";/, "user.js version must be >= 0.8.52");
+  assert.match(metaContent, /@version\s+0\.8\.5[2-9]/, "meta.js version must be >= 0.8.52");
+  assert.match(readmeContent, /0\.8\.5[2-9]/, "README.md version must be >= 0.8.52");
+
+  // 2. Non-Reddit collapse buttons + tree SVG fully hidden via extended CSS selector
+  assert.ok(
+    scriptContent.includes("html:not(.wecom-thread-style-reddit) .wecom-thread-collapse-btn") &&
+    scriptContent.includes("html:not(.wecom-thread-style-reddit) .wecom-reddit-collapse-circle"),
+    "non-Reddit mode must hide all collapse button variants including wecom-thread-collapse-btn and wecom-reddit-collapse-circle"
+  );
+
+  // 3. Wheel bottom cards use CSS order (not column-reverse) to put title at bottom
+  assert.ok(
+    scriptContent.includes(".wecom-topic-wheel-card.is-next-1 .wecom-wheel-card-meta") &&
+    scriptContent.includes("order: -1;"),
+    "is-next cards must set meta order:-1 to push it to top"
+  );
+  assert.ok(
+    scriptContent.includes(".wecom-topic-wheel-card.is-next-1 .wecom-wheel-card-top") &&
+    scriptContent.includes("order: 1;"),
+    "is-next cards must set card-top (title) order:1 to push it to bottom"
+  );
+});
+
+test("Test 186: Zhihu safe topic loading without reading 'then' TypeError, and conditional Reddit collapse btn injection guard (v0.8.52)", () => {
+  // 1. applyZhihuAnswerClamping safe async wrapper preventing 'Cannot read properties of undefined (reading then)'
+  assert.ok(
+    scriptContent.includes("req && typeof req.then === \"function\" ? await req : null;") ||
+    scriptContent.includes("const r = req && typeof req.then === \"function\" ? await req : null;"),
+    "applyZhihuAnswerClamping must guard client.get with typeof req.then before awaiting/chaining"
+  );
+  assert.ok(
+    scriptContent.includes("const hasActualChildren = added.length > 0 || Boolean(replyChildrenEl.querySelector(\".wecom-msg\"));"),
+    "loadMoreZhihuChildComments must verify actual child messages exist before injecting Reddit tree lines or collapse button"
+  );
+
+  // 2. CSS collapse buttons hidden by default, shown only when parent contains .wecom-msg
+  assert.ok(
+    scriptContent.includes("html.wecom-thread-style-reddit .wecom-reply-children:has(.wecom-msg) > .wecom-reddit-collapse-circle") &&
+    scriptContent.includes("html.wecom-thread-style-reddit .children-area:has(.wecom-msg) > .wecom-reddit-collapse-circle"),
+    "collapse circle button must explicitly require :has(.wecom-msg) to display flex"
+  );
+});

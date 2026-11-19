@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.51
+// @version      0.8.52
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -5407,7 +5407,7 @@
       stroke: var(--wc-accent, #536dfe) !important;
     }
 
-    /* Reddit 树状极简折叠按钮 (− / +) */
+    /* Reddit 树状极简折叠按钮 (− / +) 默认隐藏，必须满足有子回复才显示 */
     html.wecom-thread-style-reddit .collapse-btn,
     html.wecom-thread-style-reddit .wecom-reddit-collapse-circle {
       position: absolute !important;
@@ -5416,7 +5416,7 @@
       height: 18px !important;
       padding: 0 !important;
       margin: 0 !important;
-      display: flex !important;
+      display: none !important;
       align-items: center !important;
       justify-content: center !important;
       border: 1px solid var(--wc-border, #bfc7cc) !important;
@@ -5466,6 +5466,9 @@
     }
     html.wecom-thread-style-reddit .children-area:has(.wecom-msg) > .collapse-btn,
     html.wecom-thread-style-reddit .children-area:has(.wecom-msg) > .wecom-reddit-collapse-circle,
+    html.wecom-thread-style-reddit .children-area:has(.wecom-msg) > .wecom-thread-collapse-btn,
+    html.wecom-thread-style-reddit .wecom-reply-children:has(.wecom-msg) > .collapse-btn,
+    html.wecom-thread-style-reddit .wecom-reply-children:has(.wecom-msg) > .wecom-reddit-collapse-circle,
     html.wecom-thread-style-reddit .wecom-reply-children:has(.wecom-msg) > .wecom-thread-collapse-btn {
       display: flex !important;
     }
@@ -5715,9 +5718,11 @@
       cursor: pointer !important;
     }
 
-    /* 非 Reddit 模式下隐藏 SVG 与折叠按钮 */
+    /* 非 Reddit 模式下隐藏 SVG 与折叠按钮（含所有折叠按钮变体） */
     html:not(.wecom-thread-style-reddit) .tree-svg,
-    html:not(.wecom-thread-style-reddit) .collapse-btn {
+    html:not(.wecom-thread-style-reddit) .collapse-btn,
+    html:not(.wecom-thread-style-reddit) .wecom-thread-collapse-btn,
+    html:not(.wecom-thread-style-reddit) .wecom-reddit-collapse-circle {
       display: none !important;
     }
 
@@ -15465,12 +15470,28 @@
       pointer-events: none;
     }
 
-    /* 下方后面项：信息与标题换位置，信息在上方（被前一张卡片自然遮挡），标题在下方（露出区域清晰可见） */
+    /* 下方后面项：通过 order 换位置：信息在上方（被前一张卡片遮挡），标题在下方（露出区域清晰可见） */
+    .wecom-topic-wheel-card.is-next-1 .wecom-wheel-card-meta,
+    .wecom-topic-wheel-card.is-next-2 .wecom-wheel-card-meta,
+    .wecom-topic-wheel-card.is-next-hidden .wecom-wheel-card-meta {
+      order: -1;
+    }
+    .wecom-topic-wheel-card.is-next-1 .wecom-wheel-card-divider,
+    .wecom-topic-wheel-card.is-next-2 .wecom-wheel-card-divider,
+    .wecom-topic-wheel-card.is-next-hidden .wecom-wheel-card-divider {
+      display: none !important;
+    }
+    .wecom-topic-wheel-card.is-next-1 .wecom-wheel-card-top,
+    .wecom-topic-wheel-card.is-next-2 .wecom-wheel-card-top,
+    .wecom-topic-wheel-card.is-next-hidden .wecom-wheel-card-top {
+      order: 1;
+      margin-top: auto !important;
+      padding-bottom: 2px !important;
+    }
     .wecom-topic-wheel-card.is-next-1,
     .wecom-topic-wheel-card.is-next-2,
     .wecom-topic-wheel-card.is-next-hidden {
-      flex-direction: column-reverse !important;
-      padding: 10px 16px 12px 16px;
+      padding: 10px 16px 10px 16px;
     }
 
     /* 卡片内部元素 */
@@ -24427,7 +24448,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.51";
+  const SCRIPT_VERSION = "0.8.52";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -27687,9 +27708,21 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     if (zhihuRecommendPool.length <= offset + 10) {
       try {
         const domain = (Math.floor(offset / 20)) % 9;
-        const rankResp = client
-          ? await client.get(`/api/v4/creators/rank/hot?domain=${domain}&limit=30&offset=0`).then(r => r?.data || r).catch(() => null)
-          : await zhihuApi(`/api/v4/creators/rank/hot?domain=${domain}&limit=30&offset=0`).catch(() => null);
+        let rankResp = null;
+        if (client && typeof client.get === "function") {
+          try {
+            const p = client.get(`/api/v4/creators/rank/hot?domain=${domain}&limit=30&offset=0`);
+            const r = p && typeof p.then === "function" ? await p : p;
+            rankResp = r?.data || r;
+          } catch (_) {}
+        }
+        if (!rankResp) {
+          try {
+            rankResp = await zhihuApi(`/api/v4/creators/rank/hot?domain=${domain}&limit=30&offset=0`);
+          } catch (_) {
+            rankResp = null;
+          }
+        }
         const items = rankResp?.data || [];
         items.forEach((item, i) => {
           const mapped = mapZhihuCreatorHotItemToTopic(item, i);
@@ -45035,7 +45068,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           chatAvatar.textContent = avatarLetter(authorName);
         }
       }
-      loadCategories().then(() => {
+      Promise.resolve().then(() => typeof loadCategories === "function" ? loadCategories() : []).then(() => {
         if (!isSameTopic(chatState.topicId, topicId)) return;
         const cat = data.category_id ? categoryById(data.category_id) : null;
         const chipsBox = document.querySelector(".wecom-chat-chips");
@@ -45345,21 +45378,33 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
         if (commentCount === 0 && postId && /^\d+$/.test(postId) && !bubble.dataset.countFetched) {
           bubble.dataset.countFetched = "1";
-          const client = getZhihuInternalClient();
-          const p = client
-            ? client.get(`/api/v4/comment_v5/answers/${postId}/abstract_comment?limit=1`).then((r) => r?.data || r)
-            : zhihuApi(`/api/v4/comment_v5/answers/${postId}/abstract_comment?limit=1`);
-          p.then((res) => {
-            if (res?.counts?.total_counts != null) {
-              const realCount = Number(res.counts.total_counts);
-              if (realCount > 0) {
-                zhihuCommentCountsMap.set(postId, realCount);
-                if (post) post.reply_count = realCount;
-                const targetBtn = footer.querySelector(".wecom-zhihu-comments-btn");
-                syncZhihuCommentButton(targetBtn, realCount);
+          (async () => {
+            try {
+              let res = null;
+              const client = getZhihuInternalClient();
+              if (client && typeof client.get === "function") {
+                try {
+                  const req = client.get(`/api/v4/comment_v5/answers/${postId}/abstract_comment?limit=1`);
+                  const r = req && typeof req.then === "function" ? await req : null;
+                  res = r?.data != null ? r.data : r;
+                } catch (_) {}
               }
-            }
-          }).catch(() => {});
+              if (!res) {
+                try {
+                  res = await zhihuApi(`/api/v4/comment_v5/answers/${postId}/abstract_comment?limit=1`);
+                } catch (_) {}
+              }
+              if (res?.counts?.total_counts != null) {
+                const realCount = Number(res.counts.total_counts);
+                if (realCount > 0) {
+                  zhihuCommentCountsMap.set(postId, realCount);
+                  if (post) post.reply_count = realCount;
+                  const targetBtn = footer.querySelector(".wecom-zhihu-comments-btn");
+                  syncZhihuCommentButton(targetBtn, realCount);
+                }
+              }
+            } catch (_) {}
+          })();
         }
       } else {
         let post = postNumber ? chatState.postsByNumber?.get(postNumber) : null;
@@ -46322,7 +46367,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           }
         }
 
-        if (isReddit) {
+        const hasActualChildren = added.length > 0 || Boolean(replyChildrenEl.querySelector(".wecom-msg"));
+        if (isReddit && hasActualChildren) {
           if (!replyChildrenEl.querySelector(":scope > .tree-svg")) {
             const svg = createRedditTreeSVG();
             if (svg) replyChildrenEl.prepend(svg);
