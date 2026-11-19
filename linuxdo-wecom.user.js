@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.53
+// @version      0.8.54
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -24510,7 +24510,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.53";
+  const SCRIPT_VERSION = "0.8.54";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -34439,6 +34439,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         ensureChatPanel();
         const body = document.querySelector(".wecom-chat-body");
         const isSame = isSameTopic(chatState.topicId, topicId);
+        if (!isSame) {
+          topicNavStack.length = 0;
+          syncTopicBackBtn();
+        }
 
         if (IS_ZHIHU && zhihuCommentThreadState.active) {
           if (isSame) {
@@ -38875,11 +38879,93 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     }
   }
 
+  /* 话题内同平台链接无跳转内部导航历史栈 */
+  const topicNavStack = [];
+
+  function isSamePlatformHost(hostname) {
+    if (!hostname) return false;
+    const host = String(hostname).toLowerCase();
+    const currHost = location.hostname.toLowerCase();
+    if (host === currHost) return true;
+    if (IS_LINUXDO && (host === "linux.do" || host.endsWith(".linux.do"))) return true;
+    if (IS_V2EX && (host === "v2ex.com" || host.endsWith(".v2ex.com"))) return true;
+    if (IS_JUEJIN && (host === "juejin.cn" || host.endsWith(".juejin.cn"))) return true;
+    if (IS_ZHIHU && (host === "zhihu.com" || host.endsWith(".zhihu.com"))) return true;
+    return false;
+  }
+
+  function parseSamePlatformTopicTarget(href) {
+    if (!href || href === "#" || href.startsWith("javascript:")) return null;
+    let urlObj = null;
+    try {
+      urlObj = new URL(href, location.origin);
+    } catch {
+      return null;
+    }
+    if (!isSamePlatformHost(urlObj.hostname)) return null;
+
+    const route = topicRouteFromPath(urlObj.pathname);
+    if (route && route.topicId) {
+      let targetPost = Number(route.postNumber) || 0;
+      if (!targetPost) {
+        const hashMatch = urlObj.hash.match(/#(?:post_|reply|r_)?(\d+)/i);
+        if (hashMatch) targetPost = Number(hashMatch[1]) || 0;
+      }
+      return {
+        topicId: route.topicId,
+        postNumber: targetPost,
+        slug: route.slug || "",
+        answerId: route.answerId || null
+      };
+    }
+    return null;
+  }
+
+  function syncTopicBackBtn() {
+    const backBtn = document.querySelector(".wecom-chat-back-btn");
+    if (!backBtn) return;
+    if (typeof zhihuCommentThreadState !== "undefined" && zhihuCommentThreadState.active) {
+      backBtn.style.display = "inline-flex";
+      backBtn.title = "返回回答列表";
+      const text = backBtn.querySelector(".wecom-chat-back-text");
+      if (text) text.textContent = "返回";
+      return;
+    }
+    if (topicNavStack.length > 0) {
+      const prev = topicNavStack[topicNavStack.length - 1];
+      backBtn.style.display = "inline-flex";
+      backBtn.title = prev.title ? `返回上一话题: ${prev.title}` : "返回上一话题";
+      const text = backBtn.querySelector(".wecom-chat-back-text");
+      if (text) text.textContent = "返回";
+      return;
+    }
+    backBtn.style.display = "none";
+  }
+
   function handleChatPanelClick(event, panel) {
     const backBtn = event.target.closest(".wecom-chat-back-btn");
     if (backBtn && panel.contains(backBtn)) {
       consumeClick(event);
-      closeZhihuCommentThread(panel);
+      if (typeof zhihuCommentThreadState !== "undefined" && zhihuCommentThreadState.active) {
+        closeZhihuCommentThread(panel);
+        syncTopicBackBtn();
+        return;
+      }
+      if (topicNavStack.length > 0) {
+        const prev = topicNavStack.pop();
+        if (prev && prev.topicId) {
+          loadTopic(prev.topicId, false, { postNumber: prev.postNumber }).then(() => {
+            const body = panel.querySelector(".wecom-chat-body");
+            if (body && prev.scrollTop > 0) {
+              setTimeout(() => {
+                body.scrollTop = prev.scrollTop;
+              }, 80);
+            }
+          });
+        }
+        syncTopicBackBtn();
+        return;
+      }
       return;
     }
     const collapseTrigger = event.target.closest(".collapse-btn, .wecom-thread-collapse-btn, .line-hit, .wecom-reddit-line, .wecom-reddit-collapsed-hint");
@@ -39156,6 +39242,37 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           } catch { /* ignore */ }
           return;
         }
+
+        // 同平台帖子链接拦截：不跳转，直接在当前界面打开，并保留返回按钮
+        const samePlatformTopic = parseSamePlatformTopicTarget(href);
+        if (samePlatformTopic && samePlatformTopic.topicId) {
+          consumeClick(event);
+          const body = panel.querySelector(".wecom-chat-body");
+          if (isSameTopic(chatState.topicId, samePlatformTopic.topicId)) {
+            if (samePlatformTopic.postNumber > 1 && body) {
+              const prevScrollTop = body.scrollTop;
+              keepChatAtPost(body, samePlatformTopic.postNumber, { highlight: true });
+              saveChatJumpPosition(body, prevScrollTop, generalLink);
+            } else if (body) {
+              body.scrollTo({ top: 0, behavior: "smooth" });
+            }
+            return;
+          }
+
+          if (chatState.topicId) {
+            topicNavStack.push({
+              topicId: chatState.topicId,
+              title: chatState.title || "",
+              scrollTop: body ? body.scrollTop : 0,
+              postNumber: getRememberedPost(chatState.topicId) || 1
+            });
+          }
+
+          loadTopic(samePlatformTopic.topicId, false, samePlatformTopic.postNumber ? { postNumber: samePlatformTopic.postNumber } : null);
+          syncTopicBackBtn();
+          return;
+        }
+
         consumeClick(event);
         generalLink.setAttribute("target", "_blank");
         if (!generalLink.getAttribute("rel")?.includes("noopener")) {
@@ -45235,6 +45352,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         setTimeout(() => syncChatFloatNav(body), 150);
       }
       syncListActive();
+      syncTopicBackBtn();
     } catch (err) {
       if (err?.name === "AbortError" || signal.aborted) {
         if (topicAbortController === controller) {
@@ -45244,6 +45362,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       }
       renderChatError(err);
     } finally {
+      syncTopicBackBtn();
       if (topicAbortController === controller || !topicAbortController) {
         topicAbortController = null;
         chatState.loading = false;

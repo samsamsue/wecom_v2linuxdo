@@ -14980,3 +14980,44 @@ test("Test 187: Alt+wheel topic preview HUD supports toggling auto-scroll, defau
     "stopWheelAutoScroll must be called on closeWheelHud to clear active timers"
   );
 });
+
+test("Test 188: Same-platform topic links open in-place without page navigation, with back button and history stack (v0.8.54)", () => {
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version bump
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.5[4-9]";/, "user.js version must be >= 0.8.54");
+  assert.match(metaContent, /@version\s+0\.8\.5[4-9]/, "meta.js version must be >= 0.8.54");
+  assert.match(readmeContent, /0\.8\.5[4-9]/, "README.md version must be >= 0.8.54");
+
+  // 2. Navigation stack and same-platform host detection
+  assert.ok(
+    scriptContent.includes("const topicNavStack = [];"),
+    "must define topicNavStack array for in-place topic navigation history"
+  );
+  assert.ok(
+    scriptContent.includes("function isSamePlatformHost(") &&
+    scriptContent.includes("function parseSamePlatformTopicTarget("),
+    "must implement helper functions to identify same-platform topic URLs"
+  );
+
+  // 3. Link click interceptor in chat panel
+  assert.ok(
+    scriptContent.includes("const samePlatformTopic = parseSamePlatformTopicTarget(href);") &&
+    scriptContent.includes("topicNavStack.push({") &&
+    scriptContent.includes("loadTopic(samePlatformTopic.topicId"),
+    "must intercept same-platform topic links, push current topic state to stack, and load target topic in-place"
+  );
+
+  // 4. Back button synchronization and handler
+  assert.ok(
+    scriptContent.includes("function syncTopicBackBtn()") &&
+    scriptContent.includes("backBtn.style.display = \"inline-flex\";"),
+    "must sync back button visibility when topicNavStack has items"
+  );
+  assert.ok(
+    scriptContent.includes("const prev = topicNavStack.pop();") &&
+    scriptContent.includes("loadTopic(prev.topicId"),
+    "clicking back button must pop previous topic from stack and restore it in-place"
+  );
+});
