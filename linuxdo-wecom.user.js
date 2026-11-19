@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.52
+// @version      0.8.53
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -15600,6 +15600,10 @@
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.8);
       pointer-events: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
     }
     body.wecom-dark .wecom-topic-wheel-tip,
     html.wecom-dark .wecom-topic-wheel-tip {
@@ -15607,6 +15611,64 @@
       color: #86909c;
       border-color: rgba(255, 255, 255, 0.1);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    .wecom-wheel-tip-sep {
+      opacity: 0.35;
+      margin: 0 1px;
+    }
+    .wecom-wheel-autoscroll-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 1px 7px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: rgba(0, 0, 0, 0.05);
+      color: inherit;
+      font-size: 11px;
+      font-family: inherit;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.16s ease;
+      line-height: 1.4;
+    }
+    .wecom-wheel-autoscroll-btn:hover {
+      background: rgba(0, 0, 0, 0.09);
+      color: #1f2329;
+    }
+    body.wecom-dark .wecom-wheel-autoscroll-btn,
+    html.wecom-dark .wecom-wheel-autoscroll-btn {
+      background: rgba(255, 255, 255, 0.08);
+    }
+    body.wecom-dark .wecom-wheel-autoscroll-btn:hover,
+    html.wecom-dark .wecom-wheel-autoscroll-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: #f2f3f5;
+    }
+    .wecom-wheel-autoscroll-btn.is-active {
+      background: rgba(38, 126, 240, 0.14);
+      color: #267EF0 !important;
+      border-color: rgba(38, 126, 240, 0.35);
+      font-weight: 500;
+    }
+    body.wecom-dark .wecom-wheel-autoscroll-btn.is-active,
+    html.wecom-dark .wecom-wheel-autoscroll-btn.is-active {
+      background: rgba(38, 126, 240, 0.25);
+      color: #539df5 !important;
+      border-color: rgba(38, 126, 240, 0.5);
+    }
+    .wecom-wheel-autoscroll-kbd {
+      font-size: 9px;
+      padding: 0 3px;
+      border-radius: 3px;
+      background: rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      line-height: 1.2;
+    }
+    body.wecom-dark .wecom-wheel-autoscroll-kbd,
+    html.wecom-dark .wecom-wheel-autoscroll-kbd {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.15);
     }
 
     /* 左侧列表项焦点轮廓跟随 */
@@ -24448,7 +24510,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.52";
+  const SCRIPT_VERSION = "0.8.53";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -47980,6 +48042,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   let _wheelHud = null;
   let _wheelStage = null;
   let _wheelHudObserver = null;
+  let _wheelAutoScroll = false; // 默认关闭自动滚动
+  let _wheelAutoScrollTimer = null;
 
   const WHEEL_ICON_CLOCK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
   const WHEEL_ICON_EYE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
@@ -47992,6 +48056,56 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     return String(n);
   }
 
+  function updateWheelAutoScrollBtnUI() {
+    if (!_wheelHud) return;
+    const btn = _wheelHud.querySelector(".wecom-wheel-autoscroll-btn");
+    if (!btn) return;
+    btn.classList.toggle("is-active", _wheelAutoScroll);
+    const icon = btn.querySelector(".wecom-wheel-autoscroll-icon");
+    const text = btn.querySelector(".wecom-wheel-autoscroll-text");
+    if (icon) icon.textContent = _wheelAutoScroll ? "⏸" : "▶";
+    if (text) text.textContent = _wheelAutoScroll ? "自动滚动: 开" : "自动滚动: 关";
+    btn.title = _wheelAutoScroll ? "自动滚动进行中 (按空格键或点击暂停)" : "自动滚动已暂停 (按空格键或点击开启)";
+  }
+
+  function startWheelAutoScroll() {
+    stopWheelAutoScroll();
+    _wheelAutoScroll = true;
+    updateWheelAutoScrollBtnUI();
+    _wheelAutoScrollTimer = setInterval(() => {
+      if (!_wheelHudVisible || !_wheelHudRows.length) {
+        stopWheelAutoScroll();
+        return;
+      }
+      if (_wheelHudIndex >= _wheelHudRows.length - 1) {
+        if (typeof triggerWheelHudLoadMore === "function") {
+          triggerWheelHudLoadMore();
+        }
+        _wheelHudIndex = 0;
+      } else {
+        _wheelHudIndex++;
+      }
+      syncWheelHudUI(true);
+    }, 1800);
+  }
+
+  function stopWheelAutoScroll() {
+    _wheelAutoScroll = false;
+    if (_wheelAutoScrollTimer) {
+      clearInterval(_wheelAutoScrollTimer);
+      _wheelAutoScrollTimer = null;
+    }
+    updateWheelAutoScrollBtnUI();
+  }
+
+  function toggleWheelAutoScroll() {
+    if (_wheelAutoScroll) {
+      stopWheelAutoScroll();
+    } else {
+      startWheelAutoScroll();
+    }
+  }
+
   function ensureWheelHudDOM() {
     if (_wheelHud) return;
 
@@ -47999,8 +48113,25 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     _wheelHud.className = "wecom-topic-wheel-hud";
     _wheelHud.innerHTML = `
       <div class="wecom-topic-wheel-stage"></div>
-      <div class="wecom-topic-wheel-tip">Alt+Enter 确定进入 · Esc 退出</div>
+      <div class="wecom-topic-wheel-tip">
+        <span>Alt+Enter 确定进入 · Esc 退出</span>
+        <span class="wecom-wheel-tip-sep">·</span>
+        <button type="button" class="wecom-wheel-autoscroll-btn" title="按空格键或点击切换自动滚动">
+          <span class="wecom-wheel-autoscroll-icon">▶</span>
+          <span class="wecom-wheel-autoscroll-text">自动滚动: 关</span>
+          <span class="wecom-wheel-autoscroll-kbd">Space</span>
+        </button>
+      </div>
     `;
+
+    const autoBtn = _wheelHud.querySelector(".wecom-wheel-autoscroll-btn");
+    if (autoBtn) {
+      autoBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleWheelAutoScroll();
+      });
+    }
 
     _wheelStage = _wheelHud.querySelector(".wecom-topic-wheel-stage");
     _wheelStage.addEventListener("click", (e) => {
@@ -48014,6 +48145,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         } else {
           _wheelHudIndex = idx;
           syncWheelHudUI(true);
+          if (_wheelAutoScroll) startWheelAutoScroll();
         }
       }
     });
@@ -48088,6 +48220,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     _wheelHud.style.display = "flex";
     _wheelHud.style.visibility = "visible";
     _wheelHud.classList.add("is-visible");
+
+    // 默认关闭自动滚动
+    stopWheelAutoScroll();
 
     startWheelHudObserver();
     syncWheelHudUI(false);
@@ -48197,6 +48332,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   function closeWheelHud(cancelled = true) {
     _wheelHudVisible = false;
+    stopWheelAutoScroll();
     stopWheelHudObserver();
     if (_wheelHud) {
       _wheelHud.classList.remove("is-visible");
@@ -48268,6 +48404,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           _wheelLastTickTime = now;
           _wheelHudIndex = Math.max(0, Math.min(_wheelHudRows.length - 1, _wheelHudIndex + step));
           syncWheelHudUI(true);
+          if (_wheelAutoScroll) startWheelAutoScroll();
           if (_wheelHudIndex >= _wheelHudRows.length - 4) {
             triggerWheelHudLoadMore();
           }
@@ -48289,11 +48426,18 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         confirmWheelHud();
         return;
       }
+      if (event.code === "Space" || event.key === " ") {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleWheelAutoScroll();
+        return;
+      }
       if (event.key === "ArrowUp") {
         event.preventDefault();
         event.stopPropagation();
         _wheelHudIndex = Math.max(0, _wheelHudIndex - 1);
         syncWheelHudUI(true);
+        if (_wheelAutoScroll) startWheelAutoScroll();
         return;
       }
       if (event.key === "ArrowDown") {
@@ -48301,6 +48445,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         event.stopPropagation();
         _wheelHudIndex = Math.min(_wheelHudRows.length - 1, _wheelHudIndex + 1);
         syncWheelHudUI(true);
+        if (_wheelAutoScroll) startWheelAutoScroll();
         return;
       }
     }, true);

@@ -14941,3 +14941,42 @@ test("Test 186: Zhihu safe topic loading without reading 'then' TypeError, and c
     "collapse circle button must explicitly require :has(.wecom-msg) to display flex"
   );
 });
+
+test("Test 187: Alt+wheel topic preview HUD supports toggling auto-scroll, defaults to disabled (v0.8.53)", () => {
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version bump
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.5[3-9]";/, "user.js version must be >= 0.8.53");
+  assert.match(metaContent, /@version\s+0\.8\.5[3-9]/, "meta.js version must be >= 0.8.53");
+  assert.match(readmeContent, /0\.8\.5[3-9]/, "README.md version must be >= 0.8.53");
+
+  // 2. Default disabled state
+  assert.ok(
+    scriptContent.includes("let _wheelAutoScroll = false;"),
+    "auto-scroll must default to disabled (false)"
+  );
+
+  // 3. Auto-scroll UI controls & Space key shortcut
+  assert.ok(
+    scriptContent.includes(".wecom-wheel-autoscroll-btn") &&
+    scriptContent.includes("toggleWheelAutoScroll()"),
+    "DOM tip bar must render .wecom-wheel-autoscroll-btn with toggle action"
+  );
+  assert.ok(
+    scriptContent.includes('event.code === "Space" || event.key === " "') &&
+    scriptContent.includes("toggleWheelAutoScroll();"),
+    "Space key listener must toggle auto-scroll when wheel HUD is visible"
+  );
+
+  // 4. Reset & cleanup on open and close
+  assert.ok(
+    scriptContent.includes("openWheelHud") &&
+    scriptContent.includes("closeWheelHud"),
+    "openWheelHud and closeWheelHud must manage lifecycle"
+  );
+  assert.ok(
+    scriptContent.includes("stopWheelAutoScroll();"),
+    "stopWheelAutoScroll must be called on closeWheelHud to clear active timers"
+  );
+});
