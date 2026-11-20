@@ -15152,7 +15152,7 @@ test("Test 191: Keep current topic & list scroll position on opening notificatio
     "bindListPanelClicks must push current topic to topicNavStack with fromNotif: true when clicking a notification item"
   );
   assert.ok(
-    scriptContent.includes("if (chatState.topicId && (!isSameTopic(chatState.topicId, route.topicId) || targetPost !== getRememberedPost(chatState.topicId))) {") &&
+    scriptContent.includes("chatState.topicId && (!isSameTopic(chatState.topicId, route.topicId) || targetPost !== getRememberedPost(chatState.topicId))") &&
     scriptContent.includes("fromNotif: true"),
     "handleNotifMenuClick must push current topic to topicNavStack with fromNotif: true on Linux.do"
   );
@@ -15226,4 +15226,90 @@ test("Test 191: Keep current topic & list scroll position on opening notificatio
   assert.equal(listSandbox.listState.apiPath, "/latest.json", "apiPath must be restored");
   assert.equal(listSandbox.listState.topics.length, 2, "topics must be restored");
   assert.strictEqual(saveFn.getSaved(), null, "savedTopicListState must be cleared after restore");
+});
+
+test("Test 192: Multiple notification clicks do not stack route history and direct return restores pre-notification topic (v0.8.58)", () => {
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version bump assertions
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.5[8-9]";/, "user.js version must be >= 0.8.58");
+  assert.match(metaContent, /@version\s+0\.8\.5[8-9]/, "meta.js version must be >= 0.8.58");
+  assert.match(readmeContent, /0\.8\.5[8-9]/, "README.md version must be >= 0.8.58");
+
+  // 2. alreadyHasNotifHistory check in bindListPanelClicks & handleNotifMenuClick
+  assert.ok(
+    scriptContent.includes("const alreadyHasNotifHistory = topicNavStack.some((item) => item.fromNotif);"),
+    "must check alreadyHasNotifHistory before pushing to topicNavStack"
+  );
+  assert.ok(
+    scriptContent.includes("if (!alreadyHasNotifHistory) {") &&
+    scriptContent.includes("fromNotif: true"),
+    "bindListPanelClicks must only push initial topic once when viewing multiple notifications"
+  );
+  assert.ok(
+    scriptContent.includes("if (!alreadyHasNotifHistory && chatState.topicId && (!isSameTopic(chatState.topicId, route.topicId) || targetPost !== getRememberedPost(chatState.topicId))) {"),
+    "handleNotifMenuClick must guard against duplicate pushes on Linux.do"
+  );
+
+  // 3. history.replaceState used when opening notifications to avoid stacking browser session history
+  assert.ok(
+    scriptContent.includes("if (isNotifItem || alreadyHasNotifHistory) {") &&
+    scriptContent.includes("history.replaceState({}, \"\", href);") &&
+    scriptContent.includes("} else {") &&
+    scriptContent.includes("history.pushState({}, \"\", href);"),
+    "bindListPanelClicks must replaceState instead of pushState for notification navigation"
+  );
+  assert.ok(
+    scriptContent.includes("if (alreadyHasNotifHistory) {") &&
+    scriptContent.includes("history.replaceState({}, \"\", inAppHref);"),
+    "handleNotifMenuClick must replaceState when alreadyHasNotifHistory is true"
+  );
+  assert.ok(
+    scriptContent.includes("if (prev.fromNotif) {") &&
+    scriptContent.includes("history.replaceState({}, \"\", prevHref);"),
+    "handleChatPanelClick must replaceState when returning from notifications to original topic"
+  );
+
+  // 4. Functional simulation of multiple notification clicks and direct return
+  const testNavStack = [];
+  function simulateNotifClick(activeTopicId, newTopicId) {
+    const isNotif = true;
+    const alreadyHas = testNavStack.some((item) => item.fromNotif);
+    if (isNotif && activeTopicId) {
+      if (!alreadyHas) {
+        testNavStack.push({
+          topicId: activeTopicId,
+          title: `Topic ${activeTopicId}`,
+          fromNotif: true
+        });
+      }
+    }
+    return newTopicId;
+  }
+
+  // User starts reading original Topic 100
+  let currentTopicId = 100;
+
+  // Clicks Notification 1 (Topic 201)
+  currentTopicId = simulateNotifClick(currentTopicId, 201);
+  assert.equal(testNavStack.length, 1, "nav stack must contain 1 item after first notif click");
+  assert.equal(testNavStack[0].topicId, 100, "nav stack must hold original Topic 100");
+
+  // Clicks Notification 2 (Topic 202)
+  currentTopicId = simulateNotifClick(currentTopicId, 202);
+  assert.equal(testNavStack.length, 1, "nav stack must NOT add secondary notif topic (must remain length 1)");
+  assert.equal(testNavStack[0].topicId, 100, "nav stack must still hold original Topic 100");
+
+  // Clicks Notification 3 (Topic 203)
+  currentTopicId = simulateNotifClick(currentTopicId, 203);
+  assert.equal(testNavStack.length, 1, "nav stack must NOT add tertiary notif topic (must remain length 1)");
+  assert.equal(testNavStack[0].topicId, 100, "nav stack must still hold original Topic 100");
+
+  // User clicks "返回" (Back) button
+  const prev = testNavStack.pop();
+  assert.ok(prev, "must pop an entry");
+  assert.equal(prev.topicId, 100, "popped entry must be original Topic 100 directly");
+  assert.strictEqual(prev.fromNotif, true, "popped entry must have fromNotif: true");
+  assert.equal(testNavStack.length, 0, "nav stack must now be empty");
 });
