@@ -15359,13 +15359,13 @@ test("Test 194: Cloudflare challenge resilience, token cleanup, list auto-recove
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
   // 1. Version bump assertions
-  assert.match(userContent, /const SCRIPT_VERSION = "0\.8\.60"/, "user.js version must be 0.8.60");
-  assert.match(metaContent, /@version\s+0\.8\.60/, "meta.js version must be 0.8.60");
-  assert.match(readmeContent, /0\.8\.60/, "README.md version must be 0.8.60");
+  assert.match(userContent, /const SCRIPT_VERSION = "0\.8\.(6[0-9]|[7-9]\d)"/, "user.js version must be >= 0.8.60");
+  assert.match(metaContent, /@version\s+0\.8\.(6[0-9]|[7-9]\d)/, "meta.js version must be >= 0.8.60");
+  assert.match(readmeContent, /0\.8\.(6[0-9]|[7-9]\d)/, "README.md version must be >= 0.8.60");
 
   // 2. cleanCloudflareUrlParams cleans _cf_chl params
   assert.ok(
-    userContent.includes("function cleanCloudflareUrlParams()"),
+    userContent.includes("function cleanCloudflareUrlParams"),
     "cleanCloudflareUrlParams function must be defined"
   );
   assert.ok(
@@ -15413,5 +15413,55 @@ test("Test 194: Cloudflare challenge resilience, token cleanup, list auto-recove
     userContent.includes("if (IS_LINUXDO)") &&
     userContent.includes("setupCfChallengeMonitor();"),
     "bootstrap must initialize setupCfChallengeMonitor for Linux.do"
+  );
+});
+
+test("Test 195: Cloudflare Turnstile blob worker pending loop prevention via URL token preservation during active challenge & native challenge unmasking (v0.8.61)", () => {
+  const userContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.user.js"), "utf-8");
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version bump assertions
+  assert.match(userContent, /const SCRIPT_VERSION = "0\.8\.61"/, "user.js version must be 0.8.61");
+  assert.match(metaContent, /@version\s+0\.8\.61/, "meta.js version must be 0.8.61");
+  assert.match(readmeContent, /0\.8\.61/, "README.md version must be 0.8.61");
+
+  // 2. cleanCloudflareUrlParams guards against deleting tokens while isCfChallengeActive()
+  assert.ok(
+    userContent.includes("function cleanCloudflareUrlParams(force = false)"),
+    "cleanCloudflareUrlParams must accept force parameter"
+  );
+  assert.ok(
+    userContent.includes("if (!force && isCfChallengeActive()) return;"),
+    "cleanCloudflareUrlParams must not delete runtime challenge tokens while isCfChallengeActive() is true"
+  );
+
+  // 3. guardCloudflareChallengeForm does not tamper with form.action
+  assert.ok(
+    !userContent.includes('form.action = formUrl.toString();'),
+    "guardCloudflareChallengeForm must NEVER tamper with challenge form action"
+  );
+
+  // 4. CSS unmasks Cloudflare challenge containers and iframes from LOCK_CLASS hiding
+  assert.ok(
+    userContent.includes(".cf-turnstile") &&
+    userContent.includes("iframe[src*='challenges.cloudflare.com']") &&
+    userContent.includes("z-index: 2147483647 !important;"),
+    "CSS must exempt Cloudflare challenge containers and iframes from being hidden"
+  );
+
+  // 5. _applyTheme unmasks native challenge screen when Discourse is not yet mounted
+  assert.ok(
+    userContent.includes("if (IS_LINUXDO && isCfChallengeActive())") &&
+    userContent.includes("if (!hasDiscourseDom)") &&
+    userContent.includes("document.documentElement.classList.remove(ROOT_CLASS, LOCK_CLASS, \"wecom-topic-open\");"),
+    "_applyTheme must stand down and unmask native challenge if Discourse has not loaded"
+  );
+
+  // 6. bootstrap avoids premature token stripping
+  assert.ok(
+    userContent.includes("if (!isCfChallengeActive()) {\n      cleanCloudflareUrlParams();\n    }") ||
+    userContent.includes("if (!isCfChallengeActive()) {\r\n      cleanCloudflareUrlParams();\r\n    }"),
+    "bootstrap must only clean URL parameters if no challenge is active"
   );
 });

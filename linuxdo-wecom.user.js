@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.60
+// @version      0.8.61
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -3816,10 +3816,32 @@
     .${ROOT_CLASS}.${LOCK_CLASS} [class*='VerificationModal'],
     .${ROOT_CLASS}.${LOCK_CLASS} [class*='Verification-dialog'],
     .${ROOT_CLASS}.${LOCK_CLASS} .yidun_modal,
-    .${ROOT_CLASS}.${LOCK_CLASS} .geetest_holder {
+    .${ROOT_CLASS}.${LOCK_CLASS} .geetest_holder,
+    #challenge-stage,
+    #challenge-running,
+    #challenge-form,
+    #cf-wrapper,
+    .cf-browser-verification,
+    .cf-turnstile-wrapper,
+    .cf-turnstile,
+    iframe[src*='challenges.cloudflare.com'],
+    iframe[src*='challenge-platform'],
+    div:has(> iframe[src*='challenges.cloudflare.com']),
+    div:has(> iframe[src*='challenge-platform']),
+    .${ROOT_CLASS}.${LOCK_CLASS} #challenge-stage,
+    .${ROOT_CLASS}.${LOCK_CLASS} #challenge-running,
+    .${ROOT_CLASS}.${LOCK_CLASS} #challenge-form,
+    .${ROOT_CLASS}.${LOCK_CLASS} #cf-wrapper,
+    .${ROOT_CLASS}.${LOCK_CLASS} .cf-browser-verification,
+    .${ROOT_CLASS}.${LOCK_CLASS} .cf-turnstile-wrapper,
+    .${ROOT_CLASS}.${LOCK_CLASS} .cf-turnstile,
+    .${ROOT_CLASS}.${LOCK_CLASS} iframe[src*='challenges.cloudflare.com'],
+    .${ROOT_CLASS}.${LOCK_CLASS} iframe[src*='challenge-platform'],
+    .${ROOT_CLASS}.${LOCK_CLASS} div:has(> iframe[src*='challenges.cloudflare.com']),
+    .${ROOT_CLASS}.${LOCK_CLASS} div:has(> iframe[src*='challenge-platform']) {
       display: block !important;
       visibility: visible !important;
-      z-index: 10000000 !important;
+      z-index: 2147483647 !important;
       pointer-events: auto !important;
       opacity: 1 !important;
     }
@@ -24557,7 +24579,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.60";
+  const SCRIPT_VERSION = "0.8.61";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -40115,13 +40137,16 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     try {
       const title = document.title || "";
       if (/Just a moment\.\.\.|Cloudflare|Attention Required!/i.test(title)) return true;
+      if (typeof lastVisiblePageTitle === "string" && /Just a moment\.\.\.|Cloudflare|Attention Required!/i.test(lastVisiblePageTitle)) return true;
       if (document.getElementById("challenge-stage") ||
           document.getElementById("challenge-running") ||
           document.getElementById("challenge-form") ||
           document.querySelector(".cf-browser-verification") ||
           document.querySelector(".cf-turnstile-wrapper") ||
+          document.querySelector(".cf-turnstile") ||
           document.querySelector("#cf-wrapper") ||
           document.querySelector("iframe[src*='challenges.cloudflare.com']") ||
+          document.querySelector("iframe[src*='challenge-platform']") ||
           document.querySelector("[name='cf-turnstile-response']")) {
         return true;
       }
@@ -40131,9 +40156,12 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     }
   }
 
-  function cleanCloudflareUrlParams() {
+  function cleanCloudflareUrlParams(force = false) {
     try {
       if (typeof window === "undefined" || !location.search) return;
+      // 关键防环：若当前正在 Cloudflare 验证挑战中，绝不可清除 URL 令牌！
+      // 否则 Turnstile Web Worker 将无法获取运行时令牌，导致验证请求一直 pending 并反复刷新页面。
+      if (!force && isCfChallengeActive()) return;
       const url = new URL(location.href);
       let changed = false;
       const toDelete = [];
@@ -40192,20 +40220,14 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       const form = document.getElementById("challenge-form");
       if (form && !form.__wecomGuarded) {
         form.__wecomGuarded = true;
+        // 注意：绝不可篡改 form.action！Cloudflare 服务端校验必须原样提交到目标验证端点。
         const curTopic = (chatState.topicId ? {
           topicId: chatState.topicId,
           postNumber: chatState.targetPostNumber || 0,
           path: location.pathname,
           time: Date.now()
         } : null) || getSavedActiveTopicRoute();
-        if (curTopic && curTopic.path && form.action) {
-          try {
-            const formUrl = new URL(form.action, location.origin);
-            if (formUrl.pathname === "/" && curTopic.path !== "/") {
-              formUrl.pathname = curTopic.path;
-              form.action = formUrl.toString();
-            }
-          } catch {}
+        if (curTopic) {
           recordActiveTopicRoute(curTopic.topicId, curTopic.postNumber, curTopic.path);
         }
         form.addEventListener("submit", () => {
@@ -40235,13 +40257,13 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       try { sessionStorage.setItem("wecom_cf_in_progress", "1"); } catch {}
     }
     cfMonitorTimer = setInterval(() => {
-      cleanCloudflareUrlParams();
       guardCloudflareChallengeForm();
       const isNowActive = isCfChallengeActive();
       if (wasCfActiveBefore && !isNowActive) {
         wasCfActiveBefore = false;
         try { sessionStorage.removeItem("wecom_cf_in_progress"); } catch {}
-        cleanCloudflareUrlParams();
+        // 挑战完成后，才执行 URL 参数清理
+        cleanCloudflareUrlParams(true);
         const cfListStatus = document.querySelector(".wecom-list-status-cf");
         if (cfListStatus) {
           loadList(listState.apiPath || "/latest.json", true);
@@ -40254,6 +40276,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       } else if (isNowActive) {
         wasCfActiveBefore = true;
         try { sessionStorage.setItem("wecom_cf_in_progress", "1"); } catch {}
+      } else {
+        cleanCloudflareUrlParams(false);
       }
     }, 1500);
   }
@@ -49122,6 +49146,21 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   }
 
   function _applyTheme() {
+    if (IS_LINUXDO && isCfChallengeActive()) {
+      const hasDiscourseDom = Boolean(
+        document.getElementById("main-outlet") ||
+        document.querySelector(".topic-post") ||
+        document.querySelector(".d-header") ||
+        document.getElementById("site-logo") ||
+        (typeof window.Discourse !== "undefined")
+      );
+      if (!hasDiscourseDom) {
+        // 全页处于 Cloudflare 人机验证盾阶段：彻底放行原生验证界面，避免企业微信外壳遮挡
+        document.documentElement.classList.remove(ROOT_CLASS, LOCK_CLASS, "wecom-topic-open");
+        removePanels();
+        return;
+      }
+    }
     cleanCloudflareUrlParams();
     lastAppliedHref = window.location.pathname + window.location.search;
     if (otherThemeActive()) {
@@ -49799,9 +49838,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   function bootstrap() {
     if (isEmbeddedSubframe()) return;
-    cleanCloudflareUrlParams();
     if (IS_LINUXDO) {
       setupCfChallengeMonitor();
+    }
+    if (!isCfChallengeActive()) {
+      cleanCloudflareUrlParams();
     }
     if (!document.documentElement) {
       setTimeout(bootstrap, 0);
