@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.59
+// @version      0.8.60
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -1349,6 +1349,20 @@
       ...options,
       headers
     });
+    const contentType = resp.headers.get("content-type") || "";
+    const isHtml = contentType.includes("text/html");
+    const isCfMitigated = resp.headers.has("cf-mitigated") || resp.headers.has("cf-ray");
+    const isCfActive = typeof isCfChallengeActive === "function" ? isCfChallengeActive() : false;
+    const isCfChallenge = (resp.status === 403 || resp.status === 429 || resp.status === 503) &&
+      (isHtml || isCfMitigated || isCfActive);
+
+    if (isCfChallenge || (isHtml && !resp.ok)) {
+      rateLimitCooldownUntil = Date.now() + 15000;
+      const err = new Error(`触发 Cloudflare 人机验证盾 (HTTP ${resp.status})`);
+      err.status = resp.status;
+      err.isCloudflare = true;
+      throw err;
+    }
     if (resp.status === 429) {
       rateLimitCooldownUntil = Date.now() + 15000;
       const err = new Error("HTTP 429 (访问频率受限)");
@@ -1361,8 +1375,7 @@
       err.status = resp.status;
       throw err;
     }
-    const contentType = resp.headers.get("content-type") || "";
-    if (contentType.includes("text/html")) {
+    if (isHtml) {
       rateLimitCooldownUntil = Date.now() + 15000;
       const err = new Error("触发 Cloudflare 人机验证盾");
       err.status = 429;
@@ -24544,7 +24557,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.59";
+  const SCRIPT_VERSION = "0.8.60";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -35603,7 +35616,36 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       console.error("[linuxdo-wecom] list load failed", { apiPath, error });
       const body = document.querySelector(".wecom-list-body");
       const reason = error instanceof Error ? error.message : String(error);
-      if (body) body.innerHTML = `<div class="wecom-list-status">列表加载失败：${escapeHtml(reason)}</div>`;
+      const isCf = IS_LINUXDO && (
+        Boolean(error && (error.isCloudflare || error.status === 403 || error.status === 429)) ||
+        (typeof isCfChallengeActive === "function" && isCfChallengeActive()) ||
+        Boolean(document.querySelector("iframe[src*='challenges.cloudflare.com']"))
+      );
+      if (body) {
+        if (isCf) {
+          body.innerHTML = `
+            <div class="wecom-list-status wecom-list-status-cf is-clickable" style="padding:16px 12px;text-align:center;line-height:1.6;">
+              <div style="font-weight:600;margin-bottom:4px;color:var(--wc-text);">🛡️ 正在等待 Cloudflare 人机验证</div>
+              <div style="font-size:12px;color:var(--wc-text-3);margin-bottom:8px;">正在等待验证通过，若长时间未恢复可点击重试</div>
+              <button type="button" class="wecom-list-retry-btn" style="padding:4px 12px;background:var(--wc-brand);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">立即重试</button>
+            </div>`;
+          const retryBtn = body.querySelector(".wecom-list-retry-btn") || body.querySelector(".wecom-list-status");
+          if (retryBtn) {
+            retryBtn.onclick = () => {
+              loadList(apiPath, true);
+            };
+          }
+          clearTimeout(listState.cfRetryTimer);
+          listState.cfRetryTimer = setTimeout(() => {
+            if ((typeof isCfChallengeActive !== "function" || !isCfChallengeActive()) &&
+                normalizeListApiPath(listState.loadedApiPath) !== normalizeListApiPath(apiPath)) {
+              loadList(apiPath, true);
+            }
+          }, 3000);
+        } else {
+          body.innerHTML = `<div class="wecom-list-status">列表加载失败：${escapeHtml(reason)}</div>`;
+        }
+      }
     } finally {
       if (requestSerial === listState.requestSerial) listState.loading = false;
     }
@@ -40079,13 +40121,141 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           document.querySelector(".cf-browser-verification") ||
           document.querySelector(".cf-turnstile-wrapper") ||
           document.querySelector("#cf-wrapper") ||
-          document.querySelector("iframe[src*='challenges.cloudflare.com']")) {
+          document.querySelector("iframe[src*='challenges.cloudflare.com']") ||
+          document.querySelector("[name='cf-turnstile-response']")) {
         return true;
       }
       return false;
     } catch {
       return false;
     }
+  }
+
+  function cleanCloudflareUrlParams() {
+    try {
+      if (typeof window === "undefined" || !location.search) return;
+      const url = new URL(location.href);
+      let changed = false;
+      const toDelete = [];
+      url.searchParams.forEach((_, key) => {
+        if (key.startsWith("_cf_chl_") || key.startsWith("__cf_chl_") || key === "cf_clearance" || key === "_cf_chl_opt") {
+          toDelete.push(key);
+        }
+      });
+      for (const key of toDelete) {
+        url.searchParams.delete(key);
+        changed = true;
+      }
+      if (changed) {
+        const cleanPath = url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : "") + url.hash;
+        window.history.replaceState(window.history.state, "", cleanPath);
+      }
+    } catch { /* ignore */ }
+  }
+
+  const WECOM_ACTIVE_TOPIC_ROUTE_KEY = "wecom_active_topic_route";
+  function recordActiveTopicRoute(topicId, postNumber, pathname) {
+    if (!IS_LINUXDO) return;
+    try {
+      if (!topicId) return;
+      sessionStorage.setItem(WECOM_ACTIVE_TOPIC_ROUTE_KEY, JSON.stringify({
+        topicId: String(topicId),
+        postNumber: Number(postNumber) || 0,
+        path: pathname || location.pathname,
+        time: Date.now()
+      }));
+    } catch { /* ignore */ }
+  }
+
+  function getSavedActiveTopicRoute() {
+    if (!IS_LINUXDO) return null;
+    try {
+      const raw = sessionStorage.getItem(WECOM_ACTIVE_TOPIC_ROUTE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.topicId && Date.now() - (parsed.time || 0) < 60000) {
+        return parsed;
+      }
+    } catch { /* ignore */ }
+    return null;
+  }
+
+  function clearActiveTopicRoute() {
+    try {
+      sessionStorage.removeItem(WECOM_ACTIVE_TOPIC_ROUTE_KEY);
+    } catch { /* ignore */ }
+  }
+
+  function guardCloudflareChallengeForm() {
+    if (!IS_LINUXDO) return;
+    try {
+      const form = document.getElementById("challenge-form");
+      if (form && !form.__wecomGuarded) {
+        form.__wecomGuarded = true;
+        const curTopic = (chatState.topicId ? {
+          topicId: chatState.topicId,
+          postNumber: chatState.targetPostNumber || 0,
+          path: location.pathname,
+          time: Date.now()
+        } : null) || getSavedActiveTopicRoute();
+        if (curTopic && curTopic.path && form.action) {
+          try {
+            const formUrl = new URL(form.action, location.origin);
+            if (formUrl.pathname === "/" && curTopic.path !== "/") {
+              formUrl.pathname = curTopic.path;
+              form.action = formUrl.toString();
+            }
+          } catch {}
+          recordActiveTopicRoute(curTopic.topicId, curTopic.postNumber, curTopic.path);
+        }
+        form.addEventListener("submit", () => {
+          try {
+            sessionStorage.setItem("wecom_cf_in_progress", "1");
+          } catch {}
+          const t = (chatState.topicId ? {
+            topicId: chatState.topicId,
+            postNumber: chatState.targetPostNumber || 0,
+            path: location.pathname,
+            time: Date.now()
+          } : null) || getSavedActiveTopicRoute();
+          if (t) {
+            recordActiveTopicRoute(t.topicId, t.postNumber, t.path);
+          }
+        });
+      }
+    } catch { /* ignore */ }
+  }
+
+  let cfMonitorTimer = null;
+  let wasCfActiveBefore = false;
+  function setupCfChallengeMonitor() {
+    if (!IS_LINUXDO || cfMonitorTimer) return;
+    wasCfActiveBefore = isCfChallengeActive();
+    if (wasCfActiveBefore) {
+      try { sessionStorage.setItem("wecom_cf_in_progress", "1"); } catch {}
+    }
+    cfMonitorTimer = setInterval(() => {
+      cleanCloudflareUrlParams();
+      guardCloudflareChallengeForm();
+      const isNowActive = isCfChallengeActive();
+      if (wasCfActiveBefore && !isNowActive) {
+        wasCfActiveBefore = false;
+        try { sessionStorage.removeItem("wecom_cf_in_progress"); } catch {}
+        cleanCloudflareUrlParams();
+        const cfListStatus = document.querySelector(".wecom-list-status-cf");
+        if (cfListStatus) {
+          loadList(listState.apiPath || "/latest.json", true);
+        }
+        const cfChatError = document.querySelector(".wecom-chat-error[data-error-type='rate-limit']");
+        if (cfChatError && chatState.topicId) {
+          deleteCachedTopic(chatState.topicId);
+          loadTopic(chatState.topicId, true);
+        }
+      } else if (isNowActive) {
+        wasCfActiveBefore = true;
+        try { sessionStorage.setItem("wecom_cf_in_progress", "1"); } catch {}
+      }
+    }, 1500);
   }
 
   function setupCfPopupAutoClose() {
@@ -40308,8 +40478,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     const body = document.querySelector(".wecom-chat-body");
     if (!body) return;
     const msg = err instanceof Error ? err.message : String(err || "加载失败");
-    const isRateLimitOrCf = (err && (err.status === 429 || err.isRateLimit || err.isCloudflare)) ||
-      /429|cloudflare|人机验证|频率/i.test(msg);
+    const isRateLimitOrCf = (err && (err.status === 429 || err.status === 403 || err.isRateLimit || err.isCloudflare)) ||
+      /429|403|cloudflare|人机验证|频率/i.test(msg);
 
     let titleText = "话题加载失败";
     let descText = `${msg}，可能无权限或已被删除`;
@@ -45228,6 +45398,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       : 0;
     const optionPost = Number(target?.postNumber) || 0;
     const explicitPost = optionPost || routePost || 0;
+    recordActiveTopicRoute(topicId, explicitPost, location.pathname);
 
     const initialBody = document.querySelector(".wecom-chat-body");
     const hasRenderedMsgs = Boolean(
@@ -45582,6 +45753,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         }
         syncChatFloatNav(body);
         setTimeout(() => syncChatFloatNav(body), 150);
+        recordActiveTopicRoute(topicId, explicitPost || openPost || 1, location.pathname);
       }
       syncListActive();
       syncTopicBackBtn();
@@ -48950,6 +49122,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   }
 
   function _applyTheme() {
+    cleanCloudflareUrlParams();
     lastAppliedHref = window.location.pathname + window.location.search;
     if (otherThemeActive()) {
       console.warn("[linuxdo-wecom] 检测到 IDEA / 飞书 / 钉钉主题脚本已启用，企业微信主题自动避让。请只保留其中一个。");
@@ -49085,6 +49258,22 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       }
       syncNewPostsFromDom();
     } else {
+      if (IS_LINUXDO && isHome) {
+        const savedRoute = getSavedActiveTopicRoute();
+        const hasCfParam = Boolean(location.search && (location.search.includes("_cf_chl") || location.search.includes("cf_clearance")));
+        let wasCfInProgress = false;
+        try {
+          wasCfInProgress = sessionStorage.getItem("wecom_cf_in_progress") === "1";
+        } catch {}
+        if (savedRoute && (hasCfParam || wasCfInProgress || (Date.now() - savedRoute.time < 35000 && !chatState.topicId))) {
+          try { sessionStorage.removeItem("wecom_cf_in_progress"); } catch {}
+          console.info("[linuxdo-wecom] 检测到 Cloudflare 盾后页面回到首页，正在自动恢复此前浏览的话题:", savedRoute);
+          cleanCloudflareUrlParams();
+          window.history.replaceState(null, "", savedRoute.path);
+          scheduleApply();
+          return;
+        }
+      }
       const currentListApi = listApiForPath(pathname, location.search);
       if (normalizeListApiPath(listState.loadedApiPath) !== normalizeListApiPath(currentListApi) || !listState.topics.length) {
         loadList(currentListApi, false);
@@ -49610,6 +49799,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   function bootstrap() {
     if (isEmbeddedSubframe()) return;
+    cleanCloudflareUrlParams();
+    if (IS_LINUXDO) {
+      setupCfChallengeMonitor();
+    }
     if (!document.documentElement) {
       setTimeout(bootstrap, 0);
       return;

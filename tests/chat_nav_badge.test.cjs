@@ -14898,9 +14898,9 @@ test("Test 185: Non-Reddit collapse btn fully hidden, wheel bottom cards use CSS
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
   // 1. Version bump
-  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.5[2-9]";/, "user.js version must be >= 0.8.52");
-  assert.match(metaContent, /@version\s+0\.8\.5[2-9]/, "meta.js version must be >= 0.8.52");
-  assert.match(readmeContent, /0\.8\.5[2-9]/, "README.md version must be >= 0.8.52");
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.(5[2-9]|[6-9]\d)";/, "user.js version must be >= 0.8.52");
+  assert.match(metaContent, /@version\s+0\.8\.(5[2-9]|[6-9]\d)/, "meta.js version must be >= 0.8.52");
+  assert.match(readmeContent, /0\.8\.(5[2-9]|[6-9]\d)/, "README.md version must be >= 0.8.52");
 
   // 2. Non-Reddit collapse buttons + tree SVG fully hidden via extended CSS selector
   assert.ok(
@@ -14947,9 +14947,9 @@ test("Test 187: Alt+wheel topic preview HUD supports toggling auto-scroll, defau
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
   // 1. Version bump
-  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.5[3-9]";/, "user.js version must be >= 0.8.53");
-  assert.match(metaContent, /@version\s+0\.8\.5[3-9]/, "meta.js version must be >= 0.8.53");
-  assert.match(readmeContent, /0\.8\.5[3-9]/, "README.md version must be >= 0.8.53");
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.(5[2-9]|[6-9]\d)";/, "user.js version must be >= 0.8.53");
+  assert.match(metaContent, /@version\s+0\.8\.(5[2-9]|[6-9]\d)/, "meta.js version must be >= 0.8.53");
+  assert.match(readmeContent, /0\.8\.(5[2-9]|[6-9]\d)/, "README.md version must be >= 0.8.53");
 
   // 2. Default disabled state
   assert.ok(
@@ -14986,9 +14986,9 @@ test("Test 188: Same-platform topic links open in-place without page navigation,
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
   // 1. Version bump
-  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.5[4-9]";/, "user.js version must be >= 0.8.54");
-  assert.match(metaContent, /@version\s+0\.8\.5[4-9]/, "meta.js version must be >= 0.8.54");
-  assert.match(readmeContent, /0\.8\.5[4-9]/, "README.md version must be >= 0.8.54");
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.(5[2-9]|[6-9]\d)";/, "user.js version must be >= 0.8.54");
+  assert.match(metaContent, /@version\s+0\.8\.(5[2-9]|[6-9]\d)/, "meta.js version must be >= 0.8.54");
+  assert.match(readmeContent, /0\.8\.(5[2-9]|[6-9]\d)/, "README.md version must be >= 0.8.54");
 
   // 2. Navigation stack and same-platform host detection
   assert.ok(
@@ -15027,9 +15027,9 @@ test("Test 189: Same-platform user profile links open in-place as profile card w
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
   // 1. Version bump assertions
-  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.5[5-9]";/, "user.js version must be >= 0.8.55");
-  assert.match(metaContent, /@version\s+0\.8\.5[5-9]/, "meta.js version must be >= 0.8.55");
-  assert.match(readmeContent, /0\.8\.5[5-9]/, "README.md version must be >= 0.8.55");
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.(5[2-9]|[6-9]\d)";/, "user.js version must be >= 0.8.55");
+  assert.match(metaContent, /@version\s+0\.8\.(5[2-9]|[6-9]\d)/, "meta.js version must be >= 0.8.55");
+  assert.match(readmeContent, /0\.8\.(5[2-9]|[6-9]\d)/, "README.md version must be >= 0.8.55");
 
   // 2. parseSamePlatformMemberTarget implementation
   assert.ok(
@@ -15058,9 +15058,9 @@ test("Test 190: V2EX reply silent failure prevention with fresh once retry & cle
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
   // 1. Version bump assertions
-  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.5[6-9]";/, "user.js version must be >= 0.8.56");
-  assert.match(metaContent, /@version\s+0\.8\.5[6-9]/, "meta.js version must be >= 0.8.56");
-  assert.match(readmeContent, /0\.8\.5[6-9]/, "README.md version must be >= 0.8.56");
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.(5[2-9]|[6-9]\d)";/, "user.js version must be >= 0.8.56");
+  assert.match(metaContent, /@version\s+0\.8\.(5[2-9]|[6-9]\d)/, "meta.js version must be >= 0.8.56");
+  assert.match(readmeContent, /0\.8\.(5[2-9]|[6-9]\d)/, "README.md version must be >= 0.8.56");
 
   // 2. replyToPost keeps editor clean; submitComposer prepends mention to raw at send time
   assert.ok(
@@ -15098,9 +15098,9 @@ test("Test 191: Keep current topic & list scroll position on opening notificatio
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
   // 1. Version bump assertions
-  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.5[7-9]";/, "user.js version must be >= 0.8.57");
-  assert.match(metaContent, /@version\s+0\.8\.5[7-9]/, "meta.js version must be >= 0.8.57");
-  assert.match(readmeContent, /0\.8\.5[7-9]/, "README.md version must be >= 0.8.57");
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.(5[7-9]|[6-9]\d)";/, "user.js version must be >= 0.8.57");
+  assert.match(metaContent, /@version\s+0\.8\.(5[7-9]|[6-9]\d)/, "meta.js version must be >= 0.8.57");
+  assert.match(readmeContent, /0\.8\.(5[7-9]|[6-9]\d)/, "README.md version must be >= 0.8.57");
 
   // 2. Presence of savedTopicListState, saveCurrentTopicListState and restoreSavedTopicListState
   assert.ok(
@@ -15233,9 +15233,9 @@ test("Test 192: Multiple notification clicks do not stack route history and dire
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
   // 1. Version bump assertions
-  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.5[8-9]";/, "user.js version must be >= 0.8.58");
-  assert.match(metaContent, /@version\s+0\.8\.5[8-9]/, "meta.js version must be >= 0.8.58");
-  assert.match(readmeContent, /0\.8\.5[8-9]/, "README.md version must be >= 0.8.58");
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.(5[8-9]|[6-9]\d)";/, "user.js version must be >= 0.8.58");
+  assert.match(metaContent, /@version\s+0\.8\.(5[8-9]|[6-9]\d)/, "meta.js version must be >= 0.8.58");
+  assert.match(readmeContent, /0\.8\.(5[8-9]|[6-9]\d)/, "README.md version must be >= 0.8.58");
 
   // 2. alreadyHasNotifHistory check in bindListPanelClicks & handleNotifMenuClick
   assert.ok(
@@ -15319,9 +15319,9 @@ test("Test 193: User tags manager supports clicking username to open profile car
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
   // 1. Version bump assertions
-  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.5[9]|\d{3,}"/, "user.js version must be >= 0.8.59");
-  assert.match(metaContent, /@version\s+0\.8\.5[9]|\d{3,}/, "meta.js version must be >= 0.8.59");
-  assert.match(readmeContent, /0\.8\.5[9]|\d{3,}/, "README.md version must be >= 0.8.59");
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.(59|[6-9]\d)";/, "user.js version must be >= 0.8.59");
+  assert.match(metaContent, /@version\s+0\.8\.(59|[6-9]\d)/, "meta.js version must be >= 0.8.59");
+  assert.match(readmeContent, /0\.8\.(59|[6-9]\d)/, "README.md version must be >= 0.8.59");
 
   // 2. User info container rendered with data-user-card and accessible button attributes
   assert.ok(
@@ -15350,5 +15350,68 @@ test("Test 193: User tags manager supports clicking username to open profile car
   assert.ok(
     scriptContent.includes(".wecom-tags-user-info:hover .wecom-tags-user-name {\n      color: #1890ff;\n    }"),
     "must style username color on hovering .wecom-tags-user-info"
+  );
+});
+
+test("Test 194: Cloudflare challenge resilience, token cleanup, list auto-recovery & prevent home kickback (v0.8.60)", () => {
+  const userContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.user.js"), "utf-8");
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version bump assertions
+  assert.match(userContent, /const SCRIPT_VERSION = "0\.8\.60"/, "user.js version must be 0.8.60");
+  assert.match(metaContent, /@version\s+0\.8\.60/, "meta.js version must be 0.8.60");
+  assert.match(readmeContent, /0\.8\.60/, "README.md version must be 0.8.60");
+
+  // 2. cleanCloudflareUrlParams cleans _cf_chl params
+  assert.ok(
+    userContent.includes("function cleanCloudflareUrlParams()"),
+    "cleanCloudflareUrlParams function must be defined"
+  );
+  assert.ok(
+    userContent.includes('key.startsWith("_cf_chl_")') &&
+    userContent.includes('key === "cf_clearance"'),
+    "cleanCloudflareUrlParams must detect and delete Cloudflare tracking parameters"
+  );
+
+  // 3. api() flags Cloudflare challenge on 403/429/503 HTML or CF headers
+  assert.ok(
+    userContent.includes('const isHtml = contentType.includes("text/html");') &&
+    userContent.includes('const isCfChallenge = (resp.status === 403 || resp.status === 429 || resp.status === 503) &&') &&
+    userContent.includes("err.isCloudflare = true;"),
+    "api() must identify 403/429/503 HTML as Cloudflare challenge with isCloudflare: true"
+  );
+
+  // 4. loadList handles Cloudflare and renders friendly status with auto-retry
+  assert.ok(
+    userContent.includes(".wecom-list-status-cf") &&
+    userContent.includes("🛡️ 正在等待 Cloudflare 人机验证") &&
+    userContent.includes("listState.cfRetryTimer = setTimeout("),
+    "loadList must show friendly CF status and schedule auto-retry"
+  );
+
+  // 5. Active topic tracking & home restoration
+  assert.ok(
+    userContent.includes("function recordActiveTopicRoute(topicId, postNumber, pathname)") &&
+    userContent.includes("function getSavedActiveTopicRoute()") &&
+    userContent.includes('const WECOM_ACTIVE_TOPIC_ROUTE_KEY = "wecom_active_topic_route";'),
+    "must track active topic route in sessionStorage"
+  );
+  assert.ok(
+    userContent.includes("[linuxdo-wecom] 检测到 Cloudflare 盾后页面回到首页，正在自动恢复此前浏览的话题") &&
+    userContent.includes('window.history.replaceState(null, "", savedRoute.path);'),
+    "_applyTheme must restore saved active topic if redirected to home after Cloudflare challenge"
+  );
+
+  // 6. Challenge form guard and monitor
+  assert.ok(
+    userContent.includes("function guardCloudflareChallengeForm()") &&
+    userContent.includes("function setupCfChallengeMonitor()"),
+    "must define guardCloudflareChallengeForm and setupCfChallengeMonitor"
+  );
+  assert.ok(
+    userContent.includes("if (IS_LINUXDO)") &&
+    userContent.includes("setupCfChallengeMonitor();"),
+    "bootstrap must initialize setupCfChallengeMonitor for Linux.do"
   );
 });
