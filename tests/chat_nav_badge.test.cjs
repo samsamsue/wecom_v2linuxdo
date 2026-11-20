@@ -15092,3 +15092,138 @@ test("Test 190: V2EX reply silent failure prevention with fresh once retry & cle
     "submitV2exReply must verify that reply was actually published and catch silent drops"
   );
 });
+
+test("Test 191: Keep current topic & list scroll position on opening notifications with back button support (v0.8.57)", () => {
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version bump assertions
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.5[7-9]";/, "user.js version must be >= 0.8.57");
+  assert.match(metaContent, /@version\s+0\.8\.5[7-9]/, "meta.js version must be >= 0.8.57");
+  assert.match(readmeContent, /0\.8\.5[7-9]/, "README.md version must be >= 0.8.57");
+
+  // 2. Presence of savedTopicListState, saveCurrentTopicListState and restoreSavedTopicListState
+  assert.ok(
+    scriptContent.includes("let savedTopicListState = null;"),
+    "must define savedTopicListState"
+  );
+  assert.ok(
+    scriptContent.includes("function saveCurrentTopicListState()"),
+    "must define saveCurrentTopicListState"
+  );
+  assert.ok(
+    scriptContent.includes("function restoreSavedTopicListState()"),
+    "must define restoreSavedTopicListState"
+  );
+
+  // 3. handleNotifNavClick preserves current topic without calling navigateInApp away
+  assert.ok(
+    scriptContent.includes("const inTopic = Boolean(chatState.topicId && document.documentElement.classList.contains(\"wecom-topic-open\"));"),
+    "handleNotifNavClick must check inTopic state"
+  );
+  assert.ok(
+    scriptContent.includes("if (!inTopic && location.pathname !== \"/notifications\")"),
+    "handleNotifNavClick must avoid navigating away if user is in an active topic"
+  );
+
+  // 4. applyWecom guards against renderChatEmpty() when opening notification path with active topic
+  assert.ok(
+    scriptContent.includes("function isNotifPath(path)"),
+    "applyWecom must define isNotifPath helper"
+  );
+  assert.ok(
+    scriptContent.includes("if (!isNotif || !chatState.topicId)") &&
+    scriptContent.includes("document.documentElement.classList.add(\"wecom-topic-open\");"),
+    "applyWecom must maintain wecom-topic-open class on notification path when topic is active"
+  );
+  assert.ok(
+    scriptContent.includes("if (isNotif && chatState.topicId) {") &&
+    scriptContent.includes("// 用户当前正在浏览帖子，打开通知绝不关闭或重置当前聊天窗口") &&
+    scriptContent.includes("syncListActive();") &&
+    scriptContent.includes("return;"),
+    "applyWecom must return early and never call renderChatEmpty when opening notifications while viewing a topic"
+  );
+
+  // 5. Opening notification topic pushes previous topic to topicNavStack with fromNotif: true
+  assert.ok(
+    scriptContent.includes("if (isNotifItem && chatState.topicId) {") &&
+    scriptContent.includes("fromNotif: true") &&
+    scriptContent.includes("topicNavStack.push({"),
+    "bindListPanelClicks must push current topic to topicNavStack with fromNotif: true when clicking a notification item"
+  );
+  assert.ok(
+    scriptContent.includes("if (chatState.topicId && (!isSameTopic(chatState.topicId, route.topicId) || targetPost !== getRememberedPost(chatState.topicId))) {") &&
+    scriptContent.includes("fromNotif: true"),
+    "handleNotifMenuClick must push current topic to topicNavStack with fromNotif: true on Linux.do"
+  );
+
+  // 6. Back button restores saved topic list state and previous topic
+  assert.ok(
+    scriptContent.includes("if (prev.fromNotif) {") &&
+    scriptContent.includes("restoreSavedTopicListState();"),
+    "handleChatPanelClick must call restoreSavedTopicListState() when returning from a notification topic"
+  );
+  assert.ok(
+    scriptContent.includes("handleChatNavClick") &&
+    scriptContent.includes("if (restoreSavedTopicListState())"),
+    "handleChatNavClick must restore saved topic list state when clicking chat rail icon from notifications"
+  );
+
+  // 7. Functional test of saveCurrentTopicListState and restoreSavedTopicListState
+  const listSandbox = {
+    listState: {
+      apiPath: "/latest.json",
+      loadedApiPath: "/latest.json",
+      topics: [{ id: 1, title: "Topic 1" }, { id: 2, title: "Topic 2" }],
+      moreUrl: "/more.json",
+      listMode: "chat",
+      v2exPage: 1,
+      v2exPagePath: "/latest.json",
+      v2exHasMore: false
+    },
+    document: {
+      querySelector: (sel) => {
+        if (sel === ".wecom-list-body") return { scrollTop: 350 };
+        return null;
+      }
+    },
+    renderListRows: () => {},
+    syncListActive: () => {},
+    syncRail: () => {}
+  };
+
+  // Evaluate functions in sandbox
+  const saveFn = new Function("listState", "document", "renderListRows", "syncListActive", "syncRail", `
+    let savedTopicListState = null;
+    ${scriptContent.slice(
+      scriptContent.indexOf("function saveCurrentTopicListState()"),
+      scriptContent.indexOf("function restoreSavedTopicListState()")
+    )}
+    ${scriptContent.slice(
+      scriptContent.indexOf("function restoreSavedTopicListState()"),
+      scriptContent.indexOf("/** 点击左侧「消息」图标：回到顶部 + 刷新会话列表 */")
+    )}
+    return {
+      save: saveCurrentTopicListState,
+      restore: restoreSavedTopicListState,
+      getSaved: () => savedTopicListState
+    };
+  `)(listSandbox.listState, listSandbox.document, listSandbox.renderListRows, listSandbox.syncListActive, listSandbox.syncRail);
+
+  saveFn.save();
+  assert.ok(saveFn.getSaved(), "savedTopicListState must be populated");
+  assert.equal(saveFn.getSaved().scrollTop, 350, "saved scrollTop must match listBody scrollTop");
+  assert.equal(saveFn.getSaved().topics.length, 2, "saved topics length must match");
+
+  // Mutate listState to simulate notifications view
+  listSandbox.listState.apiPath = "/notifications";
+  listSandbox.listState.loadedApiPath = "/notifications";
+  listSandbox.listState.topics = [{ id: 99, title: "Notif 1", isNotif: true }];
+
+  // Restore
+  const restored = saveFn.restore();
+  assert.strictEqual(restored, true, "restoreSavedTopicListState must return true");
+  assert.equal(listSandbox.listState.apiPath, "/latest.json", "apiPath must be restored");
+  assert.equal(listSandbox.listState.topics.length, 2, "topics must be restored");
+  assert.strictEqual(saveFn.getSaved(), null, "savedTopicListState must be cleared after restore");
+});
