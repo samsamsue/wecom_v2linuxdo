@@ -15313,3 +15313,42 @@ test("Test 192: Multiple notification clicks do not stack route history and dire
   assert.strictEqual(prev.fromNotif, true, "popped entry must have fromNotif: true");
   assert.equal(testNavStack.length, 0, "nav stack must now be empty");
 });
+
+test("Test 193: User tags manager supports clicking username to open profile card (v0.8.59)", () => {
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version bump assertions
+  assert.match(scriptContent, /const SCRIPT_VERSION = "0\.8\.5[9]|\d{3,}"/, "user.js version must be >= 0.8.59");
+  assert.match(metaContent, /@version\s+0\.8\.5[9]|\d{3,}/, "meta.js version must be >= 0.8.59");
+  assert.match(readmeContent, /0\.8\.5[9]|\d{3,}/, "README.md version must be >= 0.8.59");
+
+  // 2. User info container rendered with data-user-card and accessible button attributes
+  assert.ok(
+    scriptContent.includes('class="wecom-tags-user-info" data-user-card="${escapeHtml(uname)}" role="button" tabindex="0"'),
+    "user tags manager rows must render .wecom-tags-user-info with data-user-card, role=button and tabindex=0"
+  );
+  assert.ok(
+    scriptContent.includes('title="点击查看 ${escapeHtml(uname)} 的资料卡"'),
+    "user tags manager rows must provide title for profile card trigger"
+  );
+
+  // 3. Event listener bindings invoke openOriginalUserCard on click and keydown
+  assert.ok(
+    scriptContent.includes('listBody.querySelectorAll(".wecom-tags-user-info").forEach(infoEl => {') &&
+    scriptContent.includes('openOriginalUserCard(infoEl, e);'),
+    "renderManagerContent must bind click & keydown on .wecom-tags-user-info to openOriginalUserCard"
+  );
+
+  // 4. #user-card z-index elevation to appear above tags manager dialog (z-index 99999)
+  assert.ok(
+    scriptContent.includes("#user-card,\n    .user-card {\n      z-index: 100005 !important;\n    }"),
+    "#user-card must have z-index 100005 !important to display above tag manager modal"
+  );
+
+  // 5. Interactive hover styling
+  assert.ok(
+    scriptContent.includes(".wecom-tags-user-info:hover .wecom-tags-user-name {\n      color: #1890ff;\n    }"),
+    "must style username color on hovering .wecom-tags-user-info"
+  );
+});

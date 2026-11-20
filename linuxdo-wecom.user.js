@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.58
+// @version      0.8.59
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -4522,7 +4522,11 @@
       color: #C0C4CC;
     }
 
-    /* Discourse 用户卡片内部标签样式 */
+    /* Discourse 用户卡片内部标签样式与层级提升 */
+    #user-card,
+    .user-card {
+      z-index: 100005 !important;
+    }
     #user-card .wecom-member-tags-section,
     .user-card .wecom-member-tags-section {
       margin: 8px 10px 10px;
@@ -4864,6 +4868,17 @@
       align-items: center;
       gap: 8px;
       min-width: 130px;
+      cursor: pointer;
+      border-radius: 6px;
+      padding: 3px 6px;
+      margin: -3px -6px;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .wecom-tags-user-info:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+    html.wecom-dark .wecom-tags-user-info:hover {
+      background: rgba(255, 255, 255, 0.08);
     }
     .wecom-tags-user-avatar {
       width: 28px;
@@ -4883,6 +4898,10 @@
       font-weight: 600;
       color: var(--wc-text, #1A1D24);
       word-break: break-all;
+      transition: color 0.15s ease;
+    }
+    .wecom-tags-user-info:hover .wecom-tags-user-name {
+      color: #1890ff;
     }
     html.wecom-dark .wecom-tags-user-name {
       color: #E4E7EB;
@@ -20137,9 +20156,9 @@
 
         return `
           <div class="wecom-tags-user-row" data-username="${escapeHtml(uname)}">
-            <div class="wecom-tags-user-info">
+            <div class="wecom-tags-user-info" data-user-card="${escapeHtml(uname)}" role="button" tabindex="0" title="点击查看 ${escapeHtml(uname)} 的资料卡">
               <div class="wecom-tags-user-avatar">${escapeHtml(letter)}</div>
-              <span class="wecom-tags-user-name" title="${escapeHtml(uname)}">${escapeHtml(uname)}</span>
+              <span class="wecom-tags-user-name" title="点击查看 ${escapeHtml(uname)} 的资料卡">${escapeHtml(uname)}</span>
             </div>
             <div class="wecom-tags-user-pills">
               ${pills}
@@ -20151,6 +20170,21 @@
           </div>
         `;
       }).join("");
+
+      listBody.querySelectorAll(".wecom-tags-user-info").forEach(infoEl => {
+        infoEl.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          openOriginalUserCard(infoEl, e);
+        });
+        infoEl.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+            openOriginalUserCard(infoEl, e);
+          }
+        });
+      });
 
       listBody.querySelectorAll(".wecom-tags-del-pill-btn").forEach(btn => {
         btn.addEventListener("click", () => {
@@ -24510,7 +24544,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.58";
+  const SCRIPT_VERSION = "0.8.59";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
