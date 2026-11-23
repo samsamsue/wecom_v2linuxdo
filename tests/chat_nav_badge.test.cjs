@@ -15422,9 +15422,9 @@ test("Test 195: Cloudflare Turnstile blob worker pending loop prevention via URL
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
   // 1. Version bump assertions
-  assert.match(userContent, /const SCRIPT_VERSION = "0\.8\.61"/, "user.js version must be 0.8.61");
-  assert.match(metaContent, /@version\s+0\.8\.61/, "meta.js version must be 0.8.61");
-  assert.match(readmeContent, /0\.8\.61/, "README.md version must be 0.8.61");
+  assert.match(userContent, /const SCRIPT_VERSION = "0\.8\.(6[1-9]|[7-9]\d)"/, "user.js version must be >= 0.8.61");
+  assert.match(metaContent, /@version\s+0\.8\.(6[1-9]|[7-9]\d)/, "meta.js version must be >= 0.8.61");
+  assert.match(readmeContent, /0\.8\.(6[1-9]|[7-9]\d)/, "README.md version must be >= 0.8.61");
 
   // 2. cleanCloudflareUrlParams guards against deleting tokens while isCfChallengeActive()
   assert.ok(
@@ -15463,5 +15463,43 @@ test("Test 195: Cloudflare Turnstile blob worker pending loop prevention via URL
     userContent.includes("if (!isCfChallengeActive()) {\n      cleanCloudflareUrlParams();\n    }") ||
     userContent.includes("if (!isCfChallengeActive()) {\r\n      cleanCloudflareUrlParams();\r\n    }"),
     "bootstrap must only clean URL parameters if no challenge is active"
+  );
+});
+
+test("Test 196: Chat bubble headings (h1-h6) styled without large font-size or bolding while distinctly recognizable via left accent border & Markdown level prefix (v0.8.62)", () => {
+  const userContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.user.js"), "utf-8");
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version bump assertions
+  assert.match(userContent, /const SCRIPT_VERSION = "0\.8\.62"/, "user.js version must be 0.8.62");
+  assert.match(metaContent, /@version\s+0\.8\.62/, "meta.js version must be 0.8.62");
+  assert.match(readmeContent, /0\.8\.62/, "README.md version must be 0.8.62");
+
+  // 2. Heading font-size matches normal text (14px) and is not bolded (font-weight: 500)
+  assert.ok(
+    userContent.includes(".wecom-msg-bubble h2,") &&
+    userContent.includes(".wecom-msg-bubble h3,") &&
+    userContent.includes(".wecom-msg-body h2,") &&
+    userContent.includes("font-size: 14px !important;") &&
+    userContent.includes("font-weight: 500 !important;"),
+    "bubble headings must have font-size: 14px !important and font-weight: 500 !important"
+  );
+
+  // 3. Left accent bar for instant visual recognition at a glance
+  assert.ok(
+    userContent.includes("border-left: 3px solid var(--wc-accent, #1a87ff) !important;") &&
+    userContent.includes("padding: 1px 0 1px 8px !important;"),
+    "bubble headings must have a 3px accent left border and padding for clear visual scanning"
+  );
+
+  // 4. Markdown level prefix pseudo-elements (##, ###, etc.) in accent color
+  assert.ok(
+    userContent.includes('.wecom-msg-bubble h2::before,') &&
+    userContent.includes('content: "## ";') &&
+    userContent.includes('.wecom-msg-bubble h3::before,') &&
+    userContent.includes('content: "### ";') &&
+    userContent.includes('color: var(--wc-accent, #1a87ff);'),
+    "bubble headings must display clean Markdown level prefix indicators in accent color"
   );
 });
