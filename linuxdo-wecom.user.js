@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.62
+// @version      0.8.63
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -67,6 +67,8 @@
   const ROOT_CLASS = "wecom-im-theme";
   const LOCK_CLASS = "wecom-locked"; // 仅三栏路由挂载：隐藏原生主内容
   const VIEW_KEY = "linuxdo-wecom-view"; // "im" | "native"
+  const EXTERNAL_NATIVE_KEY = "linuxdo-wecom-external-native"; // "0" = 关闭, "1" / 默认 = 开启 (从搜索/外链进入保持原站视图)
+  const EXTERNAL_SESSION_KEY = "wecom_external_entry_native";   // sessionStorage: "1" = 当前 tab 保持原站, "0" = 当前 tab 用户主动切回 IM
   const LAST_READ_KEY = "linuxdo-wecom-last-read";
   const LAST_READ_MAX_TOPICS = 200;
   const TOPIC_HISTORY_KEY = "linuxdo-wecom-topic-history";
@@ -17712,10 +17714,92 @@
     );
   }
 
+  const SEARCH_ENGINE_REGEX = /(?:^|\.)(?:google\.[a-z.]+|bing\.com|baidu\.com|duckduckgo\.com|sogou\.com|so\.com|haosou\.com|yahoo\.[a-z.]+|yandex\.[a-z.]+|toutiao\.com|ecosia\.org|qwant\.com|startpage\.com|sm\.cn)$/i;
+
+  function isSearchEngineReferrer(ref = typeof document !== "undefined" ? document.referrer : "") {
+    if (!ref) return false;
+    try {
+      const host = new URL(ref).hostname.toLowerCase();
+      return SEARCH_ENGINE_REGEX.test(host);
+    } catch {
+      return false;
+    }
+  }
+
+  function isExternalReferrer(ref = typeof document !== "undefined" ? document.referrer : "") {
+    if (!ref) return false;
+    try {
+      const refUrl = new URL(ref);
+      const refHost = refUrl.hostname.toLowerCase();
+      const curHost = (typeof location !== "undefined" && location.hostname ? location.hostname : "").toLowerCase();
+      if (!refHost) return false;
+      if (refHost === curHost) return false;
+      if (refHost.endsWith("linux.do") && curHost.endsWith("linux.do")) return false;
+      if (refHost.endsWith("v2ex.com") && curHost.endsWith("v2ex.com")) return false;
+      if (refHost.endsWith("juejin.cn") && curHost.endsWith("juejin.cn")) return false;
+      if (refHost.endsWith("zhihu.com") && curHost.endsWith("zhihu.com")) return false;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function isExternalOrSearchEntry() {
+    try {
+      const ref = typeof document !== "undefined" ? document.referrer : "";
+      if (isSearchEngineReferrer(ref) || isExternalReferrer(ref)) return true;
+      if (typeof location !== "undefined" && location.search) {
+        const p = new URLSearchParams(location.search);
+        if (p.has("utm_source") || p.has("utm_medium") || p.has("utm_campaign") || p.has("gclid") || p.has("msclkid") || p.has("fbclid")) {
+          return true;
+        }
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  function isExternalNativeEnabled() {
+    try {
+      return localStorage.getItem(EXTERNAL_NATIVE_KEY) !== "0";
+    } catch {
+      return true;
+    }
+  }
+
+  function setExternalNativeEnabled(on) {
+    try {
+      localStorage.setItem(EXTERNAL_NATIVE_KEY, on ? "1" : "0");
+    } catch { /* ignore */ }
+    syncThemeControls();
+    showToast(on ? "已开启：从搜索/外链进入时保持原站视图" : "已关闭：从搜索/外链进入时保持原站视图");
+  }
+
+  function checkAndInitExternalNativeSession() {
+    try {
+      if (typeof sessionStorage === "undefined") return;
+      const sessionVal = sessionStorage.getItem(EXTERNAL_SESSION_KEY);
+      if (sessionVal === "1" || sessionVal === "0") {
+        return;
+      }
+      if (isExternalNativeEnabled() && isExternalOrSearchEntry()) {
+        sessionStorage.setItem(EXTERNAL_SESSION_KEY, "1");
+      }
+    } catch { /* ignore */ }
+  }
+
   function getViewMode() {
     try {
-      if (typeof location !== "undefined" && new URLSearchParams(location.search).get("wecom_view") === "native") {
-        return "native";
+      if (typeof location !== "undefined") {
+        const param = new URLSearchParams(location.search).get("wecom_view");
+        if (param === "native") return "native";
+        if (param === "im") return "im";
+      }
+      checkAndInitExternalNativeSession();
+      if (typeof sessionStorage !== "undefined" && isExternalNativeEnabled()) {
+        const sessionVal = sessionStorage.getItem(EXTERNAL_SESSION_KEY);
+        if (sessionVal === "1") return "native";
       }
       return localStorage.getItem(VIEW_KEY) === "native" ? "native" : "im";
     } catch {
@@ -17899,7 +17983,7 @@
 
   /** 同步站点 stylesheet、html/body 属性及企业微信自绘面板。 */
   function applySiteColorMode() {
-    if (otherThemeActive()) return;
+    if (otherThemeActive() || getViewMode() === "native") return;
     const dark = isDarkMode();
     const root = document.documentElement;
     const scheme = dark ? "dark" : "light";
@@ -24237,6 +24321,18 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       aiBadge.textContent = configured ? "已配置" : "未配置";
       aiBadge.className = `wecom-menu-state-badge wecom-menu-ai-badge ${configured ? "is-on" : "is-off"}`;
     }
+
+    const extNativeBtn = menu.querySelector(".wecom-menu-toggle-external-native");
+    if (extNativeBtn) {
+      const on = isExternalNativeEnabled();
+      extNativeBtn.classList.remove("is-active");
+      extNativeBtn.setAttribute("aria-checked", on ? "true" : "false");
+      const badge = extNativeBtn.querySelector(".wecom-menu-state-badge");
+      if (badge) {
+        badge.textContent = on ? "已开启" : "已关闭";
+        badge.className = `wecom-menu-state-badge ${on ? "is-on" : "is-off"}`;
+      }
+    }
   }
 
   function bindThemeControls() {
@@ -24374,8 +24470,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       `<div class="wecom-theme-menu-title wecom-theme-menu-divider">AI 助手</div>` +
       `<button type="button" role="menuitem" class="wecom-menu-ai-config" title="配置 AI API (Gemini / OpenAI / DeepSeek)">` +
       `${ICONS.spark}<span class="wecom-menu-label">配置 AI API...</span><span class="wecom-menu-state-badge wecom-menu-ai-badge is-off">未配置</span></button>` +
-      `<div class="wecom-theme-menu-title wecom-theme-menu-divider">独立窗口</div>` +
+      `<div class="wecom-theme-menu-title wecom-theme-menu-divider">独立窗口与视图</div>` +
       `<button type="button" role="menuitem" class="wecom-menu-create-shortcut" title="创建桌面独立窗口快捷方式 (--app 模式)">${ICONS.win}<span>创建窗口快捷式</span></button>` +
+      `<button type="button" role="menuitemcheckbox" class="wecom-menu-toggle-external-native" aria-checked="true" title="从搜索引擎（如 Google、Bing、百度等）或外部网站打开链接时，保持原生网页样式不受插件影响">${ICONS.external}<span class="wecom-menu-label">从搜索/外链进入保持原站</span><span class="wecom-menu-state-badge is-on">已开启</span></button>` +
       `<button type="button" role="menuitem" class="wecom-menu-restore-native">${ICONS.external}<span>恢复原风格 (Alt+W)</span></button>` +
       `<button type="button" role="menuitem" class="wecom-check-update">${ICONS.refresh}<span>检查脚本更新</span></button>`;
     document.body.appendChild(menu);
@@ -24400,6 +24497,13 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         event.stopPropagation();
         setThemeMenuOpen(false);
         openWindowShortcutDialog();
+        return;
+      }
+      const extNativeToggle = event.target.closest(".wecom-menu-toggle-external-native");
+      if (extNativeToggle) {
+        event.preventDefault();
+        event.stopPropagation();
+        setExternalNativeEnabled(!isExternalNativeEnabled());
         return;
       }
       if (event.target.closest(".wecom-menu-restore-native")) {
@@ -24644,7 +24748,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.62";
+  const SCRIPT_VERSION = "0.8.63";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -34167,6 +34271,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   /** 彻底清理并移除注入到页面的各类型加载指示器与进度条节点 */
   function removeLoadingSliderDom() {
+    if (getViewMode() === "native" || otherThemeActive()) return;
     const selectors = [
       ".loading-indicator-container",
       ".loading-indicator",
@@ -34199,7 +34304,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   let pageLoadingIndicatorDisabled = false;
   /** 禁用 Discourse 原生页面加载进度条设置 */
   function disablePageLoadingIndicator() {
-    if (IS_V2EX || IS_JUEJIN || IS_ZHIHU || pageLoadingIndicatorDisabled) return;
+    if (getViewMode() === "native" || IS_V2EX || IS_JUEJIN || IS_ZHIHU || pageLoadingIndicatorDisabled) return;
     try {
       const owner = getEmberOwner();
       const settings = safeLookup(owner, "service:site-settings");
@@ -38955,6 +39060,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     }
     if (event.target.closest(".wecom-win-close")) {
       consumeClick(event);
+      try { sessionStorage.setItem(EXTERNAL_SESSION_KEY, "1"); } catch { /* ignore */ }
       setViewMode("native");
       location.reload();
       return true;
@@ -40553,6 +40659,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   }
 
   function openNativeTopicView() {
+    try { sessionStorage.setItem(EXTERNAL_SESSION_KEY, "1"); } catch { /* ignore */ }
     setViewMode("native");
     const target = getTopicNativePath();
     const current = location.pathname + location.search;
@@ -48623,6 +48730,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   function toggleViewModeByShortcut() {
     if (otherThemeActive()) return;
     if (getViewMode() === "native") {
+      try { sessionStorage.setItem(EXTERNAL_SESSION_KEY, "0"); } catch { /* ignore */ }
       setViewMode("im");
       location.reload();
     } else {
@@ -49070,12 +49178,17 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       return;
     }
     if (fab) return;
+    if (!document.body) {
+      document.addEventListener("DOMContentLoaded", ensureModeFab, { once: true });
+      return;
+    }
     fab = document.createElement("button");
     fab.className = "wecom-mode-fab";
     fab.title = "切回企业微信 IM 视图 (快捷键: Alt+W / Alt+O)";
     fab.setAttribute("aria-label", "切回企业微信 IM 视图");
     fab.innerHTML = ICONS.chat;
     fab.addEventListener("click", () => {
+      try { sessionStorage.setItem(EXTERNAL_SESSION_KEY, "0"); } catch { /* ignore */ }
       setViewMode("im");
       location.reload();
     });
@@ -49928,7 +50041,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       return;
     }
     injectStyle();
-    if (!otherThemeActive()) {
+    if (!otherThemeActive() && getViewMode() !== "native") {
       // document-start 尽早应用用户选择，减少主题闪烁。
       applySiteColorMode();
       applyCustomFont();

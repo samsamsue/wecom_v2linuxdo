@@ -15472,9 +15472,9 @@ test("Test 196: Chat bubble headings (h1-h6) styled without large font-size or b
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
   // 1. Version bump assertions
-  assert.match(userContent, /const SCRIPT_VERSION = "0\.8\.62"/, "user.js version must be 0.8.62");
-  assert.match(metaContent, /@version\s+0\.8\.62/, "meta.js version must be 0.8.62");
-  assert.match(readmeContent, /0\.8\.62/, "README.md version must be 0.8.62");
+  assert.match(userContent, /const SCRIPT_VERSION = "0\.8\.(6[2-9]|[7-9]\d)"/, "user.js version must be >= 0.8.62");
+  assert.match(metaContent, /@version\s+0\.8\.(6[2-9]|[7-9]\d)/, "meta.js version must be >= 0.8.62");
+  assert.match(readmeContent, /0\.8\.(6[2-9]|[7-9]\d)/, "README.md version must be >= 0.8.62");
 
   // 2. Heading font-size matches normal text (14px) and is not bolded (font-weight: 500)
   assert.ok(
@@ -15501,5 +15501,114 @@ test("Test 196: Chat bubble headings (h1-h6) styled without large font-size or b
     userContent.includes('content: "### ";') &&
     userContent.includes('color: var(--wc-accent, #1a87ff);'),
     "bubble headings must display clean Markdown level prefix indicators in accent color"
+  );
+});
+
+test("Test 197: Default native view when entering from search engines or external channels with fallback fab & settings toggle (v0.8.63)", () => {
+  const userContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.user.js"), "utf-8");
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version bump assertions
+  assert.match(userContent, /const SCRIPT_VERSION = "0\.8\.(6[3-9]|[7-9]\d)"/, "user.js version must be >= 0.8.63");
+  assert.match(metaContent, /@version\s+0\.8\.(6[3-9]|[7-9]\d)/, "meta.js version must be >= 0.8.63");
+  assert.match(readmeContent, /0\.8\.(6[3-9]|[7-9]\d)/, "README.md version must be >= 0.8.63");
+
+  // 2. Constants defined for external native mode
+  assert.ok(
+    userContent.includes('const EXTERNAL_NATIVE_KEY = "linuxdo-wecom-external-native"') &&
+    userContent.includes('const EXTERNAL_SESSION_KEY = "wecom_external_entry_native"'),
+    "must define EXTERNAL_NATIVE_KEY and EXTERNAL_SESSION_KEY constants"
+  );
+
+  // 3. SEARCH_ENGINE_REGEX comprehensive patterns
+  assert.ok(
+    userContent.includes("const SEARCH_ENGINE_REGEX = ") &&
+    userContent.includes("google.") &&
+    userContent.includes("bing\\.com") &&
+    userContent.includes("baidu\\.com") &&
+    userContent.includes("duckduckgo\\.com") &&
+    userContent.includes("sogou\\.com") &&
+    userContent.includes("so\\.com") &&
+    userContent.includes("sm\\.cn"),
+    "SEARCH_ENGINE_REGEX must cover Google, Bing, Baidu, DuckDuckGo, Sogou, 360, Yahoo, Yandex, Toutiao, Ecosia, Qwant, Startpage, Shenma"
+  );
+
+  // Test regex directly against major search engines
+  const searchRegexMatch = userContent.match(/const SEARCH_ENGINE_REGEX = (\/.*?\/[a-z]*);/);
+  assert.ok(searchRegexMatch, "must extract SEARCH_ENGINE_REGEX");
+  const searchRegex = eval(searchRegexMatch[1]);
+  assert.ok(searchRegex.test("www.google.com"), "must match google.com");
+  assert.ok(searchRegex.test("google.com.hk"), "must match google.com.hk");
+  assert.ok(searchRegex.test("cn.bing.com"), "must match bing.com");
+  assert.ok(searchRegex.test("www.baidu.com"), "must match baidu.com");
+  assert.ok(searchRegex.test("duckduckgo.com"), "must match duckduckgo.com");
+  assert.ok(searchRegex.test("www.sogou.com"), "must match sogou.com");
+  assert.ok(searchRegex.test("so.com"), "must match so.com");
+  assert.ok(searchRegex.test("search.yahoo.com"), "must match yahoo");
+  assert.ok(searchRegex.test("yandex.com"), "must match yandex");
+  assert.ok(searchRegex.test("so.toutiao.com"), "must match toutiao");
+  assert.ok(searchRegex.test("ecosia.org"), "must match ecosia");
+  assert.ok(!searchRegex.test("linux.do"), "must not match linux.do");
+  assert.ok(!searchRegex.test("v2ex.com"), "must not match v2ex.com");
+  assert.ok(!searchRegex.test("zhihu.com"), "must not match zhihu.com");
+  assert.ok(!searchRegex.test("juejin.cn"), "must not match juejin.cn");
+
+  // 4. isExternalReferrer distinguishes same-platform from external sites
+  assert.ok(
+    userContent.includes("function isExternalReferrer(") &&
+    userContent.includes('refHost.endsWith("linux.do") && curHost.endsWith("linux.do")') &&
+    userContent.includes('refHost.endsWith("v2ex.com") && curHost.endsWith("v2ex.com")') &&
+    userContent.includes('refHost.endsWith("juejin.cn") && curHost.endsWith("juejin.cn")') &&
+    userContent.includes('refHost.endsWith("zhihu.com") && curHost.endsWith("zhihu.com")'),
+    "isExternalReferrer must exclude intra-platform links and detect external traffic"
+  );
+
+  // 5. isExternalOrSearchEntry checks UTM/marketing parameters
+  assert.ok(
+    userContent.includes("function isExternalOrSearchEntry()") &&
+    userContent.includes('p.has("utm_source")') &&
+    userContent.includes('p.has("gclid")') &&
+    userContent.includes('p.has("msclkid")') &&
+    userContent.includes('p.has("fbclid")'),
+    "isExternalOrSearchEntry must detect referrer and campaign query parameters"
+  );
+
+  // 6. checkAndInitExternalNativeSession and getViewMode tab-level session behavior
+  assert.ok(
+    userContent.includes("function checkAndInitExternalNativeSession()") &&
+    userContent.includes("sessionStorage.getItem(EXTERNAL_SESSION_KEY)") &&
+    userContent.includes('sessionStorage.setItem(EXTERNAL_SESSION_KEY, "1")') &&
+    userContent.includes('sessionVal === "1") return "native";'),
+    "checkAndInitExternalNativeSession must mark session and getViewMode must return native"
+  );
+
+  // 7. ensureModeFab and toggleViewModeByShortcut clear external native lock when switching to IM
+  assert.ok(
+    userContent.includes('sessionStorage.setItem(EXTERNAL_SESSION_KEY, "0")') &&
+    userContent.includes('setViewMode("im")'),
+    "manual switch to IM must clear external native session lock"
+  );
+
+  // 8. Settings menu toggle button & synchronization
+  assert.ok(
+    userContent.includes("wecom-menu-toggle-external-native") &&
+    userContent.includes("从搜索/外链进入保持原站") &&
+    userContent.includes("function setExternalNativeEnabled(on)"),
+    "settings menu must include toggle for external native mode"
+  );
+
+  // 9. Native isolation: color mode, loading sliders & custom fonts protected in native mode
+  assert.ok(
+    /function applySiteColorMode\(\)\s*\{[\s\S]*?getViewMode\(\)\s*===\s*"native"/.test(userContent),
+    "applySiteColorMode must not alter DOM in native view mode"
+  );
+  assert.ok(
+    /function removeLoadingSliderDom\(\)\s*\{[\s\S]*?getViewMode\(\)\s*===\s*"native"/.test(userContent),
+    "removeLoadingSliderDom must not remove native loading sliders in native mode"
+  );
+  assert.ok(
+    /function disablePageLoadingIndicator\(\)\s*\{[\s\S]*?getViewMode\(\)\s*===\s*"native"/.test(userContent),
+    "disablePageLoadingIndicator must not disable native page loading indicator in native mode"
   );
 });
