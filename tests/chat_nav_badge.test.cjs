@@ -15504,7 +15504,7 @@ test("Test 196: Chat bubble headings (h1-h6) styled without large font-size or b
   );
 });
 
-test("Test 197: Default native view when entering from search engines or external channels with fallback fab & settings toggle (v0.8.63)", () => {
+test("Test 197: Default native view when entering from search engines or external channels with fallback fab & settings toggle (v0.8.63/v0.8.64)", () => {
   const userContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.user.js"), "utf-8");
   const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
@@ -15554,14 +15554,18 @@ test("Test 197: Default native view when entering from search engines or externa
   assert.ok(!searchRegex.test("zhihu.com"), "must not match zhihu.com");
   assert.ok(!searchRegex.test("juejin.cn"), "must not match juejin.cn");
 
-  // 4. isExternalReferrer distinguishes same-platform from external sites
+  // 4. isSupportedPlatformHost and isExternalReferrer: switching platforms does NOT count as external
   assert.ok(
-    userContent.includes("function isExternalReferrer(") &&
-    userContent.includes('refHost.endsWith("linux.do") && curHost.endsWith("linux.do")') &&
-    userContent.includes('refHost.endsWith("v2ex.com") && curHost.endsWith("v2ex.com")') &&
-    userContent.includes('refHost.endsWith("juejin.cn") && curHost.endsWith("juejin.cn")') &&
-    userContent.includes('refHost.endsWith("zhihu.com") && curHost.endsWith("zhihu.com")'),
-    "isExternalReferrer must exclude intra-platform links and detect external traffic"
+    userContent.includes("function isSupportedPlatformHost(") &&
+    userContent.includes('h.endsWith("linux.do")') &&
+    userContent.includes('h.endsWith("v2ex.com")') &&
+    userContent.includes('h.endsWith("juejin.cn")') &&
+    userContent.includes('h.endsWith("zhihu.com")'),
+    "must define isSupportedPlatformHost covering linux.do, v2ex.com, juejin.cn, zhihu.com"
+  );
+  assert.ok(
+    userContent.includes("isSupportedPlatformHost(refHost) && isSupportedPlatformHost(curHost)"),
+    "isExternalReferrer must exclude transitions between supported platforms"
   );
 
   // 5. isExternalOrSearchEntry checks UTM/marketing parameters
@@ -15590,7 +15594,14 @@ test("Test 197: Default native view when entering from search engines or externa
     "manual switch to IM must clear external native session lock"
   );
 
-  // 8. Settings menu toggle button & synchronization
+  // 8. navigateWithAiSync resets EXTERNAL_SESSION_KEY on platform switch
+  assert.ok(
+    userContent.includes("function navigateWithAiSync(") &&
+    userContent.includes("sessionStorage.removeItem(EXTERNAL_SESSION_KEY)"),
+    "navigateWithAiSync must clear external native session flag during platform switch"
+  );
+
+  // 9. Settings menu toggle button & synchronization
   assert.ok(
     userContent.includes("wecom-menu-toggle-external-native") &&
     userContent.includes("从搜索/外链进入保持原站") &&
@@ -15598,7 +15609,7 @@ test("Test 197: Default native view when entering from search engines or externa
     "settings menu must include toggle for external native mode"
   );
 
-  // 9. Native isolation: color mode, loading sliders & custom fonts protected in native mode
+  // 10. Native isolation: color mode, loading sliders & custom fonts protected in native mode
   assert.ok(
     /function applySiteColorMode\(\)\s*\{[\s\S]*?getViewMode\(\)\s*===\s*"native"/.test(userContent),
     "applySiteColorMode must not alter DOM in native view mode"

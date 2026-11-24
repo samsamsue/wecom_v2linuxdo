@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.63
+// @version      0.8.64
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -17726,6 +17726,17 @@
     }
   }
 
+  function isSupportedPlatformHost(host = "") {
+    if (!host) return false;
+    const h = host.toLowerCase();
+    return (
+      h.endsWith("linux.do") ||
+      h.endsWith("v2ex.com") ||
+      h.endsWith("juejin.cn") ||
+      h.endsWith("zhihu.com")
+    );
+  }
+
   function isExternalReferrer(ref = typeof document !== "undefined" ? document.referrer : "") {
     if (!ref) return false;
     try {
@@ -17734,10 +17745,8 @@
       const curHost = (typeof location !== "undefined" && location.hostname ? location.hostname : "").toLowerCase();
       if (!refHost) return false;
       if (refHost === curHost) return false;
-      if (refHost.endsWith("linux.do") && curHost.endsWith("linux.do")) return false;
-      if (refHost.endsWith("v2ex.com") && curHost.endsWith("v2ex.com")) return false;
-      if (refHost.endsWith("juejin.cn") && curHost.endsWith("juejin.cn")) return false;
-      if (refHost.endsWith("zhihu.com") && curHost.endsWith("zhihu.com")) return false;
+      // 脚本支持的各互联平台之间相互切换（linux.do ⇄ v2ex.com ⇄ juejin.cn ⇄ zhihu.com），属于应用内平台切换，不属于外部渠道
+      if (isSupportedPlatformHost(refHost) && isSupportedPlatformHost(curHost)) return false;
       return true;
     } catch {
       return false;
@@ -20885,6 +20894,9 @@
     try {
       if (syncStr) {
         window.name = "WECOM_AI_BUNDLE:" + syncStr;
+      }
+      if (typeof sessionStorage !== "undefined") {
+        sessionStorage.removeItem(EXTERNAL_SESSION_KEY);
       }
     } catch { /* ignore */ }
     window.location.href = targetUrl;
@@ -24748,7 +24760,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.63";
+  const SCRIPT_VERSION = "0.8.64";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
