@@ -15623,3 +15623,53 @@ test("Test 197: Default native view when entering from search engines or externa
     "disablePageLoadingIndicator must not disable native page loading indicator in native mode"
   );
 });
+
+test("Test 198: Linux DO native typing user presence indicator bridge in WeCom UI (v0.8.65)", () => {
+  const userContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.user.js"), "utf-8");
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version assertions
+  assert.match(userContent, /const SCRIPT_VERSION = "0\.8\.(6[5-9]|[7-9]\d)"/, "user.js version must be >= 0.8.65");
+  assert.match(metaContent, /@version\s+0\.8\.(6[5-9]|[7-9]\d)/, "meta.js version must be >= 0.8.65");
+  assert.match(readmeContent, /0\.8\.(6[5-9]|[7-9]\d)/, "README.md version must be >= 0.8.65");
+
+  // 2. Typing indicator DOM elements & classes
+  assert.ok(userContent.includes("wecom-chat-typing-indicator"), "must include .wecom-chat-typing-indicator");
+  assert.ok(userContent.includes("wecom-typing-inner"), "must include .wecom-typing-inner");
+  assert.ok(userContent.includes("wecom-typing-avatars"), "must include .wecom-typing-avatars");
+  assert.ok(userContent.includes("wecom-typing-text"), "must include .wecom-typing-text");
+  assert.ok(userContent.includes("wecom-typing-wave"), "must include .wecom-typing-wave");
+  assert.ok(userContent.includes("wecom-typing-dot"), "must include .wecom-typing-dot");
+
+  // 3. CSS animation and styling
+  assert.ok(userContent.includes("@keyframes wecom-typing-bounce"), "must include @keyframes wecom-typing-bounce");
+  assert.ok(userContent.includes(".wecom-chat-typing-indicator[hidden]"), "must style hidden typing indicator");
+  assert.ok(userContent.includes("html.${ROOT_CLASS}.wecom-dark .wecom-chat-typing-indicator"), "must support dark mode typing indicator");
+
+  // 4. Core functions defined
+  assert.ok(userContent.includes("function extractDiscourseTypingUsers("), "must define extractDiscourseTypingUsers");
+  assert.ok(userContent.includes("function formatPresenceUsers("), "must define formatPresenceUsers");
+  assert.ok(userContent.includes("function renderChatTypingIndicator("), "must define renderChatTypingIndicator");
+  assert.ok(userContent.includes("function updateChatTypingIndicator("), "must define updateChatTypingIndicator");
+  assert.ok(userContent.includes("function startTypingIndicatorWatcher("), "must define startTypingIndicatorWatcher");
+  assert.ok(userContent.includes("function stopTypingIndicatorWatcher("), "must define stopTypingIndicatorWatcher");
+
+  // 5. Native Discourse DOM selectors inspected
+  assert.ok(userContent.includes("#topic-footer-buttons .presence-users"), "must inspect topic footer buttons presence");
+  assert.ok(userContent.includes(".topic-above-footer-buttons-outlet .presence-users"), "must inspect topic above footer outlet");
+  assert.ok(userContent.includes("#reply-control .presence-users"), "must inspect native composer presence");
+
+  // 6. User card integration
+  assert.ok(userContent.includes('data-user-card="${escapeHtml(users['), "typing users must support clicking to view user card");
+
+  // 7. Lifecycle integration in renderChatEmpty and loadTopic
+  assert.ok(
+    /function renderChatEmpty\(\)\s*\{[\s\S]*?stopTypingIndicatorWatcher\(\);[\s\S]*?renderChatTypingIndicator\(null\);/.test(userContent),
+    "renderChatEmpty must stop typing watcher and reset indicator"
+  );
+  assert.ok(
+    /loadTopic[\s\S]*?startTypingIndicatorWatcher\(\);[\s\S]*?updateChatTypingIndicator\(\);/.test(userContent),
+    "loadTopic finally must start typing watcher"
+  );
+});

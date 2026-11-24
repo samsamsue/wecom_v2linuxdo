@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.64
+// @version      0.8.65
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -7308,6 +7308,132 @@
     .wecom-chat-compose.error { color: var(--wc-danger); }
     .wecom-chat-compose svg { width: 16px; height: 16px; flex-shrink: 0; }
     .wecom-chat-panel[data-empty="1"] .wecom-composer { display: none; }
+    .wecom-chat-panel[data-empty="1"] .wecom-chat-typing-indicator { display: none !important; }
+
+    /* 正在输入提示栏（企微风格） */
+    .wecom-chat-typing-indicator {
+      display: flex;
+      align-items: center;
+      padding: 4px 16px;
+      min-height: 28px;
+      box-sizing: border-box;
+      background: rgba(0, 0, 0, 0.025);
+      border-top: 1px solid rgba(0, 0, 0, 0.05);
+      font-size: 12px;
+      color: var(--wc-text-secondary, #8c8c8c);
+      user-select: none;
+      flex-shrink: 0;
+      transition: opacity 0.2s ease;
+    }
+    .wecom-chat-typing-indicator[hidden] {
+      display: none !important;
+    }
+    .wecom-typing-inner {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 100%;
+    }
+    .wecom-typing-avatars {
+      display: inline-flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .wecom-typing-avatar {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-left: -4px;
+      border: 1.5px solid var(--wc-bg-main, #ffffff);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      flex-shrink: 0;
+      display: inline-block;
+    }
+    .wecom-typing-avatar:first-child {
+      margin-left: 0;
+    }
+    .wecom-typing-avatar-fallback {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--wc-accent, #1890ff);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 1;
+    }
+    .wecom-typing-text {
+      font-size: 12px;
+      color: var(--wc-text-secondary, #8c8c8c);
+      line-height: 1.4;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .wecom-typing-user-link {
+      font-weight: 500;
+      color: var(--wc-text-1, #1f1f1f);
+      cursor: pointer;
+    }
+    .wecom-typing-user-link:hover {
+      text-decoration: underline;
+      color: var(--wc-accent, #1890ff);
+    }
+    .wecom-typing-wave {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      margin-left: 2px;
+      flex-shrink: 0;
+    }
+    .wecom-typing-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background-color: var(--wc-accent, #1890ff);
+      animation: wecom-typing-bounce 1.4s infinite ease-in-out both;
+    }
+    .wecom-typing-dot:nth-child(1) {
+      animation-delay: -0.32s;
+    }
+    .wecom-typing-dot:nth-child(2) {
+      animation-delay: -0.16s;
+    }
+    @keyframes wecom-typing-bounce {
+      0%, 80%, 100% {
+        transform: scale(0.6);
+        opacity: 0.35;
+      }
+      40% {
+        transform: scale(1.1);
+        opacity: 1;
+      }
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-typing-indicator {
+      background: rgba(255, 255, 255, 0.03);
+      border-top-color: rgba(255, 255, 255, 0.06);
+      color: #999;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-typing-avatar {
+      border-color: #242424;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-typing-text {
+      color: #999;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-typing-user-link {
+      color: #d0d0d0;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-typing-user-link:hover {
+      color: #40a9ff;
+    }
+    html.${ROOT_CLASS}.wecom-dark .wecom-typing-dot {
+      background-color: #40a9ff;
+    }
 
     /* 锁定态：原生主区不要抢走点击；原生 composer 仅作为后台提交引擎 */
     .${ROOT_CLASS}.${LOCK_CLASS} #main-outlet-wrapper,
@@ -24760,7 +24886,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.64";
+  const SCRIPT_VERSION = "0.8.65";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -37639,6 +37765,24 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       panel = null;
     }
     if (panel) {
+      if (!panel.querySelector(".wecom-chat-typing-indicator")) {
+        const composer = panel.querySelector(".wecom-composer");
+        if (composer) {
+          composer.insertAdjacentHTML("beforebegin", `
+            <div class="wecom-chat-typing-indicator" hidden aria-live="polite">
+              <div class="wecom-typing-inner">
+                <div class="wecom-typing-avatars"></div>
+                <span class="wecom-typing-text"></span>
+                <span class="wecom-typing-wave" aria-hidden="true">
+                  <span class="wecom-typing-dot"></span>
+                  <span class="wecom-typing-dot"></span>
+                  <span class="wecom-typing-dot"></span>
+                </span>
+              </div>
+            </div>
+          `);
+        }
+      }
       if (!panel.querySelector(".wecom-user-tags-manager-btn")) {
         const moreActions = panel.querySelector(".wecom-chat-more-actions");
         if (moreActions) {
@@ -37886,6 +38030,17 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         <div class="wecom-chat-float-nav-stack">
           <button type="button" class="wecom-chat-back-pos" title="回到上次浏览位置" aria-label="回到上次位置" hidden>${ICONS.backPos}<span>回到上次位置</span></button>
           <button type="button" class="wecom-chat-scroll-bottom" title="滚动到底部" aria-label="滚动到底部" hidden>${ICONS.scrollBottom}</button>
+        </div>
+      </div>
+      <div class="wecom-chat-typing-indicator" hidden aria-live="polite">
+        <div class="wecom-typing-inner">
+          <div class="wecom-typing-avatars"></div>
+          <span class="wecom-typing-text"></span>
+          <span class="wecom-typing-wave" aria-hidden="true">
+            <span class="wecom-typing-dot"></span>
+            <span class="wecom-typing-dot"></span>
+            <span class="wecom-typing-dot"></span>
+          </span>
         </div>
       </div>
       <div class="wecom-composer">
@@ -40248,6 +40403,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   function renderChatEmpty() {
     closeEditDialog(true);
     ensureChatPanel();
+    stopTypingIndicatorWatcher();
+    renderChatTypingIndicator(null);
     chatState.topicId = null;
     chatState.slug = "";
     chatState.postsByNumber = new Map();
@@ -43382,12 +43539,269 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     return !!(el && (el.classList.contains("open") || el.classList.contains("fullscreen") || el.classList.contains("edit-title")));
   }
 
+  /* ---------- 正在输入提示（Discourse 原生 Typing / Presence 状态桥接） ---------- */
+  function formatPresenceUsers(rawUsers) {
+    if (!rawUsers) return [];
+    const list = Array.isArray(rawUsers)
+      ? rawUsers
+      : (typeof rawUsers.values === "function" ? Array.from(rawUsers.values()) : (typeof rawUsers === "object" ? Object.values(rawUsers) : []));
+    const users = [];
+    const seen = new Set();
+    const current = (getCurrentUsername() || "").toLowerCase();
+    for (const item of list) {
+      if (!item) continue;
+      const username = String(item.username || item.name || "").trim().replace(/^@/, "");
+      if (!username || seen.has(username.toLowerCase())) continue;
+      if (current && username.toLowerCase() === current) continue;
+      seen.add(username.toLowerCase());
+      let avatarUrl = item.avatar_template || item.avatar || item.avatarUrl || "";
+      if (avatarUrl && typeof fullAvatarUrl === "function") {
+        avatarUrl = fullAvatarUrl(avatarUrl);
+      }
+      users.push({ username, avatarUrl });
+    }
+    return users;
+  }
+
+  function extractDiscourseTypingUsers() {
+    if (IS_V2EX || IS_JUEJIN || IS_ZHIHU || !chatState.topicId) return { users: [], description: "" };
+
+    // 1. 优先读取 Discourse 原生 DOM 中渲染的 presence-users 节点
+    const selectors = [
+      "#topic-footer-buttons .presence-users",
+      ".topic-above-footer-buttons-outlet .presence-users",
+      ".topic-above-footer-buttons .presence-users",
+      ".topic-footer-main-buttons .presence-users",
+      ".topic-presence .presence-users",
+      ".topic-presence",
+      "div.presence-users",
+      "#reply-control .presence-users",
+      ".composer-presence"
+    ];
+
+    for (const sel of selectors) {
+      const elements = document.querySelectorAll(sel);
+      for (const container of elements) {
+        if (!container || container.closest(".wecom-chat-panel")) continue;
+        const userElements = container.querySelectorAll(".presence-user, a[href*='/u/'], img.avatar");
+        const users = [];
+        const seen = new Set();
+        const current = (getCurrentUsername() || "").toLowerCase();
+
+        userElements.forEach((el) => {
+          let username = "";
+          let avatarUrl = "";
+          if (el.tagName === "IMG") {
+            username = el.title || el.alt || "";
+            avatarUrl = el.src || el.dataset?.src || "";
+          } else {
+            const img = el.querySelector("img");
+            if (img) {
+              username = img.title || img.alt || "";
+              avatarUrl = img.src || img.dataset?.src || "";
+            }
+            if (!username) {
+              const href = el.getAttribute("href") || "";
+              const match = href.match(/\/u\/([^/?#]+)/);
+              if (match) username = decodeURIComponent(match[1]);
+            }
+            if (!username) {
+              username = el.getAttribute("title") || el.getAttribute("data-user-card") || el.getAttribute("data-username") || "";
+            }
+          }
+          username = username.trim().replace(/^@/, "");
+          if (username && !seen.has(username.toLowerCase())) {
+            if (current && username.toLowerCase() === current) return;
+            seen.add(username.toLowerCase());
+            if (!avatarUrl && typeof fullAvatarUrl === "function") {
+              const cachedPost = [...chatState.postsByNumber.values()].find((p) => (p.username || "").toLowerCase() === username.toLowerCase());
+              if (cachedPost?.avatar_template) avatarUrl = fullAvatarUrl(cachedPost.avatar_template);
+            }
+            users.push({ username, avatarUrl });
+          }
+        });
+
+        const descEl = container.querySelector(".description") || container.querySelector("span:not(.presence-user):not(.wave)");
+        let description = descEl ? descEl.textContent.trim() : "";
+        if (users.length > 0 || (description && /输入|replying|typing/i.test(description))) {
+          return { users, description };
+        }
+      }
+    }
+
+    // 2. 备用策略：从 Discourse Ember 实例或 presence service 中读取
+    try {
+      const owner = getEmberOwner();
+      if (owner) {
+        const topic = getTopicModel(owner);
+        if (topic) {
+          const channel = topic.presenceChannel || topic.get?.("presenceChannel");
+          if (channel) {
+            const raw = channel.users || (typeof channel.get === "function" ? channel.get("users") : null);
+            const users = formatPresenceUsers(raw);
+            if (users.length > 0) return { users, description: "" };
+          }
+          const replyingUsers = topic.replyingUsers || (typeof topic.get === "function" ? topic.get("replyingUsers") : null);
+          if (replyingUsers) {
+            const users = formatPresenceUsers(replyingUsers);
+            if (users.length > 0) return { users, description: "" };
+          }
+        }
+        const presenceService = safeLookup(owner, "service:presence");
+        if (presenceService) {
+          const channels = presenceService._channels || presenceService.channels ||
+            (typeof presenceService.get === "function" ? presenceService.get("channels") : null);
+          if (channels) {
+            const topicIdStr = String(chatState.topicId || "");
+            const list = channels instanceof Map ? Array.from(channels.values()) :
+              (Array.isArray(channels) ? channels : (typeof channels === "object" ? Object.values(channels) : []));
+            for (const ch of list) {
+              const name = String(ch?.name || ch?.channelName || ch?.channel || "");
+              if (topicIdStr && (name.includes(topicIdStr) || name.includes(`/t/${topicIdStr}`) || name.includes(`topic/${topicIdStr}`))) {
+                const raw = ch.users || (typeof ch.get === "function" ? ch.get("users") : null);
+                const users = formatPresenceUsers(raw);
+                if (users.length > 0) return { users, description: "" };
+              }
+            }
+          }
+        }
+      }
+    } catch { /* ignore */ }
+
+    return { users: [], description: "" };
+  }
+
+  function renderChatTypingIndicator(data) {
+    const panel = document.querySelector(".wecom-chat-panel");
+    if (!panel) return;
+    const indicator = panel.querySelector(".wecom-chat-typing-indicator");
+    if (!indicator) return;
+
+    const users = Array.isArray(data?.users) ? data.users : [];
+    const description = String(data?.description || "").trim();
+
+    if (users.length === 0 && !description) {
+      indicator.hidden = true;
+      indicator.style.display = "none";
+      indicator.setAttribute("aria-hidden", "true");
+      const avatarContainer = indicator.querySelector(".wecom-typing-avatars");
+      if (avatarContainer) avatarContainer.innerHTML = "";
+      const textEl = indicator.querySelector(".wecom-typing-text");
+      if (textEl) textEl.textContent = "";
+      return;
+    }
+
+    indicator.hidden = false;
+    indicator.style.display = "flex";
+    indicator.removeAttribute("aria-hidden");
+
+    // 渲染头像
+    const avatarContainer = indicator.querySelector(".wecom-typing-avatars");
+    if (avatarContainer) {
+      avatarContainer.innerHTML = users.slice(0, 3).map((u) => {
+        const src = u.avatarUrl || "";
+        const uname = escapeHtml(u.username || "");
+        if (src) {
+          return `<img class="wecom-typing-avatar" src="${escapeHtml(src)}" alt="${uname}" title="${uname}" data-user-card="${uname}" loading="lazy" />`;
+        }
+        return `<span class="wecom-typing-avatar wecom-typing-avatar-fallback" title="${uname}" data-user-card="${uname}">${uname ? escapeHtml(uname[0].toUpperCase()) : "?"}</span>`;
+      }).join("");
+    }
+
+    // 渲染文案
+    const textEl = indicator.querySelector(".wecom-typing-text");
+    if (textEl) {
+      if (users.length > 0) {
+        if (users.length === 1) {
+          textEl.innerHTML = `<span class="wecom-typing-user-link" data-user-card="${escapeHtml(users[0].username)}">${escapeHtml(users[0].username)}</span> 正在输入...`;
+        } else if (users.length === 2) {
+          textEl.innerHTML = `<span class="wecom-typing-user-link" data-user-card="${escapeHtml(users[0].username)}">${escapeHtml(users[0].username)}</span>、<span class="wecom-typing-user-link" data-user-card="${escapeHtml(users[1].username)}">${escapeHtml(users[1].username)}</span> 正在输入...`;
+        } else {
+          textEl.innerHTML = `<span class="wecom-typing-user-link" data-user-card="${escapeHtml(users[0].username)}">${escapeHtml(users[0].username)}</span>、<span class="wecom-typing-user-link" data-user-card="${escapeHtml(users[1].username)}">${escapeHtml(users[1].username)}</span> 等 ${users.length} 人正在输入...`;
+        }
+      } else if (description) {
+        textEl.textContent = description;
+      }
+    }
+  }
+
+  function updateChatTypingIndicator() {
+    if (IS_V2EX || IS_JUEJIN || IS_ZHIHU || !chatState.topicId) {
+      renderChatTypingIndicator(null);
+      return;
+    }
+    const data = extractDiscourseTypingUsers();
+    renderChatTypingIndicator(data);
+  }
+
+  let typingIndicatorTimer = null;
+  let typingMutationObserver = null;
+
+  function startTypingIndicatorWatcher() {
+    if (IS_V2EX || IS_JUEJIN || IS_ZHIHU || !chatState.topicId) return;
+    if (!typingIndicatorTimer) {
+      typingIndicatorTimer = setInterval(() => {
+        if (!chatState.topicId) {
+          stopTypingIndicatorWatcher();
+          return;
+        }
+        updateChatTypingIndicator();
+      }, 1500);
+    }
+    if (!typingMutationObserver) {
+      const target = document.getElementById("main-outlet") || document.getElementById("main-outlet-wrapper") || document.body;
+      if (target) {
+        let scheduled = false;
+        typingMutationObserver = new MutationObserver((mutations) => {
+          let relevant = false;
+          for (const m of mutations) {
+            const targetEl = m.target;
+            if (targetEl && (targetEl.id === "reply-control" || targetEl.id === "topic-footer-buttons" ||
+                targetEl.classList?.contains("presence-users") || targetEl.closest?.(".presence-users, #topic-footer-buttons, #reply-control"))) {
+              relevant = true;
+              break;
+            }
+            for (const node of m.addedNodes) {
+              if (node.nodeType === 1 && (node.matches?.(".presence-users, .presence-user, #topic-footer-buttons") || node.querySelector?.(".presence-users, .presence-user"))) {
+                relevant = true;
+                break;
+              }
+            }
+            if (relevant) break;
+          }
+          if (relevant && !scheduled) {
+            scheduled = true;
+            setTimeout(() => {
+              scheduled = false;
+              updateChatTypingIndicator();
+            }, 100);
+          }
+        });
+        typingMutationObserver.observe(target, { childList: true, subtree: true });
+      }
+    }
+    updateChatTypingIndicator();
+  }
+
+  function stopTypingIndicatorWatcher() {
+    if (typingIndicatorTimer) {
+      clearInterval(typingIndicatorTimer);
+      typingIndicatorTimer = null;
+    }
+    if (typingMutationObserver) {
+      typingMutationObserver.disconnect();
+      typingMutationObserver = null;
+    }
+    renderChatTypingIndicator(null);
+  }
+
   function composeUi() {
     return {
       input: document.querySelector("textarea.wecom-chat-compose"),
       send: document.querySelector(".wecom-send-btn"),
       status: document.querySelector(".wecom-compose-status"),
-      target: document.querySelector(".wecom-reply-target")
+      target: document.querySelector(".wecom-reply-target"),
+      typing: document.querySelector(".wecom-chat-typing-indicator")
     };
   }
 
@@ -45691,7 +46105,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     chatState.loading = true;
     chatState.topicId = topicId;
     ensureChatPanel();
-    if (!sameTopic) switchComposerTopic(topicId);
+    if (!sameTopic) {
+      switchComposerTopic(topicId);
+      stopTypingIndicatorWatcher();
+    }
     const body = document.querySelector(".wecom-chat-body");
     if (body && (!sameTopic || force)) {
       body.dataset.topicId = String(topicId);
@@ -45979,6 +46396,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         topicAbortController = null;
         chatState.loading = false;
       }
+      startTypingIndicatorWatcher();
+      updateChatTypingIndicator();
     }
   }
 
