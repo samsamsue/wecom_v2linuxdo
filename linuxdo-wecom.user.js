@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.68
+// @version      0.8.69
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -5414,6 +5414,21 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      display: block;
+    }
+    .wecom-search-avatar-fallback {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wecom-search-meta-stat,
+    .wecom-search-meta-time {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      white-space: nowrap;
     }
     .wecom-search-result-main {
       flex: 1;
@@ -25483,7 +25498,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.68";
+  const SCRIPT_VERSION = "0.8.69";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -26003,6 +26018,15 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     return highlightSearchText(stripSearchHtmlTags(str), query);
   }
 
+  function formatSearchCount(value) {
+    if (value == null || value === "") return null;
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 0) return null;
+    if (n >= 10000) return `${(n / 10000).toFixed(n >= 100000 ? 0 : 1).replace(/\.0$/, "")}w`;
+    if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, "")}k`;
+    return String(Math.floor(n));
+  }
+
   function searchLocalTopicsAndHistory(query) {
     const clean = String(query || "").trim().toLowerCase();
     const tokens = clean ? clean.split(/\s+/).filter(Boolean) : [];
@@ -26057,9 +26081,12 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         username: author,
         avatarUrl,
         categoryName,
-        replyCount: Number(rawItem.reply_count ?? Math.max(0, (Number(rawItem.posts_count) || 1) - 1)) || 0,
-        likeCount: Number(rawItem.like_count) || 0,
-        createdAt: rawItem.visited_at || rawItem.bumped_at || rawItem.last_posted_at || rawItem.created_at || "",
+        viewCount: rawItem.views != null ? Number(rawItem.views) : null,
+        replyCount: rawItem.reply_count != null
+          ? Number(rawItem.reply_count)
+          : (rawItem.posts_count != null ? Math.max(0, Number(rawItem.posts_count) - 1) : null),
+        likeCount: rawItem.like_count != null ? Number(rawItem.like_count) : null,
+        createdAt: rawItem.last_posted_at || rawItem.created_at || rawItem.bumped_at || rawItem.visited_at || "",
         source: fromHistory ? "history" : "local"
       });
     };
@@ -26091,6 +26118,15 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
     if (IS_V2EX) {
       const localItems = page === 1 ? searchLocalTopicsAndHistory(q) : [];
+      const cachedAvatarByTid = new Map();
+      const cachedAvatarByUser = new Map();
+      for (const localItem of [...(listState?.topics || []), ...(typeof readTopicHistory === "function" ? readTopicHistory() : [])]) {
+        if (!localItem) continue;
+        const avatar = localItem.v2ex_avatar || "";
+        if (avatar && localItem.id) cachedAvatarByTid.set(String(localItem.id), avatar);
+        const uname = String(localItem.last_poster_username || localItem.username || "").trim().toLowerCase();
+        if (avatar && uname && !cachedAvatarByUser.has(uname)) cachedAvatarByUser.set(uname, avatar);
+      }
       try {
         const from = (Math.max(1, page) - 1) * 20;
         const resp = await fetch(`https://www.sov2ex.com/api/search?q=${encodeURIComponent(q)}&from=${from}&size=20`, { signal });
@@ -26101,6 +26137,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           const src = hit?._source || {};
           const tid = Number(src.id || hit?._id);
           if (!tid) return null;
+          const uname = String(src.member || "").trim();
+          const avatarUrl = cachedAvatarByTid.get(String(tid)) || (uname ? cachedAvatarByUser.get(uname.toLowerCase()) || "" : "");
           return {
             topicId: tid,
             slug: "",
@@ -26108,11 +26146,12 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             title: stripSearchHtmlTags(src.title || `主题 #${tid}`),
             blurb: stripSearchHtmlTags(src.content || "").slice(0, 180),
             postNumber: 0,
-            username: src.member || "",
-            avatarUrl: "",
+            username: uname,
+            avatarUrl,
             categoryName: src.node_name || (src.node ? `节点 ${src.node}` : ""),
-            replyCount: Number(src.replies) || 0,
-            likeCount: 0,
+            viewCount: src.views != null ? Number(src.views) : null,
+            replyCount: src.replies != null ? Number(src.replies) : null,
+            likeCount: src.likes != null ? Number(src.likes) : null,
             createdAt: src.created || "",
             source: "remote"
           };
@@ -26164,10 +26203,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
             blurb: content.slice(0, 180),
             postNumber: 0,
             username: author.user_name || "掘友",
-            avatarUrl: author.avatar_large || "",
+            avatarUrl: author.avatar_large || author.avatar || "",
             categoryName: model.topic?.title || "沸点",
-            replyCount: Number(info.comment_count) || 0,
-            likeCount: Number(info.digg_count) || 0,
+            viewCount: info.view_count != null ? Number(info.view_count) : null,
+            replyCount: info.comment_count != null ? Number(info.comment_count) : null,
+            likeCount: info.digg_count != null ? Number(info.digg_count) : null,
             createdAt: info.ctime ? new Date(Number(info.ctime) * 1000).toISOString() : "",
             source: "remote"
           };
@@ -26206,6 +26246,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           if (type === "answer" && obj.question?.id) {
             const qid = String(obj.question.id);
             const aid = String(obj.id || "");
+            const rawViews = obj.visit_count ?? obj.view_count;
+            const rawTs = obj.updated_time || obj.created_time;
             return {
               topicId: qid,
               slug: "question",
@@ -26217,14 +26259,17 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
               username: obj.author?.name || "知乎用户",
               avatarUrl: obj.author?.avatar_url || "",
               categoryName: "问答",
-              replyCount: Number(obj.comment_count) || 0,
-              likeCount: Number(obj.voteup_count) || 0,
-              createdAt: obj.updated_time ? new Date(Number(obj.updated_time) * 1000).toISOString() : "",
+              viewCount: rawViews != null ? Number(rawViews) : null,
+              replyCount: obj.comment_count != null ? Number(obj.comment_count) : null,
+              likeCount: obj.voteup_count != null ? Number(obj.voteup_count) : null,
+              createdAt: rawTs ? new Date(Number(rawTs) * 1000).toISOString() : "",
               source: "remote"
             };
           }
           if (type === "question" && obj.id) {
             const qid = String(obj.id);
+            const rawViews = obj.visit_count ?? obj.view_count;
+            const rawTs = obj.updated_time || obj.created;
             return {
               topicId: qid,
               slug: "question",
@@ -26235,14 +26280,17 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
               username: obj.author?.name || "",
               avatarUrl: obj.author?.avatar_url || "",
               categoryName: "问题",
-              replyCount: Number(obj.answer_count) || 0,
-              likeCount: Number(obj.follower_count) || 0,
-              createdAt: "",
+              viewCount: rawViews != null ? Number(rawViews) : null,
+              replyCount: obj.answer_count != null ? Number(obj.answer_count) : null,
+              likeCount: obj.follower_count != null ? Number(obj.follower_count) : null,
+              createdAt: rawTs ? new Date(Number(rawTs) * 1000).toISOString() : "",
               source: "remote"
             };
           }
           if (type === "article" && obj.id) {
             const pid = `p_${obj.id}`;
+            const rawViews = obj.view_count ?? obj.visit_count;
+            const rawTs = obj.updated || obj.created;
             return {
               topicId: pid,
               slug: "article",
@@ -26253,9 +26301,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
               username: obj.author?.name || "知乎专栏",
               avatarUrl: obj.author?.avatar_url || "",
               categoryName: "专栏",
-              replyCount: Number(obj.comment_count) || 0,
-              likeCount: Number(obj.voteup_count) || 0,
-              createdAt: obj.updated ? new Date(Number(obj.updated) * 1000).toISOString() : "",
+              viewCount: rawViews != null ? Number(rawViews) : null,
+              replyCount: obj.comment_count != null ? Number(obj.comment_count) : null,
+              likeCount: obj.voteup_count != null ? Number(obj.voteup_count) : null,
+              createdAt: rawTs ? new Date(Number(rawTs) * 1000).toISOString() : "",
               source: "remote"
             };
           }
@@ -26292,8 +26341,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       if (t && t.id) topicMap.set(Number(t.id), t);
     }
     const userMap = new Map();
+    const userIdMap = new Map();
     for (const u of users) {
-      if (u && u.username) userMap.set(String(u.username).toLowerCase(), u);
+      if (!u) continue;
+      if (u.username) userMap.set(String(u.username).toLowerCase(), u);
+      if (u.id != null) userIdMap.set(Number(u.id), u);
     }
 
     const items = [];
@@ -26307,8 +26359,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       const slug = topic.slug || "topic";
       const postNumber = Number(post.post_number) || 1;
       const cat = topic.category_id && typeof categoryById === "function" ? categoryById(topic.category_id) : null;
-      const uInfo = post.username ? userMap.get(String(post.username).toLowerCase()) : null;
+      const uInfo = post.username
+        ? userMap.get(String(post.username).toLowerCase())
+        : (post.user_id != null ? userIdMap.get(Number(post.user_id)) : null);
       const tpl = post.avatar_template || uInfo?.avatar_template || "";
+      const rawLikes = post.like_count > 0 ? post.like_count : (topic.like_count ?? post.like_count);
       items.push({
         topicId: tid,
         slug,
@@ -26316,11 +26371,14 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         title: stripSearchHtmlTags(topic.title || topic.fancy_title || `话题 #${tid}`),
         blurb: post.blurb || "",
         postNumber,
-        username: post.username || post.name || "",
+        username: post.username || post.name || uInfo?.username || "",
         avatarUrl: tpl && typeof fullAvatarUrl === "function" ? fullAvatarUrl(tpl) : "",
         categoryName: cat?.name || "",
-        replyCount: Number(topic.reply_count ?? Math.max(0, (Number(topic.posts_count) || 1) - 1)) || 0,
-        likeCount: Number(post.like_count ?? topic.like_count) || 0,
+        viewCount: topic.views != null ? Number(topic.views) : null,
+        replyCount: topic.reply_count != null
+          ? Number(topic.reply_count)
+          : (topic.posts_count != null ? Math.max(0, Number(topic.posts_count) - 1) : null),
+        likeCount: rawLikes != null ? Number(rawLikes) : null,
         createdAt: post.created_at || topic.last_posted_at || topic.created_at || "",
         source: "remote"
       });
@@ -26331,6 +26389,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       if (!tid || coveredTopicIds.has(tid)) continue;
       const slug = topic.slug || "topic";
       const cat = topic.category_id && typeof categoryById === "function" ? categoryById(topic.category_id) : null;
+      const firstPosterId = Array.isArray(topic.posters) && topic.posters.length ? Number(topic.posters[0]?.user_id) : null;
+      const posterUser = (firstPosterId ? userIdMap.get(firstPosterId) : null) ||
+        (topic.last_poster_username ? userMap.get(String(topic.last_poster_username).toLowerCase()) : null);
+      const tpl = posterUser?.avatar_template || "";
       items.push({
         topicId: tid,
         slug,
@@ -26338,12 +26400,15 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
         title: stripSearchHtmlTags(topic.title || topic.fancy_title || `话题 #${tid}`),
         blurb: "",
         postNumber: 1,
-        username: "",
-        avatarUrl: "",
+        username: posterUser?.username || topic.last_poster_username || "",
+        avatarUrl: tpl && typeof fullAvatarUrl === "function" ? fullAvatarUrl(tpl) : "",
         categoryName: cat?.name || "",
-        replyCount: Number(topic.reply_count ?? Math.max(0, (Number(topic.posts_count) || 1) - 1)) || 0,
-        likeCount: Number(topic.like_count) || 0,
-        createdAt: topic.last_posted_at || topic.created_at || "",
+        viewCount: topic.views != null ? Number(topic.views) : null,
+        replyCount: topic.reply_count != null
+          ? Number(topic.reply_count)
+          : (topic.posts_count != null ? Math.max(0, Number(topic.posts_count) - 1) : null),
+        likeCount: topic.like_count != null ? Number(topic.like_count) : null,
+        createdAt: topic.last_posted_at || topic.created_at || topic.bumped_at || "",
         source: "remote"
       });
     }
@@ -26592,11 +26657,15 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     function renderResultItemHtml(item, idx, query) {
       const titleHtml = highlightSearchText(item.title || "无标题话题", query);
       const blurbHtml = item.blurb ? formatSearchBlurbHtml(item.blurb, query) : "";
-      const initial = (item.username || item.title || "?").trim().slice(0, 1).toUpperCase();
+      const initial = escapeHtml((item.username || item.title || "?").trim().slice(0, 1).toUpperCase());
       const avatarHtml = item.avatarUrl
-        ? `<img src="${escapeHtml(item.avatarUrl)}" alt="" loading="lazy">`
-        : escapeHtml(initial);
-      const timeText = item.createdAt && typeof timeAgo === "function" ? timeAgo(item.createdAt) : "";
+        ? `<img src="${escapeHtml(item.avatarUrl)}" alt="" loading="lazy" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='flex';"><span class="wecom-search-avatar-fallback" style="display:none">${initial}</span>`
+        : `<span class="wecom-search-avatar-fallback">${initial}</span>`;
+      const timeText = item.createdAt && typeof formatTime === "function" ? formatTime(item.createdAt) : "";
+      const timeTooltip = item.createdAt && typeof formatClock === "function" ? formatClock(item.createdAt) : "";
+      const viewLabel = formatSearchCount(item.viewCount);
+      const replyLabel = formatSearchCount(item.replyCount);
+      const likeLabel = formatSearchCount(item.likeCount);
       const selectedCls = idx === searchDialogState.activeIndex ? " is-selected" : "";
       return `
         <a class="wecom-search-result-item${selectedCls}" href="${escapeHtml(item.href || "#")}" data-search-idx="${idx}">
@@ -26611,9 +26680,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
               ${item.categoryName ? `<span class="wecom-search-cat-badge">${escapeHtml(item.categoryName)}</span>` : ""}
               ${item.source === "local" || item.source === "history" ? `<span class="wecom-search-local-badge">${item.source === "history" ? "历史" : "当前列表"}</span>` : ""}
               ${item.username ? `<span>@${escapeHtml(item.username)}</span>` : ""}
-              ${item.replyCount > 0 ? `<span>💬 ${item.replyCount}</span>` : ""}
-              ${item.likeCount > 0 ? `<span>♥ ${item.likeCount}</span>` : ""}
-              ${timeText ? `<span>${escapeHtml(timeText)}</span>` : ""}
+              ${viewLabel !== null ? `<span class="wecom-search-meta-stat" title="浏览 ${escapeHtml(String(item.viewCount))}">👁 ${viewLabel}</span>` : ""}
+              ${replyLabel !== null ? `<span class="wecom-search-meta-stat" title="评论 ${escapeHtml(String(item.replyCount))}">💬 ${replyLabel}</span>` : ""}
+              ${likeLabel !== null ? `<span class="wecom-search-meta-stat" title="点赞 ${escapeHtml(String(item.likeCount))}">♥ ${likeLabel}</span>` : ""}
+              ${timeText ? `<span class="wecom-search-meta-time"${timeTooltip ? ` title="${escapeHtml(timeTooltip)}"` : ""}>🕒 ${escapeHtml(timeText)}</span>` : ""}
             </div>
           </div>
         </a>

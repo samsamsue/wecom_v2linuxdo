@@ -15680,9 +15680,9 @@ test("Test 199: Search dialog popup, multi-platform result list, non-overwriting
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
   // 1. Version assertions
-  assert.match(userContent, /const SCRIPT_VERSION = "0\.8\.(6[8-9]|[7-9]\d)"/, "user.js version must be >= 0.8.68");
-  assert.match(metaContent, /@version\s+0\.8\.(6[8-9]|[7-9]\d)/, "meta.js version must be >= 0.8.68");
-  assert.match(readmeContent, /0\.8\.(6[8-9]|[7-9]\d)/, "README.md version must be >= 0.8.68");
+  assert.match(userContent, /const SCRIPT_VERSION = "0\.8\.(69|[7-9]\d)"/, "user.js version must be >= 0.8.69");
+  assert.match(metaContent, /@version\s+0\.8\.(69|[7-9]\d)/, "meta.js version must be >= 0.8.69");
+  assert.match(readmeContent, /0\.8\.(69|[7-9]\d)/, "README.md version must be >= 0.8.69");
 
   // 2. Search dialog DOM, CSS & modal wiring
   assert.ok(userContent.includes(".wecom-search-dialog"), "must style .wecom-search-dialog");
@@ -15747,7 +15747,15 @@ test("Test 199: Search dialog popup, multi-platform result list, non-overwriting
     "handleChatPanelClick back button must use history.replaceState when returning from search"
   );
 
-  // 5. Functional unit test for formatSearchBlurbHtml & highlightSearchText
+  // 5. Functional unit test for formatSearchBlurbHtml, highlightSearchText & formatSearchCount
+  assert.ok(userContent.includes("function formatSearchCount("), "must define formatSearchCount");
+  assert.ok(userContent.includes("viewCount: topic.views != null ? Number(topic.views) : null"), "must extract viewCount from Discourse search topics");
+  assert.ok(userContent.includes("wecom-search-avatar-fallback"), "must include avatar fallback for search items");
+  assert.ok(
+    userContent.includes('typeof formatTime === "function" ? formatTime(item.createdAt)'),
+    "search results must format item post time using formatTime"
+  );
+
   const escapeHtmlFn = (str) => String(str)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -15757,10 +15765,17 @@ test("Test 199: Search dialog popup, multi-platform result list, non-overwriting
   const helperStart = userContent.indexOf("function stripSearchHtmlTags(raw)");
   const helperEnd = userContent.indexOf("function searchLocalTopicsAndHistory(query)");
   assert.ok(helperStart > 0 && helperEnd > helperStart, "must extract search highlight helpers");
-  const { formatSearchBlurbHtml, highlightSearchText } = new Function("escapeHtml", `
+  const { formatSearchBlurbHtml, highlightSearchText, formatSearchCount } = new Function("escapeHtml", `
     ${userContent.slice(helperStart, helperEnd)}
-    return { formatSearchBlurbHtml, highlightSearchText };
+    return { formatSearchBlurbHtml, highlightSearchText, formatSearchCount };
   `)(escapeHtmlFn);
+
+  assert.strictEqual(formatSearchCount(null), null, "null count should be omitted");
+  assert.strictEqual(formatSearchCount(undefined), null, "undefined count should be omitted");
+  assert.strictEqual(formatSearchCount(0), "0", "0 count should render when provided");
+  assert.strictEqual(formatSearchCount(999), "999", "sub-1k count should render raw number");
+  assert.strictEqual(formatSearchCount(1250), "1.3k", "1k+ count should format compactly");
+  assert.strictEqual(formatSearchCount(15000), "1.5w", "1w+ count should format compactly");
 
   const safeBlurb = formatSearchBlurbHtml(
     '<span class="search-highlight">Docker</span> 部署 <script>alert(1)</script> 指南',
