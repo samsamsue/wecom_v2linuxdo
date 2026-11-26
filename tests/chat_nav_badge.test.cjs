@@ -15674,21 +15674,22 @@ test("Test 198: Linux DO native typing user presence indicator bridge in WeCom U
   );
 });
 
-test("Test 199: Search dialog popup, multi-platform result list, non-overwriting topic navigation & back button (v0.8.66)", () => {
+test("Test 199: Search dialog popup, multi-platform result list, non-overwriting topic navigation & back/back-search buttons (v0.8.66/v0.8.67)", () => {
   const userContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.user.js"), "utf-8");
   const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
   // 1. Version assertions
-  assert.match(userContent, /const SCRIPT_VERSION = "0\.8\.(6[6-9]|[7-9]\d)"/, "user.js version must be >= 0.8.66");
-  assert.match(metaContent, /@version\s+0\.8\.(6[6-9]|[7-9]\d)/, "meta.js version must be >= 0.8.66");
-  assert.match(readmeContent, /0\.8\.(6[6-9]|[7-9]\d)/, "README.md version must be >= 0.8.66");
+  assert.match(userContent, /const SCRIPT_VERSION = "0\.8\.(6[7-9]|[7-9]\d)"/, "user.js version must be >= 0.8.67");
+  assert.match(metaContent, /@version\s+0\.8\.(6[7-9]|[7-9]\d)/, "meta.js version must be >= 0.8.67");
+  assert.match(readmeContent, /0\.8\.(6[7-9]|[7-9]\d)/, "README.md version must be >= 0.8.67");
 
   // 2. Search dialog DOM, CSS & modal wiring
   assert.ok(userContent.includes(".wecom-search-dialog"), "must style .wecom-search-dialog");
   assert.ok(userContent.includes(".wecom-search-dialog-card"), "must include .wecom-search-dialog-card");
   assert.ok(userContent.includes(".wecom-search-result-item"), "must include .wecom-search-result-item");
   assert.ok(userContent.includes(".wecom-search-hl"), "must style .wecom-search-hl highlights");
+  assert.ok(userContent.includes(".wecom-chat-back-search-btn"), "must include .wecom-chat-back-search-btn button & CSS");
   assert.ok(userContent.includes("function openSearchDialog("), "must define openSearchDialog");
   assert.ok(userContent.includes("function closeSearchDialog("), "must define closeSearchDialog");
   assert.ok(userContent.includes("function openSearchResultTopic("), "must define openSearchResultTopic");
@@ -15712,19 +15713,24 @@ test("Test 199: Search dialog popup, multi-platform result list, non-overwriting
     "WECOM_UI_SEL must exclude .wecom-search-dialog from external mutation observer"
   );
 
-  // 4. Non-overwriting navigation stack (fromSearch) & back button restoration
+  // 4. Non-overwriting navigation stack (fromSearch), back button & back-to-search button restoration
   assert.ok(
     userContent.includes("const alreadyHasSearch = topicNavStack.some((entry) => entry.fromSearch);"),
     "openSearchResultTopic must check alreadyHasSearch so multiple searches do not overwrite initial topic"
   );
   assert.ok(
     userContent.includes("fromSearch: true") &&
-    userContent.includes("saveCurrentTopicReadingPosition();"),
-    "openSearchResultTopic must save active topic & scrollTop onto topicNavStack with fromSearch: true"
+    userContent.includes("saveCurrentTopicReadingPosition();") &&
+    userContent.includes("searchDialogState.scrollTop = dialogBody.scrollTop;"),
+    "openSearchResultTopic must save active topic & search dialog scrollTop"
   );
   assert.ok(
-    /function syncTopicBackBtn\(\)[\s\S]*?prev\.fromSearch/.test(userContent),
-    "syncTopicBackBtn must display back button for fromSearch entries"
+    /function syncTopicBackBtn\(\)[\s\S]*?\.wecom-chat-back-search-btn[\s\S]*?prev\.fromSearch/.test(userContent),
+    "syncTopicBackBtn must toggle both back-to-search and back buttons for fromSearch entries"
+  );
+  assert.ok(
+    /const backSearchBtn = event\.target\.closest\("\.wecom-chat-back-search-btn"\);[\s\S]*?openSearchDialog\("", \{ restorePrevious: true \}\);/.test(userContent),
+    "handleChatPanelClick must restore previous search dialog when clicking .wecom-chat-back-search-btn"
   );
   assert.ok(
     /if \(prev && prev\.empty\)[\s\S]*?renderChatEmpty\(\);/.test(userContent),

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.66
+// @version      0.8.67
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -7289,6 +7289,45 @@
       background: rgba(64, 150, 255, 0.16);
       color: #4096ff;
       border-color: rgba(64, 150, 255, 0.4);
+    }
+    .wecom-chat-back-search-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 6px;
+      background: rgba(22, 119, 255, 0.08);
+      border: 1px solid rgba(22, 119, 255, 0.24);
+      color: #1677ff;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+      font-family: inherit;
+    }
+    .wecom-chat-back-search-btn svg {
+      width: 13px;
+      height: 13px;
+      flex-shrink: 0;
+    }
+    .wecom-chat-back-search-btn:hover {
+      background: rgba(22, 119, 255, 0.15);
+      border-color: rgba(22, 119, 255, 0.45);
+    }
+    html.wecom-dark .wecom-chat-back-search-btn,
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-back-search-btn {
+      background: rgba(64, 150, 255, 0.14);
+      border-color: rgba(64, 150, 255, 0.3);
+      color: #69b1ff;
+    }
+    html.wecom-dark .wecom-chat-back-search-btn:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-chat-back-search-btn:hover {
+      background: rgba(64, 150, 255, 0.24);
+      border-color: rgba(64, 150, 255, 0.5);
+      color: #91caff;
     }
 
     .wecom-msg-bubble.wecom-zhihu-clamped {
@@ -25387,7 +25426,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.66";
+  const SCRIPT_VERSION = "0.8.67";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -25814,7 +25853,8 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     loadingMore: false,
     error: "",
     fallbackHint: "",
-    activeIndex: -1
+    activeIndex: -1,
+    scrollTop: 0
   };
 
   function getSearchPlatformLabel() {
@@ -26271,6 +26311,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   function openSearchResultTopic(item) {
     if (!item) return;
+    const dialogBody = document.querySelector(".wecom-search-dialog-body");
+    if (dialogBody) {
+      searchDialogState.scrollTop = dialogBody.scrollTop;
+    }
     if (!item.topicId) {
       closeSearchDialog();
       if (item.href) navigateInApp(item.href);
@@ -26364,9 +26408,14 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     syncListActive();
   }
 
-  function openSearchDialog(initialQuery = "") {
+  function openSearchDialog(initialQuery = "", options = {}) {
     const incoming = String(initialQuery ?? "").trim();
-    const reusePrevious = !incoming && searchDialogState.query && searchDialogState.results.length > 0;
+    const hasCachedResults = Boolean(searchDialogState.query && searchDialogState.results.length > 0);
+    const reusePrevious = Boolean(
+      (options.restorePrevious && (searchDialogState.query || hasCachedResults)) ||
+      (!incoming && hasCachedResults) ||
+      (incoming && incoming === searchDialogState.query && hasCachedResults && !options.forceRefresh)
+    );
     const startQuery = incoming || (reusePrevious ? searchDialogState.query : "");
 
     closeSearchDialog();
@@ -26381,6 +26430,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       searchDialogState.error = "";
       searchDialogState.fallbackHint = "";
       searchDialogState.activeIndex = -1;
+      searchDialogState.scrollTop = 0;
     } else if (!startQuery) {
       searchDialogState.query = "";
       searchDialogState.results = [];
@@ -26389,6 +26439,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       searchDialogState.error = "";
       searchDialogState.fallbackHint = "";
       searchDialogState.activeIndex = -1;
+      searchDialogState.scrollTop = 0;
     }
 
     const filterOptions = IS_LINUXDO
@@ -26743,6 +26794,11 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       executeSearch(startQuery, { append: false });
     } else {
       renderDialogBody();
+      if (reusePrevious && searchDialogState.scrollTop > 0) {
+        requestAnimationFrame(() => {
+          bodyEl.scrollTop = searchDialogState.scrollTop;
+        });
+      }
     }
 
     setTimeout(() => {
@@ -39298,6 +39354,17 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           `);
         }
       }
+      if (!panel.querySelector(".wecom-chat-back-search-btn")) {
+        const backBtn = panel.querySelector(".wecom-chat-back-btn");
+        if (backBtn) {
+          backBtn.insertAdjacentHTML("afterend", `
+            <button type="button" class="wecom-chat-back-search-btn" style="display:none;" title="返回搜索结果列表" aria-label="返回搜索结果列表">
+              <span class="wecom-chat-back-search-icon">${ICONS.search || '🔍'}</span>
+              <span class="wecom-chat-back-search-text">返回搜索</span>
+            </button>
+          `);
+        }
+      }
       if (!panel.dataset.composeBound) {
         panel.dataset.composeBound = "1";
         bindChatPanelEvents(panel);
@@ -39339,6 +39406,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
           <button type="button" class="wecom-chat-back-btn" style="display:none;" title="返回问答列表" aria-label="返回问答列表">
             <span class="wecom-chat-back-icon">${ICONS.backPos || '←'}</span>
             <span class="wecom-chat-back-text">返回</span>
+          </button>
+          <button type="button" class="wecom-chat-back-search-btn" style="display:none;" title="返回搜索结果列表" aria-label="返回搜索结果列表">
+            <span class="wecom-chat-back-search-icon">${ICONS.search || '🔍'}</span>
+            <span class="wecom-chat-back-search-text">返回搜索</span>
           </button>
           <span class="wecom-chat-avatar" style="display:none"></span>
           <div class="wecom-chat-titles">
@@ -40977,8 +41048,27 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   function syncTopicBackBtn() {
     const backBtn = document.querySelector(".wecom-chat-back-btn");
+    const backSearchBtn = document.querySelector(".wecom-chat-back-search-btn");
+    const isCommentThread = typeof zhihuCommentThreadState !== "undefined" && zhihuCommentThreadState.active;
+    if (backSearchBtn) {
+      const hasSearchOrigin = topicNavStack.some((item) => item.fromSearch);
+      const canReturnSearch = Boolean(
+        hasSearchOrigin &&
+        !isCommentThread &&
+        chatState.topicId &&
+        (searchDialogState.query || searchDialogState.results.length > 0)
+      );
+      if (canReturnSearch) {
+        backSearchBtn.style.display = "inline-flex";
+        backSearchBtn.title = searchDialogState.query
+          ? `返回搜索结果列表: ${searchDialogState.query}`
+          : "返回搜索结果列表";
+      } else {
+        backSearchBtn.style.display = "none";
+      }
+    }
     if (!backBtn) return;
-    if (typeof zhihuCommentThreadState !== "undefined" && zhihuCommentThreadState.active) {
+    if (isCommentThread) {
       backBtn.style.display = "inline-flex";
       backBtn.title = "返回回答列表";
       const text = backBtn.querySelector(".wecom-chat-back-text");
@@ -41003,6 +41093,12 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   }
 
   function handleChatPanelClick(event, panel) {
+    const backSearchBtn = event.target.closest(".wecom-chat-back-search-btn");
+    if (backSearchBtn && panel.contains(backSearchBtn)) {
+      consumeClick(event);
+      openSearchDialog("", { restorePrevious: true });
+      return;
+    }
     const backBtn = event.target.closest(".wecom-chat-back-btn");
     if (backBtn && panel.contains(backBtn)) {
       consumeClick(event);
@@ -49368,6 +49464,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       backBtn.style.display = "";
       backBtn.classList.add("is-active");
     }
+    const backSearchBtn = panel.querySelector(".wecom-chat-back-search-btn");
+    if (backSearchBtn) {
+      backSearchBtn.style.display = "none";
+    }
     const titleEl = panel.querySelector(".wecom-chat-title");
     const subEl = panel.querySelector(".wecom-chat-sub");
     const countEl = panel.querySelector(".wecom-chat-count");
@@ -49495,6 +49595,9 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       if (backBtn) {
         backBtn.style.display = "none";
         backBtn.classList.remove("is-active");
+      }
+      if (typeof syncTopicBackBtn === "function") {
+        syncTopicBackBtn();
       }
       const count = panel.querySelector(".wecom-chat-count");
       if (count) {
