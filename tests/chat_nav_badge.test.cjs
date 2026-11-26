@@ -15673,3 +15673,91 @@ test("Test 198: Linux DO native typing user presence indicator bridge in WeCom U
     "loadTopic finally must start typing watcher"
   );
 });
+
+test("Test 199: Search dialog popup, multi-platform result list, non-overwriting topic navigation & back button (v0.8.66)", () => {
+  const userContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.user.js"), "utf-8");
+  const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
+  const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
+
+  // 1. Version assertions
+  assert.match(userContent, /const SCRIPT_VERSION = "0\.8\.(6[6-9]|[7-9]\d)"/, "user.js version must be >= 0.8.66");
+  assert.match(metaContent, /@version\s+0\.8\.(6[6-9]|[7-9]\d)/, "meta.js version must be >= 0.8.66");
+  assert.match(readmeContent, /0\.8\.(6[6-9]|[7-9]\d)/, "README.md version must be >= 0.8.66");
+
+  // 2. Search dialog DOM, CSS & modal wiring
+  assert.ok(userContent.includes(".wecom-search-dialog"), "must style .wecom-search-dialog");
+  assert.ok(userContent.includes(".wecom-search-dialog-card"), "must include .wecom-search-dialog-card");
+  assert.ok(userContent.includes(".wecom-search-result-item"), "must include .wecom-search-result-item");
+  assert.ok(userContent.includes(".wecom-search-hl"), "must style .wecom-search-hl highlights");
+  assert.ok(userContent.includes("function openSearchDialog("), "must define openSearchDialog");
+  assert.ok(userContent.includes("function closeSearchDialog("), "must define closeSearchDialog");
+  assert.ok(userContent.includes("function openSearchResultTopic("), "must define openSearchResultTopic");
+  assert.ok(userContent.includes("function fetchPlatformSearchResults("), "must define fetchPlatformSearchResults");
+
+  // 3. Search box & Ctrl+K trigger dialog instead of navigating page away
+  assert.ok(
+    /function bindSearchBox\([\s\S]*?openSearchDialog\(input\.value\.trim\(\)\)/.test(userContent),
+    "bindSearchBox must trigger openSearchDialog on submit/click"
+  );
+  assert.ok(
+    /function submitNativeSearch\([\s\S]*?openSearchDialog\(q\)/.test(userContent),
+    "submitNativeSearch must open search dialog in WeCom mode instead of replacing location"
+  );
+  assert.ok(
+    /isModalOrViewerOpen\(\)[\s\S]*?\.wecom-search-dialog:not\(\[hidden\]\)/.test(userContent),
+    "isModalOrViewerOpen must include .wecom-search-dialog"
+  );
+  assert.ok(
+    /WECOM_UI_SEL\s*=[\s\S]*?\.wecom-search-dialog/.test(userContent),
+    "WECOM_UI_SEL must exclude .wecom-search-dialog from external mutation observer"
+  );
+
+  // 4. Non-overwriting navigation stack (fromSearch) & back button restoration
+  assert.ok(
+    userContent.includes("const alreadyHasSearch = topicNavStack.some((entry) => entry.fromSearch);"),
+    "openSearchResultTopic must check alreadyHasSearch so multiple searches do not overwrite initial topic"
+  );
+  assert.ok(
+    userContent.includes("fromSearch: true") &&
+    userContent.includes("saveCurrentTopicReadingPosition();"),
+    "openSearchResultTopic must save active topic & scrollTop onto topicNavStack with fromSearch: true"
+  );
+  assert.ok(
+    /function syncTopicBackBtn\(\)[\s\S]*?prev\.fromSearch/.test(userContent),
+    "syncTopicBackBtn must display back button for fromSearch entries"
+  );
+  assert.ok(
+    /if \(prev && prev\.empty\)[\s\S]*?renderChatEmpty\(\);/.test(userContent),
+    "handleChatPanelClick back button must restore empty view when search started without an active topic"
+  );
+  assert.ok(
+    /if \(prev\.fromNotif \|\| prev\.fromSearch\)[\s\S]*?history\.replaceState\(\{\}, "", prevHref\);/.test(userContent),
+    "handleChatPanelClick back button must use history.replaceState when returning from search"
+  );
+
+  // 5. Functional unit test for formatSearchBlurbHtml & highlightSearchText
+  const escapeHtmlFn = (str) => String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+  const helperStart = userContent.indexOf("function stripSearchHtmlTags(raw)");
+  const helperEnd = userContent.indexOf("function searchLocalTopicsAndHistory(query)");
+  assert.ok(helperStart > 0 && helperEnd > helperStart, "must extract search highlight helpers");
+  const { formatSearchBlurbHtml, highlightSearchText } = new Function("escapeHtml", `
+    ${userContent.slice(helperStart, helperEnd)}
+    return { formatSearchBlurbHtml, highlightSearchText };
+  `)(escapeHtmlFn);
+
+  const safeBlurb = formatSearchBlurbHtml(
+    '<span class="search-highlight">Docker</span> 部署 <script>alert(1)</script> 指南',
+    "Docker"
+  );
+  assert.ok(safeBlurb.includes('<mark class="wecom-search-hl">Docker</mark>'), "must convert Discourse highlight span to mark");
+  assert.ok(!safeBlurb.includes("<script>"), "must strip unsafe HTML tags in search blurb");
+
+  const highlightedTitle = highlightSearchText("Linux DO Docker order:latest 教程", "Docker order:latest");
+  assert.ok(highlightedTitle.includes('<mark class="wecom-search-hl">Docker</mark>'), "must highlight search keyword");
+  assert.ok(!highlightedTitle.includes('<mark class="wecom-search-hl">order:latest</mark>'), "must skip Discourse operator tokens in highlight");
+});

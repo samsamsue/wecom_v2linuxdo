@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.65
+// @version      0.8.66
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -4999,6 +4999,507 @@
     .wecom-tags-empty-icon {
       font-size: 32px;
       margin-bottom: 4px;
+    }
+
+    /* ==================== 全局搜索 Dialog 弹窗样式 ==================== */
+    .wecom-search-dialog {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .wecom-search-dialog * {
+      box-sizing: border-box;
+    }
+    .wecom-search-dialog-card {
+      width: 720px;
+      max-width: 95vw;
+      max-height: 84vh;
+      background: var(--wc-bg, #FFFFFF);
+      border-radius: 12px;
+      border: 1px solid var(--wc-border, #E6E8EB);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      font-family: var(--wc-font);
+      animation: wecomFadeIn 0.15s ease-out;
+    }
+    html.wecom-dark .wecom-search-dialog-card,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-dialog-card {
+      background: #23272E;
+      border-color: rgba(255, 255, 255, 0.12);
+      color: #E4E7EB;
+    }
+    .wecom-search-dialog-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 20px 11px;
+      border-bottom: 1px solid var(--wc-border, #E6E8EB);
+      flex-shrink: 0;
+    }
+    html.wecom-dark .wecom-search-dialog-head,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-dialog-head {
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    .wecom-search-dialog-title-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+    .wecom-search-dialog-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--wc-text, #1A1D24);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .wecom-search-dialog-title svg {
+      color: #1890ff;
+      width: 16px;
+      height: 16px;
+    }
+    html.wecom-dark .wecom-search-dialog-title,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-dialog-title {
+      color: #FFFFFF;
+    }
+    .wecom-search-platform-badge {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: rgba(24, 144, 255, 0.12);
+      color: #1890ff;
+    }
+    .wecom-search-count-badge {
+      font-size: 12px;
+      color: var(--wc-text-3, #909399);
+      background: rgba(0, 0, 0, 0.04);
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+    html.wecom-dark .wecom-search-count-badge,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-count-badge {
+      background: rgba(255, 255, 255, 0.08);
+      color: #A0A5AF;
+    }
+    .wecom-search-dialog-close {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--wc-text-3, #8A8F99);
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+    .wecom-search-dialog-close:hover {
+      background: rgba(0, 0, 0, 0.06);
+      color: var(--wc-text, #1A1D24);
+    }
+    html.wecom-dark .wecom-search-dialog-close:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-dialog-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #FFFFFF;
+    }
+    .wecom-search-dialog-toolbar {
+      padding: 12px 20px 10px;
+      border-bottom: 1px solid var(--wc-border, #E6E8EB);
+      background: var(--wc-surface-2, #FAFBFD);
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      flex-shrink: 0;
+    }
+    html.wecom-dark .wecom-search-dialog-toolbar,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-dialog-toolbar {
+      background: rgba(255, 255, 255, 0.02);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    .wecom-search-dialog-form {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+    }
+    .wecom-search-dialog-input-wrap {
+      position: relative;
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+    .wecom-search-dialog-icon {
+      position: absolute;
+      left: 11px;
+      color: var(--wc-text-3, #909399);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+    }
+    .wecom-search-dialog-input {
+      width: 100%;
+      height: 36px;
+      padding: 0 32px 0 34px;
+      border-radius: 7px;
+      border: 1px solid var(--wc-border, #D9DCE0);
+      background: var(--wc-bg, #FFFFFF);
+      color: var(--wc-text, #1A1D24);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .wecom-search-dialog-input:focus {
+      border-color: #1890ff;
+      box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.16);
+    }
+    html.wecom-dark .wecom-search-dialog-input,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-dialog-input {
+      background: #1B1F27;
+      border-color: rgba(255, 255, 255, 0.16);
+      color: #E4E7EB;
+    }
+    .wecom-search-dialog-clear {
+      position: absolute;
+      right: 8px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(0, 0, 0, 0.08);
+      color: var(--wc-text-2, #606266);
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    html.wecom-dark .wecom-search-dialog-clear,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-dialog-clear {
+      background: rgba(255, 255, 255, 0.12);
+      color: #B0B5C0;
+    }
+    .wecom-search-dialog-submit {
+      height: 36px;
+      padding: 0 16px;
+      border-radius: 7px;
+      border: none;
+      background: #1890ff;
+      color: #FFFFFF;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.15s ease;
+    }
+    .wecom-search-dialog-submit:hover {
+      background: #40a9ff;
+    }
+    .wecom-search-dialog-submit:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+    .wecom-search-filters {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .wecom-search-filter-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      cursor: pointer;
+      background: rgba(0, 0, 0, 0.04);
+      color: var(--wc-text-2, #606266);
+      border: 1px solid transparent;
+      user-select: none;
+      transition: all 0.15s ease;
+    }
+    .wecom-search-filter-chip:hover {
+      background: rgba(24, 144, 255, 0.1);
+      color: #1890ff;
+    }
+    .wecom-search-filter-chip.is-active {
+      background: #1890ff;
+      color: #FFFFFF;
+    }
+    html.wecom-dark .wecom-search-filter-chip,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-filter-chip {
+      background: rgba(255, 255, 255, 0.06);
+      color: #B0B5C0;
+    }
+    html.wecom-dark .wecom-search-filter-chip.is-active,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-filter-chip.is-active {
+      background: #1890ff;
+      color: #FFFFFF;
+    }
+    .wecom-search-recent-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      font-size: 11px;
+      color: var(--wc-text-3, #909399);
+    }
+    .wecom-search-recent-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 5px;
+      background: rgba(0, 0, 0, 0.04);
+      color: var(--wc-text-2, #606266);
+      cursor: pointer;
+      border: none;
+      font-size: 11px;
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .wecom-search-recent-chip:hover {
+      background: rgba(24, 144, 255, 0.12);
+      color: #1890ff;
+    }
+    html.wecom-dark .wecom-search-recent-chip,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-recent-chip {
+      background: rgba(255, 255, 255, 0.07);
+      color: #B0B5C0;
+    }
+    .wecom-search-recent-clear {
+      margin-left: auto;
+      border: none;
+      background: transparent;
+      color: var(--wc-text-3, #909399);
+      cursor: pointer;
+      font-size: 11px;
+      padding: 2px 4px;
+    }
+    .wecom-search-recent-clear:hover {
+      color: #FF4D4F;
+    }
+    .wecom-search-dialog-body {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      padding: 10px 14px;
+      min-height: 220px;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    .wecom-search-result-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .wecom-search-section-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--wc-text-3, #909399);
+      padding: 4px 8px 2px;
+    }
+    .wecom-search-result-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 11px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: transparent;
+      text-decoration: none !important;
+      color: inherit;
+      cursor: pointer;
+      transition: background 0.14s ease, border-color 0.14s ease;
+    }
+    .wecom-search-result-item:hover,
+    .wecom-search-result-item.is-selected {
+      background: rgba(24, 144, 255, 0.07);
+      border-color: rgba(24, 144, 255, 0.22);
+    }
+    html.wecom-dark .wecom-search-result-item:hover,
+    html.wecom-dark .wecom-search-result-item.is-selected,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-result-item:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-result-item.is-selected {
+      background: rgba(24, 144, 255, 0.14);
+      border-color: rgba(64, 169, 255, 0.3);
+    }
+    .wecom-search-result-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 7px;
+      flex-shrink: 0;
+      overflow: hidden;
+      background: var(--wc-accent, #1890ff);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+    }
+    .wecom-search-result-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .wecom-search-result-main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .wecom-search-result-title-row {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      min-width: 0;
+    }
+    .wecom-search-result-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--wc-text, #1A1D24);
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    html.wecom-dark .wecom-search-result-title,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-result-title {
+      color: #EDF0F5;
+    }
+    .wecom-search-hl {
+      background: rgba(250, 173, 20, 0.28);
+      color: inherit;
+      padding: 0 2px;
+      border-radius: 2px;
+      font-weight: 600;
+    }
+    html.wecom-dark .wecom-search-hl,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-hl {
+      background: rgba(250, 173, 20, 0.32);
+      color: #FFD666;
+    }
+    .wecom-search-result-blurb {
+      font-size: 12px;
+      color: var(--wc-text-2, #5A606D);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-word;
+    }
+    html.wecom-dark .wecom-search-result-blurb,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-result-blurb {
+      color: #9AA2B1;
+    }
+    .wecom-search-result-meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--wc-text-3, #8A8F99);
+    }
+    .wecom-search-floor-badge {
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: rgba(24, 144, 255, 0.1);
+      color: #1890ff;
+      font-weight: 600;
+    }
+    .wecom-search-cat-badge {
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.05);
+      color: var(--wc-text-2, #606266);
+    }
+    html.wecom-dark .wecom-search-cat-badge,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-cat-badge {
+      background: rgba(255, 255, 255, 0.08);
+      color: #B0B5C0;
+    }
+    .wecom-search-local-badge {
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: rgba(82, 196, 26, 0.12);
+      color: #389e0d;
+    }
+    html.wecom-dark .wecom-search-local-badge,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-local-badge {
+      color: #73d13d;
+    }
+    .wecom-search-load-more {
+      display: block;
+      width: 100%;
+      margin-top: 8px;
+      padding: 8px 12px;
+      border-radius: 7px;
+      border: 1px dashed var(--wc-border, #D9DCE0);
+      background: transparent;
+      color: #1890ff;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .wecom-search-load-more:hover {
+      background: rgba(24, 144, 255, 0.06);
+    }
+    .wecom-search-dialog-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      color: var(--wc-text-3, #8A8F99);
+      gap: 8px;
+      text-align: center;
+      font-size: 13px;
+    }
+    .wecom-search-dialog-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 9px 20px;
+      border-top: 1px solid var(--wc-border, #E6E8EB);
+      background: var(--wc-surface-2, #FAFBFD);
+      font-size: 11px;
+      color: var(--wc-text-3, #8A8F99);
+      flex-shrink: 0;
+    }
+    html.wecom-dark .wecom-search-dialog-footer,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-dialog-footer {
+      background: rgba(255, 255, 255, 0.02);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    .wecom-search-external-link {
+      color: #1890ff;
+      text-decoration: none;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+    .wecom-search-external-link:hover {
+      text-decoration: underline;
+    }
+    .wecom-list-search svg {
+      cursor: pointer;
     }
 
     /* ---------- 右栏：聊天详情 ---------- */
@@ -24886,7 +25387,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.65";
+  const SCRIPT_VERSION = "0.8.66";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";
@@ -25294,37 +25795,1014 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   }
 
 
-  /* ============================== 会话栏搜索 ============================== */
+  /* ============================== 会话栏搜索 & 全局搜索 Dialog ============================== */
+
+  const SEARCH_HISTORY_KEY_PREFIX = "wecom_search_history_";
+  const MAX_SEARCH_HISTORY = 8;
+  let activeSearchDialogClose = null;
+  let activeSearchAbortController = null;
+  let searchListInputDebounceTimer = null;
+  let isSearchListComposing = false;
+
+  const searchDialogState = {
+    query: "",
+    filter: "",
+    results: [],
+    page: 1,
+    hasMore: false,
+    loading: false,
+    loadingMore: false,
+    error: "",
+    fallbackHint: "",
+    activeIndex: -1
+  };
+
+  function getSearchPlatformLabel() {
+    if (IS_V2EX) return "V2EX";
+    if (IS_JUEJIN) return "掘金·沸点";
+    if (IS_ZHIHU) return "知乎";
+    return "Linux DO";
+  }
+
+  function getExternalSearchUrl(query) {
+    const q = encodeURIComponent(String(query || "").trim());
+    if (IS_V2EX) return `https://www.google.com/search?q=site:v2ex.com/t%20${q}`;
+    if (IS_ZHIHU) return `https://www.zhihu.com/search?type=content&q=${q}`;
+    if (IS_JUEJIN) return `https://juejin.cn/search?query=${q}`;
+    return `/search?q=${q}`;
+  }
+
+  function getSearchHistory() {
+    try {
+      const raw = localStorage.getItem(SEARCH_HISTORY_KEY_PREFIX + CURRENT_PLATFORM);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter((s) => typeof s === "string" && s.trim()) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function pushSearchHistory(query) {
+    const clean = String(query || "").trim();
+    if (!clean) return;
+    try {
+      const next = [clean, ...getSearchHistory().filter((item) => item !== clean)].slice(0, MAX_SEARCH_HISTORY);
+      localStorage.setItem(SEARCH_HISTORY_KEY_PREFIX + CURRENT_PLATFORM, JSON.stringify(next));
+    } catch { /* ignore */ }
+  }
+
+  function clearSearchHistory() {
+    try {
+      localStorage.removeItem(SEARCH_HISTORY_KEY_PREFIX + CURRENT_PLATFORM);
+    } catch { /* ignore */ }
+  }
+
+  function stripSearchHtmlTags(raw) {
+    return String(raw || "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function highlightSearchText(plainText, query) {
+    const escaped = escapeHtml(String(plainText || ""));
+    const rawTokens = String(query || "")
+      .trim()
+      .split(/\s+/)
+      .filter((t) => t && !/^(?:order|in|status|tags|category):/i.test(t) && !t.startsWith("@") && !t.startsWith("#"))
+      .map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    if (!rawTokens.length) return escaped;
+    try {
+      const re = new RegExp(`(${rawTokens.join("|")})`, "gi");
+      return escaped.replace(re, '<mark class="wecom-search-hl">$1</mark>');
+    } catch {
+      return escaped;
+    }
+  }
+
+  function formatSearchBlurbHtml(rawHtml, query) {
+    const str = String(rawHtml || "");
+    if (!str) return "";
+    const hadNativeHighlight = /<span[^>]*class=["'][^"']*search-highlight[^"']*["'][^>]*>|<em>/i.test(str);
+    if (hadNativeHighlight) {
+      const markerStart = "\u0000HL_S\u0001";
+      const markerEnd = "\u0000HL_E\u0001";
+      const marked = str
+        .replace(/<span[^>]*class=["'][^"']*search-highlight[^"']*["'][^>]*>/gi, markerStart)
+        .replace(/<\/span>/gi, markerEnd)
+        .replace(/<em>/gi, markerStart)
+        .replace(/<\/em>/gi, markerEnd);
+      const plain = stripSearchHtmlTags(marked);
+      return escapeHtml(plain)
+        .split(markerStart).join('<mark class="wecom-search-hl">')
+        .split(markerEnd).join("</mark>");
+    }
+    return highlightSearchText(stripSearchHtmlTags(str), query);
+  }
+
+  function searchLocalTopicsAndHistory(query) {
+    const clean = String(query || "").trim().toLowerCase();
+    const tokens = clean ? clean.split(/\s+/).filter(Boolean) : [];
+    const seen = new Set();
+    const out = [];
+
+    const tryAdd = (rawItem, fromHistory = false) => {
+      if (!rawItem || rawItem.isNotif || rawItem.is_notif) return;
+      const tid = rawItem.id ?? rawItem.topic_id;
+      if (!tid) return;
+      const key = String(tid);
+      if (seen.has(key)) return;
+
+      const title = String(rawItem.title || rawItem.fancy_title || "").trim();
+      const excerpt = String(rawItem.excerpt || rawItem.blurb || "").trim();
+      const author = String(rawItem.last_poster_username || rawItem.username || rawItem.author_name || "").trim();
+      const catObj = rawItem.category_id && typeof categoryById === "function" ? categoryById(rawItem.category_id) : null;
+      const categoryName = String(rawItem.node_name || catObj?.name || rawItem.category_name || "").trim();
+
+      if (tokens.length > 0) {
+        const haystack = `${title} ${excerpt} ${author} ${categoryName}`.toLowerCase();
+        const allMatched = tokens.every((tk) => haystack.includes(tk));
+        if (!allMatched) return;
+      }
+
+      seen.add(key);
+      const slug = rawItem.slug || "topic";
+      let href = "";
+      if (IS_V2EX) href = `/t/${tid}`;
+      else if (IS_JUEJIN) href = `/pin/${tid}`;
+      else if (IS_ZHIHU) href = String(tid).startsWith("p_") ? `/p/${String(tid).slice(2)}` : `/question/${tid}`;
+      else href = `/t/${slug}/${tid}`;
+
+      let avatarUrl = rawItem.v2ex_avatar || "";
+      if (!avatarUrl && rawItem.avatar_template && typeof fullAvatarUrl === "function") {
+        avatarUrl = fullAvatarUrl(rawItem.avatar_template);
+      }
+      if (!avatarUrl && listState?.usersById && rawItem.last_poster_username) {
+        const u = Object.values(listState.usersById).find((item) => item?.username === rawItem.last_poster_username);
+        if (u?.avatar_template && typeof fullAvatarUrl === "function") {
+          avatarUrl = fullAvatarUrl(u.avatar_template);
+        }
+      }
+
+      out.push({
+        topicId: (IS_JUEJIN || IS_ZHIHU) ? String(tid) : Number(tid),
+        slug,
+        href,
+        title: title || "无标题话题",
+        blurb: excerpt,
+        postNumber: 0,
+        username: author,
+        avatarUrl,
+        categoryName,
+        replyCount: Number(rawItem.reply_count ?? Math.max(0, (Number(rawItem.posts_count) || 1) - 1)) || 0,
+        likeCount: Number(rawItem.like_count) || 0,
+        createdAt: rawItem.visited_at || rawItem.bumped_at || rawItem.last_posted_at || rawItem.created_at || "",
+        source: fromHistory ? "history" : "local"
+      });
+    };
+
+    const listTopics = Array.isArray(listState?.topics) ? listState.topics : [];
+    for (const t of listTopics) {
+      tryAdd(t, false);
+    }
+    const historyTopics = typeof readTopicHistory === "function" ? readTopicHistory() : [];
+    for (const h of historyTopics) {
+      if (!h.platform || h.platform === CURRENT_PLATFORM) {
+        tryAdd(h, true);
+      }
+    }
+    return clean ? out : out.slice(0, 8);
+  }
+
+  async function fetchPlatformSearchResults(query, { page = 1, filter = "", signal } = {}) {
+    const q = String(query || "").trim();
+    if (!q) return { items: searchLocalTopicsAndHistory(""), hasMore: false, fallbackHint: "" };
+
+    if (filter === "local") {
+      return {
+        items: searchLocalTopicsAndHistory(q),
+        hasMore: false,
+        fallbackHint: ""
+      };
+    }
+
+    if (IS_V2EX) {
+      const localItems = page === 1 ? searchLocalTopicsAndHistory(q) : [];
+      try {
+        const from = (Math.max(1, page) - 1) * 20;
+        const resp = await fetch(`https://www.sov2ex.com/api/search?q=${encodeURIComponent(q)}&from=${from}&size=20`, { signal });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        const hits = Array.isArray(data?.hits) ? data.hits : [];
+        const remoteItems = hits.map((hit) => {
+          const src = hit?._source || {};
+          const tid = Number(src.id || hit?._id);
+          if (!tid) return null;
+          return {
+            topicId: tid,
+            slug: "",
+            href: `/t/${tid}`,
+            title: stripSearchHtmlTags(src.title || `主题 #${tid}`),
+            blurb: stripSearchHtmlTags(src.content || "").slice(0, 180),
+            postNumber: 0,
+            username: src.member || "",
+            avatarUrl: "",
+            categoryName: src.node_name || (src.node ? `节点 ${src.node}` : ""),
+            replyCount: Number(src.replies) || 0,
+            likeCount: 0,
+            createdAt: src.created || "",
+            source: "remote"
+          };
+        }).filter(Boolean);
+        const remoteIds = new Set(remoteItems.map((item) => String(item.topicId)));
+        const merged = page === 1
+          ? [...remoteItems, ...localItems.filter((item) => !remoteIds.has(String(item.topicId)))]
+          : remoteItems;
+        const total = Number(data?.total) || 0;
+        return {
+          items: merged,
+          hasMore: total > page * 20 && remoteItems.length > 0,
+          fallbackHint: ""
+        };
+      } catch (err) {
+        if (err?.name === "AbortError") throw err;
+        return {
+          items: localItems,
+          hasMore: false,
+          fallbackHint: "站外检索接口暂不可达，已展示当前列表与浏览历史匹配结果"
+        };
+      }
+    }
+
+    if (IS_JUEJIN) {
+      const localItems = page === 1 ? searchLocalTopicsAndHistory(q) : [];
+      try {
+        const cursor = page > 1 ? String((page - 1) * 20) : "0";
+        const data = await juejinApi("/search_api/v1/search", {
+          key_word: q,
+          id_type: 4,
+          cursor,
+          limit: 20,
+          search_type: 0
+        }, { signal });
+        const rawList = Array.isArray(data?.data) ? data.data : [];
+        const remoteItems = rawList.map((entry) => {
+          const model = entry?.result_model || entry || {};
+          const info = model.msg_Info || model;
+          const author = model.author_user_info || {};
+          const tid = String(model.msg_id || info.msg_id || "");
+          if (!tid) return null;
+          const content = stripSearchHtmlTags(info.content || "");
+          return {
+            topicId: tid,
+            slug: "",
+            href: `/pin/${tid}`,
+            title: content.slice(0, 64) || "沸点动态",
+            blurb: content.slice(0, 180),
+            postNumber: 0,
+            username: author.user_name || "掘友",
+            avatarUrl: author.avatar_large || "",
+            categoryName: model.topic?.title || "沸点",
+            replyCount: Number(info.comment_count) || 0,
+            likeCount: Number(info.digg_count) || 0,
+            createdAt: info.ctime ? new Date(Number(info.ctime) * 1000).toISOString() : "",
+            source: "remote"
+          };
+        }).filter(Boolean);
+        const remoteIds = new Set(remoteItems.map((item) => String(item.topicId)));
+        const merged = page === 1
+          ? [...remoteItems, ...localItems.filter((item) => !remoteIds.has(String(item.topicId)))]
+          : remoteItems;
+        return {
+          items: merged,
+          hasMore: Boolean(data?.has_more),
+          fallbackHint: ""
+        };
+      } catch (err) {
+        if (err?.name === "AbortError") throw err;
+        return {
+          items: localItems,
+          hasMore: false,
+          fallbackHint: "沸点搜索接口受限，已展示当前列表与浏览历史匹配结果"
+        };
+      }
+    }
+
+    if (IS_ZHIHU) {
+      const localItems = page === 1 ? searchLocalTopicsAndHistory(q) : [];
+      try {
+        const client = typeof getZhihuInternalClient === "function" ? getZhihuInternalClient() : null;
+        if (!client) throw new Error("Zhihu client unavailable");
+        const offset = (Math.max(1, page) - 1) * 20;
+        const resp = await client.get(`/api/v4/search_v3?t=general&q=${encodeURIComponent(q)}&correction=1&offset=${offset}&limit=20`, { signal });
+        const payload = resp?.data || resp || {};
+        const rawList = Array.isArray(payload?.data) ? payload.data : [];
+        const remoteItems = rawList.map((entry) => {
+          const obj = entry?.object || entry || {};
+          const type = obj.type || entry?.type || "";
+          if (type === "answer" && obj.question?.id) {
+            const qid = String(obj.question.id);
+            const aid = String(obj.id || "");
+            return {
+              topicId: qid,
+              slug: "question",
+              href: aid ? `/question/${qid}/answer/${aid}` : `/question/${qid}`,
+              answerId: aid || null,
+              title: stripSearchHtmlTags(obj.question.name || obj.question.title || "知乎问答"),
+              blurb: obj.excerpt || "",
+              postNumber: 0,
+              username: obj.author?.name || "知乎用户",
+              avatarUrl: obj.author?.avatar_url || "",
+              categoryName: "问答",
+              replyCount: Number(obj.comment_count) || 0,
+              likeCount: Number(obj.voteup_count) || 0,
+              createdAt: obj.updated_time ? new Date(Number(obj.updated_time) * 1000).toISOString() : "",
+              source: "remote"
+            };
+          }
+          if (type === "question" && obj.id) {
+            const qid = String(obj.id);
+            return {
+              topicId: qid,
+              slug: "question",
+              href: `/question/${qid}`,
+              title: stripSearchHtmlTags(obj.title || obj.name || "知乎问题"),
+              blurb: obj.excerpt || "",
+              postNumber: 0,
+              username: obj.author?.name || "",
+              avatarUrl: obj.author?.avatar_url || "",
+              categoryName: "问题",
+              replyCount: Number(obj.answer_count) || 0,
+              likeCount: Number(obj.follower_count) || 0,
+              createdAt: "",
+              source: "remote"
+            };
+          }
+          if (type === "article" && obj.id) {
+            const pid = `p_${obj.id}`;
+            return {
+              topicId: pid,
+              slug: "article",
+              href: `/p/${obj.id}`,
+              title: stripSearchHtmlTags(obj.title || "知乎专栏"),
+              blurb: obj.excerpt || "",
+              postNumber: 0,
+              username: obj.author?.name || "知乎专栏",
+              avatarUrl: obj.author?.avatar_url || "",
+              categoryName: "专栏",
+              replyCount: Number(obj.comment_count) || 0,
+              likeCount: Number(obj.voteup_count) || 0,
+              createdAt: obj.updated ? new Date(Number(obj.updated) * 1000).toISOString() : "",
+              source: "remote"
+            };
+          }
+          return null;
+        }).filter(Boolean);
+        const remoteIds = new Set(remoteItems.map((item) => String(item.topicId)));
+        const merged = page === 1
+          ? [...remoteItems, ...localItems.filter((item) => !remoteIds.has(String(item.topicId)))]
+          : remoteItems;
+        return {
+          items: merged,
+          hasMore: Boolean(payload?.paging && !payload.paging.is_end),
+          fallbackHint: ""
+        };
+      } catch (err) {
+        if (err?.name === "AbortError") throw err;
+        return {
+          items: localItems,
+          hasMore: false,
+          fallbackHint: "知乎站内搜索接口受限，已展示当前列表与浏览历史匹配结果"
+        };
+      }
+    }
+
+    // Linux DO (Discourse /search.json)
+    const effectiveQ = filter && !q.toLowerCase().includes(filter.toLowerCase()) ? `${q} ${filter}` : q;
+    const data = await api(`/search.json?q=${encodeURIComponent(effectiveQ)}&page=${page}`, { signal });
+    const topics = Array.isArray(data?.topics) ? data.topics : [];
+    const posts = Array.isArray(data?.posts) ? data.posts : [];
+    const users = Array.isArray(data?.users) ? data.users : [];
+
+    const topicMap = new Map();
+    for (const t of topics) {
+      if (t && t.id) topicMap.set(Number(t.id), t);
+    }
+    const userMap = new Map();
+    for (const u of users) {
+      if (u && u.username) userMap.set(String(u.username).toLowerCase(), u);
+    }
+
+    const items = [];
+    const coveredTopicIds = new Set();
+
+    for (const post of posts) {
+      const tid = Number(post?.topic_id);
+      if (!tid) continue;
+      coveredTopicIds.add(tid);
+      const topic = topicMap.get(tid) || {};
+      const slug = topic.slug || "topic";
+      const postNumber = Number(post.post_number) || 1;
+      const cat = topic.category_id && typeof categoryById === "function" ? categoryById(topic.category_id) : null;
+      const uInfo = post.username ? userMap.get(String(post.username).toLowerCase()) : null;
+      const tpl = post.avatar_template || uInfo?.avatar_template || "";
+      items.push({
+        topicId: tid,
+        slug,
+        href: postNumber > 1 ? `/t/${slug}/${tid}/${postNumber}` : `/t/${slug}/${tid}`,
+        title: stripSearchHtmlTags(topic.title || topic.fancy_title || `话题 #${tid}`),
+        blurb: post.blurb || "",
+        postNumber,
+        username: post.username || post.name || "",
+        avatarUrl: tpl && typeof fullAvatarUrl === "function" ? fullAvatarUrl(tpl) : "",
+        categoryName: cat?.name || "",
+        replyCount: Number(topic.reply_count ?? Math.max(0, (Number(topic.posts_count) || 1) - 1)) || 0,
+        likeCount: Number(post.like_count ?? topic.like_count) || 0,
+        createdAt: post.created_at || topic.last_posted_at || topic.created_at || "",
+        source: "remote"
+      });
+    }
+
+    for (const topic of topics) {
+      const tid = Number(topic?.id);
+      if (!tid || coveredTopicIds.has(tid)) continue;
+      const slug = topic.slug || "topic";
+      const cat = topic.category_id && typeof categoryById === "function" ? categoryById(topic.category_id) : null;
+      items.push({
+        topicId: tid,
+        slug,
+        href: `/t/${slug}/${tid}`,
+        title: stripSearchHtmlTags(topic.title || topic.fancy_title || `话题 #${tid}`),
+        blurb: "",
+        postNumber: 1,
+        username: "",
+        avatarUrl: "",
+        categoryName: cat?.name || "",
+        replyCount: Number(topic.reply_count ?? Math.max(0, (Number(topic.posts_count) || 1) - 1)) || 0,
+        likeCount: Number(topic.like_count) || 0,
+        createdAt: topic.last_posted_at || topic.created_at || "",
+        source: "remote"
+      });
+    }
+
+    const grouped = data?.grouped_search_result || {};
+    const hasMore = Boolean(grouped.more_full_page_results || grouped.more_posts || grouped.more_topics || posts.length >= 20);
+    return { items, hasMore, fallbackHint: "" };
+  }
+
+  function closeSearchDialog() {
+    if (activeSearchAbortController) {
+      try { activeSearchAbortController.abort(); } catch { /* ignore */ }
+      activeSearchAbortController = null;
+    }
+    if (typeof activeSearchDialogClose === "function") {
+      activeSearchDialogClose();
+      activeSearchDialogClose = null;
+    }
+    const existing = document.querySelector(".wecom-search-dialog");
+    if (existing) existing.remove();
+  }
+
+  function openSearchResultTopic(item) {
+    if (!item) return;
+    if (!item.topicId) {
+      closeSearchDialog();
+      if (item.href) navigateInApp(item.href);
+      return;
+    }
+
+    closeSearchDialog();
+
+    const body = document.querySelector(".wecom-chat-body");
+    const alreadyHasSearch = topicNavStack.some((entry) => entry.fromSearch);
+    const currentPost = chatState.topicId ? (getRememberedPost(chatState.topicId) || 1) : 0;
+    const sameTargetTopic = Boolean(chatState.topicId && isSameTopic(chatState.topicId, item.topicId));
+    const targetPost = Number(item.postNumber) || 0;
+    const isSameTopicSamePost = sameTargetTopic && (!targetPost || targetPost === currentPost);
+
+    if (!alreadyHasSearch && !isSameTopicSamePost) {
+      if (chatState.topicId) {
+        saveCurrentTopicReadingPosition();
+        topicNavStack.push({
+          topicId: chatState.topicId,
+          title: chatState.title || "",
+          scrollTop: body ? body.scrollTop : 0,
+          postNumber: getRememberedPost(chatState.topicId) || 1,
+          slug: chatState.slug || "",
+          prevHref: location.pathname + location.search + location.hash,
+          fromSearch: true
+        });
+      } else {
+        topicNavStack.push({
+          topicId: null,
+          empty: true,
+          title: "返回原页面",
+          prevHref: location.pathname + location.search + location.hash,
+          fromSearch: true
+        });
+      }
+    }
+
+    let inAppHref = String(item.href || "").replace(/^https?:\/\/[^/]+/i, "");
+    if (!inAppHref.startsWith("/")) {
+      if (IS_V2EX) inAppHref = `/t/${item.topicId}`;
+      else if (IS_JUEJIN) inAppHref = `/pin/${item.topicId}`;
+      else if (IS_ZHIHU) inAppHref = String(item.topicId).startsWith("p_") ? `/p/${String(item.topicId).slice(2)}` : `/question/${item.topicId}`;
+      else inAppHref = targetPost > 1 ? `/t/${item.slug || "topic"}/${item.topicId}/${targetPost}` : `/t/${item.slug || "topic"}/${item.topicId}`;
+    }
+
+    if (inAppHref && location.pathname + location.search + location.hash !== inAppHref) {
+      suppressHistoryApply = true;
+      try {
+        history.replaceState({}, "", inAppHref);
+        if (IS_ZHIHU) {
+          try { window.dispatchEvent(new PopStateEvent("popstate", { state: {} })); } catch { /* ignore */ }
+        }
+      } finally {
+        suppressHistoryApply = false;
+      }
+    }
+
+    document.documentElement.classList.add(LOCK_CLASS, "wecom-topic-open");
+    ensureListPanel();
+    ensureChatPanel();
+
+    if (IS_ZHIHU && typeof zhihuCommentThreadState !== "undefined" && zhihuCommentThreadState.active) {
+      closeZhihuCommentThread(document.querySelector(".wecom-chat-panel"), { restoreContent: false });
+    }
+
+    const titleEl = document.querySelector(".wecom-chat-title");
+    const subEl = document.querySelector(".wecom-chat-sub");
+    if (!sameTargetTopic) {
+      if (titleEl && item.title) {
+        titleEl.textContent = item.title;
+        titleEl.classList.toggle("is-masked", typeof isMaskTitleDetail === "function" ? isMaskTitleDetail() : false);
+        titleEl.classList.remove("is-peeking-title");
+      }
+      if (subEl) subEl.textContent = "加载中…";
+    }
+
+    if (targetPost > 0) {
+      rememberTopicPost(item.topicId, targetPost);
+    }
+
+    removeLoadingSliderDom();
+    discourseRouteTo(inAppHref);
+
+    const targetOpts = {};
+    if (targetPost > 0) targetOpts.postNumber = targetPost;
+    if (item.answerId) targetOpts.answerId = item.answerId;
+
+    loadTopic(item.topicId, !sameTargetTopic || Boolean(targetPost), targetOpts);
+    syncTopicBackBtn();
+    syncListActive();
+  }
+
+  function openSearchDialog(initialQuery = "") {
+    const incoming = String(initialQuery ?? "").trim();
+    const reusePrevious = !incoming && searchDialogState.query && searchDialogState.results.length > 0;
+    const startQuery = incoming || (reusePrevious ? searchDialogState.query : "");
+
+    closeSearchDialog();
+    closeAllPlatformDropdowns?.();
+    setThemeMenuOpen?.(false);
+
+    if (incoming && incoming !== searchDialogState.query) {
+      searchDialogState.query = incoming;
+      searchDialogState.results = [];
+      searchDialogState.page = 1;
+      searchDialogState.hasMore = false;
+      searchDialogState.error = "";
+      searchDialogState.fallbackHint = "";
+      searchDialogState.activeIndex = -1;
+    } else if (!startQuery) {
+      searchDialogState.query = "";
+      searchDialogState.results = [];
+      searchDialogState.page = 1;
+      searchDialogState.hasMore = false;
+      searchDialogState.error = "";
+      searchDialogState.fallbackHint = "";
+      searchDialogState.activeIndex = -1;
+    }
+
+    const filterOptions = IS_LINUXDO
+      ? [
+          { key: "", label: "综合排序" },
+          { key: "order:latest", label: "最新发布" },
+          { key: "order:likes", label: "最多点赞" },
+          { key: "in:title", label: "仅看标题" },
+          { key: "local", label: "仅当前列表/历史" }
+        ]
+      : [
+          { key: "", label: "全部结果" },
+          { key: "local", label: "仅当前列表/历史" }
+        ];
+
+    const modalShell = createWecomModalShell({
+      overlayClass: "wecom-search-dialog",
+      closeSelectors: [".wecom-search-dialog-close"],
+      onClose: () => {
+        if (activeSearchAbortController) {
+          try { activeSearchAbortController.abort(); } catch { /* ignore */ }
+          activeSearchAbortController = null;
+        }
+        activeSearchDialogClose = null;
+      },
+      contentHtml: `
+        <div class="wecom-search-dialog-card" role="dialog" aria-modal="true" aria-labelledby="wecom-search-dialog-title">
+          <div class="wecom-search-dialog-head">
+            <div class="wecom-search-dialog-title-box">
+              <span id="wecom-search-dialog-title" class="wecom-search-dialog-title">${ICONS.search}<span>搜索话题与内容</span></span>
+              <span class="wecom-search-platform-badge">${escapeHtml(getSearchPlatformLabel())}</span>
+              <span class="wecom-search-count-badge" style="display:none"></span>
+            </div>
+            <button type="button" class="wecom-search-dialog-close" aria-label="关闭">&times;</button>
+          </div>
+          <div class="wecom-search-dialog-toolbar">
+            <form class="wecom-search-dialog-form" role="search">
+              <div class="wecom-search-dialog-input-wrap">
+                <span class="wecom-search-dialog-icon">${ICONS.search}</span>
+                <input type="search" class="wecom-search-dialog-input" placeholder="${IS_LINUXDO ? "输入关键词、@用户名、#分类 搜索全站…" : "输入关键词搜索话题与历史…"}" value="${escapeHtml(startQuery)}" autocomplete="off" />
+                <button type="button" class="wecom-search-dialog-clear" title="清空关键词" style="${startQuery ? "" : "display:none"}">&times;</button>
+              </div>
+              <button type="submit" class="wecom-search-dialog-submit">搜索</button>
+            </form>
+            <div class="wecom-search-filters">
+              ${filterOptions.map((opt) => `<button type="button" class="wecom-search-filter-chip${searchDialogState.filter === opt.key ? " is-active" : ""}" data-search-filter="${escapeHtml(opt.key)}">${escapeHtml(opt.label)}</button>`).join("")}
+            </div>
+            <div class="wecom-search-recent-row" style="display:none"></div>
+          </div>
+          <div class="wecom-search-dialog-body"></div>
+          <div class="wecom-search-dialog-footer">
+            <span>点击搜索结果将保留当前浏览帖子，可在顶部点击「← 返回」恢复</span>
+            <a class="wecom-search-external-link" href="${escapeHtml(getExternalSearchUrl(startQuery))}" target="_blank" rel="noopener noreferrer">在原站搜索页打开 ↗</a>
+          </div>
+        </div>
+      `
+    });
+
+    activeSearchDialogClose = modalShell.close;
+    const card = modalShell.overlay.querySelector(".wecom-search-dialog-card");
+    const form = card.querySelector(".wecom-search-dialog-form");
+    const input = card.querySelector(".wecom-search-dialog-input");
+    const clearBtn = card.querySelector(".wecom-search-dialog-clear");
+    const submitBtn = card.querySelector(".wecom-search-dialog-submit");
+    const countBadge = card.querySelector(".wecom-search-count-badge");
+    const recentRow = card.querySelector(".wecom-search-recent-row");
+    const bodyEl = card.querySelector(".wecom-search-dialog-body");
+    const externalLink = card.querySelector(".wecom-search-external-link");
+
+    function renderRecentRow() {
+      const history = getSearchHistory();
+      if (!history.length) {
+        recentRow.style.display = "none";
+        recentRow.innerHTML = "";
+        return;
+      }
+      recentRow.style.display = "flex";
+      recentRow.innerHTML =
+        `<span>最近搜索：</span>` +
+        history.map((term) => `<button type="button" class="wecom-search-recent-chip" data-recent-term="${escapeHtml(term)}" title="${escapeHtml(term)}">${escapeHtml(term)}</button>`).join("") +
+        `<button type="button" class="wecom-search-recent-clear" title="清空搜索记录">清空</button>`;
+    }
+
+    function syncResultSelection() {
+      const rows = bodyEl.querySelectorAll(".wecom-search-result-item");
+      rows.forEach((row, idx) => {
+        const selected = idx === searchDialogState.activeIndex;
+        row.classList.toggle("is-selected", selected);
+        if (selected) row.scrollIntoView({ block: "nearest" });
+      });
+    }
+
+    function renderResultItemHtml(item, idx, query) {
+      const titleHtml = highlightSearchText(item.title || "无标题话题", query);
+      const blurbHtml = item.blurb ? formatSearchBlurbHtml(item.blurb, query) : "";
+      const initial = (item.username || item.title || "?").trim().slice(0, 1).toUpperCase();
+      const avatarHtml = item.avatarUrl
+        ? `<img src="${escapeHtml(item.avatarUrl)}" alt="" loading="lazy">`
+        : escapeHtml(initial);
+      const timeText = item.createdAt && typeof timeAgo === "function" ? timeAgo(item.createdAt) : "";
+      const selectedCls = idx === searchDialogState.activeIndex ? " is-selected" : "";
+      return `
+        <a class="wecom-search-result-item${selectedCls}" href="${escapeHtml(item.href || "#")}" data-search-idx="${idx}">
+          <div class="wecom-search-result-avatar">${avatarHtml}</div>
+          <div class="wecom-search-result-main">
+            <div class="wecom-search-result-title-row">
+              <div class="wecom-search-result-title">${titleHtml}</div>
+            </div>
+            ${blurbHtml ? `<div class="wecom-search-result-blurb">${blurbHtml}</div>` : ""}
+            <div class="wecom-search-result-meta">
+              ${item.postNumber > 1 ? `<span class="wecom-search-floor-badge">#${item.postNumber} 楼</span>` : ""}
+              ${item.categoryName ? `<span class="wecom-search-cat-badge">${escapeHtml(item.categoryName)}</span>` : ""}
+              ${item.source === "local" || item.source === "history" ? `<span class="wecom-search-local-badge">${item.source === "history" ? "历史" : "当前列表"}</span>` : ""}
+              ${item.username ? `<span>@${escapeHtml(item.username)}</span>` : ""}
+              ${item.replyCount > 0 ? `<span>💬 ${item.replyCount}</span>` : ""}
+              ${item.likeCount > 0 ? `<span>♥ ${item.likeCount}</span>` : ""}
+              ${timeText ? `<span>${escapeHtml(timeText)}</span>` : ""}
+            </div>
+          </div>
+        </a>
+      `;
+    }
+
+    function renderDialogBody() {
+      const q = searchDialogState.query;
+      externalLink.href = getExternalSearchUrl(q);
+      clearBtn.style.display = input.value ? "flex" : "none";
+      submitBtn.disabled = searchDialogState.loading;
+
+      if (searchDialogState.loading && searchDialogState.results.length === 0) {
+        countBadge.style.display = "none";
+        bodyEl.innerHTML = `<div class="wecom-search-dialog-empty"><div class="wecom-chat-spinner"></div><div>正在搜索「${escapeHtml(q)}」…</div></div>`;
+        return;
+      }
+
+      if (searchDialogState.error && searchDialogState.results.length === 0) {
+        countBadge.style.display = "none";
+        bodyEl.innerHTML = `
+          <div class="wecom-search-dialog-empty">
+            <div>搜索失败：${escapeHtml(searchDialogState.error)}</div>
+            <button type="button" class="wecom-tags-btn primary wecom-search-retry-btn">重试搜索</button>
+          </div>`;
+        return;
+      }
+
+      if (!q) {
+        const suggestions = searchLocalTopicsAndHistory("");
+        countBadge.style.display = "none";
+        if (!suggestions.length) {
+          bodyEl.innerHTML = `
+            <div class="wecom-search-dialog-empty">
+              <div>输入关键词后按 Enter 搜索全站帖子</div>
+              <div style="font-size:12px;opacity:.75;">支持 ↑ ↓ 方向键选择 · Enter 打开 · Esc 关闭 · Ctrl+K 快速唤起</div>
+            </div>`;
+          return;
+        }
+        searchDialogState.results = suggestions;
+        bodyEl.innerHTML =
+          `<div class="wecom-search-section-label">当前会话与最近浏览推荐</div>` +
+          `<div class="wecom-search-result-list">${suggestions.map((item, idx) => renderResultItemHtml(item, idx, "")).join("")}</div>`;
+        return;
+      }
+
+      const items = searchDialogState.results;
+      countBadge.style.display = "inline-block";
+      countBadge.textContent = `共 ${items.length}${searchDialogState.hasMore ? "+" : ""} 条结果`;
+
+      if (!items.length) {
+        bodyEl.innerHTML = `
+          <div class="wecom-search-dialog-empty">
+            <div>未找到与「${escapeHtml(q)}」相关的帖子</div>
+            <div style="font-size:12px;opacity:.75;">可以尝试更换关键词、切换上方筛选条件，或前往原站搜索页查看</div>
+          </div>`;
+        return;
+      }
+
+      const hintHtml = searchDialogState.fallbackHint
+        ? `<div class="wecom-search-section-label">${escapeHtml(searchDialogState.fallbackHint)}</div>`
+        : "";
+      const listHtml = `<div class="wecom-search-result-list">${items.map((item, idx) => renderResultItemHtml(item, idx, q)).join("")}</div>`;
+      const moreHtml = searchDialogState.hasMore
+        ? `<button type="button" class="wecom-search-load-more"${searchDialogState.loadingMore ? " disabled" : ""}>${searchDialogState.loadingMore ? "正在加载更多…" : "加载更多搜索结果"}</button>`
+        : "";
+      bodyEl.innerHTML = hintHtml + listHtml + moreHtml;
+    }
+
+    async function executeSearch(queryText, { append = false } = {}) {
+      const q = String(queryText ?? input.value ?? "").trim();
+      const listInput = document.querySelector(".wecom-list-search input");
+      if (listInput && listInput.value !== q) listInput.value = q;
+
+      if (!q) {
+        searchDialogState.query = "";
+        searchDialogState.results = [];
+        searchDialogState.hasMore = false;
+        searchDialogState.error = "";
+        searchDialogState.fallbackHint = "";
+        searchDialogState.loading = false;
+        searchDialogState.activeIndex = -1;
+        renderDialogBody();
+        return;
+      }
+
+      if (activeSearchAbortController) {
+        try { activeSearchAbortController.abort(); } catch { /* ignore */ }
+      }
+      const controller = new AbortController();
+      activeSearchAbortController = controller;
+
+      if (!append) {
+        pushSearchHistory(q);
+        renderRecentRow();
+        searchDialogState.query = q;
+        searchDialogState.page = 1;
+        searchDialogState.results = [];
+        searchDialogState.hasMore = false;
+        searchDialogState.error = "";
+        searchDialogState.fallbackHint = "";
+        searchDialogState.loading = true;
+        searchDialogState.activeIndex = -1;
+      } else {
+        searchDialogState.loadingMore = true;
+        searchDialogState.page += 1;
+      }
+      renderDialogBody();
+
+      try {
+        const res = await fetchPlatformSearchResults(q, {
+          page: searchDialogState.page,
+          filter: searchDialogState.filter,
+          signal: controller.signal
+        });
+        if (controller.signal.aborted || activeSearchAbortController !== controller) return;
+        const incomingItems = Array.isArray(res?.items) ? res.items : [];
+        if (append) {
+          const existingKeys = new Set(searchDialogState.results.map((r) => `${r.topicId}_${r.postNumber}`));
+          const fresh = incomingItems.filter((r) => !existingKeys.has(`${r.topicId}_${r.postNumber}`));
+          searchDialogState.results = searchDialogState.results.concat(fresh);
+        } else {
+          searchDialogState.results = incomingItems;
+        }
+        searchDialogState.hasMore = Boolean(res?.hasMore);
+        searchDialogState.fallbackHint = res?.fallbackHint || "";
+        searchDialogState.error = "";
+      } catch (err) {
+        if (err?.name === "AbortError" || controller.signal.aborted) return;
+        searchDialogState.error = err?.message || "请求失败";
+        if (append) searchDialogState.page = Math.max(1, searchDialogState.page - 1);
+      } finally {
+        if (activeSearchAbortController === controller) {
+          activeSearchAbortController = null;
+          searchDialogState.loading = false;
+          searchDialogState.loadingMore = false;
+          renderDialogBody();
+        }
+      }
+    }
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const selectedIdx = searchDialogState.activeIndex;
+      if (selectedIdx >= 0 && searchDialogState.results[selectedIdx]) {
+        openSearchResultTopic(searchDialogState.results[selectedIdx]);
+        return;
+      }
+      executeSearch(input.value, { append: false });
+    });
+
+    input.addEventListener("input", () => {
+      searchDialogState.activeIndex = -1;
+      clearBtn.style.display = input.value ? "flex" : "none";
+      externalLink.href = getExternalSearchUrl(input.value);
+      const listInput = document.querySelector(".wecom-list-search input");
+      if (listInput && listInput.value !== input.value) listInput.value = input.value;
+      if (!input.value.trim()) {
+        executeSearch("", { append: false });
+      }
+    });
+
+    input.addEventListener("keydown", (e) => {
+      const count = searchDialogState.results.length;
+      if (!count) return;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        searchDialogState.activeIndex = searchDialogState.activeIndex < count - 1 ? searchDialogState.activeIndex + 1 : 0;
+        syncResultSelection();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        searchDialogState.activeIndex = searchDialogState.activeIndex > 0 ? searchDialogState.activeIndex - 1 : count - 1;
+        syncResultSelection();
+      }
+    });
+
+    clearBtn.addEventListener("click", () => {
+      input.value = "";
+      executeSearch("", { append: false });
+      input.focus();
+    });
+
+    card.querySelectorAll(".wecom-search-filter-chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        const nextFilter = chip.dataset.searchFilter || "";
+        if (searchDialogState.filter === nextFilter) return;
+        searchDialogState.filter = nextFilter;
+        card.querySelectorAll(".wecom-search-filter-chip").forEach((c) => c.classList.toggle("is-active", c === chip));
+        if (input.value.trim()) {
+          executeSearch(input.value, { append: false });
+        }
+      });
+    });
+
+    recentRow.addEventListener("click", (e) => {
+      const clearRecent = e.target.closest(".wecom-search-recent-clear");
+      if (clearRecent) {
+        clearSearchHistory();
+        renderRecentRow();
+        return;
+      }
+      const chip = e.target.closest(".wecom-search-recent-chip");
+      if (chip) {
+        const term = chip.dataset.recentTerm || "";
+        input.value = term;
+        executeSearch(term, { append: false });
+      }
+    });
+
+    bodyEl.addEventListener("click", (e) => {
+      const retryBtn = e.target.closest(".wecom-search-retry-btn");
+      if (retryBtn) {
+        executeSearch(input.value, { append: false });
+        return;
+      }
+      const moreBtn = e.target.closest(".wecom-search-load-more");
+      if (moreBtn) {
+        executeSearch(searchDialogState.query, { append: true });
+        return;
+      }
+      const itemEl = e.target.closest(".wecom-search-result-item");
+      if (itemEl) {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const idx = Number(itemEl.dataset.searchIdx);
+        const item = searchDialogState.results[idx];
+        if (item) openSearchResultTopic(item);
+      }
+    });
+
+    renderRecentRow();
+    if (startQuery && !reusePrevious) {
+      executeSearch(startQuery, { append: false });
+    } else {
+      renderDialogBody();
+    }
+
+    setTimeout(() => {
+      try {
+        input.focus();
+        const len = input.value.length;
+        input.setSelectionRange(len, len);
+      } catch { /* ignore */ }
+    }, 10);
+  }
 
   function bindSearchBox(container) {
     if (!container || container.dataset.searchBound === "1") return;
     const form = container.querySelector(".wecom-list-search form");
     const input = form?.querySelector("input");
+    const iconSvg = form?.querySelector("svg");
     if (!form || !input) return;
     container.dataset.searchBound = "1";
+    input.title = "输入关键词按 Enter 弹出搜索框 (Ctrl+K)";
+
+    input.addEventListener("compositionstart", () => {
+      isSearchListComposing = true;
+    });
+    input.addEventListener("compositionend", () => {
+      isSearchListComposing = false;
+    });
     input.addEventListener("input", () => {
       if (listState.listMode === "history") {
         renderHistoryList(input.value.trim());
         return;
       }
-      syncSearchToNative(input.value);
-    });
-    input.addEventListener("focus", () => {
-      if (listState.listMode === "history") return;
-      syncSearchToNative(input.value);
-      const native = getNativeSearchInput();
-      if (native && native !== input) {
-        try { native.dispatchEvent(new FocusEvent("focus", { bubbles: true })); } catch { /* ignore */ }
+      clearTimeout(searchListInputDebounceTimer);
+      const q = input.value.trim();
+      if (!q || isSearchListComposing) return;
+      if (q.length >= 2) {
+        searchListInputDebounceTimer = setTimeout(() => {
+          if (listState.listMode !== "history" && !document.querySelector(".wecom-search-dialog") && document.activeElement === input) {
+            openSearchDialog(input.value.trim());
+          }
+        }, 550);
       }
     });
+    if (iconSvg) {
+      iconSvg.addEventListener("click", (e) => {
+        if (listState.listMode === "history") return;
+        e.preventDefault();
+        e.stopPropagation();
+        clearTimeout(searchListInputDebounceTimer);
+        openSearchDialog(input.value.trim());
+      });
+    }
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       e.stopPropagation();
+      clearTimeout(searchListInputDebounceTimer);
       if (listState.listMode === "history") {
         renderHistoryList(input.value.trim());
         return;
       }
-      submitNativeSearch(input.value);
+      openSearchDialog(input.value.trim());
     });
   }
 
@@ -34349,6 +35827,10 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   function submitNativeSearch(value) {
     const q = (value || "").trim();
+    if (getViewMode() !== "native" && !otherThemeActive() && typeof openSearchDialog === "function") {
+      openSearchDialog(q);
+      return;
+    }
     if (!q) return;
     if (IS_V2EX) {
       window.open(`https://www.google.com/search?q=site:v2ex.com/t%20${encodeURIComponent(q)}`, "_blank");
@@ -39506,7 +40988,13 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
     if (topicNavStack.length > 0) {
       const prev = topicNavStack[topicNavStack.length - 1];
       backBtn.style.display = "inline-flex";
-      backBtn.title = prev.title ? `返回上一话题: ${prev.title}` : "返回上一话题";
+      if (prev.empty) {
+        backBtn.title = prev.fromSearch ? "返回搜索前的页面" : "返回原列表";
+      } else if (prev.fromSearch) {
+        backBtn.title = prev.title ? `返回正在浏览的帖子: ${prev.title}` : "返回正在浏览的帖子";
+      } else {
+        backBtn.title = prev.title ? `返回上一话题: ${prev.title}` : "返回上一话题";
+      }
       const text = backBtn.querySelector(".wecom-chat-back-text");
       if (text) text.textContent = "返回";
       return;
@@ -39525,26 +41013,49 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       }
       if (topicNavStack.length > 0) {
         const prev = topicNavStack.pop();
+        if (prev && prev.empty) {
+          const prevHref = prev.prevHref || "/";
+          if (prevHref && location.pathname + location.search + location.hash !== prevHref) {
+            suppressHistoryApply = true;
+            try {
+              history.replaceState({}, "", prevHref);
+            } finally {
+              suppressHistoryApply = false;
+            }
+          }
+          if (!IS_V2EX && !IS_JUEJIN && !IS_ZHIHU && prevHref) {
+            discourseRouteTo(prevHref);
+          }
+          document.documentElement.classList.remove("wecom-topic-open");
+          renderChatEmpty();
+          chatState.topicId = null;
+          syncListActive();
+          syncTopicBackBtn();
+          return;
+        }
         if (prev && prev.topicId) {
           if (prev.fromNotif) {
             restoreSavedTopicListState();
           }
-          let prevHref = "";
-          if (IS_V2EX) {
-            prevHref = `/t/${prev.topicId}`;
-          } else if (IS_ZHIHU) {
-            prevHref = String(prev.topicId).includes("/") ? `/${prev.topicId}` : `/question/${prev.topicId}`;
-          } else if (IS_JUEJIN) {
-            prevHref = `/post/${prev.topicId}`;
-          } else {
-            const cleanSlug = prev.slug || "topic";
-            const targetPost = prev.postNumber > 1 ? prev.postNumber : 1;
-            prevHref = targetPost > 1 ? `/t/${cleanSlug}/${prev.topicId}/${targetPost}` : `/t/${cleanSlug}/${prev.topicId}`;
+          let prevHref = prev.prevHref || "";
+          if (!prevHref) {
+            if (IS_V2EX) {
+              prevHref = `/t/${prev.topicId}`;
+            } else if (IS_ZHIHU) {
+              const sid = String(prev.topicId);
+              prevHref = sid.startsWith("p_") ? `/p/${sid.slice(2)}` : (sid.includes("/") ? `/${sid}` : `/question/${sid}`);
+            } else if (IS_JUEJIN) {
+              prevHref = `/pin/${prev.topicId}`;
+            } else {
+              const cleanSlug = prev.slug || "topic";
+              const targetPost = prev.postNumber > 1 ? prev.postNumber : 1;
+              prevHref = targetPost > 1 ? `/t/${cleanSlug}/${prev.topicId}/${targetPost}` : `/t/${cleanSlug}/${prev.topicId}`;
+            }
           }
           if (prevHref && location.pathname + location.search + location.hash !== prevHref) {
             suppressHistoryApply = true;
             try {
-              if (prev.fromNotif) {
+              if (prev.fromNotif || prev.fromSearch) {
                 history.replaceState({}, "", prevHref);
               } else {
                 history.pushState({}, "", prevHref);
@@ -39553,9 +41064,15 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
               suppressHistoryApply = false;
             }
           }
+          if (!IS_V2EX && !IS_JUEJIN && !IS_ZHIHU && prevHref) {
+            discourseRouteTo(prevHref);
+          }
           loadTopic(prev.topicId, false, { postNumber: prev.postNumber }).then(() => {
             const body = panel.querySelector(".wecom-chat-body");
             if (body && prev.scrollTop > 0) {
+              requestAnimationFrame(() => {
+                body.scrollTop = prev.scrollTop;
+              });
               setTimeout(() => {
                 body.scrollTop = prev.scrollTop;
               }, 80);
@@ -49969,7 +51486,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
   function isModalOrViewerOpen() {
     return Boolean(
       document.querySelector(
-        ".wecom-v2ex-member-card:not([hidden]), .wecom-juejin-member-card:not([hidden]), .wecom-juejin-publish-dialog:not([hidden]), .wecom-base64-insert-dialog:not([hidden]), .wecom-image-viewer:not([hidden]), .wecom-edit-dialog:not([hidden]), .wecom-watermark-dialog:not([hidden]), .wecom-boost-popover:not([hidden]), .wecom-base64-popover:not([hidden]), .wecom-v2ex-emoji-picker:not([hidden]), .dialog-holder, #discourse-modal-container .modal.show, #discourse-modal-container .modal.in, .d-modal"
+        ".wecom-search-dialog:not([hidden]), .wecom-tags-manager-dialog:not([hidden]), .wecom-v2ex-member-card:not([hidden]), .wecom-juejin-member-card:not([hidden]), .wecom-juejin-publish-dialog:not([hidden]), .wecom-base64-insert-dialog:not([hidden]), .wecom-image-viewer:not([hidden]), .wecom-edit-dialog:not([hidden]), .wecom-watermark-dialog:not([hidden]), .wecom-boost-popover:not([hidden]), .wecom-base64-popover:not([hidden]), .wecom-v2ex-emoji-picker:not([hidden]), .dialog-holder, #discourse-modal-container .modal.show, #discourse-modal-container .modal.in, .d-modal"
       )
     );
   }
@@ -50528,7 +52045,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       });
     }
 
-    const WECOM_UI_SEL = ".wecom-toast-container, .wecom-confirm-dialog, .wecom-font-picker-dialog, .wecom-shortcut-dialog, .wecom-ai-config-dialog, .wecom-ai-summary-dialog, .wecom-connect-overlay, .wecom-connect-modal, .wecom-base64-insert-dialog, .wecom-v2ex-user-popover, .wecom-v2ex-member-card, .wecom-juejin-member-card, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-image-magnifier, .wecom-edit-dialog, .wecom-rail, .wecom-rail-resizer, .wecom-list-resizer, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
+    const WECOM_UI_SEL = ".wecom-toast-container, .wecom-confirm-dialog, .wecom-search-dialog, .wecom-tags-manager-dialog, .wecom-font-picker-dialog, .wecom-shortcut-dialog, .wecom-ai-config-dialog, .wecom-ai-summary-dialog, .wecom-connect-overlay, .wecom-connect-modal, .wecom-base64-insert-dialog, .wecom-v2ex-user-popover, .wecom-v2ex-member-card, .wecom-juejin-member-card, .wecom-v2ex-nav2, .wecom-list-panel, .wecom-chat-panel, .wecom-member-panel, .wecom-image-viewer, .wecom-image-magnifier, .wecom-edit-dialog, .wecom-rail, .wecom-rail-resizer, .wecom-list-resizer, .wecom-strip, .wecom-titlebar, .wecom-mode-fab, .wecom-theme-menu, .wecom-update-notice, #linuxdo-wecom-theme";
     const NATIVE_BRIDGE_SEL = "#reply-control, .dialog-holder, .dialog-container, #discourse-modal-container, .d-modal, .bootbox, .autocomplete, .autocomplete-container, .d-editor-popup, [data-identifier='emoji-picker'], .tag-chooser";
 
     function isWecomOrBridgeNode(node) {
@@ -50677,20 +52194,25 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
       startZhihuNotificationPolling();
     }
 
-    // ⌘/Ctrl+K → 会话栏搜索（并同步原生 welcome-banner）
+    // ⌘/Ctrl+K → 弹出全局搜索 Dialog（历史模式下聚焦历史筛选框）
     window.addEventListener("keydown", (e) => {
       if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;
       if ((e.key || "").toLowerCase() !== "k") return;
       if (getViewMode() === "native" || otherThemeActive()) return;
       const tag = (e.target && e.target.tagName) || "";
-      if (tag === "TEXTAREA" || (tag === "INPUT" && e.target.type !== "search")) return;
+      if (tag === "TEXTAREA" || (tag === "INPUT" && e.target.type !== "search" && !e.target.classList?.contains("wecom-search-dialog-input"))) return;
       e.preventDefault();
       e.stopPropagation();
-      const input = document.querySelector(".wecom-list-search input") || getNativeSearchInput();
-      if (input) {
-        input.focus();
-        input.select();
+      if (listState.listMode === "history") {
+        const input = document.querySelector(".wecom-list-search input");
+        if (input) {
+          input.focus();
+          input.select();
+        }
+        return;
       }
+      const listInput = document.querySelector(".wecom-list-search input");
+      openSearchDialog(listInput ? listInput.value.trim() : "");
     }, true);
 
     scheduleApply();
