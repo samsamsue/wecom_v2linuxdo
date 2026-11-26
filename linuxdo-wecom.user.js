@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do & V2EX 企业微信主题
 // @namespace    https://linux.do/
-// @version      0.8.67
+// @version      0.8.68
 // @description  将 Linux.do、V2EX、掘金与知乎换成企业微信 5.x 桌面端风格；支持浅色/深色/跟随系统，并保留原站交互。
 // @author       Richy
 // @match        *://linux.do/*
@@ -5134,67 +5134,121 @@
       align-items: center;
       gap: 8px;
       width: 100%;
+      margin: 0 !important;
     }
     .wecom-search-dialog-input-wrap {
       position: relative;
       flex: 1;
+      min-width: 0;
+      height: 36px;
+      padding: 0 10px;
+      border-radius: 7px;
+      border: 1px solid var(--wc-border, #D9DCE0);
+      background: var(--wc-bg, #FFFFFF);
       display: flex;
       align-items: center;
+      gap: 8px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .wecom-search-dialog-input-wrap:focus-within {
+      border-color: #1890ff;
+      box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.16);
+    }
+    html.wecom-dark .wecom-search-dialog-input-wrap,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-dialog-input-wrap {
+      background: #1B1F27;
+      border-color: rgba(255, 255, 255, 0.16);
+    }
+    html.wecom-dark .wecom-search-dialog-input-wrap:focus-within,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-dialog-input-wrap:focus-within {
+      border-color: #40a9ff;
+      box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2);
     }
     .wecom-search-dialog-icon {
-      position: absolute;
-      left: 11px;
       color: var(--wc-text-3, #909399);
       pointer-events: none;
       display: flex;
       align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      line-height: 1;
     }
+    .wecom-search-dialog-icon svg {
+      width: 15px;
+      height: 15px;
+      display: block;
+    }
+    .wecom-search-dialog-input-wrap input.wecom-search-dialog-input,
     .wecom-search-dialog-input {
-      width: 100%;
-      height: 36px;
-      padding: 0 32px 0 34px;
-      border-radius: 7px;
-      border: 1px solid var(--wc-border, #D9DCE0);
-      background: var(--wc-bg, #FFFFFF);
-      color: var(--wc-text, #1A1D24);
-      font-size: 13px;
-      outline: none;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      flex: 1 !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      height: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      box-shadow: none !important;
+      color: var(--wc-text, #1A1D24) !important;
+      font-size: 13px !important;
+      line-height: 34px !important;
+      outline: none !important;
+      -webkit-appearance: none !important;
+      appearance: none !important;
     }
-    .wecom-search-dialog-input:focus {
-      border-color: #1890ff;
-      box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.16);
+    .wecom-search-dialog-input::-webkit-search-decoration,
+    .wecom-search-dialog-input::-webkit-search-cancel-button,
+    .wecom-search-dialog-input::-webkit-search-results-button,
+    .wecom-search-dialog-input::-webkit-search-results-decoration {
+      -webkit-appearance: none !important;
+      appearance: none !important;
+      display: none !important;
     }
+    html.wecom-dark .wecom-search-dialog-input-wrap input.wecom-search-dialog-input,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-dialog-input-wrap input.wecom-search-dialog-input,
     html.wecom-dark .wecom-search-dialog-input,
     html.${ROOT_CLASS}.wecom-dark .wecom-search-dialog-input {
-      background: #1B1F27;
-      border-color: rgba(255, 255, 255, 0.16);
-      color: #E4E7EB;
+      background: transparent !important;
+      color: #E4E7EB !important;
     }
     .wecom-search-dialog-clear {
-      position: absolute;
-      right: 8px;
-      width: 20px;
-      height: 20px;
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      margin: 0 !important;
+      padding: 0 !important;
       border-radius: 50%;
       border: none;
       background: rgba(0, 0, 0, 0.08);
       color: var(--wc-text-2, #606266);
       cursor: pointer;
-      font-size: 14px;
+      font-size: 13px;
       line-height: 1;
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .wecom-search-dialog-clear:hover {
+      background: rgba(0, 0, 0, 0.14);
+      color: var(--wc-text, #1A1D24);
     }
     html.wecom-dark .wecom-search-dialog-clear,
     html.${ROOT_CLASS}.wecom-dark .wecom-search-dialog-clear {
-      background: rgba(255, 255, 255, 0.12);
-      color: #B0B5C0;
+      background: rgba(255, 255, 255, 0.14);
+      color: #C0C4CC;
+    }
+    html.wecom-dark .wecom-search-dialog-clear:hover,
+    html.${ROOT_CLASS}.wecom-dark .wecom-search-dialog-clear:hover {
+      background: rgba(255, 255, 255, 0.24);
+      color: #FFFFFF;
     }
     .wecom-search-dialog-submit {
-      height: 36px;
-      padding: 0 16px;
+      height: 36px !important;
+      margin: 0 !important;
+      padding: 0 16px !important;
       border-radius: 7px;
       border: none;
       background: #1890ff;
@@ -5203,6 +5257,9 @@
       font-weight: 500;
       cursor: pointer;
       flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       transition: background 0.15s ease;
     }
     .wecom-search-dialog-submit:hover {
@@ -25426,7 +25483,7 @@ ${repliesFormatted || "(暂无回帖讨论)"}`;
 
   // 保留 @grant none，避免把依赖 window.require / Discourse 的桥接迁入沙箱。
   // 发布时用 scripts/release.py 同步此版本、头部、meta.js 和 README。
-  const SCRIPT_VERSION = "0.8.67";
+  const SCRIPT_VERSION = "0.8.68";
   const SCRIPT_REPOSITORY_URL = "https://github.com/samsamsue/wecom_v2linuxdo";
   const SCRIPT_UPDATE_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.meta.js";
   const SCRIPT_DOWNLOAD_URL = "https://raw.githubusercontent.com/samsamsue/wecom_v2linuxdo/main/linuxdo-wecom.user.js";

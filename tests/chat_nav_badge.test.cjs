@@ -15674,15 +15674,15 @@ test("Test 198: Linux DO native typing user presence indicator bridge in WeCom U
   );
 });
 
-test("Test 199: Search dialog popup, multi-platform result list, non-overwriting topic navigation & back/back-search buttons (v0.8.66/v0.8.67)", () => {
+test("Test 199: Search dialog popup, multi-platform result list, non-overwriting topic navigation & back/back-search buttons (v0.8.66/v0.8.67/v0.8.68)", () => {
   const userContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.user.js"), "utf-8");
   const metaContent = fs.readFileSync(path.join(__dirname, "../linuxdo-wecom.meta.js"), "utf-8");
   const readmeContent = fs.readFileSync(path.join(__dirname, "../README.md"), "utf-8");
 
   // 1. Version assertions
-  assert.match(userContent, /const SCRIPT_VERSION = "0\.8\.(6[7-9]|[7-9]\d)"/, "user.js version must be >= 0.8.67");
-  assert.match(metaContent, /@version\s+0\.8\.(6[7-9]|[7-9]\d)/, "meta.js version must be >= 0.8.67");
-  assert.match(readmeContent, /0\.8\.(6[7-9]|[7-9]\d)/, "README.md version must be >= 0.8.67");
+  assert.match(userContent, /const SCRIPT_VERSION = "0\.8\.(6[8-9]|[7-9]\d)"/, "user.js version must be >= 0.8.68");
+  assert.match(metaContent, /@version\s+0\.8\.(6[8-9]|[7-9]\d)/, "meta.js version must be >= 0.8.68");
+  assert.match(readmeContent, /0\.8\.(6[8-9]|[7-9]\d)/, "README.md version must be >= 0.8.68");
 
   // 2. Search dialog DOM, CSS & modal wiring
   assert.ok(userContent.includes(".wecom-search-dialog"), "must style .wecom-search-dialog");
@@ -15690,6 +15690,12 @@ test("Test 199: Search dialog popup, multi-platform result list, non-overwriting
   assert.ok(userContent.includes(".wecom-search-result-item"), "must include .wecom-search-result-item");
   assert.ok(userContent.includes(".wecom-search-hl"), "must style .wecom-search-hl highlights");
   assert.ok(userContent.includes(".wecom-chat-back-search-btn"), "must include .wecom-chat-back-search-btn button & CSS");
+  assert.ok(
+    userContent.includes(".wecom-search-dialog-input-wrap input.wecom-search-dialog-input") &&
+    userContent.includes(".wecom-search-dialog-input::-webkit-search-cancel-button") &&
+    /\.wecom-search-dialog-input-wrap\s*\{[\s\S]*?display:\s*flex;\s*align-items:\s*center;\s*gap:\s*8px;/.test(userContent),
+    "search dialog input wrapper must use flex alignment so search icon and clear button never overlap or misalign"
+  );
   assert.ok(userContent.includes("function openSearchDialog("), "must define openSearchDialog");
   assert.ok(userContent.includes("function closeSearchDialog("), "must define closeSearchDialog");
   assert.ok(userContent.includes("function openSearchResultTopic("), "must define openSearchResultTopic");
